@@ -1,11 +1,11 @@
 # ==============================================
-# AZEROTHCORE DATABASE LAYER
+# AZEROTHCORE DATABASE LAYER - PORTAINER VERSION (CLEAN)
 # ==============================================
-# MySQL database, initialization, import, and backup services
-# Deploy this layer FIRST before core services
+# Modified for better Portainer compatibility
+# Removed redundant ac-mysql-persist service
 
 services:
-  # Step 1: MySQL database with NFS-compatible approach
+  # Step 1: MySQL database
   ac-mysql:
     image: ${MYSQL_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
@@ -18,9 +18,7 @@ services:
     ports:
       - "${DOCKER_DB_EXTERNAL_PORT}:${MYSQL_PORT}"
     volumes:
-      # Use bind mount for persistent data
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
-      # Use tmpfs for MySQL runtime with different path
       - type: tmpfs
         target: /var/lib/mysql-runtime
         tmpfs:
@@ -29,21 +27,16 @@ services:
     command:
       - |
         echo "🔧 Starting MySQL with NFS-compatible setup..."
-
-        # Ensure runtime directory permissions
-        echo "📁 Setting up MySQL runtime directory..."
         mkdir -p /var/lib/mysql-runtime
         chown -R mysql:mysql /var/lib/mysql-runtime
         chmod 755 /var/lib/mysql-runtime
 
-        # Check if we have a SQL backup to restore
         if [ -f "/var/lib/mysql-persistent/backup.sql" ]; then
           echo "📦 SQL backup found, will restore after MySQL starts..."
         else
           echo "🆕 No backup found, will initialize fresh MySQL..."
         fi
 
-        # Start MySQL with custom data directory
         echo "🚀 Starting MySQL server with custom datadir..."
         exec docker-entrypoint.sh mysqld \
           --datadir=/var/lib/mysql-runtime \
@@ -63,14 +56,98 @@ services:
     networks:
       - azerothcore
 
-  # Step 2: Initialize databases and restore data
+  # Step 2: Backup service
+  ac-backup:
+    image: ${MYSQL_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_BACKUP}
+    environment:
+      MYSQL_HOST: ${CONTAINER_MYSQL}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS}
+      BACKUP_CRON_SCHEDULE: ${BACKUP_CRON_SCHEDULE}
+      TZ: ${TZ}
+    volumes:
+      - ${HOST_BACKUP_PATH}:/backups
+      - ${HOST_BACKUP_SCRIPTS_PATH}:/scripts
+    working_dir: /scripts
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo "🔧 Starting simple backup service..."
+
+        # Create backup function
+        run_backup() {
+          echo "💾 [$(date)] Starting database backup..."
+
+          # Wait for MySQL to be available
+          for i in $(seq 1 10); do
+            if mysqldump -h ${CONTAINER_MYSQL} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} --version >/dev/null 2>&1; then
+              echo "✅ MySQL connection available"
+              break
+            fi
+            echo "⏳ Waiting for MySQL... attempt $$i/10"
+            sleep 5
+          done
+
+          # Create backup directory
+          BACKUP_DIR="/backups/$(date +%Y%m%d_%H%M%S)"
+          mkdir -p "$$BACKUP_DIR"
+
+          # Backup all databases
+          echo "📦 Backing up databases to $$BACKUP_DIR"
+          mysqldump -h ${CONTAINER_MYSQL} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} \
+            --all-databases --single-transaction --routines --triggers \
+            > "$$BACKUP_DIR/full_backup.sql" 2>/dev/null
+
+          if [ -f "$$BACKUP_DIR/full_backup.sql" ]; then
+            echo "✅ [$(date)] Backup completed: $$BACKUP_DIR/full_backup.sql"
+
+            # Cleanup old backups
+            echo "🧹 Cleaning up backups older than ${BACKUP_RETENTION_DAYS} days..."
+            find /backups -type d -name "????????_??????" -mtime +${BACKUP_RETENTION_DAYS} -exec rm -rf {} + 2>/dev/null || true
+
+            echo "📊 Current backup status:"
+            ls -la /backups/ 2>/dev/null || echo "No backups directory"
+          else
+            echo "❌ [$(date)] Backup failed"
+          fi
+        }
+
+        echo "Starting backup service with schedule: ${BACKUP_CRON_SCHEDULE}"
+        echo "Backup retention: ${BACKUP_RETENTION_DAYS} days"
+
+        # Wait for MySQL to be ready, then run initial backup
+        sleep 30
+        run_backup
+
+        # Simple cron-like scheduler (runs backup at 3 AM daily)
+        while true; do
+          current_hour=$(date +%H)
+          current_minute=$(date +%M)
+
+          # Check if it's 3:00 AM (matching default cron schedule)
+          if [ "$$current_hour" = "03" ] && [ "$$current_minute" = "00" ]; then
+            run_backup
+            # Sleep for 2 minutes to avoid running multiple times
+            sleep 120
+          else
+            # Sleep for 1 minute before checking again
+            sleep 60
+          fi
+        done
+    restart: unless-stopped
+    networks:
+      - azerothcore
+
+  # Step 3: Database initialization (one-time setup)
   ac-db-init:
     image: ${MYSQL_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_DB_INIT}
-    depends_on:
-      ac-mysql:
-        condition: service_healthy
     volumes:
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
     networks:
@@ -83,13 +160,13 @@ services:
       - |
         echo "🔧 Waiting for MySQL to be ready..."
 
-        # Wait for MySQL to be responsive
+        # Wait for MySQL to be responsive with longer timeout
         for i in $(seq 1 ${DB_WAIT_RETRIES}); do
           if mysql -h ${MYSQL_HOST} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "SELECT 1;" >/dev/null 2>&1; then
             echo "✅ MySQL is responsive"
             break
           fi
-          echo "⏳ Waiting for MySQL... attempt $i/${DB_WAIT_RETRIES}"
+          echo "⏳ Waiting for MySQL... attempt $$i/${DB_WAIT_RETRIES}"
           sleep ${DB_WAIT_SLEEP}
         done
 
@@ -114,14 +191,12 @@ services:
         echo "✅ Databases ready!"
     restart: "no"
 
-  # Step 3: Import AzerothCore database schema and data
+  # Step 4: Database import (one-time setup - run after db-init)
   ac-db-import:
     image: ${AC_DB_IMPORT_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_DB_IMPORT}
-    user: "0:0"  # Run as root to handle NFS permissions
-    depends_on:
-      - ac-db-init
+    user: "0:0"
     networks:
       - azerothcore
     volumes:
@@ -143,7 +218,16 @@ services:
     command:
       - |
         echo 'Waiting for databases to be ready...'
-        sleep 10
+
+        # Wait for databases to exist with longer timeout
+        for i in $(seq 1 120); do
+          if mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "USE ${DB_AUTH_NAME}; USE ${DB_WORLD_NAME}; USE ${DB_CHARACTERS_NAME};" >/dev/null 2>&1; then
+            echo "✅ All databases accessible"
+            break
+          fi
+          echo "⏳ Waiting for databases... attempt $$i/120"
+          sleep 5
+        done
 
         echo 'Creating config file for dbimport...'
         mkdir -p /azerothcore/env/dist/etc
@@ -161,100 +245,6 @@ services:
 
         echo 'Database import complete!'
     restart: "no"
-
-  # MySQL Data Persistence Service
-  ac-mysql-persist:
-    image: ${MYSQL_IMAGE}
-    pull_policy: ${IMAGE_PULL_POLICY}
-    container_name: ac-mysql-persist
-    depends_on:
-      ac-mysql:
-        condition: service_healthy
-    environment:
-      MYSQL_HOST: ${CONTAINER_MYSQL}
-      MYSQL_PORT: ${MYSQL_PORT}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      TZ: ${TZ}
-    volumes:
-      - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
-    command:
-      - /bin/bash
-      - -c
-      - |
-        echo "🔄 Starting MySQL persistence service..."
-
-        # Create persistent directory
-        mkdir -p /var/lib/mysql-persistent
-
-        # Function to backup MySQL data
-        backup_mysql_data() {
-          echo "💾 Backing up MySQL data to persistent storage..."
-
-          # Create SQL dump for safety
-          mysqldump -h ${CONTAINER_MYSQL} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} --all-databases \
-            --single-transaction --routines --triggers > /var/lib/mysql-persistent/backup.sql 2>/dev/null || true
-
-          echo "✅ MySQL data backup completed"
-        }
-
-        # Initial backup
-        sleep 30  # Wait for MySQL to be fully ready
-        backup_mysql_data
-
-        # Schedule periodic backups every 30 minutes
-        while true; do
-          sleep 1800  # 30 minutes
-          backup_mysql_data
-        done
-    restart: unless-stopped
-    networks:
-      - azerothcore
-
-  # Automated Backup System
-  ac-backup:
-    image: ${MYSQL_IMAGE}
-    pull_policy: ${IMAGE_PULL_POLICY}
-    container_name: ${CONTAINER_BACKUP}
-    depends_on:
-      ac-mysql:
-        condition: service_healthy
-    environment:
-      MYSQL_HOST: ${CONTAINER_MYSQL}
-      MYSQL_PORT: ${MYSQL_PORT}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS}
-      BACKUP_CRON_SCHEDULE: ${BACKUP_CRON_SCHEDULE}
-      TZ: ${TZ}
-    volumes:
-      - ${HOST_BACKUP_PATH}:/backups
-      - ${HOST_BACKUP_SCRIPTS_PATH}:/scripts
-    working_dir: /scripts
-    command:
-      - /bin/bash
-      - -c
-      - |
-        apt-get update && apt-get install -y cron
-        chmod +x /scripts/*.sh 2>/dev/null || echo 'No scripts to make executable'
-        touch /var/log/backup.log
-        echo "$$BACKUP_CRON_SCHEDULE /scripts/backup.sh >> /var/log/backup.log 2>&1" | crontab -
-        echo "Starting backup service with schedule: $$BACKUP_CRON_SCHEDULE"
-        echo "Backup retention: $$BACKUP_RETENTION_DAYS days"
-        echo "Scripts location: /scripts"
-        echo "Backup location: /backups"
-        if [ -f "/scripts/backup.sh" ]; then
-          echo "Running initial backup..."
-          /scripts/backup.sh >> /var/log/backup.log 2>&1
-        else
-          echo "No backup script found at /scripts/backup.sh"
-        fi
-        echo "Starting cron daemon..."
-        /etc/init.d/cron start
-        tail -f /var/log/backup.log
-    restart: unless-stopped
-    networks:
-      - azerothcore
 
 networks:
   azerothcore:

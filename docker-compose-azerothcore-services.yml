@@ -1,7 +1,7 @@
 # ==============================================
-# AZEROTHCORE CORE SERVICES LAYER
+# AZEROTHCORE SERVICES LAYER (COMBINED)
 # ==============================================
-# Authentication server, world server, and client data
+# Authentication server, world server, client data, modules, and optional services
 # Deploy this layer AFTER the database layer is running
 
 services:
@@ -10,7 +10,7 @@ services:
     image: ${ALPINE_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_CLIENT_DATA}
-    user: "0:0"  # Run as root to handle NFS permissions
+    user: "0:0"  # Run as root to install packages
     volumes:
       - ${STORAGE_PATH}/data:/azerothcore/data
       - ${STORAGE_PATH}/cache:/cache
@@ -21,29 +21,11 @@ services:
       - |
         apk add --no-cache curl unzip wget ca-certificates p7zip jq
 
+        # Fix ownership of mount points to match NFS
+        chown -R 1001:1001 /azerothcore/data /cache
+
         # Create cache directory if it doesn't exist
         mkdir -p /cache
-
-        # Check if game data already exists
-        if [ -d '/azerothcore/data/maps' ] && [ -d '/azerothcore/data/vmaps' ] && [ -d '/azerothcore/data/mmaps' ] && [ -d '/azerothcore/data/dbc' ]; then
-          echo '✅ Game data already exists, verifying integrity...'
-
-          # Quick verification of required directories
-          MISSING_DIRS=""
-          for dir in maps vmaps mmaps dbc; do
-            if [ ! -d "/azerothcore/data/$$dir" ] || [ -z "$$(ls -A /azerothcore/data/$$dir 2>/dev/null)" ]; then
-              MISSING_DIRS="$$MISSING_DIRS $$dir"
-            fi
-          done
-
-          if [ -z "$$MISSING_DIRS" ]; then
-            echo '✅ All game data directories verified, startup complete!'
-            exit 0
-          else
-            echo "⚠️ Missing or empty directories:$$MISSING_DIRS"
-            echo "🔄 Re-extracting game data..."
-          fi
-        fi
 
         echo '🚀 Starting AzerothCore game data setup...'
 
@@ -100,8 +82,9 @@ services:
           echo "📥 Downloading client data (~15GB, may take 10-30 minutes)..."
           echo "📍 Source: $$LATEST_URL"
 
-          # Download with progress indication
-          wget --progress=bar:force -O "$$CACHE_FILE.tmp" "$$LATEST_URL" || {
+          # Download with clean progress indication
+          echo "📥 Starting download..."
+          wget --progress=dot:giga -O "$$CACHE_FILE.tmp" "$$LATEST_URL" 2>&1 | sed 's/^/📊 /' || {
             echo '❌ wget failed, trying curl...'
             curl -L --progress-bar -o "$$CACHE_FILE.tmp" "$$LATEST_URL" || {
               echo '❌ All download methods failed'
@@ -130,11 +113,57 @@ services:
         # Clear existing data if extraction failed previously
         rm -rf /azerothcore/data/maps /azerothcore/data/vmaps /azerothcore/data/mmaps /azerothcore/data/dbc
 
-        unzip -q data.zip -d /azerothcore/data/ || {
+        # Extract with detailed progress tracking
+        echo '🔄 Starting extraction with progress monitoring...'
+
+        # Start extraction in background with overwrite
+        unzip -o -q data.zip -d /azerothcore/data/ &
+
+        UNZIP_PID=$!
+        LAST_CHECK_TIME=0
+
+        # Monitor progress with directory size checks
+        while kill -0 "$$UNZIP_PID" 2>/dev/null; do
+          CURRENT_TIME=$$(date +%s)
+          if [ $$((CURRENT_TIME - LAST_CHECK_TIME)) -ge 30 ]; then
+            LAST_CHECK_TIME=$$CURRENT_TIME
+
+            # Check what's been extracted so far
+            PROGRESS_MSG="📊 Progress at $$(date '+%H:%M:%S'):"
+
+            if [ -d "/azerothcore/data/dbc" ] && [ -n "$$(ls -A /azerothcore/data/dbc 2>/dev/null)" ]; then
+              DBC_SIZE=$$(du -sh /azerothcore/data/dbc 2>/dev/null | cut -f1)
+              PROGRESS_MSG="$$PROGRESS_MSG DBC($$DBC_SIZE)"
+            fi
+
+            if [ -d "/azerothcore/data/maps" ] && [ -n "$$(ls -A /azerothcore/data/maps 2>/dev/null)" ]; then
+              MAPS_SIZE=$$(du -sh /azerothcore/data/maps 2>/dev/null | cut -f1)
+              PROGRESS_MSG="$$PROGRESS_MSG Maps($$MAPS_SIZE)"
+            fi
+
+            if [ -d "/azerothcore/data/vmaps" ] && [ -n "$$(ls -A /azerothcore/data/vmaps 2>/dev/null)" ]; then
+              VMAPS_SIZE=$$(du -sh /azerothcore/data/vmaps 2>/dev/null | cut -f1)
+              PROGRESS_MSG="$$PROGRESS_MSG VMaps($$VMAPS_SIZE)"
+            fi
+
+            if [ -d "/azerothcore/data/mmaps" ] && [ -n "$$(ls -A /azerothcore/data/mmaps 2>/dev/null)" ]; then
+              MMAPS_SIZE=$$(du -sh /azerothcore/data/mmaps 2>/dev/null | cut -f1)
+              PROGRESS_MSG="$$PROGRESS_MSG MMaps($$MMAPS_SIZE)"
+            fi
+
+            echo "$$PROGRESS_MSG"
+          fi
+          sleep 5
+        done
+
+        wait "$$UNZIP_PID"
+        UNZIP_EXIT_CODE=$?
+
+        if [ $$UNZIP_EXIT_CODE -ne 0 ]; then
           echo '❌ Extraction failed'
           rm -f data.zip
           exit 1
-        }
+        fi
 
         # Clean up temporary extraction file (keep cached version)
         rm -f data.zip
@@ -171,8 +200,6 @@ services:
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_AUTHSERVER}
     user: "0:0"  # Run as root to handle NFS permissions
-    external_links:
-      - ${CONTAINER_MYSQL}:${CONTAINER_MYSQL}
     environment:
       AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
       AC_UPDATES_ENABLE_DATABASES: "0"
@@ -208,8 +235,6 @@ services:
     depends_on:
       - ac-authserver
       - ac-client-data
-    external_links:
-      - ${CONTAINER_MYSQL}:${CONTAINER_MYSQL}
     environment:
       AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
       AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}"
@@ -242,6 +267,80 @@ services:
       timeout: ${WORLD_HEALTHCHECK_TIMEOUT}
       retries: ${WORLD_HEALTHCHECK_RETRIES}
       start_period: ${WORLD_HEALTHCHECK_START_PERIOD}
+
+  # Optional: Eluna Lua Engine
+  ac-eluna:
+    image: ${AC_ELUNA_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_ELUNA}
+    user: "0:0"  # Run as root to handle NFS permissions
+    restart: unless-stopped
+    networks:
+      - azerothcore
+
+  # Module Management Service
+  ac-modules:
+    image: ${ALPINE_GIT_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_MODULES}
+    user: "0:0"  # Run as root to handle NFS permissions
+    volumes:
+      - ${STORAGE_PATH}/modules:/modules
+    environment:
+      - MODULE_PLAYERBOTS=${MODULE_PLAYERBOTS}
+      - MODULE_AOE_LOOT=${MODULE_AOE_LOOT}
+      - MODULE_LEARN_SPELLS=${MODULE_LEARN_SPELLS}
+      - MODULE_FIREWORKS=${MODULE_FIREWORKS}
+      - MODULE_INDIVIDUAL_PROGRESSION=${MODULE_INDIVIDUAL_PROGRESSION}
+      - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo 'Initializing module management...'
+        cd /modules
+
+        if [ "$DEPLOYMENT_MODE" = "portainer" ]; then
+          echo 'Simple module setup for Portainer deployment...'
+          mkdir -p mod-playerbots
+          echo '✅ Playerbot module directory created'
+        else
+          echo 'Advanced module setup for local development...'
+          # Install Playerbots if enabled
+          if [ "$MODULE_PLAYERBOTS" = "1" ] && [ ! -d "mod-playerbots" ]; then
+            echo 'Installing mod-playerbots...'
+            git clone https://github.com/liyunfan1223/mod-playerbots.git mod-playerbots
+          fi
+
+          # Install AOE Loot if enabled
+          if [ "$MODULE_AOE_LOOT" = "1" ] && [ ! -d "mod-aoe-loot" ]; then
+            echo 'Installing mod-aoe-loot...'
+            git clone https://github.com/azerothcore/mod-aoe-loot.git mod-aoe-loot
+          fi
+
+          # Install Learn Spells if enabled
+          if [ "$MODULE_LEARN_SPELLS" = "1" ] && [ ! -d "mod-learn-spells" ]; then
+            echo 'Installing mod-learn-spells...'
+            git clone https://github.com/azerothcore/mod-learn-spells.git mod-learn-spells
+          fi
+
+          # Install Fireworks on Level if enabled
+          if [ "$MODULE_FIREWORKS" = "1" ] && [ ! -d "mod-fireworks-on-level" ]; then
+            echo 'Installing mod-fireworks-on-level...'
+            git clone https://github.com/azerothcore/mod-fireworks-on-level.git mod-fireworks-on-level
+          fi
+
+          # Install Individual Progression if enabled
+          if [ "$MODULE_INDIVIDUAL_PROGRESSION" = "1" ] && [ ! -d "mod-individual-progression" ]; then
+            echo 'Installing mod-individual-progression...'
+            git clone https://github.com/azerothcore/mod-individual-progression.git mod-individual-progression
+          fi
+        fi
+
+        echo 'Module management complete. Keeping container alive...'
+        tail -f /dev/null
+    restart: "no"
+    networks:
+      - azerothcore
 
 networks:
   azerothcore:

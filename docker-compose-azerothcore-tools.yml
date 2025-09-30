@@ -10,8 +10,8 @@ services:
     image: phpmyadmin/phpmyadmin:latest
     container_name: ac-phpmyadmin
     environment:
-      PMA_HOST: ${PMA_HOST:-host.docker.internal}
-      PMA_PORT: ${PMA_PORT:-64306}
+      PMA_HOST: ${PMA_HOST:-ac-mysql}
+      PMA_PORT: ${PMA_PORT:-3306}
       PMA_USER: ${PMA_USER:-root}
       PMA_PASSWORD: ${DOCKER_DB_ROOT_PASSWORD:-password}
       MYSQL_ROOT_PASSWORD: ${DOCKER_DB_ROOT_PASSWORD:-password}
@@ -24,7 +24,7 @@ services:
       - "${PMA_EXTERNAL_PORT:-8081}:80"
     restart: unless-stopped
     networks:
-      - azerothcore-tools
+      - azerothcore
 
   # Keira3 Database Editor (Production Ready)
   ac-keira3:
@@ -35,8 +35,8 @@ services:
       - NODE_ENV=production
       - KEIRA_PORT=8080
       - KEIRA_HOST=0.0.0.0
-      - KEIRA_DATABASE_HOST=${KEIRA_DATABASE_HOST:-host.docker.internal}
-      - KEIRA_DATABASE_PORT=${KEIRA_DATABASE_PORT:-64306}
+      - KEIRA_DATABASE_HOST=${KEIRA_DATABASE_HOST:-ac-mysql}
+      - KEIRA_DATABASE_PORT=${KEIRA_DATABASE_PORT:-3306}
       - KEIRA_DATABASE_USER=root
       - KEIRA_DATABASE_PASSWORD=${DOCKER_DB_ROOT_PASSWORD:-password}
       - KEIRA_DATABASE_NAME=acore_world
@@ -64,7 +64,7 @@ services:
     security_opt:
       - no-new-privileges:true
     networks:
-      - azerothcore-tools
+      - azerothcore
 
   # InfluxDB for Monitoring
   ac-influxdb:
@@ -85,18 +85,19 @@ services:
       - ${STORAGE_PATH_TOOLS:-./volumes-tools}/azerothcore/influxdb:/var/lib/influxdb2
     restart: unless-stopped
     networks:
-      - azerothcore-tools
+      - azerothcore
 
   # Grafana Monitoring Dashboard
   ac-grafana:
     image: grafana/grafana:latest
     container_name: ac-grafana
+    user: "0:0"  # Run as root to handle NFS permissions
     depends_on:
       - ac-influxdb
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-acore123}
-      GF_INSTALL_PLUGINS: ${GF_INSTALL_PLUGINS:-grafana-piechart-panel}
+      GF_INSTALL_PLUGINS: ${GF_PLUGINS_PREINSTALL:-grafana-piechart-panel}
       GF_SERVER_ROOT_URL: ${GF_SERVER_ROOT_URL:-http://localhost:3001}
       GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION: ${GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION:-false}
       GF_SECURITY_SECRET_KEY: ${GF_SECURITY_SECRET_KEY:-}
@@ -110,16 +111,24 @@ services:
       - "${GF_EXTERNAL_PORT:-3001}:3000"
     volumes:
       - ${STORAGE_PATH_TOOLS:-./volumes-tools}/azerothcore/grafana:/var/lib/grafana
-      - ${STORAGE_PATH_TOOLS:-./volumes-tools}/azerothcore/grafana-config:/etc/grafana
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "🔧 Setting up Grafana permissions..."
+
+        # Create directories with proper ownership
+        mkdir -p /var/lib/grafana
+        chown -R 472:472 /var/lib/grafana
+        chmod -R 755 /var/lib/grafana
+
+        echo "🚀 Starting Grafana server..."
+        exec su -s /bin/bash grafana -c "/run.sh"
     restart: unless-stopped
     networks:
-      - azerothcore-tools
+      - azerothcore
 
 networks:
-  azerothcore-tools:
-    driver: bridge
-    name: ${TOOLS_NETWORK_NAME:-azerothcore-tools}
-    ipam:
-      config:
-        - subnet: ${TOOLS_NETWORK_SUBNET:-172.21.0.0/16}
-          gateway: ${TOOLS_NETWORK_GATEWAY:-172.21.0.1}
+
+  azerothcore:
+    external: true
+    name: azerothcore
