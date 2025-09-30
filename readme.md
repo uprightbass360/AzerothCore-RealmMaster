@@ -96,17 +96,17 @@ This project provides a production-ready AzerothCore deployment using Docker/Pod
 ## Project Structure
 
 ```
-acore-compose/
-├── docker-compose.yml      # Main orchestration file
-├── .env                    # Environment configuration
-├── data/                   # Game data files (maps, vmaps, etc.)
-│   ├── dbc/               # Client database files
-│   ├── maps/              # Map files
-│   ├── vmaps/             # Visual map files
-│   └── mmaps/             # Movement map files (optional)
-├── backups/               # Automated backup storage
-├── backup-scripts/        # Database backup automation
-└── assets/                # Web interface assets
+acore-compose2/
+├── docker-compose-azerothcore-database.yml     # Database layer
+├── docker-compose-azerothcore-services.yml     # Game services layer
+├── docker-compose-azerothcore-tools.yml        # Management tools layer
+├── docker-compose-azerothcore-database.env     # Database configuration
+├── docker-compose-azerothcore-services.env     # Services configuration
+├── docker-compose-azerothcore-tools.env        # Tools configuration
+├── docker-compose-azerothcore-optional.env     # Optional services config
+├── backup-scripts/                             # Database backup automation
+├── local-data/                                 # Local storage (when not using NFS)
+└── readme.md                                   # This documentation
 ```
 
 ## Container Architecture
@@ -150,44 +150,43 @@ graph TD
 
 ```bash
 # Clone the repository
-git clone https://github.com/uprightbass360/acore-compose.git
-cd acore-compose
+git clone https://github.com/uprightbass360/acore-compose2.git
+cd acore-compose2
 
-# Environment file is already configured with defaults
-# Modify .env file for your specific deployment:
-# - EXTERNAL_IP: Your server's public IP
-# - MYSQL_ROOT_PASSWORD: Strong password (default: azerothcore123)
+# Environment files are pre-configured with defaults
+# Modify the relevant .env files for your deployment:
+# - docker-compose-azerothcore-database.env: Database settings
+# - docker-compose-azerothcore-services.env: Game server settings
+# - docker-compose-azerothcore-tools.env: Management tools settings
 ```
 
 ### Step 2: Prepare Game Data Files
 
-The server requires extracted game data from the WoW 3.3.5a client:
+The server automatically downloads and extracts game data on first run. The `ac-client-data` service will:
+- Download the latest client data from wowgaming/client-data releases (~15GB)
+- Extract maps, vmaps, mmaps, and DBC files
+- Cache the download for future deployments
+- Verify data integrity
 
-```bash
-# Create data directory structure
-mkdir -p data/{dbc,maps,vmaps,mmaps}
-
-# Option A: Copy from existing extraction
-cp -r /path/to/extracted/dbc/* data/dbc/
-cp -r /path/to/extracted/maps/* data/maps/
-cp -r /path/to/extracted/vmaps/* data/vmaps/
-cp -r /path/to/extracted/mmaps/* data/mmaps/  # Optional
-
-# Option B: Extract from WoW client
-# Use AzerothCore extraction tools on your WoW 3.3.5a client
-```
+No manual data extraction is required, but ensure you have sufficient disk space and bandwidth.
 
 ### Step 3: Deploy the Stack
 
+Deploy services in the correct order:
+
 ```bash
-# Deploy all services
-docker-compose up -d
+# Step 1: Deploy database layer
+docker compose --env-file docker-compose-azerothcore-database.env -f docker-compose-azerothcore-database.yml up -d
 
-# Monitor deployment
-docker-compose logs -f
+# Step 2: Wait for database initialization, then deploy services
+docker compose --env-file docker-compose-azerothcore-services.env -f docker-compose-azerothcore-services.yml up -d
 
-# Verify all containers are running
-docker ps | grep ac-
+# Step 3: Deploy management tools (optional)
+docker compose --env-file docker-compose-azerothcore-tools.env -f docker-compose-azerothcore-tools.yml up -d
+
+# Monitor deployment progress
+docker logs ac-client-data -f  # Watch data download/extraction
+docker logs ac-db-init -f      # Watch database initialization
 ```
 
 ### Step 4: Initial Database Import
@@ -229,38 +228,27 @@ set realmlist YOUR_SERVER_IP
 
 ### Environment Variables
 
-All configuration is managed through the `.env` file. Key variables:
+Configuration is managed through separate `.env` files for each layer:
 
-#### Database Settings
-- `MYSQL_ROOT_PASSWORD`: Database root password
-- `MYSQL_HOST`: Database hostname (default: ac-mysql)
-- `DB_AUTH_NAME`: Authentication database name
-- `DB_WORLD_NAME`: World database name
-- `DB_CHARACTERS_NAME`: Characters database name
+#### Database Layer (`docker-compose-azerothcore-database.env`)
+- `MYSQL_ROOT_PASSWORD`: Database root password (default: azerothcore123)
+- `STORAGE_PATH`: Data storage path (default: /nfs/containers/azerothcore)
+- `NETWORK_SUBNET`: Docker network subnet
+- `BACKUP_RETENTION_DAYS`: Backup retention period
 
-#### Network Settings
-- `EXTERNAL_IP`: Public IP for realm list
-- `EXTERNAL_BASE_URL`: Custom domain URL (e.g., https://acore.example.com)
+#### Services Layer (`docker-compose-azerothcore-services.env`)
 - `DOCKER_AUTH_EXTERNAL_PORT`: Auth server external port (3784)
 - `DOCKER_WORLD_EXTERNAL_PORT`: World server external port (8215)
 - `DOCKER_SOAP_EXTERNAL_PORT`: SOAP API port (7778)
+- `PLAYERBOT_ENABLED`: Enable/disable playerbots (1/0)
+- `PLAYERBOT_MAX_BOTS`: Maximum number of bots (default: 40)
 
-#### Web Interface Settings (Collision-Free Ports)
+#### Tools Layer (`docker-compose-azerothcore-tools.env`)
 - `PMA_EXTERNAL_PORT`: PHPMyAdmin port (8081)
 - `KEIRA3_EXTERNAL_PORT`: Database editor port (4201)
 - `GF_EXTERNAL_PORT`: Grafana monitoring port (3001)
 - `INFLUXDB_EXTERNAL_PORT`: InfluxDB metrics port (8087)
-
-#### Performance Settings
-- `MAX_PLAYERS`: Maximum concurrent players
-- `PROCESS_PRIORITY`: Process priority level
-- `MAX_CONNECTIONS`: MySQL max connections
-
-#### Game Rates
-- `RATE_XP_KILL`: Experience from kills multiplier
-- `RATE_XP_QUEST`: Experience from quests multiplier
-- `RATE_DROP_MONEY`: Money drop rate multiplier
-- `RATE_DROP_ITEMS`: Item drop rate multiplier
+- `STORAGE_PATH_TOOLS`: Tools storage path (default: ./volumes-tools)
 
 ### Realm Configuration
 
@@ -389,11 +377,19 @@ docker exec ac-mysql mysqlcheck \
 
 #### Update Containers:
 ```bash
-# Pull latest images
-docker-compose pull
+# Pull latest images for database layer
+docker-compose -f docker-compose-azerothcore-database.yml pull
+
+# Pull latest images for services layer
+docker-compose -f docker-compose-azerothcore-services.yml pull
+
+# Pull latest images for tools layer
+docker-compose -f docker-compose-azerothcore-tools.yml pull
 
 # Recreate containers with new images
-docker-compose up -d --force-recreate
+docker-compose -f docker-compose-azerothcore-database.yml up -d --force-recreate
+docker-compose -f docker-compose-azerothcore-services.yml up -d --force-recreate
+docker-compose -f docker-compose-azerothcore-tools.yml up -d --force-recreate
 
 # Remove old unused images
 docker image prune -a
@@ -401,14 +397,14 @@ docker image prune -a
 
 #### Update AzerothCore:
 ```bash
-# Stop services
-docker-compose stop ac-worldserver ac-authserver
+# Stop services layer
+docker-compose -f docker-compose-azerothcore-services.yml stop
 
 # Update database
-docker-compose up ac-db-import
+docker-compose -f docker-compose-azerothcore-database.yml up ac-db-import
 
-# Restart services
-docker-compose start ac-worldserver ac-authserver
+# Restart services layer
+docker-compose -f docker-compose-azerothcore-services.yml up -d
 ```
 
 ### Log Management
@@ -442,7 +438,7 @@ EOF
 
 ### Automated Backups
 
-The `ac-backup` container provides automated backups. Configure via environment:
+The database layer includes an automated backup service. Configure via environment variables in `docker-compose-azerothcore-database.env`:
 
 - `BACKUP_CRON_SCHEDULE`: Cron expression (default: "0 3 * * *" - 3 AM daily)
 - `BACKUP_RETENTION_DAYS`: Days to keep backups (default: 7)
@@ -496,10 +492,7 @@ docker logs ac-mysql --tail 50
 #### 4. Permission Denied Errors
 **Error**: Various permission denied messages
 
-**Solution**: Run containers as root (configured in .env):
-```bash
-DOCKER_USER=root
-```
+**Solution**: Containers are configured to run as root to handle NFS permissions. Check volume mount permissions and ensure storage paths are accessible.
 
 ### Debug Commands
 
@@ -527,25 +520,29 @@ docker exec ac-worldserver ls -la /azerothcore/data/
 
 #### Complete Reset:
 ```bash
-# Stop all containers
-docker-compose down
+# Stop all layers
+docker-compose -f docker-compose-azerothcore-tools.yml down
+docker-compose -f docker-compose-azerothcore-services.yml down
+docker-compose -f docker-compose-azerothcore-database.yml down
 
 # Remove all volumes (WARNING: Deletes all data)
-docker-compose down -v
+docker volume prune -f
 
 # Remove all containers and images
 docker system prune -a
 
-# Start fresh
-docker-compose up -d
+# Start fresh (in order)
+docker-compose -f docker-compose-azerothcore-database.yml up -d
+docker-compose -f docker-compose-azerothcore-services.yml up -d
+docker-compose -f docker-compose-azerothcore-tools.yml up -d
 ```
 
 #### Reset Specific Service:
 ```bash
 # Reset worldserver only
-docker-compose stop ac-worldserver
-docker-compose rm -f ac-worldserver
-docker-compose up -d ac-worldserver
+docker-compose -f docker-compose-azerothcore-services.yml stop ac-worldserver
+docker-compose -f docker-compose-azerothcore-services.yml rm -f ac-worldserver
+docker-compose -f docker-compose-azerothcore-services.yml up -d ac-worldserver
 ```
 
 ## Security Considerations
@@ -563,9 +560,9 @@ docker-compose up -d ac-worldserver
    - Disable SOAP if not needed
 
 3. **File Permissions**
-   - Restrict access to .env file: `chmod 600 .env`
+   - Restrict access to .env files: `chmod 600 *.env`
    - Secure backup directories
-   - Use non-root user when possible
+   - Containers run as root to handle NFS permissions
 
 4. **Regular Updates**
    - Keep containers updated
@@ -627,7 +624,7 @@ docker stats --no-stream
 ### Database Credentials
 - **Host**: `localhost:64306`
 - **User**: `root`
-- **Password**: `azerothcore123` (configurable in .env)
+- **Password**: `azerothcore123` (configurable in environment files)
 - **Databases**: `acore_auth`, `acore_world`, `acore_characters`
 
 ### Related Projects
@@ -637,22 +634,40 @@ docker stats --no-stream
 ### Useful Commands Reference
 ```bash
 # Quick status check
-docker-compose ps
+docker ps | grep ac-
 
-# Restart all services
-docker-compose restart
+# Restart database layer
+docker-compose -f docker-compose-azerothcore-database.yml restart
 
-# View all logs
-docker-compose logs
+# Restart services layer
+docker-compose -f docker-compose-azerothcore-services.yml restart
 
-# Stop everything
-docker-compose stop
+# Restart tools layer
+docker-compose -f docker-compose-azerothcore-tools.yml restart
 
-# Start everything
-docker-compose start
+# View database logs
+docker-compose -f docker-compose-azerothcore-database.yml logs
 
-# Update and restart
-docker-compose pull && docker-compose up -d
+# View services logs
+docker-compose -f docker-compose-azerothcore-services.yml logs
+
+# View tools logs
+docker-compose -f docker-compose-azerothcore-tools.yml logs
+
+# Stop everything (in reverse order)
+docker-compose -f docker-compose-azerothcore-tools.yml down
+docker-compose -f docker-compose-azerothcore-services.yml down
+docker-compose -f docker-compose-azerothcore-database.yml down
+
+# Start everything (in order)
+docker-compose -f docker-compose-azerothcore-database.yml up -d
+docker-compose -f docker-compose-azerothcore-services.yml up -d
+docker-compose -f docker-compose-azerothcore-tools.yml up -d
+
+# Update and restart all layers
+docker-compose -f docker-compose-azerothcore-database.yml pull && docker-compose -f docker-compose-azerothcore-database.yml up -d
+docker-compose -f docker-compose-azerothcore-services.yml pull && docker-compose -f docker-compose-azerothcore-services.yml up -d
+docker-compose -f docker-compose-azerothcore-tools.yml pull && docker-compose -f docker-compose-azerothcore-tools.yml up -d
 
 # Backup database
 docker exec ac-mysql mysqldump -uroot -p${MYSQL_ROOT_PASSWORD} --all-databases > backup.sql
