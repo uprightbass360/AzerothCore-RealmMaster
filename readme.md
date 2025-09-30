@@ -96,7 +96,7 @@ This project provides a production-ready AzerothCore deployment using Docker/Pod
 ## Project Structure
 
 ```
-acore-compose2/
+acore-compose/
 ├── docker-compose-azerothcore-database.yml     # Database layer
 ├── docker-compose-azerothcore-services.yml     # Game services layer
 ├── docker-compose-azerothcore-tools.yml        # Management tools layer
@@ -150,8 +150,8 @@ graph TD
 
 ```bash
 # Clone the repository
-git clone https://github.com/uprightbass360/acore-compose2.git
-cd acore-compose2
+git clone https://github.com/uprightbass360/acore-compose.git
+cd acore-compose
 
 # Environment files are pre-configured with defaults
 # Modify the relevant .env files for your deployment:
@@ -160,48 +160,42 @@ cd acore-compose2
 # - docker-compose-azerothcore-tools.env: Management tools settings
 ```
 
-### Step 2: Prepare Game Data Files
-
-The server automatically downloads and extracts game data on first run. The `ac-client-data` service will:
-- Download the latest client data from wowgaming/client-data releases (~15GB)
-- Extract maps, vmaps, mmaps, and DBC files
-- Cache the download for future deployments
-- Verify data integrity
-
-No manual data extraction is required, but ensure you have sufficient disk space and bandwidth.
-
-### Step 3: Deploy the Stack
+### Step 2: Deploy the Stack
 
 Deploy services in the correct order:
 
 ```bash
 # Step 1: Deploy database layer
 docker compose --env-file docker-compose-azerothcore-database.env -f docker-compose-azerothcore-database.yml up -d
-
-# Step 2: Wait for database initialization, then deploy services
-docker compose --env-file docker-compose-azerothcore-services.env -f docker-compose-azerothcore-services.yml up -d
-
-# Step 3: Deploy management tools (optional)
-docker compose --env-file docker-compose-azerothcore-tools.env -f docker-compose-azerothcore-tools.yml up -d
-
-# Monitor deployment progress
-docker logs ac-client-data -f  # Watch data download/extraction
+#The database import happens automatically via the `ac-db-import` container. Monitor progress:
 docker logs ac-db-init -f      # Watch database initialization
-```
-
-### Step 4: Initial Database Import
-
-The database import happens automatically via the `ac-db-import` container. Monitor progress:
-
-```bash
 # Check import status
 docker logs ac-db-import -f
-
 # Verify databases were created
 docker exec ac-mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD} -e "SHOW DATABASES;"
 ```
 
-### Step 5: Create Admin Account
+```bash
+# Step 2: Wait for database initialization, then deploy services
+docker compose --env-file docker-compose-azerothcore-services.env -f docker-compose-azerothcore-services.yml up -d
+docker logs ac-client-data -f  # Watch data download/extraction
+```
+
+The server automatically downloads and extracts game data on first run. The `ac-client-data` service will:
+- Download the latest client data from wowgaming/client-data releases (~15GB)
+- Extract maps, vmaps, mmaps, and DBC files
+- Cache the download for future deployments
+- Verify data integrity
+- This can take around 20 minutes to complete depending on your storage
+
+No manual data extraction is required, but ensure you have sufficient disk space and bandwidth.
+
+```bash
+# Step 3: Deploy management tools (optional)
+docker compose --env-file docker-compose-azerothcore-tools.env -f docker-compose-azerothcore-tools.yml up -d
+```
+
+### Step 3: Create Admin Account
 
 Once the worldserver is running:
 
@@ -217,7 +211,7 @@ server info
 # Detach from console without stopping: Ctrl+P, Ctrl+Q
 ```
 
-### Step 6: Configure Game Client
+### Step 4: Configure Game Client
 
 Edit your WoW 3.3.5a client's `realmlist.wtf`:
 ```
@@ -700,16 +694,5 @@ Contributions are welcome! Please:
 3. Commit your changes
 4. Push to the branch
 5. Create a Pull Request
-
-## Changelog
-
-### Version 1.0.0 (2025)
-- One-Shot yaml file which implements all inital settings
-- Initial release with full containerization
-- Playerbot support integrated
-- Automated backup system
-- Complete environment variable configuration
-
----
 
 **Note**: This is an unofficial community deployment. Always backup your data before updates or changes.
