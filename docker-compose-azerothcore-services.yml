@@ -209,7 +209,7 @@ services:
       AC_LOGGER_SERVER_CONFIG: "1,Console"
       AC_APPENDER_CONSOLE_CONFIG: "1,2,0"
     ports:
-      - "${DOCKER_AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
+      - "${AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
     restart: unless-stopped
     networks:
       - azerothcore
@@ -249,8 +249,8 @@ services:
       # Logger configuration - Use config file defaults with proper log level
       AC_LOG_LEVEL: "2"
     ports:
-      - "${DOCKER_WORLD_EXTERNAL_PORT}:${WORLD_PORT}"
-      - "${DOCKER_SOAP_EXTERNAL_PORT}:${SOAP_PORT}"
+      - "${WORLD_EXTERNAL_PORT}:${WORLD_PORT}"
+      - "${SOAP_EXTERNAL_PORT}:${SOAP_PORT}"
     volumes:
       - ${STORAGE_PATH}/data:/azerothcore/data
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc

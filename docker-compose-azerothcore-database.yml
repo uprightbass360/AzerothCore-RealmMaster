@@ -16,7 +16,7 @@ services:
       MYSQL_ALLOW_EMPTY_PASSWORD: no
       MYSQL_DATADIR: /var/lib/mysql-runtime
     ports:
-      - "${DOCKER_DB_EXTERNAL_PORT}:${MYSQL_PORT}"
+      - "${MYSQL_EXTERNAL_PORT}:${MYSQL_PORT}"
     volumes:
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
       - type: tmpfs

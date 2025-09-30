@@ -113,18 +113,18 @@ acore-compose/
 
 ### Service Containers
 
-| Container | Image | Purpose | Exposed Ports | Status |
-|-----------|-------|---------|---------------|---------|
-| `ac-mysql` | mysql:8.0 | MySQL database server | 64306:3306 | ✅ Healthy |
-| `ac-authserver` | acore/ac-wotlk-authserver:14.0.0-dev | Authentication server | 3784:3724 | ⚠️ Running (unhealthy) |
-| `ac-worldserver` | acore/ac-wotlk-worldserver:14.0.0-dev | Game world server | 8215:8085, 7778:7878 | ⚠️ Running (unhealthy) |
-| `ac-eluna` | acore/eluna-ts:master | Lua scripting engine | - | 🔄 Restarting |
-| `ac-phpmyadmin` | phpmyadmin/phpmyadmin:latest | Database management web UI | 8081:80 | ✅ Running |
-| `ac-grafana` | grafana/grafana:latest | Monitoring dashboard | 3001:3000 | ✅ Running |
-| `ac-influxdb` | influxdb:2.7-alpine | Metrics database | 8087:8086 | ✅ Running |
-| `ac-keira3` | uprightbass360/keira3:latest | Production database editor with API | 4201:8080 | ✅ Running (healthy) |
-| `ac-backup` | mysql:8.0 | Automated backup service | - | ✅ Running |
-| `ac-modules` | alpine/git:latest | Module management | - | ✅ Running |
+| Container | Image | Purpose | Exposed Ports |
+|-----------|-------|---------|---------------|
+| `ac-mysql` | mysql:8.0 | MySQL database server | 64306:3306 | 
+| `ac-authserver` | acore/ac-wotlk-authserver:14.0.0-dev | Authentication server | 3784:3724 | 
+| `ac-worldserver` | acore/ac-wotlk-worldserver:14.0.0-dev | Game world server | 8215:8085, 7778:7878 | 
+| `ac-eluna` | acore/eluna-ts:master | Lua scripting engine | - | 
+| `ac-phpmyadmin` | phpmyadmin/phpmyadmin:latest | Database management web UI | 8081:80| 
+| `ac-grafana` | grafana/grafana:latest | Monitoring dashboard | 3001:3000 | 
+| `ac-influxdb` | influxdb:2.7-alpine | Metrics database | 8087:8086 | 
+| `ac-keira3` | uprightbass360/keira3:latest | Production database editor with API | 4201:8080 | 
+| `ac-backup` | mysql:8.0 | Automated backup service | - | 
+| `ac-modules` | alpine/git:latest | Module management | - | 
 
 ### Container Relationships
 
@@ -231,9 +231,9 @@ Configuration is managed through separate `.env` files for each layer:
 - `BACKUP_RETENTION_DAYS`: Backup retention period
 
 #### Services Layer (`docker-compose-azerothcore-services.env`)
-- `DOCKER_AUTH_EXTERNAL_PORT`: Auth server external port (3784)
-- `DOCKER_WORLD_EXTERNAL_PORT`: World server external port (8215)
-- `DOCKER_SOAP_EXTERNAL_PORT`: SOAP API port (7778)
+- `AUTH_EXTERNAL_PORT`: Auth server external port (3784)
+- `WORLD_EXTERNAL_PORT`: World server external port (8215)
+- `SOAP_EXTERNAL_PORT`: SOAP API port (7778)
 - `PLAYERBOT_ENABLED`: Enable/disable playerbots (1/0)
 - `PLAYERBOT_MAX_BOTS`: Maximum number of bots (default: 40)
 
