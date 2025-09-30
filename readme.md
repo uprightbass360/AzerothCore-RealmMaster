@@ -107,7 +107,9 @@ acore-compose/
 ├── docker-compose-azerothcore-tools.env        # Tools configuration
 ├── docker-compose-azerothcore-optional.env     # Optional services config
 ├── scripts/                                     # Deployment, cleanup, and backup automation
-├── local-data/                                 # Local storage (when not using NFS)
+├── storage/                                     # Unified storage root (configurable via STORAGE_ROOT)
+│   └── azerothcore/                            # All persistent data (database, configs, tools)
+├── backups/                                     # Database backups
 └── readme.md                                   # This documentation
 ```
 
@@ -160,6 +162,14 @@ cd acore-compose
 # - docker-compose-azerothcore-database.env: Database settings
 # - docker-compose-azerothcore-services.env: Game server settings
 # - docker-compose-azerothcore-tools.env: Management tools settings
+
+# IMPORTANT: Configure storage location for your environment
+# For local development (default):
+#   STORAGE_ROOT=./storage
+# For production with NFS:
+#   STORAGE_ROOT=/nfs/containers
+# For custom mount:
+#   STORAGE_ROOT=/mnt/azerothcore-data
 ```
 
 ### Step 2: Deploy the Stack
@@ -226,10 +236,22 @@ set realmlist YOUR_SERVER_IP
 
 Configuration is managed through separate `.env` files for each layer:
 
+#### Storage Configuration (All Layers)
+- `STORAGE_ROOT`: Root storage path (default: `./storage`)
+  - **Local development**: `./storage`
+  - **Production NFS**: `/nfs/containers`
+  - **Custom mount**: `/mnt/azerothcore-data`
+- All layers derive their storage paths from `STORAGE_ROOT`:
+  - Database: `${STORAGE_ROOT}/azerothcore`
+  - Services: `${STORAGE_ROOT}/azerothcore`
+  - Tools: `${STORAGE_ROOT}/azerothcore`
+  - Optional: `${STORAGE_ROOT}/azerothcore`
+
 #### Database Layer (`docker-compose-azerothcore-database.env`)
 - `MYSQL_ROOT_PASSWORD`: Database root password (default: azerothcore123)
 - `MYSQL_EXTERNAL_PORT`: External MySQL port (default: 64306)
-- `STORAGE_PATH`: Data storage path (default: /nfs/containers/azerothcore)
+- `STORAGE_ROOT`: Root storage path (default: ./storage)
+- `STORAGE_PATH`: Derived storage path (${STORAGE_ROOT}/azerothcore)
 - `NETWORK_SUBNET`: Docker network subnet
 - `BACKUP_RETENTION_DAYS`: Backup retention period
 
@@ -237,6 +259,8 @@ Configuration is managed through separate `.env` files for each layer:
 - `AUTH_EXTERNAL_PORT`: Auth server external port (3784)
 - `WORLD_EXTERNAL_PORT`: World server external port (8215)
 - `SOAP_EXTERNAL_PORT`: SOAP API port (7778)
+- `STORAGE_ROOT`: Root storage path (default: ./storage)
+- `STORAGE_PATH`: Derived storage path (${STORAGE_ROOT}/azerothcore)
 - `PLAYERBOT_ENABLED`: Enable/disable playerbots (1/0)
 - `PLAYERBOT_MAX_BOTS`: Maximum number of bots (default: 40)
 
@@ -245,7 +269,8 @@ Configuration is managed through separate `.env` files for each layer:
 - `KEIRA3_EXTERNAL_PORT`: Database editor port (4201)
 - `GF_EXTERNAL_PORT`: Grafana monitoring port (3001)
 - `INFLUXDB_EXTERNAL_PORT`: InfluxDB metrics port (8087)
-- `STORAGE_PATH_TOOLS`: Tools storage path (default: ./volumes-tools)
+- `STORAGE_ROOT`: Root storage path (default: ./storage)
+- `STORAGE_PATH_TOOLS`: Derived storage path (${STORAGE_ROOT}/azerothcore)
 
 ### Realm Configuration
 
@@ -265,48 +290,76 @@ SELECT * FROM realmlist;"
 
 ## Volume Management
 
-### Named Volumes
+### Storage Architecture
 
-| Volume Name | Container Mount | Purpose | Can Be Bind Mounted |
-|-------------|-----------------|---------|---------------------|
-| `ac_mysql_data` | `/var/lib/mysql` | MySQL database files | ✅ Yes - For backup/migration |
-| `ac_data` | `/azerothcore/data` | Game data (maps, vmaps, etc.) | ✅ Yes - Required for data files |
-| `ac_config` | `/azerothcore/env/dist/etc` | Configuration files | ✅ Yes - For custom configs |
-| `ac_logs` | `/azerothcore/logs` | Application logs | ✅ Yes - For log analysis |
-| `ac_backup` | `/backups` | Database backups | ✅ Yes - For external backup storage |
+The deployment uses a unified storage approach controlled by the `STORAGE_ROOT` variable:
 
-### Bind Mount Examples
+| Storage Component | Local Path | Production Path | Purpose |
+|-------------------|------------|-----------------|---------|
+| **Database Data** | `./storage/azerothcore/mysql-data` | `${STORAGE_ROOT}/azerothcore/mysql-data` | MySQL database files |
+| **Game Data** | `./storage/azerothcore/data` | `${STORAGE_ROOT}/azerothcore/data` | Maps, vmaps, mmaps, DBC files |
+| **Configuration** | `./storage/azerothcore/config` | `${STORAGE_ROOT}/azerothcore/config` | Server configuration files |
+| **Application Logs** | `./storage/azerothcore/logs` | `${STORAGE_ROOT}/azerothcore/logs` | Server and service logs |
+| **Tools Data** | `./storage/azerothcore/azerothcore/grafana` | `${STORAGE_ROOT}/azerothcore/azerothcore/grafana` | Grafana dashboards |
+| **Metrics Data** | `./storage/azerothcore/azerothcore/influxdb` | `${STORAGE_ROOT}/azerothcore/azerothcore/influxdb` | InfluxDB time series data |
+| **Backups** | `./backups` | `./backups` | Database backup files |
 
-To use bind mounts instead of named volumes, modify the compose file:
+### Storage Configuration Examples
 
-```yaml
-volumes:
-  # Replace named volume with bind mount
-  - /srv/azerothcore/mysql:/var/lib/mysql
-  - /srv/azerothcore/data:/azerothcore/data
-  - /srv/azerothcore/config:/azerothcore/env/dist/etc
-  - /srv/azerothcore/logs:/azerothcore/logs
-  - /srv/azerothcore/backups:/backups
+#### Local Development
+```bash
+# All data stored locally in ./storage/
+STORAGE_ROOT=./storage
 ```
+
+#### Production with NFS
+```bash
+# All data on NFS mount
+STORAGE_ROOT=/nfs/containers
+```
+
+#### Custom Mount Point
+```bash
+# All data on dedicated storage mount
+STORAGE_ROOT=/mnt/azerothcore-data
+```
+
+### Unified Storage Benefits
+
+✅ **Single Mount Point**: Only need to mount one directory in production
+✅ **Simplified Backup**: All persistent data in one location
+✅ **Easy Migration**: Copy entire `${STORAGE_ROOT}/azerothcore` directory
+✅ **Consistent Paths**: All layers use same storage root
+✅ **Environment Flexibility**: Change storage location via single variable
 
 ### Volume Backup Procedures
 
-#### Backup MySQL Data:
+#### Complete Storage Backup:
 ```bash
-# Create backup of MySQL volume
-docker run --rm \
-  -v ac_mysql_data:/data \
-  -v $(pwd):/backup \
-  alpine tar czf /backup/mysql-backup-$(date +%Y%m%d).tar.gz -C /data .
+# Backup entire storage directory (recommended)
+tar czf azerothcore-storage-backup-$(date +%Y%m%d).tar.gz storage/
+
+# Or backup to remote location
+rsync -av storage/ backup-server:/backups/azerothcore/$(date +%Y%m%d)/
 ```
 
-#### Backup Game Data:
+#### Component-Specific Backups:
 ```bash
-# Create backup of game data volume
-docker run --rm \
-  -v ac_data:/data \
-  -v $(pwd):/backup \
-  alpine tar czf /backup/gamedata-backup-$(date +%Y%m%d).tar.gz -C /data .
+# Backup just database files
+tar czf mysql-backup-$(date +%Y%m%d).tar.gz storage/azerothcore/mysql-data/
+
+# Backup just game data
+tar czf gamedata-backup-$(date +%Y%m%d).tar.gz storage/azerothcore/data/
+
+# Backup just configuration
+tar czf config-backup-$(date +%Y%m%d).tar.gz storage/azerothcore/config/
+```
+
+#### Production Storage Backup:
+```bash
+# When using custom STORAGE_ROOT
+source docker-compose-azerothcore-database.env
+tar czf azerothcore-backup-$(date +%Y%m%d).tar.gz ${STORAGE_ROOT}/azerothcore/
 ```
 
 ## Maintenance
@@ -414,15 +467,15 @@ docker logs -f ac-worldserver
 # Export logs to file
 docker logs ac-worldserver > worldserver.log 2>&1
 
-# Clear old logs (if using bind mount)
-find /srv/azerothcore/logs -name "*.log" -mtime +30 -delete
+# Clear old logs (adjust path based on STORAGE_ROOT)
+find ${STORAGE_ROOT}/azerothcore/logs -name "*.log" -mtime +30 -delete
 ```
 
 #### Log Rotation (using bind mount):
 ```bash
-# Create logrotate config
+# Create logrotate config (adjust path based on STORAGE_ROOT)
 cat > /etc/logrotate.d/azerothcore <<EOF
-/srv/azerothcore/logs/*.log {
+${STORAGE_ROOT}/azerothcore/logs/*.log {
     daily
     rotate 7
     compress
@@ -441,10 +494,13 @@ The deployment includes a comprehensive automated backup system with individual 
 
 Configure via environment variables in `docker-compose-azerothcore-database.env`:
 
+- `STORAGE_ROOT`: Root storage path (default: ./storage)
 - `BACKUP_CRON_SCHEDULE`: Cron expression (default: "0 3 * * *" - 3 AM daily)
 - `BACKUP_RETENTION_DAYS`: Days to keep backups (default: 7)
 - `HOST_BACKUP_PATH`: Local backup storage path (default: ./backups)
 - `HOST_BACKUP_SCRIPTS_PATH`: Backup scripts path (default: ./scripts)
+
+**Note**: The backup service operates independently of `STORAGE_ROOT` and uses dedicated backup paths for database exports.
 
 ### Backup Features
 
