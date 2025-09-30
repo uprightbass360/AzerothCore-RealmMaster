@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AzerothCore Status</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="30">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 30px; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .service-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; }
+        .service-running { border-left: 4px solid #4CAF50; }
+        .service-warning { border-left: 4px solid #FF9800; }
+        .service-critical { border-left: 4px solid #F44336; }
+        .service-missing { border-left: 4px solid #9E9E9E; }
+        .metric { display: flex; justify-content: space-between; margin: 5px 0; }
+        .timestamp { text-align: center; color: #666; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏰 AzerothCore Server Status</h1>
+            <p>System Uptime: up 1 day, 9 hours, 22 minutes</p>
+        </div>
+
+        <div class="status-grid">
+            <div class="service-card service-missing">
+                <h3>Authentication Server</h3>
+                <div class="metric"><strong>Service:</strong> <span>ac-authserver</span></div>
+                <div class="metric"><strong>Status:</strong> <span>Not Running</span></div>
+            </div>
+            <div class="service-card service-missing">
+                <h3>MySQL Database</h3>
+                <div class="metric"><strong>Service:</strong> <span>ac-mysql</span></div>
+                <div class="metric"><strong>Status:</strong> <span>Not Running</span></div>
+            </div>
+            <div class="service-card service-missing">
+                <h3>Backup Service</h3>
+                <div class="metric"><strong>Service:</strong> <span>ac-backup</span></div>
+                <div class="metric"><strong>Status:</strong> <span>Not Running</span></div>
+            </div>
+            <div class="service-card service-missing">
+                <h3>World Server</h3>
+                <div class="metric"><strong>Service:</strong> <span>ac-worldserver</span></div>
+                <div class="metric"><strong>Status:</strong> <span>Not Running</span></div>
+            </div>
+        </div>
+
+        <h2>Recent Alerts</h2>
+        <table>
+            <tr><th>Time</th><th>Level</th><th>Service</th><th>Message</th></tr>
+        </table>
+
+        <div class="timestamp">
+            Last updated: 2025-09-29 22:13:56
+        </div>
+    </div>
+</body>
+</html>
