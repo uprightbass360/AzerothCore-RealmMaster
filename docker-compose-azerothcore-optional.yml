@@ -1,0 +1,86 @@
+# ==============================================
+# AZEROTHCORE OPTIONAL SERVICES LAYER
+# ==============================================
+# Modules, monitoring, and additional services
+# Deploy this layer AFTER core services are running
+
+services:
+  # Optional: Eluna Lua Engine
+  ac-eluna:
+    image: ${AC_ELUNA_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_ELUNA}
+    external_links:
+      - ${CONTAINER_WORLDSERVER}:${CONTAINER_WORLDSERVER}
+    restart: unless-stopped
+    networks:
+      - azerothcore
+
+  # Module Management Service
+  ac-modules:
+    image: ${ALPINE_GIT_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_MODULES}
+    user: "0:0"  # Run as root to handle NFS permissions
+    volumes:
+      - ${STORAGE_PATH}/modules:/modules
+    environment:
+      - MODULE_PLAYERBOTS=${MODULE_PLAYERBOTS}
+      - MODULE_AOE_LOOT=${MODULE_AOE_LOOT}
+      - MODULE_LEARN_SPELLS=${MODULE_LEARN_SPELLS}
+      - MODULE_FIREWORKS=${MODULE_FIREWORKS}
+      - MODULE_INDIVIDUAL_PROGRESSION=${MODULE_INDIVIDUAL_PROGRESSION}
+      - DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo 'Initializing module management...'
+        cd /modules
+
+        if [ "$DEPLOYMENT_MODE" = "portainer" ]; then
+          echo 'Simple module setup for Portainer deployment...'
+          mkdir -p mod-playerbots
+          echo '✅ Playerbot module directory created'
+        else
+          echo 'Advanced module setup for local development...'
+          # Install Playerbots if enabled
+          if [ "$MODULE_PLAYERBOTS" = "1" ] && [ ! -d "mod-playerbots" ]; then
+            echo 'Installing mod-playerbots...'
+            git clone https://github.com/liyunfan1223/mod-playerbots.git mod-playerbots
+          fi
+
+          # Install AOE Loot if enabled
+          if [ "$MODULE_AOE_LOOT" = "1" ] && [ ! -d "mod-aoe-loot" ]; then
+            echo 'Installing mod-aoe-loot...'
+            git clone https://github.com/azerothcore/mod-aoe-loot.git mod-aoe-loot
+          fi
+
+          # Install Learn Spells if enabled
+          if [ "$MODULE_LEARN_SPELLS" = "1" ] && [ ! -d "mod-learn-spells" ]; then
+            echo 'Installing mod-learn-spells...'
+            git clone https://github.com/azerothcore/mod-learn-spells.git mod-learn-spells
+          fi
+
+          # Install Fireworks on Level if enabled
+          if [ "$MODULE_FIREWORKS" = "1" ] && [ ! -d "mod-fireworks-on-level" ]; then
+            echo 'Installing mod-fireworks-on-level...'
+            git clone https://github.com/azerothcore/mod-fireworks-on-level.git mod-fireworks-on-level
+          fi
+
+          # Install Individual Progression if enabled
+          if [ "$MODULE_INDIVIDUAL_PROGRESSION" = "1" ] && [ ! -d "mod-individual-progression" ]; then
+            echo 'Installing mod-individual-progression...'
+            git clone https://github.com/azerothcore/mod-individual-progression.git mod-individual-progression
+          fi
+        fi
+
+        echo 'Module management complete. Keeping container alive...'
+        tail -f /dev/null
+    restart: "no"
+    networks:
+      - azerothcore
+
+networks:
+  azerothcore:
+    external: true
+    name: ${NETWORK_NAME}

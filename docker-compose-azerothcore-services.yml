@@ -1,0 +1,249 @@
+# ==============================================
+# AZEROTHCORE CORE SERVICES LAYER
+# ==============================================
+# Authentication server, world server, and client data
+# Deploy this layer AFTER the database layer is running
+
+services:
+  # Client Data Download Service
+  ac-client-data:
+    image: ${ALPINE_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_CLIENT_DATA}
+    user: "0:0"  # Run as root to handle NFS permissions
+    volumes:
+      - ${STORAGE_PATH}/data:/azerothcore/data
+      - ${STORAGE_PATH}/cache:/cache
+    working_dir: /tmp
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl unzip wget ca-certificates p7zip jq
+
+        # Create cache directory if it doesn't exist
+        mkdir -p /cache
+
+        # Check if game data already exists
+        if [ -d '/azerothcore/data/maps' ] && [ -d '/azerothcore/data/vmaps' ] && [ -d '/azerothcore/data/mmaps' ] && [ -d '/azerothcore/data/dbc' ]; then
+          echo '✅ Game data already exists, verifying integrity...'
+
+          # Quick verification of required directories
+          MISSING_DIRS=""
+          for dir in maps vmaps mmaps dbc; do
+            if [ ! -d "/azerothcore/data/$$dir" ] || [ -z "$$(ls -A /azerothcore/data/$$dir 2>/dev/null)" ]; then
+              MISSING_DIRS="$$MISSING_DIRS $$dir"
+            fi
+          done
+
+          if [ -z "$$MISSING_DIRS" ]; then
+            echo '✅ All game data directories verified, startup complete!'
+            exit 0
+          else
+            echo "⚠️ Missing or empty directories:$$MISSING_DIRS"
+            echo "🔄 Re-extracting game data..."
+          fi
+        fi
+
+        echo '🚀 Starting AzerothCore game data setup...'
+
+        # Get the latest release info from wowgaming/client-data
+        echo '📡 Fetching latest client data release info...'
+        RELEASE_INFO=$$(wget -qO- https://api.github.com/repos/wowgaming/client-data/releases/latest 2>/dev/null)
+
+        if [ -n "$$RELEASE_INFO" ]; then
+          LATEST_URL=$$(echo "$$RELEASE_INFO" | grep '"browser_download_url":' | grep '\.zip' | cut -d'"' -f4 | head -1)
+          LATEST_TAG=$$(echo "$$RELEASE_INFO" | grep '"tag_name":' | cut -d'"' -f4)
+          LATEST_SIZE=$$(echo "$$RELEASE_INFO" | grep '"size":' | head -1 | grep -o '[0-9]*')
+        fi
+
+        if [ -z "$$LATEST_URL" ]; then
+          echo '❌ Could not fetch latest release URL'
+          echo '📥 Using fallback: direct download from v16 release'
+          LATEST_URL='https://github.com/wowgaming/client-data/releases/download/v16/data.zip'
+          LATEST_TAG='v16'
+          LATEST_SIZE='0'
+        fi
+
+        echo "📍 Latest release: $$LATEST_TAG"
+        echo "📥 Download URL: $$LATEST_URL"
+
+        # Cache file paths
+        CACHE_FILE="/cache/client-data-$$LATEST_TAG.zip"
+        VERSION_FILE="/cache/client-data-version.txt"
+
+        # Check if we have a cached version
+        if [ -f "$$CACHE_FILE" ] && [ -f "$$VERSION_FILE" ]; then
+          CACHED_VERSION=$$(cat "$$VERSION_FILE" 2>/dev/null)
+          if [ "$$CACHED_VERSION" = "$$LATEST_TAG" ]; then
+            echo "✅ Found cached client data version $$LATEST_TAG"
+            echo "📊 Cached file size: $$(ls -lh "$$CACHE_FILE" | awk '{print $$5}')"
+
+            # Verify cache file integrity
+            if unzip -t "$$CACHE_FILE" > /dev/null 2>&1; then
+              echo "✅ Cache file integrity verified"
+              echo "⚡ Using cached download - skipping download phase"
+              cp "$$CACHE_FILE" data.zip
+            else
+              echo "⚠️ Cache file corrupted, will re-download"
+              rm -f "$$CACHE_FILE" "$$VERSION_FILE"
+            fi
+          else
+            echo "📦 Cache version ($$CACHED_VERSION) differs from latest ($$LATEST_TAG)"
+            echo "🗑️ Removing old cache"
+            rm -f /cache/client-data-*.zip "$$VERSION_FILE"
+          fi
+        fi
+
+        # Download if we don't have a valid cached file
+        if [ ! -f "data.zip" ]; then
+          echo "📥 Downloading client data (~15GB, may take 10-30 minutes)..."
+          echo "📍 Source: $$LATEST_URL"
+
+          # Download with progress indication
+          wget --progress=bar:force -O "$$CACHE_FILE.tmp" "$$LATEST_URL" || {
+            echo '❌ wget failed, trying curl...'
+            curl -L --progress-bar -o "$$CACHE_FILE.tmp" "$$LATEST_URL" || {
+              echo '❌ All download methods failed'
+              rm -f "$$CACHE_FILE.tmp"
+              exit 1
+            }
+          }
+
+          # Verify download integrity
+          if unzip -t "$$CACHE_FILE.tmp" > /dev/null 2>&1; then
+            mv "$$CACHE_FILE.tmp" "$$CACHE_FILE"
+            echo "$$LATEST_TAG" > "$$VERSION_FILE"
+            echo '✅ Download completed and verified'
+            echo "📊 File size: $$(ls -lh "$$CACHE_FILE" | awk '{print $$5}')"
+            cp "$$CACHE_FILE" data.zip
+          else
+            echo '❌ Downloaded file is corrupted'
+            rm -f "$$CACHE_FILE.tmp"
+            exit 1
+          fi
+        fi
+
+        echo '📂 Extracting client data (this may take 10-15 minutes)...'
+        echo '⏳ Please wait while extracting...'
+
+        # Clear existing data if extraction failed previously
+        rm -rf /azerothcore/data/maps /azerothcore/data/vmaps /azerothcore/data/mmaps /azerothcore/data/dbc
+
+        unzip -q data.zip -d /azerothcore/data/ || {
+          echo '❌ Extraction failed'
+          rm -f data.zip
+          exit 1
+        }
+
+        # Clean up temporary extraction file (keep cached version)
+        rm -f data.zip
+
+        echo '✅ Client data extraction complete!'
+        echo '📁 Verifying extracted directories:'
+
+        # Verify required directories exist and have content
+        ALL_GOOD=true
+        for dir in maps vmaps mmaps dbc; do
+          if [ -d "/azerothcore/data/$$dir" ] && [ -n "$$(ls -A /azerothcore/data/$$dir 2>/dev/null)" ]; then
+            DIR_SIZE=$$(du -sh /azerothcore/data/$$dir 2>/dev/null | cut -f1)
+            echo "✅ $$dir directory: OK ($$DIR_SIZE)"
+          else
+            echo "❌ $$dir directory: MISSING or EMPTY"
+            ALL_GOOD=false
+          fi
+        done
+
+        if [ "$$ALL_GOOD" = "true" ]; then
+          echo '🎉 Game data setup complete! AzerothCore worldserver can now start.'
+          echo "💾 Cached version $$LATEST_TAG for future use"
+        else
+          echo '❌ Some directories are missing or empty'
+          exit 1
+        fi
+    restart: "no"
+    networks:
+      - azerothcore
+
+  # Auth server
+  ac-authserver:
+    image: ${AC_AUTHSERVER_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_AUTHSERVER}
+    user: "0:0"  # Run as root to handle NFS permissions
+    external_links:
+      - ${CONTAINER_MYSQL}:${CONTAINER_MYSQL}
+    environment:
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
+      AC_UPDATES_ENABLE_DATABASES: "0"
+      AC_BIND_IP: "0.0.0.0"
+      AC_LOG_LEVEL: "1"
+      AC_LOGGER_ROOT_CONFIG: "1,Console"
+      AC_LOGGER_SERVER_CONFIG: "1,Console"
+      AC_APPENDER_CONSOLE_CONFIG: "1,2,0"
+    ports:
+      - "${DOCKER_AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
+    restart: unless-stopped
+    networks:
+      - azerothcore
+    volumes:
+      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+    cap_add:
+      - SYS_NICE
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep '[a]uthserver' | grep -v grep || exit 1"]
+      interval: ${AUTH_HEALTHCHECK_INTERVAL}
+      timeout: ${AUTH_HEALTHCHECK_TIMEOUT}
+      retries: ${AUTH_HEALTHCHECK_RETRIES}
+      start_period: ${AUTH_HEALTHCHECK_START_PERIOD}
+
+  # World server with Playerbots support
+  ac-worldserver:
+    image: ${AC_WORLDSERVER_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_WORLDSERVER}
+    user: "0:0"  # Run as root to handle NFS permissions
+    stdin_open: true
+    tty: true
+    depends_on:
+      - ac-authserver
+      - ac-client-data
+    external_links:
+      - ${CONTAINER_MYSQL}:${CONTAINER_MYSQL}
+    environment:
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
+      AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}"
+      AC_CHARACTER_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_CHARACTERS_NAME}"
+      AC_UPDATES_ENABLE_DATABASES: "0"
+      AC_BIND_IP: "0.0.0.0"
+      AC_DATA_DIR: "/azerothcore/data"
+      AC_SOAP_PORT: "7878"
+      AC_PROCESS_PRIORITY: "0"
+      PLAYERBOT_ENABLED: "${PLAYERBOT_ENABLED}"
+      PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS}"
+      # Logger configuration - Use config file defaults with proper log level
+      AC_LOG_LEVEL: "2"
+    ports:
+      - "${DOCKER_WORLD_EXTERNAL_PORT}:${WORLD_PORT}"
+      - "${DOCKER_SOAP_EXTERNAL_PORT}:${SOAP_PORT}"
+    volumes:
+      - ${STORAGE_PATH}/data:/azerothcore/data
+      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_PATH}/logs:/azerothcore/logs
+      - ${STORAGE_PATH}/modules:/azerothcore/modules
+    restart: unless-stopped
+    networks:
+      - azerothcore
+    cap_add:
+      - SYS_NICE
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep '[w]orldserver' | grep -v grep || exit 1"]
+      interval: ${WORLD_HEALTHCHECK_INTERVAL}
+      timeout: ${WORLD_HEALTHCHECK_TIMEOUT}
+      retries: ${WORLD_HEALTHCHECK_RETRIES}
+      start_period: ${WORLD_HEALTHCHECK_START_PERIOD}
+
+networks:
+  azerothcore:
+    external: true
+    name: ${NETWORK_NAME}
