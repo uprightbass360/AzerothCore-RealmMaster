@@ -31,6 +31,8 @@ This project is a Docker/Podman implementation based on:
 - [Configuration](#configuration)
 - [Volume Management](#volume-management)
 - [Maintenance](#maintenance)
+- [Backup System](#backup-system)
+- [Deployment Scripts](#deployment-scripts)
 - [Troubleshooting](#troubleshooting)
 - [Security Considerations](#security-considerations)
 
@@ -104,7 +106,7 @@ acore-compose/
 ├── docker-compose-azerothcore-services.env     # Services configuration
 ├── docker-compose-azerothcore-tools.env        # Tools configuration
 ├── docker-compose-azerothcore-optional.env     # Optional services config
-├── backup-scripts/                             # Database backup automation
+├── scripts/                                     # Deployment, cleanup, and backup automation
 ├── local-data/                                 # Local storage (when not using NFS)
 └── readme.md                                   # This documentation
 ```
@@ -431,18 +433,194 @@ cat > /etc/logrotate.d/azerothcore <<EOF
 EOF
 ```
 
-### Automated Backups
+## Backup System
 
-The database layer includes an automated backup service. Configure via environment variables in `docker-compose-azerothcore-database.env`:
+The deployment includes a comprehensive automated backup system with individual database backups, compression, and retention management.
+
+### Backup Configuration
+
+Configure via environment variables in `docker-compose-azerothcore-database.env`:
 
 - `BACKUP_CRON_SCHEDULE`: Cron expression (default: "0 3 * * *" - 3 AM daily)
 - `BACKUP_RETENTION_DAYS`: Days to keep backups (default: 7)
+- `HOST_BACKUP_PATH`: Local backup storage path (default: ./backups)
+- `HOST_BACKUP_SCRIPTS_PATH`: Backup scripts path (default: ./scripts)
 
-#### Manual Backup Trigger:
+### Backup Features
+
+✅ **Individual Database Backups**: Separate compressed files for each database
+✅ **Backup Manifests**: JSON metadata with timestamps and backup information
+✅ **Automated Compression**: Gzip compression for space efficiency
+✅ **Retention Management**: Automatic cleanup of old backups
+✅ **External Scripts**: Uses external backup/restore scripts for flexibility
+
+### Backup Operations
+
+#### Automatic Backups
+The `ac-backup` container runs continuously and performs scheduled backups:
+- **Schedule**: Daily at 3:00 AM by default (configurable via `BACKUP_CRON_SCHEDULE`)
+- **Databases**: All AzerothCore databases (auth, world, characters)
+- **Format**: Individual compressed SQL files per database
+- **Retention**: Automatic cleanup after configured days
+
+#### Manual Backups
+
 ```bash
-# Execute backup immediately
-docker exec ac-backup /backup.sh
+# Execute backup immediately using container
+docker exec ac-backup /scripts/backup.sh
+
+# Or run backup script directly (if scripts are accessible)
+cd scripts
+./backup.sh
+
+# Check backup status and logs
+docker logs ac-backup --tail 20
+
+# List available backups
+ls -la backups/
 ```
+
+### Backup Structure
+
+```
+backups/
+├── 20250930_181843/                    # Timestamp-based backup directory
+│   ├── acore_auth.sql.gz              # Compressed auth database (8KB)
+│   ├── acore_world.sql.gz             # Compressed world database (77MB)
+│   ├── acore_characters.sql.gz        # Compressed characters database (16KB)
+│   └── manifest.json                  # Backup metadata
+├── 20250930_120000/                    # Previous backup
+└── ...                                 # Additional backups (retention managed)
+```
+
+### Backup Metadata
+
+Each backup includes a `manifest.json` file with backup information:
+
+```json
+{
+    "timestamp": "20250930_181843",
+    "databases": ["acore_auth acore_world acore_characters"],
+    "backup_size": "77M",
+    "retention_days": 7,
+    "mysql_version": "8.0.43"
+}
+```
+
+### Backup Restoration
+
+#### Using Restore Script
+```bash
+cd scripts
+./restore.sh /path/to/backup/directory/20250930_181843
+```
+
+#### Manual Restoration
+```bash
+# Restore individual database from compressed backup
+gunzip -c backups/20250930_181843/acore_world.sql.gz | \
+  docker exec -i ac-mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD} acore_world
+
+# Restore all databases from a backup directory
+for db in auth world characters; do
+  gunzip -c backups/20250930_181843/acore_${db}.sql.gz | \
+    docker exec -i ac-mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD} acore_${db}
+done
+```
+
+### Backup Monitoring
+
+```bash
+# Monitor backup service logs
+docker logs ac-backup -f
+
+# Check backup service status
+docker ps | grep ac-backup
+
+# Verify recent backups
+find backups/ -name "*.sql.gz" -mtime -1 -ls
+
+# Check backup sizes
+du -sh backups/*/
+```
+
+## Deployment Scripts
+
+The `scripts/` directory contains automation tools for deployment, health checking, and cleanup operations.
+
+### Available Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|--------|
+| `deploy-and-check.sh` | Automated deployment and health verification | `./deploy-and-check.sh [--skip-deploy] [--quick-check]` |
+| `cleanup.sh` | Multi-level resource cleanup | `./cleanup.sh [--soft\|--hard\|--nuclear] [--dry-run]` |
+| `backup.sh` | Manual database backup | `./backup.sh` |
+| `restore.sh` | Database restoration | `./restore.sh <backup_directory>` |
+
+### Deployment and Health Check Script
+
+The `deploy-and-check.sh` script provides automated deployment and comprehensive health verification.
+
+#### Features
+✅ **Layered Deployment**: Deploys database → services → tools in correct order
+✅ **Container Health Validation**: Checks all 8 core containers
+✅ **Port Connectivity Tests**: Validates all external ports
+✅ **Web Service Verification**: HTTP response and content validation
+✅ **Database Validation**: Schema and realm configuration checks
+✅ **Comprehensive Reporting**: Color-coded status with detailed results
+
+#### Usage Examples
+
+```bash
+cd scripts
+
+# Full deployment with health checks
+./deploy-and-check.sh
+
+# Health check only (skip deployment)
+./deploy-and-check.sh --skip-deploy
+
+# Quick health check (basic tests only)
+./deploy-and-check.sh --skip-deploy --quick-check
+```
+
+### Cleanup Script
+
+The `cleanup.sh` script provides safe and comprehensive cleanup options with multiple levels of cleanup intensity.
+
+#### Cleanup Levels
+
+- **🟢 Soft (`--soft`)**: Stop containers only (preserves data)
+- **🟡 Hard (`--hard`)**: Remove containers + networks (preserves volumes/data)
+- **🔴 Nuclear (`--nuclear`)**: Complete removal (DESTROYS ALL DATA)
+
+#### Usage Examples
+
+```bash
+cd scripts
+
+# Safe cleanup - stop containers only
+./cleanup.sh --soft
+
+# Moderate cleanup - remove containers and networks (preserves data)
+./cleanup.sh --hard
+
+# Complete cleanup - remove everything (DESTROYS ALL DATA)
+./cleanup.sh --nuclear
+
+# See what would happen without doing it
+./cleanup.sh --hard --dry-run
+
+# Force cleanup without prompts (for automation)
+./cleanup.sh --hard --force
+```
+
+### Script Documentation
+
+For complete documentation on each script:
+- **Deployment**: See `scripts/DEPLOYMENT.md`
+- **Cleanup**: See `scripts/CLEANUP.md`
+- **Scripts Overview**: See `scripts/README.md`
 
 ## Troubleshooting
 

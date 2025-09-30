@@ -77,61 +77,31 @@ services:
       - /bin/bash
       - -c
       - |
-        echo "🔧 Starting simple backup service..."
+        echo "🔧 Starting backup service using external script..."
 
-        # Create backup function
-        run_backup() {
-          echo "💾 [$(date)] Starting database backup..."
+        # Make sure backup script is executable
+        chmod +x /scripts/backup.sh
 
-          # Wait for MySQL to be available
-          for i in $(seq 1 10); do
-            if mysqldump -h ${CONTAINER_MYSQL} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} --version >/dev/null 2>&1; then
-              echo "✅ MySQL connection available"
-              break
-            fi
-            echo "⏳ Waiting for MySQL... attempt $$i/10"
-            sleep 5
-          done
-
-          # Create backup directory
-          BACKUP_DIR="/backups/$(date +%Y%m%d_%H%M%S)"
-          mkdir -p "$$BACKUP_DIR"
-
-          # Backup all databases
-          echo "📦 Backing up databases to $$BACKUP_DIR"
-          mysqldump -h ${CONTAINER_MYSQL} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} \
-            --all-databases --single-transaction --routines --triggers \
-            > "$$BACKUP_DIR/full_backup.sql" 2>/dev/null
-
-          if [ -f "$$BACKUP_DIR/full_backup.sql" ]; then
-            echo "✅ [$(date)] Backup completed: $$BACKUP_DIR/full_backup.sql"
-
-            # Cleanup old backups
-            echo "🧹 Cleaning up backups older than ${BACKUP_RETENTION_DAYS} days..."
-            find /backups -type d -name "????????_??????" -mtime +${BACKUP_RETENTION_DAYS} -exec rm -rf {} + 2>/dev/null || true
-
-            echo "📊 Current backup status:"
-            ls -la /backups/ 2>/dev/null || echo "No backups directory"
-          else
-            echo "❌ [$(date)] Backup failed"
-          fi
-        }
-
-        echo "Starting backup service with schedule: ${BACKUP_CRON_SCHEDULE}"
-        echo "Backup retention: ${BACKUP_RETENTION_DAYS} days"
-
-        # Wait for MySQL to be ready, then run initial backup
+        # Wait for MySQL to be ready before starting backup service
+        echo "⏳ Waiting for MySQL to be ready..."
         sleep 30
-        run_backup
+
+        # Run initial backup
+        echo "🚀 Running initial backup..."
+        /scripts/backup.sh
 
         # Simple cron-like scheduler (runs backup at 3 AM daily)
+        echo "⏰ Starting backup scheduler with schedule: ${BACKUP_CRON_SCHEDULE}"
+        echo "📅 Backup retention: ${BACKUP_RETENTION_DAYS} days"
+
         while true; do
           current_hour=$(date +%H)
           current_minute=$(date +%M)
 
           # Check if it's 3:00 AM (matching default cron schedule)
           if [ "$$current_hour" = "03" ] && [ "$$current_minute" = "00" ]; then
-            run_backup
+            echo "⏰ [$(date)] Scheduled backup time reached, running backup..."
+            /scripts/backup.sh
             # Sleep for 2 minutes to avoid running multiple times
             sleep 120
           else
