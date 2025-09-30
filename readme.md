@@ -226,6 +226,7 @@ Configuration is managed through separate `.env` files for each layer:
 
 #### Database Layer (`docker-compose-azerothcore-database.env`)
 - `MYSQL_ROOT_PASSWORD`: Database root password (default: azerothcore123)
+- `MYSQL_EXTERNAL_PORT`: External MySQL port (default: 64306)
 - `STORAGE_PATH`: Data storage path (default: /nfs/containers/azerothcore)
 - `NETWORK_SUBNET`: Docker network subnet
 - `BACKUP_RETENTION_DAYS`: Backup retention period
