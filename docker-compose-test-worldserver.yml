@@ -1,0 +1,192 @@
+# ==============================================
+# TEST WORLDSERVER WITH LOCAL GAME FILES
+# ==============================================
+# This is a test configuration to compare performance
+# of worldserver with game files stored locally within
+# the container vs. external volume mount
+
+services:
+  # Test world server with local game files (no external data volume)
+  ac-worldserver-test:
+    image: ${AC_WORLDSERVER_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_WORLDSERVER_TEST}
+    user: "0:0"  # Run as root to handle permissions
+    stdin_open: true
+    tty: true
+    # depends_on:
+    #   - ac-authserver  # Assumes authserver is already running from main deployment
+    environment:
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
+      AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}"
+      AC_CHARACTER_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_CHARACTERS_NAME}"
+      AC_UPDATES_ENABLE_DATABASES: "0"
+      AC_BIND_IP: "0.0.0.0"
+      AC_DATA_DIR: "/azerothcore/data"
+      AC_SOAP_PORT: "7878"
+      AC_PROCESS_PRIORITY: "0"
+      PLAYERBOT_ENABLED: "${PLAYERBOT_ENABLED}"
+      PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS}"
+      # Logger configuration - Use config file defaults with proper log level
+      AC_LOG_LEVEL: "2"
+    ports:
+      - "${WORLD_EXTERNAL_PORT_TEST}:${WORLD_PORT}"
+      - "${SOAP_EXTERNAL_PORT_TEST}:${SOAP_PORT}"
+    volumes:
+      # Only mount config and logs, NOT the data directory (game files will be internal)
+      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_PATH}/logs-test:/azerothcore/logs
+      - ${STORAGE_PATH}/modules:/azerothcore/modules
+      # Mount cache directory to persist downloaded files across container restarts
+      - ${STORAGE_PATH}/cache-test:/cache
+    restart: unless-stopped
+    networks:
+      - azerothcore
+    cap_add:
+      - SYS_NICE
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "🧪 Starting TEST worldserver with local game files..."
+
+        # Install required packages for downloading
+        echo "📦 Installing download tools..."
+        apt-get update > /dev/null 2>&1
+        apt-get install -y curl wget unzip ca-certificates > /dev/null 2>&1
+
+        # Create cache and data directories
+        mkdir -p /cache /azerothcore/data
+
+        echo "🧪 Starting TEST worldserver with cached local game files..."
+        echo "📂 Cache directory: /cache (persistent across restarts)"
+        echo "🎯 Game files will be copied to local container storage for performance testing"
+
+        cd /tmp
+
+        # Get the latest release info from wowgaming/client-data
+        echo '📡 Fetching latest client data release info...'
+        RELEASE_INFO=$$(wget -qO- https://api.github.com/repos/wowgaming/client-data/releases/latest 2>/dev/null)
+
+        if [ -n "$$RELEASE_INFO" ]; then
+          LATEST_URL=$$(echo "$$RELEASE_INFO" | grep '"browser_download_url":' | grep '\.zip' | cut -d'"' -f4 | head -1)
+          LATEST_TAG=$$(echo "$$RELEASE_INFO" | grep '"tag_name":' | cut -d'"' -f4)
+        fi
+
+        if [ -z "$$LATEST_URL" ]; then
+          echo '❌ Could not fetch latest release URL'
+          echo '📥 Using fallback: direct download from v16 release'
+          LATEST_URL='https://github.com/wowgaming/client-data/releases/download/v16/data.zip'
+          LATEST_TAG='v16'
+        fi
+
+        echo "📍 Latest release: $$LATEST_TAG"
+        echo "📥 Download URL: $$LATEST_URL"
+
+        # Cache file paths
+        CACHE_FILE="/cache/client-data-$$LATEST_TAG.zip"
+        VERSION_FILE="/cache/client-data-version.txt"
+
+        # Check if we have a cached version
+        if [ -f "$$CACHE_FILE" ] && [ -f "$$VERSION_FILE" ]; then
+          CACHED_VERSION=$$(cat "$$VERSION_FILE" 2>/dev/null)
+          if [ "$$CACHED_VERSION" = "$$LATEST_TAG" ]; then
+            echo "🎉 Found cached client data for $$LATEST_TAG"
+            echo "📊 Cached file size: $$(ls -lh "$$CACHE_FILE" | awk '{print $$5}')"
+            echo "⚡ Using cached download (no internet download needed)"
+            cp "$$CACHE_FILE" data.zip
+          else
+            echo "🔄 Cached version ($$CACHED_VERSION) differs from latest ($$LATEST_TAG)"
+            echo "📥 Downloading new version..."
+            wget --progress=dot:giga -O "$$CACHE_FILE.tmp" "$$LATEST_URL"
+            if [ $$? -eq 0 ]; then
+              mv "$$CACHE_FILE.tmp" "$$CACHE_FILE"
+              echo "$$LATEST_TAG" > "$$VERSION_FILE"
+              echo "✅ Download completed and cached"
+              cp "$$CACHE_FILE" data.zip
+            else
+              echo "❌ Download failed!"
+              exit 1
+            fi
+          fi
+        else
+          echo "💾 No cache found, downloading and caching..."
+          echo "⏱️  Download started at: $(date)"
+          wget --progress=dot:giga -O "$$CACHE_FILE.tmp" "$$LATEST_URL"
+          if [ $$? -eq 0 ]; then
+            mv "$$CACHE_FILE.tmp" "$$CACHE_FILE"
+            echo "$$LATEST_TAG" > "$$VERSION_FILE"
+            echo "✅ Download completed and cached at: $(date)"
+            echo "📊 File size: $$(ls -lh "$$CACHE_FILE" | awk '{print $$5}')"
+            cp "$$CACHE_FILE" data.zip
+          else
+            echo "❌ Download failed!"
+            exit 1
+          fi
+        fi
+
+        # Extract game files to local container storage for performance testing
+        echo "📂 Extracting client data to local container storage..."
+        echo "🎯 This tests performance with files stored locally vs. external volume"
+        echo "⏱️  Extraction started at: $(date)"
+
+        # Clear any existing data
+        rm -rf /azerothcore/data/maps /azerothcore/data/vmaps /azerothcore/data/mmaps /azerothcore/data/dbc
+
+        # Extract with progress monitoring
+        unzip -o -q data.zip -d /azerothcore/data/ &
+        UNZIP_PID=$!
+
+        # Simple progress indicator
+        while kill -0 "$$UNZIP_PID" 2>/dev/null; do
+          echo "⏳ Extracting... ($(date '+%H:%M:%S'))"
+          sleep 30
+        done
+
+        wait $$UNZIP_PID
+        UNZIP_EXIT_CODE=$$?
+
+        if [ $$UNZIP_EXIT_CODE -ne 0 ]; then
+          echo "❌ Extraction failed!"
+          exit 1
+        fi
+
+        # Clean up zip file
+        rm -f data.zip
+
+        echo "✅ Extraction completed at: $(date)"
+        echo "💾 Game files are now stored locally in container for performance testing"
+
+        # Verify required directories exist and have content
+        echo '📁 Verifying extracted directories:'
+        ALL_GOOD=true
+        for dir in maps vmaps mmaps dbc; do
+          if [ -d "/azerothcore/data/$$dir" ] && [ -n "$$(ls -A /azerothcore/data/$$dir 2>/dev/null)" ]; then
+            DIR_SIZE=$$(du -sh /azerothcore/data/$$dir 2>/dev/null | cut -f1)
+            echo "✅ $$dir directory: OK ($$DIR_SIZE)"
+          else
+            echo "❌ $$dir directory: MISSING or EMPTY"
+            ALL_GOOD=false
+          fi
+        done
+
+        if [ "$$ALL_GOOD" != "true" ]; then
+          echo "❌ Game data verification failed!"
+          exit 1
+        fi
+
+        echo "🎉 Local game data setup complete!"
+        echo "🚀 Starting worldserver..."
+        echo "⏱️  Worldserver startup time: $(date)"
+
+        # Start the worldserver
+        exec /azerothcore/env/dist/bin/worldserver
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep '[w]orldserver' | grep -v grep || exit 1"]
+      interval: ${WORLD_HEALTHCHECK_INTERVAL}
+      timeout: ${WORLD_HEALTHCHECK_TIMEOUT}
+      retries: ${WORLD_HEALTHCHECK_RETRIES}
+      start_period: 1800s  # 30 minutes to allow for download and extraction
+
+networks:
+  azerothcore:
+    external: true

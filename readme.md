@@ -24,6 +24,7 @@ This project is a Docker/Podman implementation based on:
 ## Table of Contents
 - [Overview](#overview)
 - [Features](#features)
+- [Available Modules](#available-modules)
 - [Requirements](#requirements)
 - [Project Structure](#project-structure)
 - [Container Architecture](#container-architecture)
@@ -75,6 +76,103 @@ This project provides a production-ready AzerothCore deployment using Docker/Pod
 - ✅ **Health Monitoring**: Built-in health checks for all services
 - ✅ **Network Isolation**: Custom bridge network for container communication
 - ✅ **Persistent Storage**: Named volumes for data persistence
+
+## Available Modules
+
+This deployment includes an automated module management system that supports 28 AzerothCore modules. All modules are automatically downloaded from GitHub when enabled and include proper configuration files.
+
+### Quality of Life Modules
+
+| Module | Description | Repository | README | Post-Install Notes |
+|--------|-------------|------------|--------|-------------------|
+| **AutoBalance** | Dynamic difficulty scaling for dungeons/raids | [mod-autobalance](https://github.com/azerothcore/mod-autobalance) | [📖](https://github.com/azerothcore/mod-autobalance/blob/master/README.md) | Requires AutoBalance.conf configuration |
+| **AHBot** | Auction House bot for populated auctions | [mod-ahbot](https://github.com/azerothcore/mod-ahbot) | [📖](https://github.com/azerothcore/mod-ahbot/blob/master/README.md) | Requires mod_ahbot.conf configuration |
+| **Transmog** | Transmogrification system | [mod-transmog](https://github.com/azerothcore/mod-transmog) | [📖](https://github.com/azerothcore/mod-transmog/blob/master/README.md) | Requires transmog.conf configuration |
+| **NPC Buffer** | Buff NPC services | [mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer) | [📖](https://github.com/azerothcore/mod-npc-buffer/blob/master/README.md) | Requires npc_buffer.conf configuration |
+| **AoE Loot** | Area of effect looting feature | [mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot) | [📖](https://github.com/azerothcore/mod-aoe-loot/blob/master/.github/README.md) | No additional configuration required |
+| **Learn Spells** | Automatic spell learning | [mod-learn-spells](https://github.com/azerothcore/mod-learn-spells) | [📖](https://github.com/azerothcore/mod-learn-spells/blob/master/README.md) | Requires mod_learnspells.conf configuration |
+| **Auto Revive** | Auto-revive functionality for GMs | [mod-auto-revive](https://github.com/azerothcore/mod-auto-revive) | [📖](https://github.com/azerothcore/mod-auto-revive/blob/master/README.md) | Requires AutoRevive.conf configuration |
+| **NPC Enchanter** | NPC-based gear enchantment services | [mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter) | [📖](https://github.com/azerothcore/mod-npc-enchanter/blob/master/README.md) | Requires npc_enchanter.conf configuration |
+| **Instance Reset** | NPC-based instance reset functionality | [mod-instance-reset](https://github.com/azerothcore/mod-instance-reset) | [📖](https://github.com/azerothcore/mod-instance-reset/blob/master/README.md) | Requires instance-reset.conf configuration |
+
+### Gameplay Enhancement Modules
+
+| Module | Description | Repository | README | Post-Install Notes |
+|--------|-------------|------------|--------|-------------------|
+| **Individual Progression** | Custom character progression system | [mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression) | [📖](https://github.com/ZhengPeiRu21/mod-individual-progression/blob/master/README.md) | Complex SQL imports required |
+| **Dynamic XP** | Configurable experience rates | [mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp) | [📖](https://github.com/azerothcore/mod-dynamic-xp/blob/master/README.md) | Requires Individual-XP.conf configuration |
+| **Solo LFG** | Solo dungeon finder system | [mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg) | [📖](https://github.com/azerothcore/mod-solo-lfg/blob/master/README.md) | Requires SoloLfg.conf configuration |
+| **1v1 Arena** | Arena combat system | [mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena) | [📖](https://github.com/azerothcore/mod-1v1-arena/blob/master/README.md) | Database tables auto-created |
+| **Phased Duels** | Isolated dueling system | [mod-phased-duels](https://github.com/azerothcore/mod-phased-duels) | [📖](https://github.com/azerothcore/mod-phased-duels/blob/master/README.md) | No additional configuration required |
+| **Solocraft** | Solo dungeon scaling | [mod-solocraft](https://github.com/azerothcore/mod-solocraft) | [📖](https://github.com/azerothcore/mod-solocraft/blob/master/.github/README.md) | Requires Solocraft.conf configuration |
+| **Random Enchants** | Random item enchantments | [mod-random-enchants](https://github.com/azerothcore/mod-random-enchants) | [📖](https://github.com/azerothcore/mod-random-enchants/blob/master/README.md) | Requires RandomEnchants.conf configuration |
+| **Level Grant** | Quest-based level granting | [mod-quest-count-level](https://github.com/michaeldelago/mod-quest-count-level) | [📖](https://github.com/michaeldelago/mod-quest-count-level/blob/main/README.md) | Requires levelGrant.conf configuration |
+
+### Server Management Modules
+
+| Module | Description | Repository | README | Post-Install Notes |
+|--------|-------------|------------|--------|-------------------|
+| **Breaking News Override** | Server announcement system | [mod-breaking-news-override](https://github.com/azerothcore/mod-breaking-news-override) | [📖](https://github.com/azerothcore/mod-breaking-news-override/blob/master/README.md) | No additional configuration required |
+| **Boss Announcer** | Raid boss kill notifications | [mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer) | [📖](https://github.com/azerothcore/mod-boss-announcer/blob/master/README.md) | No additional configuration required |
+| **Account Achievements** | Cross-character achievements | [mod-account-achievements](https://github.com/azerothcore/mod-account-achievements) | [📖](https://github.com/azerothcore/mod-account-achievements/blob/master/README.md) | Database tables auto-created |
+| **Gain Honor Guard** | Honor system for killing guards | [mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard) | [📖](https://github.com/azerothcore/mod-gain-honor-guard/blob/master/.github/README.md) | Requires GainHonorGuard.conf configuration |
+| **PvP Titles** | Honor-based PvP title system | [mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles) | [📖](https://github.com/azerothcore/mod-pvp-titles/blob/master/README.md) | Requires mod_pvptitles.conf configuration |
+| **Pocket Portal** | Teleportation portal system | [mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal) | [📖](https://github.com/azerothcore/mod-pocket-portal/blob/master/README.md) | Requires pocketportal.conf configuration |
+
+### Core System Modules
+
+| Module | Description | Repository | README | Post-Install Notes |
+|--------|-------------|------------|--------|-------------------|
+| **Playerbots** | AI-controlled bot system | [mod-playerbots](https://github.com/liyunfan1223/mod-playerbots) | [📖](https://github.com/liyunfan1223/mod-playerbots/blob/master/README.md) | Enabled by default, extensive configuration |
+| **Fireworks** | Fireworks on level up | [mod-fireworks-on-level](https://github.com/azerothcore/mod-fireworks-on-level) | [📖](https://github.com/azerothcore/mod-fireworks-on-level/blob/master/README.md) | No additional configuration required |
+| **Eluna** | Lua scripting engine | [mod-eluna](https://github.com/azerothcore/mod-eluna) | [📖](https://github.com/azerothcore/mod-eluna/blob/master/README.md) | Requires mod_LuaEngine.conf configuration |
+| **Time Is Time** | Realistic day/night cycle | [mod-TimeIsTime](https://github.com/dunjeon/mod-TimeIsTime) | [📖](https://github.com/dunjeon/mod-TimeIsTime/blob/main/README.md) | Requires mod-time_is_time.conf configuration |
+| **NPC Beastmaster** | Cross-class pet system | [mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster) | [📖](https://github.com/azerothcore/mod-npc-beastmaster/blob/master/README.md) | Requires npc_beastmaster.conf configuration |
+
+### Module Configuration
+
+Enable modules by setting their environment variables to `1` in `docker-compose-azerothcore-services.env`:
+
+```bash
+# Example: Enable AutoBalance and Transmog
+MODULE_AUTOBALANCE=1
+MODULE_TRANSMOG=1
+```
+
+After enabling/disabling modules:
+1. Restart the module container: `docker-compose up -d ac-modules`
+2. **Enabled modules** will be automatically downloaded to `storage/azerothcore/modules/`
+3. **Disabled modules** will be automatically removed from the modules directory
+4. **Configuration files** (`.conf.dist`) are automatically managed:
+   - **Enabled modules**: Config files copied to `storage/azerothcore/config/`
+   - **Disabled modules**: Config files removed from config directory
+5. **Important**: Modules require server recompilation to be active
+6. Some modules require database imports (check individual module README files)
+
+### Module Management Behavior
+
+The module management system provides complete automation:
+
+- **Enable Module** (`MODULE_NAME=1`):
+  - Downloads module source code if not present
+  - Copies `.conf.dist` files to config directory
+- **Disable Module** (`MODULE_NAME=0`):
+  - Removes module directory completely
+  - Removes associated configuration files
+- **Module Persistence**: Only enabled modules and their configs remain
+- **Clean Slate**: Disabling and re-enabling ensures fresh download and config
+- **Zero Manual Setup**: No need to manually copy configuration files
+
+### Post-Installation Requirements
+
+⚠️ **Critical**: Most modules require additional steps after download:
+
+1. **Server Recompilation**: Modules need to be compiled into the server
+2. **Configuration Files**: Copy `.conf` files to config directory
+3. **Database Imports**: Some modules include SQL files for database schema
+4. **Module-Specific Setup**: Check each module's README for specific requirements
+
+See the [AzerothCore Module Documentation](https://www.azerothcore.org/wiki/installing-a-module) for complete installation procedures.
 
 ## Requirements
 
@@ -241,11 +339,11 @@ Configuration is managed through separate `.env` files for each layer:
   - **Local development**: `./storage`
   - **Production NFS**: `/nfs/containers`
   - **Custom mount**: `/mnt/azerothcore-data`
-- All layers derive their storage paths from `STORAGE_ROOT`:
-  - Database: `${STORAGE_ROOT}/azerothcore`
-  - Services: `${STORAGE_ROOT}/azerothcore`
-  - Tools: `${STORAGE_ROOT}/azerothcore`
-  - Optional: `${STORAGE_ROOT}/azerothcore`
+- All layers use the same `STORAGE_PATH` variable derived from `STORAGE_ROOT`:
+  - Database: `STORAGE_PATH=${STORAGE_ROOT}/azerothcore`
+  - Services: `STORAGE_PATH=${STORAGE_ROOT}/azerothcore`
+  - Tools: `STORAGE_PATH=${STORAGE_ROOT}/azerothcore`
+  - Optional: `STORAGE_PATH=${STORAGE_ROOT}/azerothcore`
 
 #### Database Layer (`docker-compose-azerothcore-database.env`)
 - `MYSQL_ROOT_PASSWORD`: Database root password (default: azerothcore123)
@@ -270,7 +368,7 @@ Configuration is managed through separate `.env` files for each layer:
 - `GF_EXTERNAL_PORT`: Grafana monitoring port (3001)
 - `INFLUXDB_EXTERNAL_PORT`: InfluxDB metrics port (8087)
 - `STORAGE_ROOT`: Root storage path (default: ./storage)
-- `STORAGE_PATH_TOOLS`: Derived storage path (${STORAGE_ROOT}/azerothcore)
+- `STORAGE_PATH`: Derived storage path (${STORAGE_ROOT}/azerothcore)
 
 ### Realm Configuration
 
