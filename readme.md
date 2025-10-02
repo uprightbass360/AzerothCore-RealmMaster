@@ -79,7 +79,16 @@ This project provides a production-ready AzerothCore deployment using Docker/Pod
 
 ## Available Modules
 
-This deployment includes an automated module management system that supports 28 AzerothCore modules. All modules are automatically downloaded from GitHub when enabled and include proper configuration files.
+This deployment includes a **comprehensive automated module management system** that supports 28 AzerothCore modules with:
+
+- ✅ **Automatic module installation and removal**
+- ✅ **State tracking with rebuild detection**
+- ✅ **SQL script execution for database setup**
+- ✅ **Configuration file management**
+- ✅ **Source-based compilation integration**
+- ✅ **Compatibility analysis and documentation**
+
+All modules are automatically downloaded from GitHub when enabled and include proper configuration files.
 
 ### Quality of Life Modules
 
