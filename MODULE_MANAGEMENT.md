@@ -38,12 +38,15 @@ The module management system provides:
 
 ### Compilation Required
 All current modules require source-based compilation:
-- mod-playerbots (CRITICAL: Requires custom AzerothCore branch)
-- mod-aoe-loot
-- mod-learn-spells
-- mod-fireworks-on-level
-- mod-individual-progression (Auto-configures accounts)
-- All other modules...
+- mod-playerbots (🚨 CRITICAL: Requires custom AzerothCore branch)
+- mod-aoe-loot (⚠️ Ready for testing)
+- mod-learn-spells (⚠️ Ready for testing)
+- mod-fireworks-on-level (⚠️ Ready for testing)
+- mod-individual-progression (🔧 Auto-configures accounts)
+- mod-ahbot (❌ KNOWN ISSUE: Linking error - disabled)
+- All other modules (⚠️ Ready for testing)
+
+See `MODULE_COMPATIBILITY.md` for detailed compatibility status.
 
 ## Configuration
 
