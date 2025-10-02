@@ -95,7 +95,7 @@ This document tracks the compatibility status of AzerothCore modules with the au
 
 2. **Test Compilation**:
    ```bash
-   ./rebuild-with-modules.sh
+   ./scripts/rebuild-with-modules.sh
    ```
 
 3. **Monitor Build**:
@@ -167,7 +167,7 @@ This document tracks the compatibility status of AzerothCore modules with the au
 MODULE_NAME=1
 
 # 2. Rebuild if needed
-./rebuild-with-modules.sh
+./scripts/rebuild-with-modules.sh
 
 # 3. Restart services
 docker compose -f docker-compose-azerothcore-services.yml restart

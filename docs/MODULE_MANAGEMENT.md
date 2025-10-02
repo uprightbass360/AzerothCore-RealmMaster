@@ -26,7 +26,7 @@ The module management system provides:
    - Automatically detects when compilation is required
    - Provides detailed rebuild instructions
 
-3. **Automated Rebuild Script** (`rebuild-with-modules.sh`)
+3. **Automated Rebuild Script** (`scripts/rebuild-with-modules.sh`)
    - Orchestrates full compilation workflow
    - Integrates with source-based Docker builds
    - Handles module synchronization
@@ -132,7 +132,7 @@ Module configuration has changed. To integrate C++ modules into AzerothCore:
    docker compose -f /tmp/acore-dev-test/docker-compose.yml up -d
 
 3. Or use the automated rebuild script (if available):
-   ./rebuild-with-modules.sh
+   ./scripts/rebuild-with-modules.sh
 ```
 
 ### Automated Rebuild Script
@@ -171,7 +171,7 @@ The `rebuild-with-modules.sh` script provides:
 
 3. Follow rebuild instructions or run:
    ```bash
-   ./rebuild-with-modules.sh
+   ./scripts/rebuild-with-modules.sh
    ```
 
 ### Disable Module
@@ -193,7 +193,7 @@ MODULE_TRANSMOG=1
 MODULE_SOLO_LFG=1
 
 # Single rebuild handles all changes
-./rebuild-with-modules.sh
+./scripts/rebuild-with-modules.sh
 ```
 
 ## Troubleshooting

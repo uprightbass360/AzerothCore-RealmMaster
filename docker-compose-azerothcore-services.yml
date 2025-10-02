@@ -1062,7 +1062,7 @@ services:
             echo "   docker compose -f /tmp/acore-dev-test/docker-compose.yml up -d"
             echo ""
             echo "3. Or use the automated rebuild script (if available):"
-            echo "   ./rebuild-with-modules.sh"
+            echo "   ./scripts/rebuild-with-modules.sh"
             echo ""
             echo "📋 NOTE: Source-based build will compile AzerothCore with all enabled modules"
             echo "⏱️  Expected build time: 15-45 minutes depending on system performance"
