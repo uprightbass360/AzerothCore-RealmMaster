@@ -82,7 +82,7 @@ services:
     ports:
       - "${INFLUXDB_EXTERNAL_PORT:-8087}:8086"
     volumes:
-      - ${STORAGE_PATH:-./storage/azerothcore}/azerothcore/influxdb:/var/lib/influxdb2
+      - ${STORAGE_PATH:-./storage/azerothcore}/influxdb:/var/lib/influxdb2
     restart: unless-stopped
     networks:
       - azerothcore
@@ -110,7 +110,7 @@ services:
     ports:
       - "${GF_EXTERNAL_PORT:-3001}:3000"
     volumes:
-      - ${STORAGE_PATH:-./storage/azerothcore}/azerothcore/grafana:/var/lib/grafana
+      - ${STORAGE_PATH:-./storage/azerothcore}/grafana:/var/lib/grafana
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
