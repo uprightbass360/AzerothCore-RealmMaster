@@ -130,8 +130,7 @@ acore-compose/
 | `ac-authserver` | acore/ac-wotlk-authserver:14.0.0-dev | Authentication server | 3784:3724 | 
 | `ac-worldserver` | acore/ac-wotlk-worldserver:14.0.0-dev | Game world server | 8215:8085, 7778:7878 | 
 | `ac-eluna` | acore/eluna-ts:master | Lua scripting engine | - | 
-| `ac-phpmyadmin` | phpmyadmin/phpmyadmin:latest | Database management web UI | 8081:80| 
- 
+| `ac-phpmyadmin` | phpmyadmin/phpmyadmin:latest | Database management web UI | 8081:80 | 
 | `ac-keira3` | uprightbass360/keira3:latest | Production database editor with API | 4201:8080 |
 | `ac-backup` | mysql:8.0 | Automated backup service | - |
 | `ac-modules` | alpine/git:latest | Module management | - |
@@ -336,7 +335,7 @@ The deployment uses a unified storage approach controlled by the `STORAGE_ROOT` 
 | **Game Data** | `./storage/azerothcore/data` | `${STORAGE_ROOT}/azerothcore/data` | Maps, vmaps, mmaps, DBC files |
 | **Configuration** | `./storage/azerothcore/config` | `${STORAGE_ROOT}/azerothcore/config` | Server configuration files |
 | **Application Logs** | `./storage/azerothcore/logs` | `${STORAGE_ROOT}/azerothcore/logs` | Server and service logs |
-| **Backups** | `./backups` | `./backups` | Database backup files |
+| **Backups** | `./storage/azerothcore/backups` | `${STORAGE_ROOT}/azerothcore/backups` | Database backup files |
 
 ### Storage Configuration Examples
 
@@ -537,10 +536,9 @@ The system provides **dual backup schedules** for comprehensive data protection:
 Configure via environment variables in `docker-compose-azerothcore-database.env`:
 
 - `STORAGE_ROOT`: Root storage path (default: ./storage)
-- `BACKUP_CRON_SCHEDULE`: Daily backup time (default: "0 9 * * *" - 9 AM UTC)
 - `BACKUP_RETENTION_DAYS`: Days to keep daily backups (default: 3)
 - `BACKUP_RETENTION_HOURS`: Hours to keep hourly backups (default: 6)
-- `BACKUP_DIR`: Container backup directory (default: /backups)
+- `BACKUP_DAILY_TIME`: Hour for daily backup in 24h format (default: 09)
 - `HOST_BACKUP_PATH`: Host backup storage path (default: ${STORAGE_PATH}/backups)
 - `DB_AUTH_NAME`, `DB_WORLD_NAME`, `DB_CHARACTERS_NAME`: Database names (configurable)
 
@@ -569,7 +567,7 @@ The `ac-backup` container runs continuously with dual scheduling:
 - **Purpose**: Recent recovery and frequent data protection
 
 **Daily Backups**:
-- **Schedule**: Daily at 9:00 AM UTC (configurable via `BACKUP_CRON_SCHEDULE`)
+- **Schedule**: Daily at configurable time (default: 9:00 AM UTC)
 - **Retention**: 3 days (keeps last 3 daily backups)
 - **Location**: `${HOST_BACKUP_PATH}/daily/`
 - **Features**: Enhanced with database statistics and comprehensive metadata

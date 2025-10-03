@@ -5,7 +5,7 @@ MYSQL_HOST=${MYSQL_HOST:-ac-mysql}
 MYSQL_PORT=${MYSQL_PORT:-3306}
 MYSQL_USER=${MYSQL_USER:-root}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
-BACKUP_DIR=${BACKUP_DIR:-/backups}
+BACKUP_DIR="/backups"
 
 if [ -z "$1" ]; then
     echo "Usage: restore.sh <backup_timestamp>"

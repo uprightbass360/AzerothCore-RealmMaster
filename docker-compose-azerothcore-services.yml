@@ -1072,7 +1072,25 @@ services:
           echo "✅ No C++ modules enabled - pre-built containers can be used"
         fi
 
-        echo 'Module management complete. Keeping container alive...'
+        echo 'Module management complete.'
+
+        # Download rebuild script from GitHub for local access
+        echo '📥 Downloading rebuild-with-modules.sh from GitHub...'
+        apk add --no-cache curl
+        if curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/rebuild-with-modules.sh -o /tmp/rebuild-with-modules.sh 2>/dev/null; then
+          echo '✅ Downloaded rebuild-with-modules.sh from GitHub'
+          chmod +x /tmp/rebuild-with-modules.sh
+          echo '📍 Script available at: /tmp/rebuild-with-modules.sh'
+        elif [ -f "/project/scripts/rebuild-with-modules.sh" ]; then
+          echo '📁 Using local rebuild-with-modules.sh for testing'
+          cp /project/scripts/rebuild-with-modules.sh /tmp/rebuild-with-modules.sh
+          chmod +x /tmp/rebuild-with-modules.sh
+          echo '✅ Copied to /tmp/rebuild-with-modules.sh'
+        else
+          echo '⚠️  Warning: rebuild-with-modules.sh not found in GitHub or locally'
+        fi
+
+        echo 'Keeping container alive...'
         tail -f /dev/null
     restart: "no"
     networks:

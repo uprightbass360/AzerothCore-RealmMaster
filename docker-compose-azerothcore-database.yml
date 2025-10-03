@@ -150,8 +150,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS}
       BACKUP_RETENTION_HOURS: ${BACKUP_RETENTION_HOURS}
-      BACKUP_CRON_SCHEDULE: ${BACKUP_CRON_SCHEDULE}
-      BACKUP_DIR: ${BACKUP_DIR}
+      BACKUP_DAILY_TIME: ${BACKUP_DAILY_TIME}
       DB_AUTH_NAME: ${DB_AUTH_NAME}
       DB_WORLD_NAME: ${DB_WORLD_NAME}
       DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
@@ -185,7 +184,7 @@ services:
 
         # Enhanced scheduler with hourly and daily backups
         echo "⏰ Starting enhanced backup scheduler:"
-        echo "   📅 Daily backups: ${BACKUP_CRON_SCHEDULE} (retention: ${BACKUP_RETENTION_DAYS} days)"
+        echo "   📅 Daily backups: ${BACKUP_DAILY_TIME}:00 UTC (retention: ${BACKUP_RETENTION_DAYS} days)"
         echo "   ⏰ Hourly backups: every hour (retention: ${BACKUP_RETENTION_HOURS} hours)"
 
         # Track last backup times to avoid duplicates
@@ -197,15 +196,15 @@ services:
           current_minute=$(date +%M)
           current_time="$current_hour:$current_minute"
 
-          # Daily backup check (9:00 AM)
-          if [ "$$current_hour" = "09" ] && [ "$$current_minute" = "00" ] && [ "$$last_daily_hour" != "$$current_hour" ]; then
+          # Daily backup check (configurable time)
+          if [ "$$current_hour" = "${BACKUP_DAILY_TIME}" ] && [ "$$current_minute" = "00" ] && [ "$$last_daily_hour" != "$$current_hour" ]; then
             echo "📅 [$(date)] Daily backup time reached, running daily backup..."
             /tmp/backup-daily.sh
             last_daily_hour="$$current_hour"
             # Sleep for 2 minutes to avoid running multiple times
             sleep 120
           # Hourly backup check (every hour at minute 0, except during daily backup)
-          elif [ "$$current_minute" = "00" ] && [ "$$current_hour" != "09" ] && [ "$$last_hourly_minute" != "$$current_minute" ]; then
+          elif [ "$$current_minute" = "00" ] && [ "$$current_hour" != "${BACKUP_DAILY_TIME}" ] && [ "$$last_hourly_minute" != "$$current_minute" ]; then
             echo "⏰ [$(date)] Hourly backup time reached, running hourly backup..."
             /tmp/backup-hourly.sh
             last_hourly_minute="$$current_minute"
