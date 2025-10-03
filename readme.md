@@ -12,7 +12,7 @@ This project is a Docker/Podman implementation based on:
 - **Logger Issue Resolution**: Fixed worldserver startup issues with proper logger configuration
 - **Dynamic URL Generation**: Web interfaces automatically detect external URLs for deployment flexibility
 - **Port Collision Prevention**: All external ports optimized to avoid common development tool conflicts
-- **Enhanced Security**: Comprehensive security settings for all web interfaces (Grafana, InfluxDB, PHPMyAdmin)
+- **Enhanced Security**: Comprehensive security settings for all web interfaces (PHPMyAdmin)
 - **Full Environment Variable Configuration**: No hardcoded values, everything configurable via .env
 - **External Domain Support**: Configurable base URLs for custom domain deployment
 - **Multi-Runtime Support**: Works with both Docker and Podman
@@ -315,8 +315,7 @@ acore-compose/
 | `ac-worldserver` | acore/ac-wotlk-worldserver:14.0.0-dev | Game world server | 8215:8085, 7778:7878 | 
 | `ac-eluna` | acore/eluna-ts:master | Lua scripting engine | - | 
 | `ac-phpmyadmin` | phpmyadmin/phpmyadmin:latest | Database management web UI | 8081:80| 
-| `ac-grafana` | grafana/grafana:latest | Monitoring dashboard | 3001:3000 | 
-| `ac-influxdb` | influxdb:2.7-alpine | Metrics database | 8087:8086 | 
+ 
 | `ac-keira3` | uprightbass360/keira3:latest | Production database editor with API | 4201:8080 | 
 | `ac-backup` | mysql:8.0 | Automated backup service | - | 
 | `ac-modules` | alpine/git:latest | Module management | - | 
@@ -472,8 +471,6 @@ Configuration is managed through separate `.env` files for each layer:
 #### Tools Layer (`docker-compose-azerothcore-tools.env`)
 - `PMA_EXTERNAL_PORT`: PHPMyAdmin port (8081)
 - `KEIRA3_EXTERNAL_PORT`: Database editor port (4201)
-- `GF_EXTERNAL_PORT`: Grafana monitoring port (3001)
-- `INFLUXDB_EXTERNAL_PORT`: InfluxDB metrics port (8087)
 - `STORAGE_ROOT`: Root storage path (default: ./storage)
 - `STORAGE_PATH`: Derived storage path (${STORAGE_ROOT}/azerothcore)
 
@@ -505,8 +502,6 @@ The deployment uses a unified storage approach controlled by the `STORAGE_ROOT` 
 | **Game Data** | `./storage/azerothcore/data` | `${STORAGE_ROOT}/azerothcore/data` | Maps, vmaps, mmaps, DBC files |
 | **Configuration** | `./storage/azerothcore/config` | `${STORAGE_ROOT}/azerothcore/config` | Server configuration files |
 | **Application Logs** | `./storage/azerothcore/logs` | `${STORAGE_ROOT}/azerothcore/logs` | Server and service logs |
-| **Tools Data** | `./storage/azerothcore/azerothcore/grafana` | `${STORAGE_ROOT}/azerothcore/azerothcore/grafana` | Grafana dashboards |
-| **Metrics Data** | `./storage/azerothcore/azerothcore/influxdb` | `${STORAGE_ROOT}/azerothcore/azerothcore/influxdb` | InfluxDB time series data |
 | **Backups** | `./backups` | `./backups` | Database backup files |
 
 ### Storage Configuration Examples
@@ -693,98 +688,172 @@ EOF
 
 ## Backup System
 
-The deployment includes a comprehensive automated backup system with individual database backups, compression, and retention management.
+The deployment includes a comprehensive automated backup system with tiered backup schedules, individual database backups, compression, and intelligent retention management.
+
+### Enhanced Backup Strategy
+
+The system provides **dual backup schedules** for comprehensive data protection:
+
+- **🕘 Hourly Backups**: Every hour with 6-hour retention (for recent recovery)
+- **📅 Daily Backups**: Every day at 9:00 AM UTC with 3-day retention (for longer-term recovery)
+- **🔄 Auto-Restore**: Automatic backup restoration on fresh MySQL installations
 
 ### Backup Configuration
 
 Configure via environment variables in `docker-compose-azerothcore-database.env`:
 
 - `STORAGE_ROOT`: Root storage path (default: ./storage)
-- `BACKUP_CRON_SCHEDULE`: Cron expression (default: "0 3 * * *" - 3 AM daily)
-- `BACKUP_RETENTION_DAYS`: Days to keep backups (default: 7)
-- `HOST_BACKUP_PATH`: Local backup storage path (default: ./backups)
-- `HOST_BACKUP_SCRIPTS_PATH`: Backup scripts path (default: ./scripts)
+- `BACKUP_CRON_SCHEDULE`: Daily backup time (default: "0 9 * * *" - 9 AM UTC)
+- `BACKUP_RETENTION_DAYS`: Days to keep daily backups (default: 3)
+- `BACKUP_RETENTION_HOURS`: Hours to keep hourly backups (default: 6)
+- `BACKUP_DIR`: Container backup directory (default: /backups)
+- `HOST_BACKUP_PATH`: Host backup storage path (default: ${STORAGE_PATH}/backups)
+- `DB_AUTH_NAME`, `DB_WORLD_NAME`, `DB_CHARACTERS_NAME`: Database names (configurable)
 
-**Note**: The backup service operates independently of `STORAGE_ROOT` and uses dedicated backup paths for database exports.
+**Note**: All backup settings are now fully parameterized via environment variables for maximum flexibility.
 
 ### Backup Features
 
+✅ **Tiered Backup Strategy**: Hourly + Daily schedules with different retention policies
 ✅ **Individual Database Backups**: Separate compressed files for each database
 ✅ **Backup Manifests**: JSON metadata with timestamps and backup information
 ✅ **Automated Compression**: Gzip compression for space efficiency
-✅ **Retention Management**: Automatic cleanup of old backups
-✅ **External Scripts**: Uses external backup/restore scripts for flexibility
+✅ **Intelligent Retention**: Different policies for hourly vs daily backups
+✅ **Auto-Restore**: Automatic restoration from latest backup on fresh installations
+✅ **Environment-Based Config**: All settings configurable via environment variables
+✅ **Shared Storage**: Backups persist in host filesystem independent of container lifecycle
 
 ### Backup Operations
 
 #### Automatic Backups
-The `ac-backup` container runs continuously and performs scheduled backups:
-- **Schedule**: Daily at 3:00 AM by default (configurable via `BACKUP_CRON_SCHEDULE`)
-- **Databases**: All AzerothCore databases (auth, world, characters)
-- **Format**: Individual compressed SQL files per database
-- **Retention**: Automatic cleanup after configured days
+The `ac-backup` container runs continuously with dual scheduling:
+
+**Hourly Backups**:
+- **Schedule**: Every hour at minute 0 (except during daily backup)
+- **Retention**: 6 hours (keeps last 6 hourly backups)
+- **Location**: `${HOST_BACKUP_PATH}/hourly/`
+- **Purpose**: Recent recovery and frequent data protection
+
+**Daily Backups**:
+- **Schedule**: Daily at 9:00 AM UTC (configurable via `BACKUP_CRON_SCHEDULE`)
+- **Retention**: 3 days (keeps last 3 daily backups)
+- **Location**: `${HOST_BACKUP_PATH}/daily/`
+- **Features**: Enhanced with database statistics and comprehensive metadata
+- **Purpose**: Longer-term recovery and compliance
 
 #### Manual Backups
 
 ```bash
-# Execute backup immediately using container
-docker exec ac-backup /scripts/backup.sh
+# Execute hourly backup immediately
+docker exec ac-backup /tmp/backup-hourly.sh
 
-# Or run backup script directly (if scripts are accessible)
-cd scripts
-./backup.sh
+# Execute daily backup immediately
+docker exec ac-backup /tmp/backup-daily.sh
 
 # Check backup status and logs
 docker logs ac-backup --tail 20
 
-# List available backups
-ls -la backups/
+# List available backups by type
+ls -la ${HOST_BACKUP_PATH}/hourly/
+ls -la ${HOST_BACKUP_PATH}/daily/
+
+# Check backup storage usage
+du -sh ${HOST_BACKUP_PATH}/*/
 ```
 
-### Backup Structure
+### Tiered Backup Structure
 
 ```
-backups/
-├── 20250930_181843/                    # Timestamp-based backup directory
-│   ├── acore_auth.sql.gz              # Compressed auth database (8KB)
-│   ├── acore_world.sql.gz             # Compressed world database (77MB)
-│   ├── acore_characters.sql.gz        # Compressed characters database (16KB)
-│   └── manifest.json                  # Backup metadata
-├── 20250930_120000/                    # Previous backup
-└── ...                                 # Additional backups (retention managed)
+storage/azerothcore/backups/
+├── hourly/                             # Hourly backups (6-hour retention)
+│   ├── 20251003_140000/               # Recent hourly backup
+│   │   ├── acore_auth.sql.gz          # Compressed auth database (8KB)
+│   │   ├── acore_world.sql.gz         # Compressed world database (77MB)
+│   │   ├── acore_characters.sql.gz    # Compressed characters database (16KB)
+│   │   └── manifest.json              # Backup metadata
+│   └── 20251003_150000/               # Next hourly backup
+├── daily/                              # Daily backups (3-day retention)
+│   ├── 20251003_090000/               # Daily backup with enhanced features
+│   │   ├── acore_auth.sql.gz          # Compressed auth database (8KB)
+│   │   ├── acore_world.sql.gz         # Compressed world database (77MB)
+│   │   ├── acore_characters.sql.gz    # Compressed characters database (16KB)
+│   │   ├── manifest.json              # Enhanced backup metadata
+│   │   └── database_stats.txt         # Database statistics and sizing
+│   └── 20251004_090000/               # Next daily backup
+└── [legacy backups]                    # Previous single-schedule backups
 ```
 
-### Backup Metadata
+### Enhanced Backup Metadata
 
-Each backup includes a `manifest.json` file with backup information:
-
+**Hourly Backup Manifest** (`hourly/*/manifest.json`):
 ```json
 {
-    "timestamp": "20250930_181843",
-    "databases": ["acore_auth acore_world acore_characters"],
+    "timestamp": "20251003_140000",
+    "type": "hourly",
+    "databases": ["acore_auth", "acore_world", "acore_characters"],
     "backup_size": "77M",
-    "retention_days": 7,
+    "retention_hours": 6,
     "mysql_version": "8.0.43"
 }
 ```
 
-### Backup Restoration
-
-#### Using Restore Script
-```bash
-cd scripts
-./restore.sh /path/to/backup/directory/20250930_181843
+**Daily Backup Manifest** (`daily/*/manifest.json`):
+```json
+{
+    "timestamp": "20251003_090000",
+    "type": "daily",
+    "databases": ["acore_auth", "acore_world", "acore_characters"],
+    "backup_size": "77M",
+    "retention_days": 3,
+    "mysql_version": "8.0.43",
+    "backup_method": "mysqldump with master-data and flush-logs",
+    "created_by": "acore-compose2 backup system"
+}
 ```
 
-#### Manual Restoration
+**Daily Database Statistics** (`daily/*/database_stats.txt`):
+```
+Database: acore_auth, Tables: 15, Size: 1.2MB
+Database: acore_world, Tables: 422, Size: 75.8MB
+Database: acore_characters, Tables: 25, Size: 0.8MB
+```
+
+### Auto-Restore Functionality
+
+The system includes intelligent auto-restore capabilities:
+
+**Restoration Priority**:
+1. **Daily backups** (preferred for consistency)
+2. **Hourly backups** (fallback for recent data)
+3. **Legacy backups** (compatibility with older backups)
+
+**Auto-Restore Process**:
+- Detects fresh MySQL installations automatically
+- Finds latest available backup using priority order
+- Downloads restoration script from GitHub
+- Performs automated database restoration
+- Continues normal MySQL startup after restoration
+
+**Manual Restoration**:
+```bash
+# Restore from specific daily backup
+cd scripts
+./restore.sh daily/20251003_090000
+
+# Restore from specific hourly backup
+cd scripts
+./restore.sh hourly/20251003_140000
+```
+
+#### Legacy Manual Restoration
 ```bash
 # Restore individual database from compressed backup
-gunzip -c backups/20250930_181843/acore_world.sql.gz | \
+gunzip -c backups/daily/20251003_090000/acore_world.sql.gz | \
   docker exec -i ac-mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD} acore_world
 
 # Restore all databases from a backup directory
 for db in auth world characters; do
-  gunzip -c backups/20250930_181843/acore_${db}.sql.gz | \
+  gunzip -c backups/daily/20251003_090000/acore_${db}.sql.gz | \
     docker exec -i ac-mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD} acore_${db}
 done
 ```
@@ -1055,8 +1124,6 @@ docker stats --no-stream
 | **SOAP API** | `localhost:7778` | 7778 | Server administration API |
 | **PHPMyAdmin** | `http://localhost:8081` | 8081 | Database management interface |
 | **Keira3** | `http://localhost:4201` | 4201 | Database editor web UI with API backend |
-| **Grafana** | `http://localhost:3001` | 3001 | Monitoring dashboard |
-| **InfluxDB** | `localhost:8087` | 8087 | Metrics database |
 | **MySQL** | `localhost:64306` | 64306 | Direct database access |
 
 ### Database Credentials
