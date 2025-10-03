@@ -126,27 +126,77 @@ acore-compose/
 
 | Container | Image | Purpose | Exposed Ports |
 |-----------|-------|---------|---------------|
-| `ac-mysql` | mysql:8.0 | MySQL database server | 64306:3306 | 
-| `ac-authserver` | acore/ac-wotlk-authserver:14.0.0-dev | Authentication server | 3784:3724 | 
-| `ac-worldserver` | acore/ac-wotlk-worldserver:14.0.0-dev | Game world server | 8215:8085, 7778:7878 | 
-| `ac-eluna` | acore/eluna-ts:master | Lua scripting engine | - | 
-| `ac-phpmyadmin` | phpmyadmin/phpmyadmin:latest | Database management web UI | 8081:80 | 
-| `ac-keira3` | uprightbass360/keira3:latest | Production database editor with API | 4201:8080 |
-| `ac-backup` | mysql:8.0 | Automated backup service | - |
-| `ac-modules` | alpine/git:latest | Module management | - |
-| `ac-post-install` | alpine:latest | Automatic post-installation configuration | - | 
+| **Database Layer** |
+| `ac-mysql` | mysql:8.0 | MySQL database server | 64306:3306 |
+| `ac-db-init` | mysql:8.0 | Database initialization (one-time) | - |
+| `ac-db-import` | acore/ac-wotlk-db-import:14.0.0-dev | Database import (one-time) | - |
+| `ac-backup` | mysql:8.0 | Automated backup service with GitHub scripts | - |
+| **Services Layer** |
+| `ac-client-data` | alpine:latest | Game client data download/extraction | - |
+| `ac-authserver` | acore/ac-wotlk-authserver:14.0.0-dev | Authentication server | 3784:3724 |
+| `ac-worldserver` | acore/ac-wotlk-worldserver:14.0.0-dev | Game world server | 8215:8085, 7778:7878 |
+| `ac-eluna` | acore/eluna-ts:master | Lua scripting engine | - |
+| `ac-modules` | alpine/git:latest | Module management with GitHub script download | - |
+| `ac-post-install` | alpine:latest | Automatic post-installation configuration | - |
+| **Tools Layer** |
+| `ac-phpmyadmin` | phpmyadmin/phpmyadmin:latest | Database management web UI | 8081:80 |
+| `ac-keira3` | uprightbass360/keira3:latest | Production database editor with API | 4201:8080 | 
 
 ### Container Relationships
 
 ```mermaid
 graph TD
-    A[ac-mysql] -->|depends_on| B[ac-db-init]
-    B -->|depends_on| C[ac-db-import]
-    C -->|depends_on| D[ac-authserver]
-    C -->|depends_on| E[ac-worldserver]
-    E -->|depends_on| F[ac-eluna]
-    A -->|backup| G[ac-backup]
+    %% Database Layer
+    A[ac-mysql] --> B[ac-db-init]
+    A --> C[ac-db-import]
+    A --> D[ac-backup]
+
+    %% Services Layer
+    E[ac-client-data] --> F[ac-authserver]
+    F --> G[ac-worldserver]
+    G --> H[ac-eluna]
+    I[ac-modules] --> J[ac-post-install]
+
+    %% Tools Layer (External)
+    K[ac-phpmyadmin] -.->|connects to| A
+    L[ac-keira3] -.->|connects to| A
+
+    %% Database dependencies
+    A -.->|provides data| F
+    A -.->|provides data| G
+
+    %% Layer grouping
+    subgraph "Database Layer"
+        A
+        B
+        C
+        D
+    end
+
+    subgraph "Services Layer"
+        E
+        F
+        G
+        H
+        I
+        J
+    end
+
+    subgraph "Tools Layer"
+        K
+        L
+    end
 ```
+
+**Layer Dependencies**:
+- **Database Layer**: Independent, starts first
+- **Services Layer**: Depends on database layer being ready
+- **Tools Layer**: Connects to database layer externally
+
+**Container Dependencies**:
+- `ac-worldserver` depends on: `ac-authserver`, `ac-client-data`
+- `ac-post-install` depends on: `ac-modules`
+- All game services connect to: `ac-mysql`
 
 ### Network Architecture
 - **Network Name**: `azerothcore`
