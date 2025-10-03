@@ -107,12 +107,11 @@ This project provides a production-ready AzerothCore deployment using Docker/Pod
 ```
 acore-compose/
 ├── docker-compose-azerothcore-database.yml     # Database layer
-├── docker-compose-azerothcore-services.yml     # Game services layer
-├── docker-compose-azerothcore-tools.yml        # Management tools layer
 ├── docker-compose-azerothcore-database.env     # Database configuration
+├── docker-compose-azerothcore-services.yml     # Game services layer
 ├── docker-compose-azerothcore-services.env     # Services configuration
+├── docker-compose-azerothcore-tools.yml        # Management tools layer
 ├── docker-compose-azerothcore-tools.env        # Tools configuration
-├── docker-compose-azerothcore-optional.env     # Optional services config
 ├── scripts/                                    # Deployment, cleanup, and backup automation
 ├── storage/                                    # Unified storage root (configurable via STORAGE_ROOT)
 │   └── azerothcore/                            # All persistent data (database, configs, tools)
