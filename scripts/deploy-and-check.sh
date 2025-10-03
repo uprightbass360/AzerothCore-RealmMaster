@@ -200,7 +200,7 @@ perform_health_checks() {
     print_status "HEADER" "CONTAINER HEALTH STATUS"
 
     # Check all containers
-    local containers=("ac-mysql" "ac-backup" "ac-authserver" "ac-worldserver" "ac-phpmyadmin" "ac-keira3" "ac-grafana" "ac-influxdb")
+    local containers=("ac-mysql" "ac-backup" "ac-authserver" "ac-worldserver" "ac-phpmyadmin" "ac-keira3")
     local container_failures=0
 
     for container in "${containers[@]}"; do
@@ -232,8 +232,6 @@ perform_health_checks() {
     print_status "INFO" "Tools Layer:"
     if ! check_port 8081 "PHPMyAdmin"; then ((port_failures++)); fi
     if ! check_port 4201 "Keira3"; then ((port_failures++)); fi
-    if ! check_port 3001 "Grafana"; then ((port_failures++)); fi
-    if ! check_port 8087 "InfluxDB"; then ((port_failures++)); fi
 
     if [ "$QUICK_CHECK" = false ]; then
         print_status "HEADER" "WEB SERVICE HEALTH CHECKS"
@@ -241,8 +239,6 @@ perform_health_checks() {
         local web_failures=0
         if ! check_web_service "http://localhost:8081/" "PHPMyAdmin" "phpMyAdmin"; then ((web_failures++)); fi
         if ! check_web_service "http://localhost:4201/health" "Keira3" "healthy"; then ((web_failures++)); fi
-        if ! check_web_service "http://localhost:3001/api/health" "Grafana" "database.*ok"; then ((web_failures++)); fi
-        if ! check_web_service "http://localhost:8087/health" "InfluxDB" "ready for queries"; then ((web_failures++)); fi
 
         print_status "HEADER" "DATABASE CONNECTIVITY TEST"
 
@@ -274,16 +270,12 @@ perform_health_checks() {
         print_status "INFO" "Available services:"
         echo "  🌐 PHPMyAdmin:     http://localhost:8081"
         echo "  🛠️  Keira3:         http://localhost:4201"
-        echo "  📊 Grafana:        http://localhost:3001"
-        echo "  📈 InfluxDB:       http://localhost:8087"
         echo "  🎮 Game Server:    localhost:8215"
         echo "  🔐 Auth Server:    localhost:3784"
         echo "  🔧 SOAP API:       localhost:7778"
         echo "  🗄️  MySQL:          localhost:64306"
         echo ""
         print_status "INFO" "Default credentials:"
-        echo "  📊 Grafana:        admin / acore123"
-        echo "  📈 InfluxDB:       acore / acore123"
         echo "  🗄️  MySQL:          root / azerothcore123"
         return 0
     else

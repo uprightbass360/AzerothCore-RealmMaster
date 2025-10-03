@@ -113,10 +113,10 @@ acore-compose/
 ├── docker-compose-azerothcore-services.env     # Services configuration
 ├── docker-compose-azerothcore-tools.env        # Tools configuration
 ├── docker-compose-azerothcore-optional.env     # Optional services config
-├── scripts/                                     # Deployment, cleanup, and backup automation
-├── storage/                                     # Unified storage root (configurable via STORAGE_ROOT)
-│   └── azerothcore/                            # All persistent data (database, configs, tools)
-├── backups/                                     # Database backups
+├── scripts/                                    # Deployment, cleanup, and backup automation
+├── storage/                                    # Unified storage root (configurable via STORAGE_ROOT)
+│   ├── azerothcore/                            # All persistent data (database, configs, tools)
+│   └── backups/                                # Database backups
 └── readme.md                                   # This documentation
 ```
 

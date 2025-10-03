@@ -165,7 +165,7 @@ show_current_resources() {
     fi
 
     echo -e "${BLUE}Images:${NC}"
-    if docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep -E "acore|azerothcore|phpmyadmin|grafana|influxdb|keira3" | head -10; then
+    if docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep -E "acore|azerothcore|phpmyadmin|keira3" | head -10; then
         echo ""
     else
         echo "  No AzerothCore-related images found"
@@ -258,7 +258,7 @@ nuclear_cleanup() {
         "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^acore/' | xargs -r docker rmi"
 
     execute_command "Remove related tool images" \
-        "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'phpmyadmin|grafana|influxdb|uprightbass360/keira3' | xargs -r docker rmi"
+        "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'phpmyadmin|uprightbass360/keira3' | xargs -r docker rmi"
 
     # Clean up local data directories
     execute_command "Remove local data directories" \

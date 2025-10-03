@@ -56,21 +56,17 @@ cd scripts
 - ✅ **ac-worldserver**: Game world server
 - ✅ **ac-phpmyadmin**: Database management interface
 - ✅ **ac-keira3**: Database editor
-- ✅ **ac-grafana**: Monitoring dashboard
-- ✅ **ac-influxdb**: Metrics database
 
 ### Port Connectivity Tests
 - **Database Layer**: MySQL (64306)
 - **Services Layer**: Auth Server (3784), World Server (8215), SOAP API (7778)
-- **Tools Layer**: PHPMyAdmin (8081), Keira3 (4201), Grafana (3001), InfluxDB (8087)
+- **Tools Layer**: PHPMyAdmin (8081), Keira3 (4201)
 
-### Web Service Health Checks (Full Mode Only)
+### Web Service Health Checks 
 - **PHPMyAdmin**: HTTP response and content verification
 - **Keira3**: Health endpoint and content verification
-- **Grafana**: API health check
-- **InfluxDB**: Health endpoint validation
 
-### Database Validation (Full Mode Only)
+### Database Validation 
 - **Schema Verification**: Confirms all required databases exist
 - **Realm Configuration**: Validates realm setup
 
@@ -79,8 +75,6 @@ cd scripts
 ### Web Interfaces
 - 🌐 **PHPMyAdmin**: http://localhost:8081
 - 🛠️ **Keira3**: http://localhost:4201
-- 📊 **Grafana**: http://localhost:3001
-- 📈 **InfluxDB**: http://localhost:8087
 
 ### Game Connections
 - 🎮 **Game Server**: localhost:8215
@@ -89,8 +83,6 @@ cd scripts
 - 🗄️ **MySQL**: localhost:64306
 
 ### Default Credentials
-- **Grafana**: admin / acore123
-- **InfluxDB**: acore / acore123
 - **MySQL**: root / azerothcore123
 
 ## Deployment Process
@@ -113,8 +105,6 @@ The script follows this deployment sequence:
 ### 3. Tools Layer
 - Deploys PHPMyAdmin database interface
 - Deploys Keira3 database editor
-- Deploys Grafana monitoring
-- Deploys InfluxDB metrics database
 
 ## Troubleshooting
 
