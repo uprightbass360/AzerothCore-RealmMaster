@@ -24,7 +24,6 @@ This project is a Docker/Podman implementation based on:
 ## Table of Contents
 - [Overview](#overview)
 - [Features](#features)
-- [Available Modules](#available-modules)
 - [Requirements](#requirements)
 - [Project Structure](#project-structure)
 - [Container Architecture](#container-architecture)
@@ -36,6 +35,7 @@ This project is a Docker/Podman implementation based on:
 - [Deployment Scripts](#deployment-scripts)
 - [Troubleshooting](#troubleshooting)
 - [Security Considerations](#security-considerations)
+- [Available Modules](#available-modules)
 
 ## Overview
 
@@ -77,195 +77,6 @@ This project provides a production-ready AzerothCore deployment using Docker/Pod
 - ✅ **Network Isolation**: Custom bridge network for container communication
 - ✅ **Persistent Storage**: Named volumes for data persistence
 
-## Available Modules
-
-This deployment includes a **comprehensive automated module management system** that supports 28 AzerothCore modules with:
-
-- ✅ **Automatic Git-based module installation**
-- ✅ **State tracking with rebuild detection**
-- ✅ **SQL script execution for database setup**
-- ✅ **Configuration file management (.conf.dist → .conf)**
-- ✅ **Source-based compilation integration**
-- ✅ **Hash-based change detection triggers rebuilds automatically**
-- ✅ **Compatibility analysis and documentation**
-
-All modules are automatically downloaded from GitHub when enabled and include proper configuration files.
-
-### Module Management Architecture
-
-The system consists of three key components:
-
-1. **Module Manager Container** (`ac-modules`)
-   - Handles module downloading, SQL execution, and state tracking
-   - Runs as one-time setup during stack initialization
-   - Monitors module configuration changes
-
-2. **Rebuild Detection System**
-   - Tracks module enable/disable state changes
-   - Automatically detects when compilation is required
-   - Provides detailed rebuild instructions
-
-3. **Automated Rebuild Script** (`scripts/rebuild-with-modules.sh`)
-   - Orchestrates full compilation workflow
-   - Integrates with source-based Docker builds
-   - Handles module synchronization
-
-### Module Status Legend
-
-- ✅ **COMPATIBLE**: Module compiles and links successfully
-- ⚠️ **TESTING**: Module requires testing for compatibility
-- ❌ **INCOMPATIBLE**: Module has known compilation or linking issues
-- 🔧 **REQUIRES_CONFIG**: Module needs configuration before compilation
-- 🚨 **CRITICAL**: Module has special requirements or limitations
-
-**Important**: All 28 analyzed modules require C++ compilation - none are compatible with pre-built containers.
-
-### Core Modules (High Priority)
-
-| Module | Status | Description | Repository | README |
-|--------|--------|-------------|------------|--------|
-| **AoE Loot** | ⚠️ | Area of effect looting feature | [mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot) | [📖](https://github.com/azerothcore/mod-aoe-loot/blob/master/.github/README.md) |
-| **Learn Spells** | ⚠️ | Automatic spell learning | [mod-learn-spells](https://github.com/azerothcore/mod-learn-spells) | [📖](https://github.com/azerothcore/mod-learn-spells/blob/master/README.md) |
-| **AutoBalance** | ⚠️ | Dynamic difficulty scaling for dungeons/raids | [mod-autobalance](https://github.com/azerothcore/mod-autobalance) | [📖](https://github.com/azerothcore/mod-autobalance/blob/master/README.md) |
-| **Solo LFG** | ⚠️ | Solo dungeon finder system | [mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg) | [📖](https://github.com/azerothcore/mod-solo-lfg/blob/master/README.md) |
-| **Transmog** | ⚠️ | Transmogrification system | [mod-transmog](https://github.com/azerothcore/mod-transmog) | [📖](https://github.com/azerothcore/mod-transmog/blob/master/README.md) |
-
-### Quality of Life Modules
-
-| Module | Status | Description | Repository | README |
-|--------|--------|-------------|------------|--------|
-| **AHBot** | ❌ | Auction House bot for populated auctions - **LINKING ERROR** | [mod-ahbot](https://github.com/azerothcore/mod-ahbot) | [📖](https://github.com/azerothcore/mod-ahbot/blob/master/README.md) |
-| **NPC Buffer** | ⚠️ | Buff NPC services | [mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer) | [📖](https://github.com/azerothcore/mod-npc-buffer/blob/master/README.md) |
-| **Dynamic XP** | ⚠️ | Configurable experience rates | [mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp) | [📖](https://github.com/azerothcore/mod-dynamic-xp/blob/master/README.md) |
-| **Breaking News** | ⚠️ | Server announcement system | [mod-breaking-news-override](https://github.com/azerothcore/mod-breaking-news-override) | [📖](https://github.com/azerothcore/mod-breaking-news-override/blob/master/README.md) |
-| **Auto Revive** | ⚠️ | Auto-revive functionality for GMs | [mod-auto-revive](https://github.com/azerothcore/mod-auto-revive) | [📖](https://github.com/azerothcore/mod-auto-revive/blob/master/README.md) |
-| **NPC Enchanter** | ⚠️ | NPC-based gear enchantment services | [mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter) | [📖](https://github.com/azerothcore/mod-npc-enchanter/blob/master/README.md) |
-| **Instance Reset** | ⚠️ | NPC-based instance reset functionality | [mod-instance-reset](https://github.com/azerothcore/mod-instance-reset) | [📖](https://github.com/azerothcore/mod-instance-reset/blob/master/README.md) |
-
-### Advanced Modules
-
-| Module | Status | Description | Repository | README |
-|--------|--------|-------------|------------|--------|
-| **Playerbots** | 🚨 | AI-controlled bot system - **REQUIRES CUSTOM BRANCH** | [mod-playerbots](https://github.com/liyunfan1223/mod-playerbots) | [📖](https://github.com/liyunfan1223/mod-playerbots/blob/master/README.md) |
-| **Individual Progression** | 🔧 | Custom character progression system | [mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression) | [📖](https://github.com/ZhengPeiRu21/mod-individual-progression/blob/master/README.md) |
-| **1v1 Arena** | ⚠️ | Arena combat system | [mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena) | [📖](https://github.com/azerothcore/mod-1v1-arena/blob/master/README.md) |
-| **Phased Duels** | ⚠️ | Isolated dueling system | [mod-phased-duels](https://github.com/azerothcore/mod-phased-duels) | [📖](https://github.com/azerothcore/mod-phased-duels/blob/master/README.md) |
-| **Solocraft** | ⚠️ | Solo dungeon scaling | [mod-solocraft](https://github.com/azerothcore/mod-solocraft) | [📖](https://github.com/azerothcore/mod-solocraft/blob/master/.github/README.md) |
-| **Random Enchants** | ⚠️ | Random item enchantments | [mod-random-enchants](https://github.com/azerothcore/mod-random-enchants) | [📖](https://github.com/azerothcore/mod-random-enchants/blob/master/README.md) |
-
-### Server Management Modules
-
-| Module | Status | Description | Repository | README |
-|--------|--------|-------------|------------|--------|
-| **Boss Announcer** | ⚠️ | Raid boss kill notifications | [mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer) | [📖](https://github.com/azerothcore/mod-boss-announcer/blob/master/README.md) |
-| **Account Achievements** | ⚠️ | Cross-character achievements | [mod-account-achievements](https://github.com/azerothcore/mod-account-achievements) | [📖](https://github.com/azerothcore/mod-account-achievements/blob/master/README.md) |
-| **Eluna** | ⚠️ | Lua scripting engine integration | [mod-eluna](https://github.com/azerothcore/mod-eluna) | [📖](https://github.com/azerothcore/mod-eluna/blob/master/README.md) |
-| **Gain Honor Guard** | ⚠️ | Honor system for killing guards | [mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard) | [📖](https://github.com/azerothcore/mod-gain-honor-guard/blob/master/.github/README.md) |
-| **PvP Titles** | ⚠️ | Honor-based PvP title system | [mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles) | [📖](https://github.com/azerothcore/mod-pvp-titles/blob/master/README.md) |
-| **Pocket Portal** | ⚠️ | Teleportation portal system | [mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal) | [📖](https://github.com/azerothcore/mod-pocket-portal/blob/master/README.md) |
-
-### Additional Modules
-
-| Module | Status | Description | Repository | README |
-|--------|--------|-------------|------------|--------|
-| **Time Is Time** | ⚠️ | Realistic day/night cycle | [mod-TimeIsTime](https://github.com/dunjeon/mod-TimeIsTime) | [📖](https://github.com/dunjeon/mod-TimeIsTime/blob/main/README.md) |
-| **NPC Beastmaster** | ⚠️ | Cross-class pet system | [mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster) | [📖](https://github.com/azerothcore/mod-npc-beastmaster/blob/master/README.md) |
-| **Fireworks** | ⚠️ | Fireworks on level up | [mod-fireworks-on-level](https://github.com/azerothcore/mod-fireworks-on-level) | [📖](https://github.com/azerothcore/mod-fireworks-on-level/blob/master/README.md) |
-| **Level Grant** | ⚠️ | Quest-based level granting | [mod-quest-count-level](https://github.com/michaeldelago/mod-quest-count-level) | [📖](https://github.com/michaeldelago/mod-quest-count-level/blob/main/README.md) |
-
-### Module Configuration
-
-Enable modules by setting their environment variables to `1` in `docker-compose-azerothcore-services.env`:
-
-```bash
-# Example: Enable AutoBalance and Transmog
-MODULE_AUTOBALANCE=1
-MODULE_TRANSMOG=1
-```
-
-After enabling/disabling modules:
-1. Run the module manager: `docker compose -f docker-compose-azerothcore-services.yml up ac-modules`
-2. **Enabled modules** will be automatically downloaded to `storage/azerothcore/modules/`
-3. **Disabled modules** will be automatically removed from the modules directory
-4. **Configuration files** (`.conf.dist`) are automatically managed:
-   - **Enabled modules**: Config files copied to `storage/azerothcore/config/`
-   - **Disabled modules**: Config files removed from config directory
-5. **SQL scripts** are automatically executed for database setup
-6. **Important**: All modules require server recompilation to be active - use `./scripts/rebuild-with-modules.sh`
-
-### Safe Module Testing Procedure
-
-1. **Enable Single Module**:
-   ```bash
-   # Edit docker-compose-azerothcore-services.env
-   MODULE_AOE_LOOT=1  # Enable one module
-   ```
-
-2. **Test Compilation**:
-   ```bash
-   ./scripts/rebuild-with-modules.sh
-   ```
-
-3. **Monitor Build**:
-   - Watch for compilation errors
-   - Check for linking issues
-   - Verify successful completion
-
-4. **Test Functionality**:
-   - Start services
-   - Test module features in-game
-   - Check server logs for errors
-
-### Module Management Behavior
-
-The module management system provides complete automation:
-
-- **Enable Module** (`MODULE_NAME=1`):
-  - Downloads module source code via Git if not present
-  - Copies `.conf.dist` files to config directory
-  - Executes SQL scripts for database setup
-  - Updates module state tracking for rebuild detection
-- **Disable Module** (`MODULE_NAME=0`):
-  - Removes module directory completely
-  - Removes associated configuration files
-  - Updates state hash to trigger rebuild detection
-- **Module Persistence**: Only enabled modules and their configs remain
-- **Clean Slate**: Disabling and re-enabling ensures fresh download and config
-- **Zero Manual Setup**: No need to manually copy configuration files or run SQL scripts
-
-### Known Issues and Limitations
-
-#### ❌ mod-ahbot (AuctionHouse Bot)
-- **Error**: `undefined reference to 'Addmod_ahbotScripts()'`
-- **Cause**: Module script loader function not properly exported
-- **Status**: Disabled by default until fixed
-- **Workaround**: Report issue to module maintainer
-
-#### 🚨 mod-playerbots (Player Bots)
-- **Issue**: Requires custom AzerothCore branch
-- **Requirement**: `liyunfan1223/azerothcore-wotlk/tree/Playerbot`
-- **Impact**: Incompatible with standard AzerothCore builds
-- **Solution**: Use separate deployment for playerbot functionality
-
-#### 🔧 mod-individual-progression
-- **Note**: Auto-configures accounts for individual progression
-- **Requirement**: Account creation after server setup
-
-### Post-Installation Requirements
-
-⚠️ **Critical**: All modules require source-based compilation:
-
-1. **Server Recompilation**: All modules need C++ compilation - use `./scripts/rebuild-with-modules.sh`
-2. **Module State Tracking**: System automatically detects when rebuilds are required
-3. **Rebuild Detection**: Hash-based change detection triggers rebuild notifications
-4. **Database Integration**: SQL scripts are executed automatically during module installation
-
-### Module Documentation
-
-For detailed module management documentation, see:
-- **Complete System Guide**: [docs/MODULE_MANAGEMENT.md](docs/MODULE_MANAGEMENT.md)
-- **Compatibility Matrix**: [docs/MODULE_COMPATIBILITY.md](docs/MODULE_COMPATIBILITY.md)
-- **Quick Start Guide**: [docs/README.md](docs/README.md)
 
 ## Requirements
 
@@ -281,6 +92,11 @@ For detailed module management documentation, see:
 - **Compose Tool**: docker-compose 1.29+ OR podman-compose 1.0+
 - **MySQL Client**: For manual database operations (optional)
 - **Git**: For cloning repositories (optional)
+
+### MySQL MCP Requirements
+- **Note**: To use the MySQL MCP (Model Context Protocol) with this project, the database must be running
+- **Database Access**: The MySQL container must be accessible on port 64306 (configurable in environment files)
+- **Connection Details**: MCP will need the database credentials configured in the environment files
 
 ### Game Client Requirements
 - **WoW Client**: Version 3.3.5a (Build 12340)
@@ -316,9 +132,10 @@ acore-compose/
 | `ac-eluna` | acore/eluna-ts:master | Lua scripting engine | - | 
 | `ac-phpmyadmin` | phpmyadmin/phpmyadmin:latest | Database management web UI | 8081:80| 
  
-| `ac-keira3` | uprightbass360/keira3:latest | Production database editor with API | 4201:8080 | 
-| `ac-backup` | mysql:8.0 | Automated backup service | - | 
-| `ac-modules` | alpine/git:latest | Module management | - | 
+| `ac-keira3` | uprightbass360/keira3:latest | Production database editor with API | 4201:8080 |
+| `ac-backup` | mysql:8.0 | Automated backup service | - |
+| `ac-modules` | alpine/git:latest | Module management | - |
+| `ac-post-install` | alpine:latest | Automatic post-installation configuration | - | 
 
 ### Container Relationships
 
@@ -397,18 +214,35 @@ No manual data extraction is required, but ensure you have sufficient disk space
 docker compose --env-file docker-compose-azerothcore-tools.env -f docker-compose-azerothcore-tools.yml up -d
 ```
 
-### Step 3: Run Post-Installation Configuration
+### Step 3: Automatic Post-Installation Configuration
 
-Configure the server with production database settings and realm information:
+The system automatically configures the server on new installations:
 
 ```bash
-# Run automated post-installation setup
+# Post-install configuration runs automatically via the ac-post-install container
+# Monitor the automated setup process:
+docker logs ac-post-install -f
+
+# The automatic setup will:
+# 1. Detect new installations (no previous marker file)
+# 2. Wait for MySQL and configuration files to be ready
+# 3. Update .conf files with production database settings
+# 4. Update realmlist table with server address and port
+# 5. Restart services to apply changes
+# 6. Create a completion marker to prevent re-execution
+```
+
+#### Manual Post-Installation (Optional)
+
+If you need to run post-installation manually or troubleshoot:
+
+```bash
+# Run manual post-installation setup
 ./scripts/post-install-setup.sh
 
-# This script will:
-# 1. Update .conf files with production database settings
-# 2. Update realmlist table with server address and port
-# 3. Restart services to apply changes
+# Or force re-run automatic post-install (removes marker)
+docker exec ac-post-install rm -f /install-markers/post-install-completed
+docker compose -f docker-compose-azerothcore-services.yml restart ac-post-install
 ```
 
 ### Step 4: Create Admin Account
@@ -1099,6 +933,196 @@ SHOW PROCESSLIST;"
 # Monitor resource usage
 docker stats --no-stream
 ```
+
+## Available Modules
+
+This deployment includes a **comprehensive automated module management system** that supports 28 AzerothCore modules with:
+
+- ✅ **Automatic Git-based module installation**
+- ✅ **State tracking with rebuild detection**
+- ✅ **SQL script execution for database setup**
+- ✅ **Configuration file management (.conf.dist → .conf)**
+- ✅ **Source-based compilation integration**
+- ✅ **Hash-based change detection triggers rebuilds automatically**
+- ✅ **Compatibility analysis and documentation**
+
+All modules are automatically downloaded from GitHub when enabled and include proper configuration files.
+
+### Module Management Architecture
+
+The system consists of three key components:
+
+1. **Module Manager Container** (`ac-modules`)
+   - Handles module downloading, SQL execution, and state tracking
+   - Runs as one-time setup during stack initialization
+   - Monitors module configuration changes
+
+2. **Rebuild Detection System**
+   - Tracks module enable/disable state changes
+   - Automatically detects when compilation is required
+   - Provides detailed rebuild instructions
+
+3. **Automated Rebuild Script** (`scripts/rebuild-with-modules.sh`)
+   - Orchestrates full compilation workflow
+   - Integrates with source-based Docker builds
+   - Handles module synchronization
+
+### Module Status Legend
+
+- ✅ **COMPATIBLE**: Module compiles and links successfully
+- ⚠️ **TESTING**: Module requires testing for compatibility
+- ❌ **INCOMPATIBLE**: Module has known compilation or linking issues
+- 🔧 **REQUIRES_CONFIG**: Module needs configuration before compilation
+- 🚨 **CRITICAL**: Module has special requirements or limitations
+
+**Important**: All 28 analyzed modules require C++ compilation - none are compatible with pre-built containers.
+
+### Core Modules (High Priority)
+
+| Module | Status | Description | Repository | README |
+|--------|--------|-------------|------------|--------|
+| **AoE Loot** | ⚠️ | Area of effect looting feature | [mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot) | [📖](https://github.com/azerothcore/mod-aoe-loot/blob/master/.github/README.md) |
+| **Learn Spells** | ⚠️ | Automatic spell learning | [mod-learn-spells](https://github.com/azerothcore/mod-learn-spells) | [📖](https://github.com/azerothcore/mod-learn-spells/blob/master/README.md) |
+| **AutoBalance** | ⚠️ | Dynamic difficulty scaling for dungeons/raids | [mod-autobalance](https://github.com/azerothcore/mod-autobalance) | [📖](https://github.com/azerothcore/mod-autobalance/blob/master/README.md) |
+| **Solo LFG** | ⚠️ | Solo dungeon finder system | [mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg) | [📖](https://github.com/azerothcore/mod-solo-lfg/blob/master/README.md) |
+| **Transmog** | ⚠️ | Transmogrification system | [mod-transmog](https://github.com/azerothcore/mod-transmog) | [📖](https://github.com/azerothcore/mod-transmog/blob/master/README.md) |
+
+### Quality of Life Modules
+
+| Module | Status | Description | Repository | README |
+|--------|--------|-------------|------------|--------|
+| **AHBot** | ❌ | Auction House bot for populated auctions - **LINKING ERROR** | [mod-ahbot](https://github.com/azerothcore/mod-ahbot) | [📖](https://github.com/azerothcore/mod-ahbot/blob/master/README.md) |
+| **NPC Buffer** | ⚠️ | Buff NPC services | [mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer) | [📖](https://github.com/azerothcore/mod-npc-buffer/blob/master/README.md) |
+| **Dynamic XP** | ⚠️ | Configurable experience rates | [mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp) | [📖](https://github.com/azerothcore/mod-dynamic-xp/blob/master/README.md) |
+| **Breaking News** | ⚠️ | Server announcement system | [mod-breaking-news-override](https://github.com/azerothcore/mod-breaking-news-override) | [📖](https://github.com/azerothcore/mod-breaking-news-override/blob/master/README.md) |
+| **Auto Revive** | ⚠️ | Auto-revive functionality for GMs | [mod-auto-revive](https://github.com/azerothcore/mod-auto-revive) | [📖](https://github.com/azerothcore/mod-auto-revive/blob/master/README.md) |
+| **NPC Enchanter** | ⚠️ | NPC-based gear enchantment services | [mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter) | [📖](https://github.com/azerothcore/mod-npc-enchanter/blob/master/README.md) |
+| **Instance Reset** | ⚠️ | NPC-based instance reset functionality | [mod-instance-reset](https://github.com/azerothcore/mod-instance-reset) | [📖](https://github.com/azerothcore/mod-instance-reset/blob/master/README.md) |
+
+### Advanced Modules
+
+| Module | Status | Description | Repository | README |
+|--------|--------|-------------|------------|--------|
+| **Playerbots** | 🚨 | AI-controlled bot system - **REQUIRES CUSTOM BRANCH** | [mod-playerbots](https://github.com/liyunfan1223/mod-playerbots) | [📖](https://github.com/liyunfan1223/mod-playerbots/blob/master/README.md) |
+| **Individual Progression** | 🔧 | Custom character progression system | [mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression) | [📖](https://github.com/ZhengPeiRu21/mod-individual-progression/blob/master/README.md) |
+| **1v1 Arena** | ⚠️ | Arena combat system | [mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena) | [📖](https://github.com/azerothcore/mod-1v1-arena/blob/master/README.md) |
+| **Phased Duels** | ⚠️ | Isolated dueling system | [mod-phased-duels](https://github.com/azerothcore/mod-phased-duels) | [📖](https://github.com/azerothcore/mod-phased-duels/blob/master/README.md) |
+| **Solocraft** | ⚠️ | Solo dungeon scaling | [mod-solocraft](https://github.com/azerothcore/mod-solocraft) | [📖](https://github.com/azerothcore/mod-solocraft/blob/master/.github/README.md) |
+| **Random Enchants** | ⚠️ | Random item enchantments | [mod-random-enchants](https://github.com/azerothcore/mod-random-enchants) | [📖](https://github.com/azerothcore/mod-random-enchants/blob/master/README.md) |
+
+### Server Management Modules
+
+| Module | Status | Description | Repository | README |
+|--------|--------|-------------|------------|--------|
+| **Boss Announcer** | ⚠️ | Raid boss kill notifications | [mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer) | [📖](https://github.com/azerothcore/mod-boss-announcer/blob/master/README.md) |
+| **Account Achievements** | ⚠️ | Cross-character achievements | [mod-account-achievements](https://github.com/azerothcore/mod-account-achievements) | [📖](https://github.com/azerothcore/mod-account-achievements/blob/master/README.md) |
+| **Eluna** | ⚠️ | Lua scripting engine integration | [mod-eluna](https://github.com/azerothcore/mod-eluna) | [📖](https://github.com/azerothcore/mod-eluna/blob/master/README.md) |
+| **Gain Honor Guard** | ⚠️ | Honor system for killing guards | [mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard) | [📖](https://github.com/azerothcore/mod-gain-honor-guard/blob/master/.github/README.md) |
+| **PvP Titles** | ⚠️ | Honor-based PvP title system | [mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles) | [📖](https://github.com/azerothcore/mod-pvp-titles/blob/master/README.md) |
+| **Pocket Portal** | ⚠️ | Teleportation portal system | [mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal) | [📖](https://github.com/azerothcore/mod-pocket-portal/blob/master/README.md) |
+
+### Additional Modules
+
+| Module | Status | Description | Repository | README |
+|--------|--------|-------------|------------|--------|
+| **Time Is Time** | ⚠️ | Realistic day/night cycle | [mod-TimeIsTime](https://github.com/dunjeon/mod-TimeIsTime) | [📖](https://github.com/dunjeon/mod-TimeIsTime/blob/main/README.md) |
+| **NPC Beastmaster** | ⚠️ | Cross-class pet system | [mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster) | [📖](https://github.com/azerothcore/mod-npc-beastmaster/blob/master/README.md) |
+| **Fireworks** | ⚠️ | Fireworks on level up | [mod-fireworks-on-level](https://github.com/azerothcore/mod-fireworks-on-level) | [📖](https://github.com/azerothcore/mod-fireworks-on-level/blob/master/README.md) |
+| **Level Grant** | ⚠️ | Quest-based level granting | [mod-quest-count-level](https://github.com/michaeldelago/mod-quest-count-level) | [📖](https://github.com/michaeldelago/mod-quest-count-level/blob/main/README.md) |
+
+### Module Configuration
+
+Enable modules by setting their environment variables to `1` in `docker-compose-azerothcore-services.env`:
+
+```bash
+# Example: Enable AutoBalance and Transmog
+MODULE_AUTOBALANCE=1
+MODULE_TRANSMOG=1
+```
+
+After enabling/disabling modules:
+1. Run the module manager: `docker compose -f docker-compose-azerothcore-services.yml up ac-modules`
+2. **Enabled modules** will be automatically downloaded to `storage/azerothcore/modules/`
+3. **Disabled modules** will be automatically removed from the modules directory
+4. **Configuration files** (`.conf.dist`) are automatically managed:
+   - **Enabled modules**: Config files copied to `storage/azerothcore/config/`
+   - **Disabled modules**: Config files removed from config directory
+5. **SQL scripts** are automatically executed for database setup
+6. **Important**: All modules require server recompilation to be active - use `./scripts/rebuild-with-modules.sh`
+
+### Safe Module Testing Procedure
+
+1. **Enable Single Module**:
+   ```bash
+   # Edit docker-compose-azerothcore-services.env
+   MODULE_AOE_LOOT=1  # Enable one module
+   ```
+
+2. **Test Compilation**:
+   ```bash
+   ./scripts/rebuild-with-modules.sh
+   ```
+
+3. **Monitor Build**:
+   - Watch for compilation errors
+   - Check for linking issues
+   - Verify successful completion
+
+4. **Test Functionality**:
+   - Start services
+   - Test module features in-game
+   - Check server logs for errors
+
+### Module Management Behavior
+
+The module management system provides complete automation:
+
+- **Enable Module** (`MODULE_NAME=1`):
+  - Downloads module source code via Git if not present
+  - Copies `.conf.dist` files to config directory
+  - Executes SQL scripts for database setup
+  - Updates module state tracking for rebuild detection
+- **Disable Module** (`MODULE_NAME=0`):
+  - Removes module directory completely
+  - Removes associated configuration files
+  - Updates state hash to trigger rebuild detection
+- **Module Persistence**: Only enabled modules and their configs remain
+- **Clean Slate**: Disabling and re-enabling ensures fresh download and config
+- **Zero Manual Setup**: No need to manually copy configuration files or run SQL scripts
+
+### Known Issues and Limitations
+
+#### ❌ mod-ahbot (AuctionHouse Bot)
+- **Error**: `undefined reference to 'Addmod_ahbotScripts()'`
+- **Cause**: Module script loader function not properly exported
+- **Status**: Disabled by default until fixed
+- **Workaround**: Report issue to module maintainer
+
+#### 🚨 mod-playerbots (Player Bots)
+- **Issue**: Requires custom AzerothCore branch
+- **Requirement**: `liyunfan1223/azerothcore-wotlk/tree/Playerbot`
+- **Impact**: Incompatible with standard AzerothCore builds
+- **Solution**: Use separate deployment for playerbot functionality
+
+#### 🔧 mod-individual-progression
+- **Note**: Auto-configures accounts for individual progression
+- **Requirement**: Account creation after server setup
+
+### Post-Installation Requirements
+
+⚠️ **Critical**: All modules require source-based compilation:
+
+1. **Server Recompilation**: All modules need C++ compilation - use `./scripts/rebuild-with-modules.sh`
+2. **Module State Tracking**: System automatically detects when rebuilds are required
+3. **Rebuild Detection**: Hash-based change detection triggers rebuild notifications
+4. **Database Integration**: SQL scripts are executed automatically during module installation
+
+### Module Documentation
+
+For detailed module management documentation, see:
+- **Complete System Guide**: [docs/MODULE_MANAGEMENT.md](docs/MODULE_MANAGEMENT.md)
+- **Compatibility Matrix**: [docs/MODULE_COMPATIBILITY.md](docs/MODULE_COMPATIBILITY.md)
+- **Quick Start Guide**: [docs/README.md](docs/README.md)
 
 ## Support and Resources
 

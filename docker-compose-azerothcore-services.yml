@@ -1078,6 +1078,66 @@ services:
     networks:
       - azerothcore
 
+  # Auto Post-Install Configuration Service
+  ac-post-install:
+    image: ${ALPINE_IMAGE}
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ${CONTAINER_POST_INSTALL}
+    user: "0:0"  # Run as root for full permissions
+    volumes:
+      - ${STORAGE_PATH}/config:/azerothcore/config
+      - ${STORAGE_PATH}/install-markers:/install-markers
+      - .:/project
+    working_dir: /project
+    environment:
+      MYSQL_HOST: ${CONTAINER_MYSQL}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_AUTH_NAME: ${DB_AUTH_NAME}
+      DB_WORLD_NAME: ${DB_WORLD_NAME}
+      DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
+      STORAGE_PATH: ${STORAGE_PATH}
+      SERVER_ADDRESS: ${SERVER_ADDRESS}
+      REALM_PORT: ${REALM_PORT}
+      NETWORK_NAME: ${NETWORK_NAME}
+    depends_on:
+      - ac-modules
+    command:
+      - sh
+      - -c
+      - |
+        # Install bash first
+        echo "📦 Installing bash..."
+        apk add --no-cache bash
+
+        # Download post-install script from GitHub (fallback to local for testing)
+        echo "📥 Downloading auto post-install script..."
+        echo "🔍 Checking project directory contents:"
+        ls -la /project/scripts/ || echo "❌ /project/scripts/ not found"
+
+        if curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/auto-post-install.sh -o /tmp/auto-post-install.sh 2>/dev/null; then
+          echo "✅ Downloaded from GitHub"
+        elif [ -f "/project/scripts/auto-post-install.sh" ]; then
+          echo "📁 Using local script for testing"
+          echo "🔍 File details:"
+          ls -la /project/scripts/auto-post-install.sh
+          cp /project/scripts/auto-post-install.sh /tmp/auto-post-install.sh
+          echo "✅ Copied to /tmp/auto-post-install.sh"
+          ls -la /tmp/auto-post-install.sh
+        else
+          echo "❌ Script not found in GitHub or locally"
+          echo "🔍 Available files in /project/scripts/:"
+          ls -la /project/scripts/ || echo "Directory not accessible"
+          exit 1
+        fi
+        chmod +x /tmp/auto-post-install.sh
+        echo "🚀 Executing script with bash..."
+        bash /tmp/auto-post-install.sh
+    restart: "no"
+    networks:
+      - azerothcore
+
 networks:
   azerothcore:
     external: true
