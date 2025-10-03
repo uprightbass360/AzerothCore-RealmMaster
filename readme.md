@@ -205,6 +205,46 @@ graph TD
 
 ## Initial Setup
 
+### Quick Setup Script (Recommended)
+
+For the easiest setup experience, use the interactive setup script:
+
+```bash
+# Clone the repository
+git clone https://github.com/uprightbass360/acore-compose.git
+cd acore-compose
+
+# Run the interactive setup script
+./scripts/setup-server.sh
+```
+
+The setup script will:
+- ✅ **Guide you through deployment type selection** (Local, LAN, or Public server)
+- ✅ **Auto-detect your network configuration** (LAN IP detection)
+- ✅ **Validate all inputs** (IP addresses, ports, paths)
+- ✅ **Generate custom environment files** (`*-custom.env`) with your settings
+- ✅ **Provide deployment commands** tailored to your configuration
+- ✅ **Show client configuration** with exact realmlist.wtf settings
+
+**Generated Files**:
+- `docker-compose-azerothcore-database-custom.env`
+- `docker-compose-azerothcore-services-custom.env`
+- `docker-compose-azerothcore-tools-custom.env`
+
+**Deploy with custom configuration**:
+```bash
+# Database layer
+docker compose --env-file docker-compose-azerothcore-database-custom.env -f docker-compose-azerothcore-database.yml up -d
+
+# Services layer
+docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml up -d
+
+# Tools layer (optional)
+docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml up -d
+```
+
+### Manual Setup
+
 ### Step 1: Clone and Configure
 
 ```bash
