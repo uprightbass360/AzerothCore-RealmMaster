@@ -176,7 +176,70 @@ cd acore-compose
 #   STORAGE_ROOT=/nfs/containers
 # For custom mount:
 #   STORAGE_ROOT=/mnt/azerothcore-data
+
+# IMPORTANT: Configure server address for client connections
+# Edit docker-compose-azerothcore-services.env:
+#   SERVER_ADDRESS=your-server-ip-or-domain
+#   REALM_PORT=8215
 ```
+
+### Server Address Configuration
+
+Configure the external server address that WoW clients will use to connect:
+
+**Environment Variables** (in `docker-compose-azerothcore-services.env`):
+- `SERVER_ADDRESS`: The IP address or domain name clients use to connect
+- `REALM_PORT`: The external port clients connect to (default: 8215)
+
+**Configuration Examples**:
+```bash
+# Local development (single machine)
+SERVER_ADDRESS=127.0.0.1
+REALM_PORT=8215
+
+# LAN server (accessible on local network)
+SERVER_ADDRESS=192.168.1.100
+REALM_PORT=8215
+
+# Public server (internet-accessible)
+SERVER_ADDRESS=your-domain.com
+# or
+SERVER_ADDRESS=203.0.113.100
+REALM_PORT=8215
+```
+
+**Port Configuration**:
+- **External Ports** (client-facing): Configured in environment file
+  - `REALM_PORT=8215` - World server port for client connections
+  - `AUTH_EXTERNAL_PORT=3784` - Auth server port
+  - `SOAP_EXTERNAL_PORT=7778` - SOAP API port
+- **Internal Ports** (container-side): Fixed and mapped automatically
+  - Auth server: 3724 (mapped to external 3784)
+  - World server: 8085 (mapped to external 8215)
+  - SOAP API: 7878 (mapped to external 7778)
+
+**Configuration Workflow**:
+1. **Edit Environment File**: Modify `docker-compose-azerothcore-services.env`
+   ```bash
+   # Update these values for your environment
+   SERVER_ADDRESS=your-server-address
+   REALM_PORT=8215
+   ```
+2. **Restart Services**: Changes take effect after restart
+   ```bash
+   docker compose --env-file docker-compose-azerothcore-services.env -f docker-compose-azerothcore-services.yml restart
+   ```
+3. **Verify Configuration**: Check that realmlist was updated
+   ```bash
+   docker exec ac-mysql mysql -uroot -pazerothcore123 -e "USE acore_auth; SELECT address, port FROM realmlist WHERE id=1;"
+   ```
+4. **Update Client**: Edit your WoW client's `realmlist.wtf` with the new server address
+
+**Important Notes**:
+- The post-install automation automatically updates the database realmlist
+- Changes are persistent and survive container restarts
+- Ensure firewall allows traffic on configured ports
+- For public servers, configure port forwarding on your router
 
 ### Step 2: Deploy the Stack
 
@@ -262,10 +325,36 @@ server info
 
 ### Step 5: Configure Game Client
 
-Edit your WoW 3.3.5a client's `realmlist.wtf`:
+**Client Connection Instructions**:
+
+1. **Locate your WoW 3.3.5a client directory**
+2. **Edit `realmlist.wtf` file** (in your WoW client folder):
+   ```
+   set realmlist SERVER_ADDRESS
+   ```
+
+**Examples based on your server configuration**:
+```bash
+# Local development
+set realmlist 127.0.0.1
+
+# LAN server
+set realmlist 192.168.1.100
+
+# Public server with custom port
+set realmlist your-domain.com 8215
+# or for IP with custom port
+set realmlist 203.0.113.100 8215
 ```
-set realmlist YOUR_SERVER_IP
-```
+
+**Default Connection**: If using default `REALM_PORT=8215`, you can omit the port in most clients.
+
+**Troubleshooting Connection Issues**:
+- Verify server is running: `docker ps`
+- Check if ports are open: `telnet SERVER_ADDRESS 8215`
+- Ensure firewall allows traffic on configured ports
+- For public servers, verify port forwarding is configured
+- Check server logs: `docker logs ac-worldserver`
 
 ## Configuration
 
