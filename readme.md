@@ -117,7 +117,21 @@ acore-compose/
 ├── scripts/                                    # Deployment, cleanup, and backup automation
 ├── storage/                                    # Unified storage root (configurable via STORAGE_ROOT)
 │   └── azerothcore/                            # All persistent data (database, configs, tools)
-│      └── backups/                             # Database backups (see backups documentation for sub-folder listing)
+│       ├── backups/                            # Database backups with automated retention
+│       │   ├── hourly/                         # Hourly backup snapshots
+│       │   └── daily/                          # Daily backup snapshots
+│       ├── cache/                              # Application cache and temporary files
+│       ├── config/                             # Server configuration files (.conf)
+│       ├── data/                               # Game client data (maps, vmaps, mmaps, dbc)
+│       │   ├── Cameras/                        # Camera configuration files
+│       │   ├── dbc/                            # Database Client files
+│       │   ├── maps/                           # Game world maps
+│       │   ├── mmaps/                          # Movement maps for pathfinding
+│       │   └── vmaps/                          # Visual maps for line-of-sight
+│       ├── install-markers/                    # Installation state tracking
+│       ├── logs/                               # Server log files
+│       ├── modules/                            # AzerothCore modules and extensions
+│       └── mysql-data/                         # MySQL database files
 └── readme.md                                   # This documentation
 ```
 
