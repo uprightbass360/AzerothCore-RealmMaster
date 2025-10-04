@@ -1106,6 +1106,7 @@ services:
       - ${STORAGE_PATH}/config:/azerothcore/config
       - ${STORAGE_PATH}/install-markers:/install-markers
       - .:/project
+      - /var/run/docker.sock:/var/run/docker.sock:rw
     working_dir: /project
     environment:
       MYSQL_HOST: ${CONTAINER_MYSQL}
@@ -1119,6 +1120,8 @@ services:
       SERVER_ADDRESS: ${SERVER_ADDRESS}
       REALM_PORT: ${REALM_PORT}
       NETWORK_NAME: ${NETWORK_NAME}
+      CONTAINER_AUTHSERVER: ${CONTAINER_AUTHSERVER}
+      CONTAINER_WORLDSERVER: ${CONTAINER_WORLDSERVER}
     depends_on:
       - ac-modules
     command:
@@ -1127,7 +1130,7 @@ services:
       - |
         # Install required packages
         echo "📦 Installing required packages..."
-        apk add --no-cache bash curl
+        apk add --no-cache bash curl docker-cli
 
         # Download post-install script from GitHub (fallback to local for testing)
         echo "📥 Downloading auto post-install script..."

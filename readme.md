@@ -18,6 +18,7 @@ This project is a Docker/Podman implementation based on:
 - **Multi-Runtime Support**: Works with both Docker and Podman
 - **Automated Database Initialization**: Complete schema import and setup automation
 - **Comprehensive Health Checks**: Built-in service monitoring and restart policies
+- **Automated Service Restart**: Post-install automatically restarts services with Docker/Podman support
 - **Automated Backup System**: Scheduled backups with configurable retention
 - **Production-Ready Security**: Advanced security configurations and best practices
 
@@ -69,6 +70,7 @@ This project provides a production-ready AzerothCore deployment using Docker/Pod
 
 - ✅ **Fully Containerized**: All components run in isolated containers
 - ✅ **Automated Setup**: Database creation, schema import, and configuration handled automatically
+- ✅ **Auto-Restart Services**: Post-install automatically restarts authserver/worldserver (Docker/Podman compatible)
 - ✅ **Playerbot Integration**: AI-controlled bots for solo/small group play
 - ✅ **Eluna Support**: Lua scripting for custom content
 - ✅ **Automated Backups**: Scheduled database backups with retention policies
@@ -379,9 +381,40 @@ docker logs ac-post-install -f
 # 2. Wait for MySQL and configuration files to be ready
 # 3. Update .conf files with production database settings
 # 4. Update realmlist table with server address and port
-# 5. Restart services to apply changes
+# 5. Automatically restart authserver and worldserver to apply changes
 # 6. Create a completion marker to prevent re-execution
 ```
+
+#### Automatic Service Restart
+
+The post-install system includes **automatic service restart functionality** with support for both Docker and Podman:
+
+**Container Runtime Detection**:
+- 🐳 **Docker**: Automatically detects Docker daemon and uses Docker CLI
+- 🦭 **Podman**: Falls back to Podman CLI if Docker unavailable
+- ⚠️ **Graceful fallback**: Skips restart if no runtime detected (continues other tasks)
+
+**Restart Process**:
+```bash
+🔄 Restarting authserver and worldserver to pick up new configuration...
+🐳 Detected Docker runtime
+🔄 Restarting authserver container: ac-authserver
+✅ Authserver restarted successfully
+🔄 Restarting worldserver container: ac-worldserver
+✅ Worldserver restarted successfully
+✅ Service restart completed
+```
+
+**Requirements**:
+- **Docker socket access**: Container has `/var/run/docker.sock` mounted
+- **Container runtime**: Docker or Podman available in container
+- **Environment variables**: `CONTAINER_AUTHSERVER` and `CONTAINER_WORLDSERVER` defined
+
+**Benefits**:
+- ✅ **Immediate effect**: Configuration changes applied instantly
+- ✅ **No manual intervention**: Fully automated restart process
+- ✅ **Cross-platform**: Works with Docker Desktop, Podman, and cloud environments
+- ✅ **Graceful shutdown**: Services shut down cleanly before restart
 
 #### Manual Post-Installation (Optional)
 

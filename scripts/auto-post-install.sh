@@ -104,12 +104,55 @@ else
     exit 1
   fi
 
-  # Step 3: Note about service restart
+  # Step 3: Restart services to apply changes
   echo ""
-  echo "ℹ️  Step 3: Service restart note..."
+  echo "ℹ️  Step 3: Restarting services to apply changes..."
   echo "📝 Configuration changes have been applied to files"
-  echo "💡 Services will automatically restart if needed during next deployment"
-  echo "✅ Post-install configuration completed - services will pick up changes on next restart"
+  echo "🔄 Restarting authserver and worldserver to pick up new configuration..."
+
+  # Detect container runtime (Docker or Podman)
+  CONTAINER_CMD=""
+  if command -v docker >/dev/null 2>&1; then
+    # Check if we can connect to Docker daemon
+    if docker version >/dev/null 2>&1; then
+      CONTAINER_CMD="docker"
+      echo "🐳 Detected Docker runtime"
+    fi
+  fi
+
+  if [ -z "$CONTAINER_CMD" ] && command -v podman >/dev/null 2>&1; then
+    # Check if we can connect to Podman
+    if podman version >/dev/null 2>&1; then
+      CONTAINER_CMD="podman"
+      echo "🦭 Detected Podman runtime"
+    fi
+  fi
+
+  if [ -z "$CONTAINER_CMD" ]; then
+    echo "⚠️  No container runtime detected (docker/podman) - skipping restart"
+  else
+    # Restart authserver
+    if [ -n "$CONTAINER_AUTHSERVER" ]; then
+      echo "🔄 Restarting authserver container: $CONTAINER_AUTHSERVER"
+      if $CONTAINER_CMD restart "$CONTAINER_AUTHSERVER" 2>/dev/null; then
+        echo "✅ Authserver restarted successfully"
+      else
+        echo "⚠️  Failed to restart authserver (may not be running yet)"
+      fi
+    fi
+
+    # Restart worldserver
+    if [ -n "$CONTAINER_WORLDSERVER" ]; then
+      echo "🔄 Restarting worldserver container: $CONTAINER_WORLDSERVER"
+      if $CONTAINER_CMD restart "$CONTAINER_WORLDSERVER" 2>/dev/null; then
+        echo "✅ Worldserver restarted successfully"
+      else
+        echo "⚠️  Failed to restart worldserver (may not be running yet)"
+      fi
+    fi
+  fi
+
+  echo "✅ Service restart completed"
 
   # Create completion marker
   echo "$(date)" > /install-markers/post-install-completed
