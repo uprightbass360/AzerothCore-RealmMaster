@@ -1125,15 +1125,12 @@ services:
       - sh
       - -c
       - |
-        # Install bash first
-        echo "📦 Installing bash..."
-        apk add --no-cache bash
+        # Install required packages
+        echo "📦 Installing required packages..."
+        apk add --no-cache bash curl
 
         # Download post-install script from GitHub (fallback to local for testing)
         echo "📥 Downloading auto post-install script..."
-        echo "🔍 Checking project directory contents:"
-        ls -la /project/scripts/ || echo "❌ /project/scripts/ not found"
-
         if curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/auto-post-install.sh -o /tmp/auto-post-install.sh 2>/dev/null; then
           echo "✅ Downloaded from GitHub"
         elif [ -f "/project/scripts/auto-post-install.sh" ]; then
@@ -1145,8 +1142,14 @@ services:
           ls -la /tmp/auto-post-install.sh
         else
           echo "❌ Script not found in GitHub or locally"
-          echo "🔍 Available files in /project/scripts/:"
-          ls -la /project/scripts/ || echo "Directory not accessible"
+          echo "🔍 Debugging information:"
+          echo "   Project directory mount status:"
+          ls -la /project/ || echo "   ❌ /project/ not accessible"
+          echo "   Scripts directory status:"
+          ls -la /project/scripts/ || echo "   ❌ /project/scripts/ not found"
+          echo "   Current working directory: $(pwd)"
+          echo "   Available volumes:"
+          df -h || echo "   ❌ Cannot check volumes"
           exit 1
         fi
         chmod +x /tmp/auto-post-install.sh
