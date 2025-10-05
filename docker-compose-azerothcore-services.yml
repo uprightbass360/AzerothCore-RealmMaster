@@ -7,7 +7,7 @@
 services:
   # Client Data Download Service
   ac-client-data:
-    image: ${ALPINE_IMAGE}
+    image: ${AC_CLIENT_DATA_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_CLIENT_DATA}
     user: "0:0"  # Run as root to install packages
