@@ -256,6 +256,7 @@ services:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
       - ${STORAGE_PATH}/modules:/azerothcore/modules
+      - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
     restart: unless-stopped
     networks:
       - azerothcore
@@ -323,6 +324,10 @@ services:
       - MODULE_NPC_ENCHANTER=${MODULE_NPC_ENCHANTER}
       - MODULE_INSTANCE_RESET=${MODULE_INSTANCE_RESET}
       - MODULE_LEVEL_GRANT=${MODULE_LEVEL_GRANT}
+      - MODULE_ARAC=${MODULE_ARAC}
+      - MODULE_ASSISTANT=${MODULE_ASSISTANT}
+      - MODULE_REAGENT_BANK=${MODULE_REAGENT_BANK}
+      - MODULE_BLACK_MARKET_AUCTION_HOUSE=${MODULE_BLACK_MARKET_AUCTION_HOUSE}
       # Database connection for SQL execution
       - CONTAINER_MYSQL=${CONTAINER_MYSQL}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
@@ -437,6 +442,10 @@ services:
           echo 'Removing mod-eluna (disabled)...'
           rm -rf mod-eluna
         fi
+        if [ "$MODULE_ARAC" != "1" ] && [ -d "mod-arac" ]; then
+          echo 'Removing mod-arac (disabled)...'
+          rm -rf mod-arac
+        fi
 
         if [ "$MODULE_TIME_IS_TIME" != "1" ] && [ -d "mod-TimeIsTime" ]; then
           echo 'Removing mod-TimeIsTime (disabled)...'
@@ -482,6 +491,18 @@ services:
           echo 'Removing mod-quest-count-level (disabled)...'
           rm -rf mod-quest-count-level
         fi
+        if [ "$MODULE_ASSISTANT" != "1" ] && [ -d "mod-assistant" ]; then
+          echo 'Removing mod-assistant (disabled)...'
+          rm -rf mod-assistant
+        fi
+        if [ "$MODULE_REAGENT_BANK" != "1" ] && [ -d "mod-reagent-bank" ]; then
+          echo 'Removing mod-reagent-bank (disabled)...'
+          rm -rf mod-reagent-bank
+        fi
+        if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" != "1" ] && [ -d "mod-black-market" ]; then
+          echo 'Removing mod-black-market (disabled)...'
+          rm -rf mod-black-market
+        fi
 
         echo 'Installing enabled modules...'
 
@@ -493,6 +514,7 @@ services:
           echo '   🚨 INCOMPATIBLE with standard AzerothCore - module will not function properly'
           echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
           echo '   📋 POST-INSTALL: Requires manual account/character configuration'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
           git clone https://github.com/liyunfan1223/mod-playerbots.git mod-playerbots
         fi
 
@@ -502,6 +524,7 @@ services:
           echo '   📖 Project: https://github.com/azerothcore/mod-aoe-loot'
           echo '   ℹ️  Allows looting multiple corpses with one action'
           echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
           git clone https://github.com/azerothcore/mod-aoe-loot.git mod-aoe-loot
         fi
 
@@ -511,6 +534,7 @@ services:
           echo '   📖 Project: https://github.com/azerothcore/mod-learn-spells'
           echo '   ℹ️  Automatically teaches class spells on level up'
           echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
           git clone https://github.com/azerothcore/mod-learn-spells.git mod-learn-spells
         fi
 
@@ -520,6 +544,7 @@ services:
           echo '   📖 Project: https://github.com/azerothcore/mod-fireworks-on-level'
           echo '   ℹ️  Displays fireworks when players level up'
           echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
           git clone https://github.com/azerothcore/mod-fireworks-on-level.git mod-fireworks-on-level
         fi
 
@@ -531,6 +556,7 @@ services:
           echo '   ✅ AUTO-CONFIG: Automatically sets EnablePlayerSettings=1 and DBC.EnforceItemAttributes=0'
           echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
           echo '   📁 Optional client files available in optional/ directory'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
           git clone https://github.com/ZhengPeiRu21/mod-individual-progression.git mod-individual-progression
         fi
 
@@ -553,7 +579,11 @@ services:
         fi
 
         if [ "$MODULE_TRANSMOG" = "1" ] && [ ! -d "mod-transmog" ]; then
-          echo 'Installing mod-transmog...'
+          echo '🎭 Installing mod-transmog...'
+          echo '   📖 Project: https://github.com/azerothcore/mod-transmog'
+          echo '   ℹ️  Allows appearance customization of equipment'
+          echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
           git clone https://github.com/azerothcore/mod-transmog.git mod-transmog
         fi
 
@@ -574,6 +604,7 @@ services:
           echo '   ℹ️  Allows dungeon finder for solo players and small groups'
           echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
           echo '   💡 Pairs perfectly with mod-solocraft and mod-autobalance'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
           git clone https://github.com/azerothcore/mod-solo-lfg.git mod-solo-lfg
         fi
 
@@ -619,8 +650,21 @@ services:
         fi
 
         if [ "$MODULE_ELUNA" = "1" ] && [ ! -d "mod-eluna" ]; then
-          echo 'Installing mod-eluna...'
+          echo '🖥️ Installing mod-eluna...'
+          echo '   📖 Project: https://github.com/azerothcore/mod-eluna'
+          echo '   ℹ️  Lua scripting engine for custom server functionality'
+          echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
           git clone https://github.com/azerothcore/mod-eluna.git mod-eluna
+        fi
+        if [ "$MODULE_ARAC" = "1" ] && [ ! -d "mod-arac" ]; then
+          echo '🌈 Installing mod-arac...'
+          echo '   📖 Project: https://github.com/heyitsbench/mod-arac'
+          echo '   ℹ️  All Races All Classes - Removes class restrictions'
+          echo '   🚨 CRITICAL: Requires DBC file updates and client patch!'
+          echo '   📋 POST-INSTALL: Apply Patch-A.MPQ to client WoW/Data/ directory'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
+          git clone https://github.com/heyitsbench/mod-arac.git mod-arac
         fi
 
         if [ "$MODULE_TIME_IS_TIME" = "1" ] && [ ! -d "mod-TimeIsTime" ]; then
@@ -658,7 +702,11 @@ services:
         fi
 
         if [ "$MODULE_NPC_ENCHANTER" = "1" ] && [ ! -d "mod-npc-enchanter" ]; then
-          echo 'Installing mod-npc-enchanter...'
+          echo '✨ Installing mod-npc-enchanter...'
+          echo '   📖 Project: https://github.com/azerothcore/mod-npc-enchanter'
+          echo '   ℹ️  NPC that provides enchanting services'
+          echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
           git clone https://github.com/azerothcore/mod-npc-enchanter.git mod-npc-enchanter
         fi
 
@@ -670,6 +718,30 @@ services:
         if [ "$MODULE_LEVEL_GRANT" = "1" ] && [ ! -d "mod-quest-count-level" ]; then
           echo 'Installing mod-quest-count-level...'
           git clone https://github.com/michaeldelago/mod-quest-count-level.git mod-quest-count-level
+        fi
+        if [ "$MODULE_ASSISTANT" = "1" ] && [ ! -d "mod-assistant" ]; then
+          echo '🤖 Installing mod-assistant...'
+          echo '   📖 Project: https://github.com/azerothcore/mod-assistant'
+          echo '   ℹ️  Provides AI-powered assistance and automation features'
+          echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
+          git clone https://github.com/azerothcore/mod-assistant.git mod-assistant
+        fi
+        if [ "$MODULE_REAGENT_BANK" = "1" ] && [ ! -d "mod-reagent-bank" ]; then
+          echo '🏦 Installing mod-reagent-bank...'
+          echo '   📖 Project: https://github.com/azerothcore/mod-reagent-bank'
+          echo '   ℹ️  Adds reagent bank functionality similar to retail WoW'
+          echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
+          git clone https://github.com/azerothcore/mod-reagent-bank.git mod-reagent-bank
+        fi
+        if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && [ ! -d "mod-black-market" ]; then
+          echo '🏴‍☠️ Installing mod-black-market...'
+          echo '   📖 Project: https://github.com/azerothcore/mod-black-market'
+          echo '   ℹ️  Black Market Auction House for rare and unique items'
+          echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+          echo '   🔬 STATUS: IN TESTING - Currently under verification'
+          git clone https://github.com/azerothcore/mod-black-market.git mod-black-market
         fi
 
         echo 'Managing configuration files...'
@@ -750,6 +822,9 @@ services:
         if [ "$MODULE_ELUNA" != "1" ]; then
           rm -f /azerothcore/env/dist/etc/mod_LuaEngine.conf*
         fi
+        if [ "$MODULE_ARAC" != "1" ]; then
+          rm -f /azerothcore/env/dist/etc/arac.conf*
+        fi
 
         if [ "$MODULE_TIME_IS_TIME" != "1" ]; then
           rm -f /azerothcore/env/dist/etc/mod-time_is_time.conf*
@@ -785,6 +860,18 @@ services:
 
         if [ "$MODULE_LEVEL_GRANT" != "1" ]; then
           rm -f /azerothcore/env/dist/etc/levelGrant.conf*
+        fi
+
+        if [ "$MODULE_ASSISTANT" != "1" ]; then
+          rm -f /azerothcore/env/dist/etc/mod_assistant.conf*
+        fi
+
+        if [ "$MODULE_REAGENT_BANK" != "1" ]; then
+          rm -f /azerothcore/env/dist/etc/mod_reagent_bank.conf*
+        fi
+
+        if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" != "1" ]; then
+          rm -f /azerothcore/env/dist/etc/mod_black_market.conf*
         fi
 
         # Install configuration files for enabled modules
@@ -942,6 +1029,9 @@ services:
         if [ "$MODULE_ELUNA" = "1" ] && [ -d "mod-eluna" ]; then
           execute_module_sql "mod-eluna" "Eluna"
         fi
+        if [ "$MODULE_ARAC" = "1" ] && [ -d "mod-arac" ]; then
+          execute_module_sql "mod-arac" "All Races All Classes"
+        fi
 
         if [ "$MODULE_TIME_IS_TIME" = "1" ] && [ -d "mod-TimeIsTime" ]; then
           execute_module_sql "mod-TimeIsTime" "Time Is Time"
@@ -977,6 +1067,15 @@ services:
 
         if [ "$MODULE_LEVEL_GRANT" = "1" ] && [ -d "mod-quest-count-level" ]; then
           execute_module_sql "mod-quest-count-level" "Level Grant"
+        fi
+        if [ "$MODULE_ASSISTANT" = "1" ] && [ -d "mod-assistant" ]; then
+          execute_module_sql "mod-assistant" "Assistant"
+        fi
+        if [ "$MODULE_REAGENT_BANK" = "1" ] && [ -d "mod-reagent-bank" ]; then
+          execute_module_sql "mod-reagent-bank" "Reagent Bank"
+        fi
+        if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && [ -d "mod-black-market" ]; then
+          execute_module_sql "mod-black-market" "Black Market"
         fi
 
         echo 'SQL execution complete.'
@@ -1032,6 +1131,7 @@ services:
         [ "$MODULE_AUTO_REVIVE" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-auto-revive"
         [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-gain-honor-guard"
         [ "$MODULE_ELUNA" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-eluna"
+        [ "$MODULE_ARAC" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-arac"
         [ "$MODULE_TIME_IS_TIME" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-time-is-time"
         [ "$MODULE_POCKET_PORTAL" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-pocket-portal"
         [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-random-enchants"
@@ -1041,6 +1141,9 @@ services:
         [ "$MODULE_NPC_ENCHANTER" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-npc-enchanter"
         [ "$MODULE_INSTANCE_RESET" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-instance-reset"
         [ "$MODULE_LEVEL_GRANT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-quest-count-level"
+        [ "$MODULE_ASSISTANT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-assistant"
+        [ "$MODULE_REAGENT_BANK" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-reagent-bank"
+        [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-black-market"
 
         if [ -n "$ENABLED_MODULES" ]; then
           ENABLED_COUNT=$(echo $ENABLED_MODULES | wc -w)
