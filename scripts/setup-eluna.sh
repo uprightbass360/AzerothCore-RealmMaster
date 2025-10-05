@@ -67,6 +67,17 @@ else
     print_status "INFO" "lua_scripts directory already exists"
 fi
 
+# Create typescript directory for ac-eluna container
+TYPESCRIPT_DIR="${STORAGE_PATH}/typescript"
+print_status "INFO" "Creating TypeScript scripts directory: $TYPESCRIPT_DIR"
+
+if [ ! -d "$TYPESCRIPT_DIR" ]; then
+    mkdir -p "$TYPESCRIPT_DIR"
+    print_status "SUCCESS" "Created typescript directory"
+else
+    print_status "INFO" "typescript directory already exists"
+fi
+
 # Create example scripts
 print_status "HEADER" "CREATING EXAMPLE LUA SCRIPTS"
 
@@ -218,6 +229,85 @@ EOF
 
 print_status "SUCCESS" "Created init.lua loader script"
 
+# Create TypeScript example
+print_status "HEADER" "CREATING TYPESCRIPT EXAMPLE"
+
+cat > "$TYPESCRIPT_DIR/index.ts" << 'EOF'
+// ==============================================
+// TypeScript Example for AzerothCore Eluna-TS
+// ==============================================
+// This TypeScript file will be compiled to Lua by ac-eluna container
+
+// Event constants
+const PLAYER_EVENT_ON_LOGIN = 3;
+const PLAYER_EVENT_ON_LEVEL_CHANGE = 13;
+
+// Welcome message for players
+function OnPlayerLogin(event: number, player: Player): void {
+    const playerName = player.GetName();
+    const playerLevel = player.GetLevel();
+
+    player.SendBroadcastMessage(
+        `|cff00ff00Welcome ${playerName}! You are level ${playerLevel}.|r`
+    );
+    player.SendBroadcastMessage(
+        "|cffyellow🚀 This server supports TypeScript scripting via Eluna-TS!|r"
+    );
+
+    print(`TypeScript: Player ${playerName} logged in at level ${playerLevel}`);
+}
+
+// Level up rewards
+function OnPlayerLevelUp(event: number, player: Player, oldLevel: number): void {
+    const newLevel = player.GetLevel();
+    const playerName = player.GetName();
+
+    if (newLevel <= oldLevel) {
+        return;
+    }
+
+    player.SendBroadcastMessage(
+        `|cffff6600Congratulations on reaching level ${newLevel}!|r`
+    );
+
+    // Milestone rewards
+    const rewards: { [key: number]: { gold?: number; message: string } } = {
+        10: { gold: 100, message: "1 gold for reaching level 10!" },
+        20: { gold: 500, message: "5 gold for reaching level 20!" },
+        30: { gold: 1000, message: "10 gold for reaching level 30!" },
+        40: { gold: 2000, message: "20 gold for reaching level 40!" },
+        50: { gold: 5000, message: "50 gold for reaching level 50!" },
+        60: { gold: 10000, message: "100 gold for reaching the original cap!" },
+        70: { gold: 20000, message: "200 gold for reaching TBC cap!" },
+        80: { gold: 50000, message: "500 gold for reaching max level!" }
+    };
+
+    const reward = rewards[newLevel];
+    if (reward) {
+        if (reward.gold) {
+            player.ModifyMoney(reward.gold * 10000); // Convert to copper
+        }
+        player.SendBroadcastMessage(`|cffff0000${reward.message}|r`);
+
+        if (newLevel >= 60) {
+            SendWorldMessage(
+                `|cffff6600${playerName} has reached level ${newLevel}! Congratulations!|r`
+            );
+        }
+    }
+
+    print(`TypeScript: Player ${playerName} leveled from ${oldLevel} to ${newLevel}`);
+}
+
+// Register events
+RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, OnPlayerLogin);
+RegisterPlayerEvent(PLAYER_EVENT_ON_LEVEL_CHANGE, OnPlayerLevelUp);
+
+print("✅ TypeScript scripts loaded and will be compiled to Lua by ac-eluna");
+EOF
+
+print_status "SUCCESS" "Created TypeScript example: index.ts"
+
 # Create Eluna configuration documentation
 cat > "$LUA_SCRIPTS_DIR/README.md" << 'EOF'
 # AzerothCore Eluna Lua Scripts
@@ -322,16 +412,32 @@ else
     print_status "INFO" "No separate Eluna container found (using embedded mod-eluna)"
 fi
 
+# Check for Black Market integration
+if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ]; then
+    print_status "INFO" "Black Market Auction House module enabled - requires Eluna integration"
+    if [ -f "$LUA_SCRIPTS_DIR/bmah_server.lua" ]; then
+        print_status "SUCCESS" "Black Market Lua script found in lua_scripts directory"
+    else
+        print_status "WARNING" "Black Market Lua script not found - will be copied during module installation"
+    fi
+fi
+
 # Summary
 print_status "HEADER" "SETUP COMPLETE"
 
 echo "📁 Lua Scripts Directory: $LUA_SCRIPTS_DIR"
+echo "📁 TypeScript Directory: $TYPESCRIPT_DIR"
+echo ""
 echo "📜 Example Scripts Created:"
+echo "   Lua Scripts:"
 echo "   • welcome.lua - Player login messages"
 echo "   • server_info.lua - Custom info commands"
 echo "   • level_rewards.lua - Milestone rewards"
 echo "   • init.lua - Script loader documentation"
 echo "   • README.md - Complete documentation"
+echo ""
+echo "   TypeScript Scripts:"
+echo "   • index.ts - TypeScript example with type safety"
 echo ""
 
 print_status "INFO" "Next Steps:"
