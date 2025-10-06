@@ -504,6 +504,14 @@ main() {
     sed -i "s#BACKUP_DAILY_TIME=.*#BACKUP_DAILY_TIME=${BACKUP_DAILY_TIME}#" docker-compose-azerothcore-database-custom.env
     sed -i "s#TZ=.*#TZ=${TIMEZONE}#" docker-compose-azerothcore-database-custom.env
 
+    # Toggle database images based on module selection
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        # Swap AC_DB_IMPORT_IMAGE to enable mod-playerbots database
+        sed -i 's/\(AC_DB_IMPORT_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-database-custom.env
+        sed -i 's/\(AC_DB_IMPORT_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-database-custom.env
+        sed -i 's/\(AC_DB_IMPORT_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-database-custom.env
+    fi
+
     # Create custom services environment file
     print_status "INFO" "Creating custom services environment file..."
     cp docker-compose-azerothcore-services.env docker-compose-azerothcore-services-custom.env
@@ -517,12 +525,36 @@ main() {
     sed -i "s#SERVER_ADDRESS=.*#SERVER_ADDRESS=${SERVER_ADDRESS}#" docker-compose-azerothcore-services-custom.env
     sed -i "s#REALM_PORT=.*#REALM_PORT=${REALM_PORT}#" docker-compose-azerothcore-services-custom.env
 
+    # Toggle Docker images based on module selection
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        # Swap specific images that have _DISABLED variants
+        sed -i 's/\(AC_AUTHSERVER_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_AUTHSERVER_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_AUTHSERVER_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-services-custom.env
+
+        sed -i 's/\(AC_WORLDSERVER_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_WORLDSERVER_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_WORLDSERVER_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-services-custom.env
+
+        sed -i 's/\(AC_CLIENT_DATA_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_CLIENT_DATA_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_CLIENT_DATA_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-services-custom.env
+    fi
+
     # Create custom tools environment file
     print_status "INFO" "Creating custom tools environment file..."
     cp docker-compose-azerothcore-tools.env docker-compose-azerothcore-tools-custom.env
 
     # Substitute values in tools env file using a different delimiter
     sed -i "s#STORAGE_ROOT=.*#STORAGE_ROOT=${STORAGE_ROOT}#" docker-compose-azerothcore-tools-custom.env
+
+    # Toggle tools images based on module selection
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        # Swap AC_TOOLS_IMAGE to enable mod-playerbots tools
+        sed -i 's/\(AC_TOOLS_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-tools-custom.env
+        sed -i 's/\(AC_TOOLS_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-tools-custom.env
+        sed -i 's/\(AC_TOOLS_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-tools-custom.env
+    fi
 
     # Create custom modules environment file (only if modules are enabled)
     if [ "$MODULE_SELECTION_MODE" != "none" ]; then
