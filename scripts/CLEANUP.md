@@ -228,6 +228,7 @@ docker volume ls --format '{{.Name}}' | grep 'ac_' | xargs docker volume rm
 
 # Manual image removal
 docker images --format '{{.Repository}}:{{.Tag}}' | grep '^acore/' | xargs docker rmi
+docker images --format '{{.Repository}}:{{.Tag}}' | grep '^uprightbass360/azerothcore-wotlk-playerbots' | xargs docker rmi
 ```
 
 ## Exit Codes

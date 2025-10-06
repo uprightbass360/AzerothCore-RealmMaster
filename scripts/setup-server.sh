@@ -95,6 +95,28 @@ prompt_input() {
     done
 }
 
+# Function to prompt for yes/no input
+prompt_yes_no() {
+    local prompt=$1
+    local default=$2
+
+    while true; do
+        if [ "$default" = "y" ]; then
+            read -p "$(echo -e "${YELLOW}🔧 ${prompt} [Y/n]: ${NC}")" value
+            value=${value:-y}
+        else
+            read -p "$(echo -e "${YELLOW}🔧 ${prompt} [y/N]: ${NC}")" value
+            value=${value:-n}
+        fi
+
+        case $value in
+            [Yy]*) echo "1"; return 0 ;;
+            [Nn]*) echo "0"; return 0 ;;
+            *) print_status "ERROR" "Please answer y or n" ;;
+        esac
+    done
+}
+
 # Function to show deployment type info
 show_deployment_info() {
     local type=$1
@@ -243,6 +265,157 @@ main() {
     # Optional: Timezone
     TIMEZONE=$(prompt_input "Server timezone" "UTC" "")
 
+    # Module Configuration
+    print_status "HEADER" "MODULE CONFIGURATION"
+    echo "AzerothCore supports 25+ enhancement modules. Choose your setup:"
+    echo "1) Suggested Modules (recommended for beginners)"
+    echo "2) Manual Selection (advanced users)"
+    echo "3) No Modules (vanilla experience)"
+    echo ""
+
+    MODULE_SELECTION_MODE=""
+    while true; do
+        read -p "$(echo -e "${YELLOW}🔧 Select module configuration [1-3]: ${NC}")" module_choice
+        case $module_choice in
+            1)
+                MODULE_SELECTION_MODE="suggested"
+                print_status "INFO" "Suggested Modules Selected:"
+                echo "  ✅ Solo LFG - Dungeon finder for solo players"
+                echo "  ✅ Solocraft - Scale content for solo players"
+                echo "  ✅ Autobalance - Dynamic dungeon difficulty"
+                echo "  ✅ AH Bot - Auction house automation"
+                echo "  ✅ Transmog - Equipment appearance customization"
+                echo "  ✅ NPC Buffer - Convenience buffs"
+                echo "  ✅ Learn Spells - Auto-learn class spells"
+                echo "  ✅ Fireworks - Level-up celebrations"
+                echo ""
+                break
+                ;;
+            2)
+                MODULE_SELECTION_MODE="manual"
+                print_status "INFO" "Manual Module Selection:"
+                echo "  You will be prompted for each of the 25+ available modules"
+                echo "  This allows full customization of your server experience"
+                echo ""
+                break
+                ;;
+            3)
+                MODULE_SELECTION_MODE="none"
+                print_status "INFO" "No Modules Selected:"
+                echo "  Pure AzerothCore experience without enhancements"
+                echo "  You can add modules later if needed"
+                echo ""
+                break
+                ;;
+            *)
+                print_status "ERROR" "Please select 1, 2, or 3"
+                ;;
+        esac
+    done
+
+    # Initialize all modules to disabled
+    MODULE_PLAYERBOTS=0
+    MODULE_AOE_LOOT=0
+    MODULE_LEARN_SPELLS=0
+    MODULE_FIREWORKS=0
+    MODULE_INDIVIDUAL_PROGRESSION=0
+    MODULE_AHBOT=0
+    MODULE_AUTOBALANCE=0
+    MODULE_TRANSMOG=0
+    MODULE_NPC_BUFFER=0
+    MODULE_DYNAMIC_XP=0
+    MODULE_SOLO_LFG=0
+    MODULE_1V1_ARENA=0
+    MODULE_PHASED_DUELS=0
+    MODULE_BREAKING_NEWS=0
+    MODULE_BOSS_ANNOUNCER=0
+    MODULE_ACCOUNT_ACHIEVEMENTS=0
+    MODULE_AUTO_REVIVE=0
+    MODULE_GAIN_HONOR_GUARD=0
+    MODULE_ELUNA=0
+    MODULE_TIME_IS_TIME=0
+    MODULE_POCKET_PORTAL=0
+    MODULE_RANDOM_ENCHANTS=0
+    MODULE_SOLOCRAFT=0
+    MODULE_PVP_TITLES=0
+    MODULE_NPC_BEASTMASTER=0
+    MODULE_NPC_ENCHANTER=0
+    MODULE_INSTANCE_RESET=0
+    MODULE_LEVEL_GRANT=0
+    MODULE_ASSISTANT=0
+    MODULE_REAGENT_BANK=0
+    MODULE_BLACK_MARKET_AUCTION_HOUSE=0
+    MODULE_ARAC=0
+
+    # Configure modules based on selection
+    if [ "$MODULE_SELECTION_MODE" = "suggested" ]; then
+        # Enable suggested modules for beginners
+        MODULE_SOLO_LFG=1
+        MODULE_SOLOCRAFT=1
+        MODULE_AUTOBALANCE=1
+        MODULE_AHBOT=1
+        MODULE_TRANSMOG=1
+        MODULE_NPC_BUFFER=1
+        MODULE_LEARN_SPELLS=1
+        MODULE_FIREWORKS=1
+
+    elif [ "$MODULE_SELECTION_MODE" = "manual" ]; then
+        print_status "PROMPT" "Configure each module (y/n):"
+
+        # Core Gameplay Modules
+        echo -e "\n${BLUE}🎮 Core Gameplay Modules:${NC}"
+        MODULE_SOLO_LFG=$(prompt_yes_no "Solo LFG - Dungeon finder for solo players" "n")
+        MODULE_SOLOCRAFT=$(prompt_yes_no "Solocraft - Scale dungeons/raids for solo play" "n")
+        MODULE_AUTOBALANCE=$(prompt_yes_no "Autobalance - Dynamic difficulty scaling" "n")
+        MODULE_PLAYERBOTS=$(prompt_yes_no "Playerbots - AI companions (REQUIRES SPECIAL BUILD)" "n")
+
+        # Quality of Life Modules
+        echo -e "\n${BLUE}🛠️ Quality of Life Modules:${NC}"
+        MODULE_TRANSMOG=$(prompt_yes_no "Transmog - Equipment appearance customization" "n")
+        MODULE_NPC_BUFFER=$(prompt_yes_no "NPC Buffer - Convenience buff NPCs" "n")
+        MODULE_LEARN_SPELLS=$(prompt_yes_no "Learn Spells - Auto-learn class spells on level" "n")
+        MODULE_AOE_LOOT=$(prompt_yes_no "AOE Loot - Loot multiple corpses at once" "n")
+        MODULE_FIREWORKS=$(prompt_yes_no "Fireworks - Celebrate level ups" "n")
+        MODULE_ASSISTANT=$(prompt_yes_no "Assistant - Multi-service NPC" "n")
+
+        # Economy & Auction House
+        echo -e "\n${BLUE}💰 Economy Modules:${NC}"
+        MODULE_AHBOT=$(prompt_yes_no "AH Bot - Auction house automation" "n")
+        MODULE_REAGENT_BANK=$(prompt_yes_no "Reagent Bank - Material storage system" "n")
+        MODULE_BLACK_MARKET_AUCTION_HOUSE=$(prompt_yes_no "Black Market - MoP-style black market" "n")
+
+        # PvP & Arena
+        echo -e "\n${BLUE}⚔️ PvP Modules:${NC}"
+        MODULE_1V1_ARENA=$(prompt_yes_no "1v1 Arena - Solo arena battles" "n")
+        MODULE_PHASED_DUELS=$(prompt_yes_no "Phased Duels - Instanced dueling" "n")
+        MODULE_PVP_TITLES=$(prompt_yes_no "PvP Titles - Additional honor titles" "n")
+
+        # Progression & Experience
+        echo -e "\n${BLUE}📈 Progression Modules:${NC}"
+        MODULE_INDIVIDUAL_PROGRESSION=$(prompt_yes_no "Individual Progression - Per-player vanilla→TBC→WotLK" "n")
+        MODULE_DYNAMIC_XP=$(prompt_yes_no "Dynamic XP - Customizable experience rates" "n")
+        MODULE_LEVEL_GRANT=$(prompt_yes_no "Level Grant - Quest-based leveling rewards" "n")
+        MODULE_ACCOUNT_ACHIEVEMENTS=$(prompt_yes_no "Account Achievements - Account-wide achievements" "n")
+
+        # Server Management & Features
+        echo -e "\n${BLUE}🔧 Server Features:${NC}"
+        MODULE_BREAKING_NEWS=$(prompt_yes_no "Breaking News - Login screen announcements" "n")
+        MODULE_BOSS_ANNOUNCER=$(prompt_yes_no "Boss Announcer - Server-wide boss kill announcements" "n")
+        MODULE_AUTO_REVIVE=$(prompt_yes_no "Auto Revive - Automatic resurrection" "n")
+        MODULE_ELUNA=$(prompt_yes_no "Eluna - Lua scripting engine" "n")
+
+        # Special & Utility
+        echo -e "\n${BLUE}🎯 Utility Modules:${NC}"
+        MODULE_NPC_BEASTMASTER=$(prompt_yes_no "NPC Beastmaster - Pet management NPC" "n")
+        MODULE_NPC_ENCHANTER=$(prompt_yes_no "NPC Enchanter - Enchanting services" "n")
+        MODULE_RANDOM_ENCHANTS=$(prompt_yes_no "Random Enchants - Diablo-style random item stats" "n")
+        MODULE_POCKET_PORTAL=$(prompt_yes_no "Pocket Portal - Portable teleportation" "n")
+        MODULE_INSTANCE_RESET=$(prompt_yes_no "Instance Reset - Manual instance resets" "n")
+        MODULE_TIME_IS_TIME=$(prompt_yes_no "Time is Time - Real-time game world" "n")
+        MODULE_GAIN_HONOR_GUARD=$(prompt_yes_no "Gain Honor Guard - Honor from guard kills" "n")
+        MODULE_ARAC=$(prompt_yes_no "All Races All Classes - Remove class restrictions (REQUIRES CLIENT PATCH)" "n")
+    fi
+
     # Summary
     print_status "HEADER" "CONFIGURATION SUMMARY"
     echo "Deployment Type: $DEPLOYMENT_TYPE"
@@ -254,6 +427,48 @@ main() {
     echo "Storage Path: $STORAGE_ROOT"
     echo "Daily Backup Time: ${BACKUP_DAILY_TIME}:00 UTC"
     echo "Backup Retention: ${BACKUP_RETENTION_DAYS} days, ${BACKUP_RETENTION_HOURS} hours"
+
+    # Module summary
+    if [ "$MODULE_SELECTION_MODE" = "suggested" ]; then
+        echo "Modules: Suggested preset (8 modules)"
+    elif [ "$MODULE_SELECTION_MODE" = "manual" ]; then
+        ENABLED_COUNT=0
+        [ "$MODULE_SOLO_LFG" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_SOLOCRAFT" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_AUTOBALANCE" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_PLAYERBOTS" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_TRANSMOG" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_NPC_BUFFER" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_LEARN_SPELLS" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_AOE_LOOT" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_FIREWORKS" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_ASSISTANT" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_AHBOT" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_REAGENT_BANK" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_1V1_ARENA" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_PHASED_DUELS" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_PVP_TITLES" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_INDIVIDUAL_PROGRESSION" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_DYNAMIC_XP" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_LEVEL_GRANT" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_ACCOUNT_ACHIEVEMENTS" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_BREAKING_NEWS" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_BOSS_ANNOUNCER" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_AUTO_REVIVE" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_ELUNA" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_NPC_BEASTMASTER" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_NPC_ENCHANTER" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_POCKET_PORTAL" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_INSTANCE_RESET" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_TIME_IS_TIME" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        [ "$MODULE_ARAC" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
+        echo "Modules: Custom selection ($ENABLED_COUNT modules)"
+    else
+        echo "Modules: None (vanilla experience)"
+    fi
     echo ""
 
     # Confirmation
@@ -289,6 +504,14 @@ main() {
     sed -i "s#BACKUP_DAILY_TIME=.*#BACKUP_DAILY_TIME=${BACKUP_DAILY_TIME}#" docker-compose-azerothcore-database-custom.env
     sed -i "s#TZ=.*#TZ=${TIMEZONE}#" docker-compose-azerothcore-database-custom.env
 
+    # Toggle database images based on module selection
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        # Swap AC_DB_IMPORT_IMAGE to enable mod-playerbots database
+        sed -i 's/\(AC_DB_IMPORT_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-database-custom.env
+        sed -i 's/\(AC_DB_IMPORT_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-database-custom.env
+        sed -i 's/\(AC_DB_IMPORT_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-database-custom.env
+    fi
+
     # Create custom services environment file
     print_status "INFO" "Creating custom services environment file..."
     cp docker-compose-azerothcore-services.env docker-compose-azerothcore-services-custom.env
@@ -302,6 +525,22 @@ main() {
     sed -i "s#SERVER_ADDRESS=.*#SERVER_ADDRESS=${SERVER_ADDRESS}#" docker-compose-azerothcore-services-custom.env
     sed -i "s#REALM_PORT=.*#REALM_PORT=${REALM_PORT}#" docker-compose-azerothcore-services-custom.env
 
+    # Toggle Docker images based on module selection
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        # Swap specific images that have _DISABLED variants
+        sed -i 's/\(AC_AUTHSERVER_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_AUTHSERVER_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_AUTHSERVER_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-services-custom.env
+
+        sed -i 's/\(AC_WORLDSERVER_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_WORLDSERVER_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_WORLDSERVER_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-services-custom.env
+
+        sed -i 's/\(AC_CLIENT_DATA_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_CLIENT_DATA_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/\(AC_CLIENT_DATA_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-services-custom.env
+    fi
+
     # Create custom tools environment file
     print_status "INFO" "Creating custom tools environment file..."
     cp docker-compose-azerothcore-tools.env docker-compose-azerothcore-tools-custom.env
@@ -309,10 +548,65 @@ main() {
     # Substitute values in tools env file using a different delimiter
     sed -i "s#STORAGE_ROOT=.*#STORAGE_ROOT=${STORAGE_ROOT}#" docker-compose-azerothcore-tools-custom.env
 
+    # Toggle tools images based on module selection
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        # Swap AC_TOOLS_IMAGE to enable mod-playerbots tools
+        sed -i 's/\(AC_TOOLS_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-tools-custom.env
+        sed -i 's/\(AC_TOOLS_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-tools-custom.env
+        sed -i 's/\(AC_TOOLS_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-tools-custom.env
+    fi
+
+    # Create custom modules environment file (only if modules are enabled)
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        print_status "INFO" "Creating custom modules environment file..."
+        cp docker-compose-azerothcore-modules.env docker-compose-azerothcore-modules-custom.env
+
+        # Substitute values in modules env file
+        sed -i "s#STORAGE_ROOT=.*#STORAGE_ROOT=${STORAGE_ROOT}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MYSQL_ROOT_PASSWORD=.*#MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}#" docker-compose-azerothcore-modules-custom.env
+
+        # Set all module variables
+        sed -i "s#MODULE_PLAYERBOTS=.*#MODULE_PLAYERBOTS=${MODULE_PLAYERBOTS}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_AOE_LOOT=.*#MODULE_AOE_LOOT=${MODULE_AOE_LOOT}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_LEARN_SPELLS=.*#MODULE_LEARN_SPELLS=${MODULE_LEARN_SPELLS}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_FIREWORKS=.*#MODULE_FIREWORKS=${MODULE_FIREWORKS}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_INDIVIDUAL_PROGRESSION=.*#MODULE_INDIVIDUAL_PROGRESSION=${MODULE_INDIVIDUAL_PROGRESSION}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_AHBOT=.*#MODULE_AHBOT=${MODULE_AHBOT}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_AUTOBALANCE=.*#MODULE_AUTOBALANCE=${MODULE_AUTOBALANCE}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_TRANSMOG=.*#MODULE_TRANSMOG=${MODULE_TRANSMOG}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_NPC_BUFFER=.*#MODULE_NPC_BUFFER=${MODULE_NPC_BUFFER}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_DYNAMIC_XP=.*#MODULE_DYNAMIC_XP=${MODULE_DYNAMIC_XP}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_SOLO_LFG=.*#MODULE_SOLO_LFG=${MODULE_SOLO_LFG}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_1V1_ARENA=.*#MODULE_1V1_ARENA=${MODULE_1V1_ARENA}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_PHASED_DUELS=.*#MODULE_PHASED_DUELS=${MODULE_PHASED_DUELS}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_BREAKING_NEWS=.*#MODULE_BREAKING_NEWS=${MODULE_BREAKING_NEWS}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_BOSS_ANNOUNCER=.*#MODULE_BOSS_ANNOUNCER=${MODULE_BOSS_ANNOUNCER}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_ACCOUNT_ACHIEVEMENTS=.*#MODULE_ACCOUNT_ACHIEVEMENTS=${MODULE_ACCOUNT_ACHIEVEMENTS}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_AUTO_REVIVE=.*#MODULE_AUTO_REVIVE=${MODULE_AUTO_REVIVE}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_GAIN_HONOR_GUARD=.*#MODULE_GAIN_HONOR_GUARD=${MODULE_GAIN_HONOR_GUARD}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_ELUNA=.*#MODULE_ELUNA=${MODULE_ELUNA}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_TIME_IS_TIME=.*#MODULE_TIME_IS_TIME=${MODULE_TIME_IS_TIME}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_POCKET_PORTAL=.*#MODULE_POCKET_PORTAL=${MODULE_POCKET_PORTAL}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_RANDOM_ENCHANTS=.*#MODULE_RANDOM_ENCHANTS=${MODULE_RANDOM_ENCHANTS}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_SOLOCRAFT=.*#MODULE_SOLOCRAFT=${MODULE_SOLOCRAFT}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_PVP_TITLES=.*#MODULE_PVP_TITLES=${MODULE_PVP_TITLES}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_NPC_BEASTMASTER=.*#MODULE_NPC_BEASTMASTER=${MODULE_NPC_BEASTMASTER}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_NPC_ENCHANTER=.*#MODULE_NPC_ENCHANTER=${MODULE_NPC_ENCHANTER}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_INSTANCE_RESET=.*#MODULE_INSTANCE_RESET=${MODULE_INSTANCE_RESET}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_LEVEL_GRANT=.*#MODULE_LEVEL_GRANT=${MODULE_LEVEL_GRANT}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_ASSISTANT=.*#MODULE_ASSISTANT=${MODULE_ASSISTANT}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_REAGENT_BANK=.*#MODULE_REAGENT_BANK=${MODULE_REAGENT_BANK}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_BLACK_MARKET_AUCTION_HOUSE=.*#MODULE_BLACK_MARKET_AUCTION_HOUSE=${MODULE_BLACK_MARKET_AUCTION_HOUSE}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#MODULE_ARAC=.*#MODULE_ARAC=${MODULE_ARAC}#" docker-compose-azerothcore-modules-custom.env
+    fi
+
     print_status "SUCCESS" "Custom environment files created:"
     echo "  - docker-compose-azerothcore-database-custom.env"
     echo "  - docker-compose-azerothcore-services-custom.env"
     echo "  - docker-compose-azerothcore-tools-custom.env"
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        echo "  - docker-compose-azerothcore-modules-custom.env"
+    fi
     echo ""
 
     # Deployment instructions
@@ -325,9 +619,18 @@ main() {
     echo "2. Deploy services layer:"
     echo "   docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml up -d"
     echo ""
-    echo "3. Deploy tools layer (optional):"
-    echo "   docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml up -d"
-    echo ""
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        echo "3. Deploy modules layer (installs and configures selected modules):"
+        echo "   docker compose --env-file docker-compose-azerothcore-modules-custom.env -f docker-compose-azerothcore-modules.yml up -d"
+        echo ""
+        echo "4. Deploy tools layer (optional):"
+        echo "   docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml up -d"
+        echo ""
+    else
+        echo "3. Deploy tools layer (optional):"
+        echo "   docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml up -d"
+        echo ""
+    fi
 
     if [ "$DEPLOYMENT_TYPE" != "local" ]; then
         print_status "WARNING" "Additional configuration required for ${DEPLOYMENT_TYPE} deployment:"

@@ -2,3 +2,4 @@ data/
 backups/
 local-data-tools/
 storage/
+*custom.env

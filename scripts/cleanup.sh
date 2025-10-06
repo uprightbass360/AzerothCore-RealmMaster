@@ -165,7 +165,7 @@ show_current_resources() {
     fi
 
     echo -e "${BLUE}Images:${NC}"
-    if docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep -E "acore|azerothcore|phpmyadmin|keira3" | head -10; then
+    if docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep -E "acore|azerothcore|phpmyadmin|keira3|uprightbass360.*playerbots" | head -10; then
         echo ""
     else
         echo "  No AzerothCore-related images found"
@@ -256,6 +256,9 @@ nuclear_cleanup() {
     # Remove images
     execute_command "Remove AzerothCore server images" \
         "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^acore/' | xargs -r docker rmi"
+
+    execute_command "Remove mod-playerbots images" \
+        "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^uprightbass360/azerothcore-wotlk-playerbots' | xargs -r docker rmi"
 
     execute_command "Remove related tool images" \
         "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'phpmyadmin|uprightbass360/keira3' | xargs -r docker rmi"
