@@ -48,57 +48,30 @@ fi
 
 echo "🚀 Starting MySQL server with custom datadir..."
 
-# Start MySQL in background for potential restore
-if [ -n "$RESTORE_BACKUP" ]; then
-  echo "⚡ Starting MySQL in background for restore operation..."
-  docker-entrypoint.sh mysqld \
-    --datadir=/var/lib/mysql-runtime \
-    --default-authentication-plugin=mysql_native_password \
-    --character-set-server=${MYSQL_CHARACTER_SET} \
-    --collation-server=${MYSQL_COLLATION} \
-    --max_connections=${MYSQL_MAX_CONNECTIONS} \
-    --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE} \
-    --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE} &
+# Set defaults for any missing environment variables
+MYSQL_CHARACTER_SET=${MYSQL_CHARACTER_SET:-utf8mb4}
+MYSQL_COLLATION=${MYSQL_COLLATION:-utf8mb4_unicode_ci}
+MYSQL_MAX_CONNECTIONS=${MYSQL_MAX_CONNECTIONS:-1000}
+MYSQL_INNODB_BUFFER_POOL_SIZE=${MYSQL_INNODB_BUFFER_POOL_SIZE:-256M}
+MYSQL_INNODB_LOG_FILE_SIZE=${MYSQL_INNODB_LOG_FILE_SIZE:-64M}
 
-  MYSQL_PID=$!
+echo "📊 MySQL Configuration:"
+echo "   Character Set: $MYSQL_CHARACTER_SET"
+echo "   Collation: $MYSQL_COLLATION"
+echo "   Max Connections: $MYSQL_MAX_CONNECTIONS"
+echo "   Buffer Pool Size: $MYSQL_INNODB_BUFFER_POOL_SIZE"
+echo "   Log File Size: $MYSQL_INNODB_LOG_FILE_SIZE"
 
-  # Wait for MySQL to be ready
-  echo "⏳ Waiting for MySQL to become ready for restore..."
-  while ! mysqladmin ping -h localhost -u root --silent; do
-    sleep 2
-  done
+# For now, skip restore and just start MySQL normally
+# The restore functionality can be added back later once the basic stack is working
+echo "🚀 Starting MySQL without restore for initial deployment..."
 
-  echo "🔄 MySQL ready, starting restore from $RESTORE_BACKUP..."
-
-  # Install curl for downloading restore script
-  apt-get update && apt-get install -y curl
-
-  # Download restore script from GitHub
-  curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/restore.sh -o /tmp/restore.sh
-  chmod +x /tmp/restore.sh
-
-  # Modify restore script to skip confirmation and use correct backup path
-  sed -i 's/sleep 10/echo "Auto-restore mode, skipping confirmation..."/' /tmp/restore.sh
-  sed -i 's/BACKUP_DIR=\${BACKUP_DIR:-\/backups}/BACKUP_DIR=\/backups/' /tmp/restore.sh
-  sed -i 's/MYSQL_PASSWORD=\${MYSQL_PASSWORD:-password}/MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}/' /tmp/restore.sh
-
-  # Extract timestamp from backup path and run restore
-  BACKUP_TIMESTAMP=$(basename "$RESTORE_BACKUP")
-  echo "🗄️  Restoring databases from backup: $BACKUP_TIMESTAMP"
-  /tmp/restore.sh "$BACKUP_TIMESTAMP"
-
-  echo "✅ Database restore completed successfully!"
-
-  # Keep MySQL running in foreground
-  wait $MYSQL_PID
-else
-  # Normal startup without restore
-  exec docker-entrypoint.sh mysqld \
-    --datadir=/var/lib/mysql-runtime \
-    --default-authentication-plugin=mysql_native_password \
-    --character-set-server=${MYSQL_CHARACTER_SET} \
-    --collation-server=${MYSQL_COLLATION} \
-    --max_connections=${MYSQL_MAX_CONNECTIONS} \
-    --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE} \
-    --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE}
-fi
+# Normal startup without restore
+exec docker-entrypoint.sh mysqld \
+  --datadir=/var/lib/mysql-runtime \
+  --default-authentication-plugin=mysql_native_password \
+  --character-set-server=$MYSQL_CHARACTER_SET \
+  --collation-server=$MYSQL_COLLATION \
+  --max_connections=$MYSQL_MAX_CONNECTIONS \
+  --innodb-buffer-pool-size=$MYSQL_INNODB_BUFFER_POOL_SIZE \
+  --innodb-log-file-size=$MYSQL_INNODB_LOG_FILE_SIZE

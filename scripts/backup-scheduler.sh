@@ -3,8 +3,8 @@ set -e
 
 echo "🔧 Starting enhanced backup service with hourly and daily schedules..."
 
-# Install curl if not available
-apt-get update && apt-get install -y curl
+# Install curl if not available (handle different package managers)
+microdnf install -y curl || yum install -y curl || apt-get update && apt-get install -y curl
 
 # Download backup scripts from GitHub
 echo "📥 Downloading backup scripts from GitHub..."
