@@ -1,8 +1,6 @@
 # ==============================================
-# AZEROTHCORE DATABASE LAYER - PORTAINER VERSION (CLEAN)
+# AZEROTHCORE DATABASE LAYER
 # ==============================================
-# Modified for better Portainer compatibility
-# Removed redundant ac-mysql-persist service
 
 services:
   # Step 1: MySQL database
@@ -15,6 +13,12 @@ services:
       MYSQL_ROOT_HOST: '${MYSQL_ROOT_HOST}'
       MYSQL_ALLOW_EMPTY_PASSWORD: no
       MYSQL_DATADIR: /var/lib/mysql-runtime
+      # MySQL configuration variables for startup script
+      MYSQL_CHARACTER_SET: ${MYSQL_CHARACTER_SET}
+      MYSQL_COLLATION: ${MYSQL_COLLATION}
+      MYSQL_MAX_CONNECTIONS: ${MYSQL_MAX_CONNECTIONS}
+      MYSQL_INNODB_BUFFER_POOL_SIZE: ${MYSQL_INNODB_BUFFER_POOL_SIZE}
+      MYSQL_INNODB_LOG_FILE_SIZE: ${MYSQL_INNODB_LOG_FILE_SIZE}
     ports:
       - "${MYSQL_EXTERNAL_PORT}:${MYSQL_PORT}"
     volumes:
@@ -24,110 +28,15 @@ services:
         target: /var/lib/mysql-runtime
         tmpfs:
           size: 2G
-    entrypoint: ["/bin/bash", "-c"]
     command:
-      - |
-        echo "🔧 Starting MySQL with NFS-compatible setup and auto-restore..."
-        mkdir -p /var/lib/mysql-runtime
-        chown -R mysql:mysql /var/lib/mysql-runtime
-        chmod 755 /var/lib/mysql-runtime
-
-        # Check if MySQL data directory is empty (fresh start)
-        if [ ! -d "/var/lib/mysql-runtime/mysql" ]; then
-          echo "🆕 Fresh MySQL installation detected..."
-
-          # Check for available backups (prefer daily, fallback to hourly, then legacy)
-          if [ -d "/backups" ] && [ "$(ls -A /backups)" ]; then
-            # Try daily backups first
-            if [ -d "/backups/daily" ] && [ "$(ls -A /backups/daily)" ]; then
-              LATEST_BACKUP=$(ls -1t /backups/daily | head -n 1)
-              if [ -n "$LATEST_BACKUP" ] && [ -d "/backups/daily/$LATEST_BACKUP" ]; then
-                echo "📦 Latest daily backup found: $LATEST_BACKUP"
-                echo "🔄 Will restore after MySQL initializes..."
-                export RESTORE_BACKUP="/backups/daily/$LATEST_BACKUP"
-              fi
-            # Try hourly backups second
-            elif [ -d "/backups/hourly" ] && [ "$(ls -A /backups/hourly)" ]; then
-              LATEST_BACKUP=$(ls -1t /backups/hourly | head -n 1)
-              if [ -n "$LATEST_BACKUP" ] && [ -d "/backups/hourly/$LATEST_BACKUP" ]; then
-                echo "📦 Latest hourly backup found: $LATEST_BACKUP"
-                echo "🔄 Will restore after MySQL initializes..."
-                export RESTORE_BACKUP="/backups/hourly/$LATEST_BACKUP"
-              fi
-            # Try legacy backup structure last
-            else
-              LATEST_BACKUP=$(ls -1t /backups | head -n 1)
-              if [ -n "$LATEST_BACKUP" ] && [ -d "/backups/$LATEST_BACKUP" ]; then
-                echo "📦 Latest legacy backup found: $LATEST_BACKUP"
-                echo "🔄 Will restore after MySQL initializes..."
-                export RESTORE_BACKUP="/backups/$LATEST_BACKUP"
-              else
-                echo "🆕 No valid backups found, will initialize fresh..."
-              fi
-            fi
-          else
-            echo "🆕 No backup directory found, will initialize fresh..."
-          fi
-        else
-          echo "📁 Existing MySQL data found, skipping restore..."
-        fi
-
-        echo "🚀 Starting MySQL server with custom datadir..."
-
-        # Start MySQL in background for potential restore
-        if [ -n "$RESTORE_BACKUP" ]; then
-          echo "⚡ Starting MySQL in background for restore operation..."
-          docker-entrypoint.sh mysqld \
-            --datadir=/var/lib/mysql-runtime \
-            --default-authentication-plugin=mysql_native_password \
-            --character-set-server=${MYSQL_CHARACTER_SET} \
-            --collation-server=${MYSQL_COLLATION} \
-            --max_connections=${MYSQL_MAX_CONNECTIONS} \
-            --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE} \
-            --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE} &
-
-          MYSQL_PID=$!
-
-          # Wait for MySQL to be ready
-          echo "⏳ Waiting for MySQL to become ready for restore..."
-          while ! mysqladmin ping -h localhost -u root --silent; do
-            sleep 2
-          done
-
-          echo "🔄 MySQL ready, starting restore from $RESTORE_BACKUP..."
-
-          # Install curl for downloading restore script
-          apt-get update && apt-get install -y curl
-
-          # Download restore script from GitHub
-          curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/restore.sh -o /tmp/restore.sh
-          chmod +x /tmp/restore.sh
-
-          # Modify restore script to skip confirmation and use correct backup path
-          sed -i 's/sleep 10/echo "Auto-restore mode, skipping confirmation..."/' /tmp/restore.sh
-          sed -i 's/BACKUP_DIR=\${BACKUP_DIR:-\/backups}/BACKUP_DIR=\/backups/' /tmp/restore.sh
-          sed -i 's/MYSQL_PASSWORD=\${MYSQL_PASSWORD:-password}/MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}/' /tmp/restore.sh
-
-          # Extract timestamp from backup path and run restore
-          BACKUP_TIMESTAMP=$(basename "$RESTORE_BACKUP")
-          echo "🗄️  Restoring databases from backup: $BACKUP_TIMESTAMP"
-          /tmp/restore.sh "$BACKUP_TIMESTAMP"
-
-          echo "✅ Database restore completed successfully!"
-
-          # Keep MySQL running in foreground
-          wait $MYSQL_PID
-        else
-          # Normal startup without restore
-          exec docker-entrypoint.sh mysqld \
-            --datadir=/var/lib/mysql-runtime \
-            --default-authentication-plugin=mysql_native_password \
-            --character-set-server=${MYSQL_CHARACTER_SET} \
-            --collation-server=${MYSQL_COLLATION} \
-            --max_connections=${MYSQL_MAX_CONNECTIONS} \
-            --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE} \
-            --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE}
-        fi
+      - mysqld
+      - --datadir=/var/lib/mysql-runtime
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=1000
+      - --innodb-buffer-pool-size=256M
+      - --innodb-log-file-size=64M
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u ${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} --silent || exit 1"]
@@ -162,59 +71,14 @@ services:
       - /bin/bash
       - -c
       - |
-        echo "🔧 Starting enhanced backup service with hourly and daily schedules..."
+        # Install curl for downloading backup scheduler script (handle different package managers)
+        microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
 
-        # Install curl if not available
-        apt-get update && apt-get install -y curl
-
-        # Download backup scripts from GitHub
-        echo "📥 Downloading backup scripts from GitHub..."
-        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/backup.sh -o /tmp/backup.sh
-        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/backup-hourly.sh -o /tmp/backup-hourly.sh
-        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/backup-daily.sh -o /tmp/backup-daily.sh
-        chmod +x /tmp/backup.sh /tmp/backup-hourly.sh /tmp/backup-daily.sh
-
-        # Wait for MySQL to be ready before starting backup service
-        echo "⏳ Waiting for MySQL to be ready..."
-        sleep 30
-
-        # Run initial daily backup
-        echo "🚀 Running initial daily backup..."
-        /tmp/backup-daily.sh
-
-        # Enhanced scheduler with hourly and daily backups
-        echo "⏰ Starting enhanced backup scheduler:"
-        echo "   📅 Daily backups: ${BACKUP_DAILY_TIME}:00 UTC (retention: ${BACKUP_RETENTION_DAYS} days)"
-        echo "   ⏰ Hourly backups: every hour (retention: ${BACKUP_RETENTION_HOURS} hours)"
-
-        # Track last backup times to avoid duplicates
-        last_daily_hour=""
-        last_hourly_minute=""
-
-        while true; do
-          current_hour=$(date +%H)
-          current_minute=$(date +%M)
-          current_time="$current_hour:$current_minute"
-
-          # Daily backup check (configurable time)
-          if [ "$$current_hour" = "${BACKUP_DAILY_TIME}" ] && [ "$$current_minute" = "00" ] && [ "$$last_daily_hour" != "$$current_hour" ]; then
-            echo "📅 [$(date)] Daily backup time reached, running daily backup..."
-            /tmp/backup-daily.sh
-            last_daily_hour="$$current_hour"
-            # Sleep for 2 minutes to avoid running multiple times
-            sleep 120
-          # Hourly backup check (every hour at minute 0, except during daily backup)
-          elif [ "$$current_minute" = "00" ] && [ "$$current_hour" != "${BACKUP_DAILY_TIME}" ] && [ "$$last_hourly_minute" != "$$current_minute" ]; then
-            echo "⏰ [$(date)] Hourly backup time reached, running hourly backup..."
-            /tmp/backup-hourly.sh
-            last_hourly_minute="$$current_minute"
-            # Sleep for 2 minutes to avoid running multiple times
-            sleep 120
-          else
-            # Sleep for 1 minute before checking again
-            sleep 60
-          fi
-        done
+        # Download backup scheduler script from GitHub
+        echo "📥 Downloading backup scheduler script from GitHub..."
+        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/backup-scheduler.sh -o /tmp/backup-scheduler.sh
+        chmod +x /tmp/backup-scheduler.sh
+        /tmp/backup-scheduler.sh
     restart: unless-stopped
     networks:
       - azerothcore
@@ -230,41 +94,28 @@ services:
       - azerothcore
     environment:
       MYSQL_PWD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_HOST: ${CONTAINER_MYSQL}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_WAIT_RETRIES: ${DB_WAIT_RETRIES}
+      DB_WAIT_SLEEP: ${DB_WAIT_SLEEP}
+      DB_AUTH_NAME: ${DB_AUTH_NAME}
+      DB_WORLD_NAME: ${DB_WORLD_NAME}
+      DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
+      MYSQL_CHARACTER_SET: ${MYSQL_CHARACTER_SET}
+      MYSQL_COLLATION: ${MYSQL_COLLATION}
     command:
       - sh
       - -c
       - |
-        echo "🔧 Waiting for MySQL to be ready..."
+        # Install curl for downloading db init script (handle different package managers)
+        microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
 
-        # Wait for MySQL to be responsive with longer timeout
-        for i in $(seq 1 ${DB_WAIT_RETRIES}); do
-          if mysql -h ${MYSQL_HOST} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "SELECT 1;" >/dev/null 2>&1; then
-            echo "✅ MySQL is responsive"
-            break
-          fi
-          echo "⏳ Waiting for MySQL... attempt $$i/${DB_WAIT_RETRIES}"
-          sleep ${DB_WAIT_SLEEP}
-        done
-
-        # Check if we should restore from backup
-        if [ -f "/var/lib/mysql-persistent/backup.sql" ]; then
-          echo "🔄 Restoring databases from backup..."
-          mysql -h ${MYSQL_HOST} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} < /var/lib/mysql-persistent/backup.sql || {
-            echo "⚠️ Backup restore failed, will create fresh databases"
-          }
-        fi
-
-        echo "🗄️ Creating/verifying AzerothCore databases..."
-        mysql -h ${MYSQL_HOST} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "
-        CREATE DATABASE IF NOT EXISTS ${DB_AUTH_NAME} DEFAULT CHARACTER SET ${MYSQL_CHARACTER_SET} COLLATE ${MYSQL_COLLATION};
-        CREATE DATABASE IF NOT EXISTS ${DB_WORLD_NAME} DEFAULT CHARACTER SET ${MYSQL_CHARACTER_SET} COLLATE ${MYSQL_COLLATION};
-        CREATE DATABASE IF NOT EXISTS ${DB_CHARACTERS_NAME} DEFAULT CHARACTER SET ${MYSQL_CHARACTER_SET} COLLATE ${MYSQL_COLLATION};
-        SHOW DATABASES;
-        " || {
-          echo "❌ Failed to create databases"
-          exit 1
-        }
-        echo "✅ Databases ready!"
+        # Download db init script from GitHub
+        echo "📥 Downloading database initialization script from GitHub..."
+        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-init.sh -o /tmp/db-init.sh
+        chmod +x /tmp/db-init.sh
+        /tmp/db-init.sh
     restart: "no"
 
   # Step 4: Database import (one-time setup - run after db-init)
@@ -290,36 +141,7 @@ services:
       AC_LOGGER_ROOT_CONFIG: "1,Console"
       AC_LOGGER_SERVER_CONFIG: "1,Console"
       AC_APPENDER_CONSOLE_CONFIG: "1,2,0"
-    entrypoint: ["/bin/bash", "-c"]
-    command:
-      - |
-        echo 'Waiting for databases to be ready...'
-
-        # Wait for databases to exist with longer timeout
-        for i in $(seq 1 120); do
-          if mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "USE ${DB_AUTH_NAME}; USE ${DB_WORLD_NAME}; USE ${DB_CHARACTERS_NAME};" >/dev/null 2>&1; then
-            echo "✅ All databases accessible"
-            break
-          fi
-          echo "⏳ Waiting for databases... attempt $$i/120"
-          sleep 5
-        done
-
-        echo 'Creating config file for dbimport...'
-        mkdir -p /azerothcore/env/dist/etc
-        cat > /azerothcore/env/dist/etc/dbimport.conf <<EOF
-        LoginDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
-        WorldDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}"
-        CharacterDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_CHARACTERS_NAME}"
-        Updates.EnableDatabases = 7
-        Updates.AutoSetup = 1
-        EOF
-
-        echo 'Running database import...'
-        cd /azerothcore/env/dist/bin
-        ./dbimport
-
-        echo 'Database import complete!'
+# Use the default AzerothCore dbimport entrypoint
     restart: "no"
 
 networks:

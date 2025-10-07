@@ -391,6 +391,9 @@ Run the configuration analysis tool for specific guidance:
 - **[Module Configuration Requirements](docs/module-configuration-requirements.md)** - Detailed manual setup steps
 - **[Lua Scripting Guide](storage/azerothcore/lua_scripts/README.md)** - Eluna development
 - **[Deployment Scripts](scripts/README.md)** - Automation tools reference
+- **[GitHub-Hosted Scripts](scripts/GITHUB-HOSTED-SCRIPTS.md)** - Service script documentation
+- **[Deployment Guide](scripts/DEPLOYMENT.md)** - Complete deployment procedures
+- **[Cleanup Guide](scripts/CLEANUP.md)** - Resource management procedures
 
 ---
 
