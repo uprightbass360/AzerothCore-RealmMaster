@@ -1,0 +1,197 @@
+#!/bin/bash
+set -e
+
+# Function to execute SQL files for a module
+execute_module_sql() {
+  local module_dir="$1"
+  local module_name="$2"
+
+  echo "Processing SQL scripts for $module_name..."
+
+  # Find and execute SQL files in the module
+  if [ -d "$module_dir/data/sql" ]; then
+    # Execute world database scripts
+    if [ -d "$module_dir/data/sql/world" ]; then
+      find "$module_dir/data/sql/world" -name "*.sql" -type f | while read sql_file; do
+        echo "  Executing world SQL: $(basename "$sql_file")"
+        if mariadb --ssl=false -h "${CONTAINER_MYSQL}" -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" "${DB_WORLD_NAME}" < "$sql_file" >/dev/null 2>&1; then
+          echo "    ✅ Successfully executed $(basename "$sql_file")"
+        else
+          echo "    ❌ Failed to execute $sql_file"
+        fi
+      done
+    fi
+
+    # Execute auth database scripts
+    if [ -d "$module_dir/data/sql/auth" ]; then
+      find "$module_dir/data/sql/auth" -name "*.sql" -type f | while read sql_file; do
+        echo "  Executing auth SQL: $(basename "$sql_file")"
+        if mariadb --ssl=false -h "${CONTAINER_MYSQL}" -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" "${DB_AUTH_NAME}" < "$sql_file" >/dev/null 2>&1; then
+          echo "    ✅ Successfully executed $(basename "$sql_file")"
+        else
+          echo "    ❌ Failed to execute $sql_file"
+        fi
+      done
+    fi
+
+    # Execute character database scripts
+    if [ -d "$module_dir/data/sql/characters" ]; then
+      find "$module_dir/data/sql/characters" -name "*.sql" -type f | while read sql_file; do
+        echo "  Executing characters SQL: $(basename "$sql_file")"
+        if mariadb --ssl=false -h "${CONTAINER_MYSQL}" -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" "${DB_CHARACTERS_NAME}" < "$sql_file" >/dev/null 2>&1; then
+          echo "    ✅ Successfully executed $(basename "$sql_file")"
+        else
+          echo "    ❌ Failed to execute $sql_file"
+        fi
+      done
+    fi
+
+    # Execute base SQL files (common pattern)
+    find "$module_dir/data/sql" -maxdepth 1 -name "*.sql" -type f | while read sql_file; do
+      echo "  Executing base SQL: $(basename "$sql_file")"
+      mysql -h "${CONTAINER_MYSQL}" -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" "${DB_WORLD_NAME}" < "$sql_file" 2>/dev/null || echo "    Warning: Failed to execute $sql_file"
+    done
+  fi
+
+  # Look for SQL files in other common locations
+  if [ -d "$module_dir/sql" ]; then
+    find "$module_dir/sql" -name "*.sql" -type f | while read sql_file; do
+      echo "  Executing SQL: $(basename "$sql_file")"
+      mysql -h "${CONTAINER_MYSQL}" -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" "${DB_WORLD_NAME}" < "$sql_file" 2>/dev/null || echo "    Warning: Failed to execute $sql_file"
+    done
+  fi
+}
+
+# Main function to execute SQL for all enabled modules
+execute_module_sql_scripts() {
+  # Install MariaDB client if not available
+  which mariadb >/dev/null 2>&1 || {
+    echo "Installing MariaDB client..."
+    apk add --no-cache mariadb-client >/dev/null 2>&1 || echo "Warning: Could not install MariaDB client"
+  }
+
+  # Execute SQL for enabled modules only
+  if [ "$MODULE_PLAYERBOTS" = "1" ] && [ -d "mod-playerbots" ]; then
+    execute_module_sql "mod-playerbots" "Playerbots"
+  fi
+
+  if [ "$MODULE_AOE_LOOT" = "1" ] && [ -d "mod-aoe-loot" ]; then
+    execute_module_sql "mod-aoe-loot" "AoE Loot"
+  fi
+
+  if [ "$MODULE_LEARN_SPELLS" = "1" ] && [ -d "mod-learn-spells" ]; then
+    execute_module_sql "mod-learn-spells" "Learn Spells"
+  fi
+
+  if [ "$MODULE_FIREWORKS" = "1" ] && [ -d "mod-fireworks-on-level" ]; then
+    execute_module_sql "mod-fireworks-on-level" "Fireworks"
+  fi
+
+  if [ "$MODULE_INDIVIDUAL_PROGRESSION" = "1" ] && [ -d "mod-individual-progression" ]; then
+    execute_module_sql "mod-individual-progression" "Individual Progression"
+  fi
+
+  if [ "$MODULE_AHBOT" = "1" ] && [ -d "mod-ahbot" ]; then
+    execute_module_sql "mod-ahbot" "AHBot"
+  fi
+
+  if [ "$MODULE_AUTOBALANCE" = "1" ] && [ -d "mod-autobalance" ]; then
+    execute_module_sql "mod-autobalance" "AutoBalance"
+  fi
+
+  if [ "$MODULE_TRANSMOG" = "1" ] && [ -d "mod-transmog" ]; then
+    execute_module_sql "mod-transmog" "Transmog"
+  fi
+
+  if [ "$MODULE_NPC_BUFFER" = "1" ] && [ -d "mod-npc-buffer" ]; then
+    execute_module_sql "mod-npc-buffer" "NPC Buffer"
+  fi
+
+  if [ "$MODULE_DYNAMIC_XP" = "1" ] && [ -d "mod-dynamic-xp" ]; then
+    execute_module_sql "mod-dynamic-xp" "Dynamic XP"
+  fi
+
+  if [ "$MODULE_SOLO_LFG" = "1" ] && [ -d "mod-solo-lfg" ]; then
+    execute_module_sql "mod-solo-lfg" "Solo LFG"
+  fi
+
+  if [ "$MODULE_1V1_ARENA" = "1" ] && [ -d "mod-1v1-arena" ]; then
+    execute_module_sql "mod-1v1-arena" "1v1 Arena"
+  fi
+
+  if [ "$MODULE_PHASED_DUELS" = "1" ] && [ -d "mod-phased-duels" ]; then
+    execute_module_sql "mod-phased-duels" "Phased Duels"
+  fi
+
+  if [ "$MODULE_BREAKING_NEWS" = "1" ] && [ -d "mod-breaking-news-override" ]; then
+    execute_module_sql "mod-breaking-news-override" "Breaking News"
+  fi
+
+  if [ "$MODULE_BOSS_ANNOUNCER" = "1" ] && [ -d "mod-boss-announcer" ]; then
+    execute_module_sql "mod-boss-announcer" "Boss Announcer"
+  fi
+
+  if [ "$MODULE_ACCOUNT_ACHIEVEMENTS" = "1" ] && [ -d "mod-account-achievements" ]; then
+    execute_module_sql "mod-account-achievements" "Account Achievements"
+  fi
+
+  if [ "$MODULE_AUTO_REVIVE" = "1" ] && [ -d "mod-auto-revive" ]; then
+    execute_module_sql "mod-auto-revive" "Auto Revive"
+  fi
+
+  if [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && [ -d "mod-gain-honor-guard" ]; then
+    execute_module_sql "mod-gain-honor-guard" "Gain Honor Guard"
+  fi
+
+  if [ "$MODULE_ELUNA" = "1" ] && [ -d "mod-eluna" ]; then
+    execute_module_sql "mod-eluna" "Eluna"
+  fi
+  if [ "$MODULE_ARAC" = "1" ] && [ -d "mod-arac" ]; then
+    execute_module_sql "mod-arac" "All Races All Classes"
+  fi
+
+  if [ "$MODULE_TIME_IS_TIME" = "1" ] && [ -d "mod-TimeIsTime" ]; then
+    execute_module_sql "mod-TimeIsTime" "Time Is Time"
+  fi
+
+  if [ "$MODULE_POCKET_PORTAL" = "1" ] && [ -d "mod-pocket-portal" ]; then
+    execute_module_sql "mod-pocket-portal" "Pocket Portal"
+  fi
+
+  if [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && [ -d "mod-random-enchants" ]; then
+    execute_module_sql "mod-random-enchants" "Random Enchants"
+  fi
+
+  if [ "$MODULE_SOLOCRAFT" = "1" ] && [ -d "mod-solocraft" ]; then
+    execute_module_sql "mod-solocraft" "Solocraft"
+  fi
+
+  if [ "$MODULE_PVP_TITLES" = "1" ] && [ -d "mod-pvp-titles" ]; then
+    execute_module_sql "mod-pvp-titles" "PvP Titles"
+  fi
+
+  if [ "$MODULE_NPC_BEASTMASTER" = "1" ] && [ -d "mod-npc-beastmaster" ]; then
+    execute_module_sql "mod-npc-beastmaster" "NPC Beastmaster"
+  fi
+
+  if [ "$MODULE_NPC_ENCHANTER" = "1" ] && [ -d "mod-npc-enchanter" ]; then
+    execute_module_sql "mod-npc-enchanter" "NPC Enchanter"
+  fi
+
+  if [ "$MODULE_INSTANCE_RESET" = "1" ] && [ -d "mod-instance-reset" ]; then
+    execute_module_sql "mod-instance-reset" "Instance Reset"
+  fi
+
+  if [ "$MODULE_LEVEL_GRANT" = "1" ] && [ -d "mod-quest-count-level" ]; then
+    execute_module_sql "mod-quest-count-level" "Level Grant"
+  fi
+  if [ "$MODULE_ASSISTANT" = "1" ] && [ -d "mod-assistant" ]; then
+    execute_module_sql "mod-assistant" "Assistant"
+  fi
+  if [ "$MODULE_REAGENT_BANK" = "1" ] && [ -d "mod-reagent-bank" ]; then
+    execute_module_sql "mod-reagent-bank" "Reagent Bank"
+  fi
+  if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && [ -d "mod-black-market" ]; then
+    execute_module_sql "mod-black-market" "Black Market"
+  fi
+}
