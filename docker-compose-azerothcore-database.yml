@@ -6,7 +6,6 @@ services:
   # Step 1: MySQL database
   ac-mysql:
     image: ${MYSQL_IMAGE}
-    pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_MYSQL}
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -50,7 +49,6 @@ services:
   # Step 2: Backup service
   ac-backup:
     image: ${MYSQL_IMAGE}
-    pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_BACKUP}
     environment:
       MYSQL_HOST: ${CONTAINER_MYSQL}
@@ -86,7 +84,6 @@ services:
   # Step 3: Database initialization (one-time setup)
   ac-db-init:
     image: ${MYSQL_IMAGE}
-    pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_DB_INIT}
     volumes:
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
@@ -121,7 +118,6 @@ services:
   # Step 4: Database import (one-time setup - run after db-init)
   ac-db-import:
     image: ${AC_DB_IMPORT_IMAGE}
-    pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_DB_IMPORT}
     user: "0:0"
     networks:
