@@ -10,8 +10,17 @@ BACKUP_DIR="/backups"
 RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
 DATE_FORMAT="%Y%m%d_%H%M%S"
 
-# Database names
+# Database names - core databases
 DATABASES=("acore_auth" "acore_world" "acore_characters")
+
+# Check if acore_playerbots database exists and add it to backup list
+echo "Checking for optional acore_playerbots database..."
+if mysql -h$MYSQL_HOST -P$MYSQL_PORT -u$MYSQL_USER -p$MYSQL_PASSWORD -e "USE acore_playerbots;" 2>/dev/null; then
+    DATABASES+=("acore_playerbots")
+    echo "✅ acore_playerbots database found - will be included in backup"
+else
+    echo "ℹ️  acore_playerbots database not found - skipping (this is normal for some installations)"
+fi
 
 # Create backup directory
 mkdir -p $BACKUP_DIR
@@ -22,6 +31,7 @@ BACKUP_SUBDIR="$BACKUP_DIR/$TIMESTAMP"
 mkdir -p $BACKUP_SUBDIR
 
 echo "[$TIMESTAMP] Starting AzerothCore database backup..."
+echo "[$TIMESTAMP] Databases to backup: ${DATABASES[@]}"
 
 # Backup each database
 for db in "${DATABASES[@]}"; do
