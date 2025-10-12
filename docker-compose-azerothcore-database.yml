@@ -88,7 +88,6 @@ services:
     volumes:
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
       - ${HOST_BACKUP_PATH}:/backups
-      - ./scripts/db-init-enhanced.sh:/tmp/db-init-enhanced.sh
     networks:
       - azerothcore
     environment:
@@ -111,11 +110,8 @@ services:
         microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
 
         # Download enhanced db init script from GitHub
-        # echo "📥 Downloading enhanced database initialization script from GitHub..."
-        # curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-init-enhanced.sh -o /tmp/db-init-enhanced.sh
-
-        # Use local enhanced db init script for testing
-        echo "📥 Using local enhanced database initialization script..."
+        echo "📥 Downloading enhanced database initialization script from GitHub..."
+        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-init-enhanced.sh -o /tmp/db-init-enhanced.sh
         chmod +x /tmp/db-init-enhanced.sh
         /tmp/db-init-enhanced.sh
     restart: "no"
@@ -133,7 +129,6 @@ services:
     volumes:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
-      - ./scripts/db-import-conditional.sh:/tmp/db-import-conditional.sh
     environment:
       AC_DATA_DIR: "/azerothcore/data"
       AC_LOGS_DIR: "/azerothcore/logs"
@@ -159,11 +154,8 @@ services:
         microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
 
         # Download conditional db import script from GitHub
-        # echo "📥 Downloading conditional database import script from GitHub..."
-        # curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-import-conditional.sh -o /tmp/db-import-conditional.sh
-
-        # Use local conditional db import script for testing
-        echo "📥 Using local conditional database import script..."
+        echo "📥 Downloading conditional database import script from GitHub..."
+        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-import-conditional.sh -o /tmp/db-import-conditional.sh
         chmod +x /tmp/db-import-conditional.sh
         /tmp/db-import-conditional.sh
     restart: "no"
