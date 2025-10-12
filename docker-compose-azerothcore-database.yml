@@ -87,6 +87,8 @@ services:
     container_name: ${CONTAINER_DB_INIT}
     volumes:
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
+      - ${HOST_BACKUP_PATH}:/backups
+      - ./scripts/db-init-enhanced.sh:/tmp/db-init-enhanced.sh
     networks:
       - azerothcore
     environment:
@@ -108,11 +110,14 @@ services:
         # Install curl for downloading db init script (handle different package managers)
         microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
 
-        # Download db init script from GitHub
-        echo "📥 Downloading database initialization script from GitHub..."
-        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-init.sh -o /tmp/db-init.sh
-        chmod +x /tmp/db-init.sh
-        /tmp/db-init.sh
+        # Download enhanced db init script from GitHub
+        # echo "📥 Downloading enhanced database initialization script from GitHub..."
+        # curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-init-enhanced.sh -o /tmp/db-init-enhanced.sh
+
+        # Use local enhanced db init script for testing
+        echo "📥 Using local enhanced database initialization script..."
+        chmod +x /tmp/db-init-enhanced.sh
+        /tmp/db-init-enhanced.sh
     restart: "no"
 
   # Step 4: Database import (one-time setup - run after db-init)
@@ -127,6 +132,8 @@ services:
       - azerothcore
     volumes:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
+      - ./scripts/db-import-conditional.sh:/tmp/db-import-conditional.sh
     environment:
       AC_DATA_DIR: "/azerothcore/data"
       AC_LOGS_DIR: "/azerothcore/logs"
@@ -136,7 +143,29 @@ services:
       AC_CLOSE_IDLE_CONNECTIONS: "false"
       AC_UPDATES_ENABLE_DATABASES: "7"
       AC_UPDATES_AUTO_SETUP: "1"
-# Use the default AzerothCore dbimport entrypoint
+      # Additional environment variables for conditional import
+      CONTAINER_MYSQL: ${CONTAINER_MYSQL}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_AUTH_NAME: ${DB_AUTH_NAME}
+      DB_WORLD_NAME: ${DB_WORLD_NAME}
+      DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
+    command:
+      - sh
+      - -c
+      - |
+        # Install curl for downloading conditional db import script
+        microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
+
+        # Download conditional db import script from GitHub
+        # echo "📥 Downloading conditional database import script from GitHub..."
+        # curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-import-conditional.sh -o /tmp/db-import-conditional.sh
+
+        # Use local conditional db import script for testing
+        echo "📥 Using local conditional database import script..."
+        chmod +x /tmp/db-import-conditional.sh
+        /tmp/db-import-conditional.sh
     restart: "no"
 
 networks:

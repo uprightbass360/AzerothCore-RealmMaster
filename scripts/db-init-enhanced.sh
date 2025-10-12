@@ -60,12 +60,9 @@ validate_backup() {
 
 # Function to find and validate the most recent backup
 find_latest_backup() {
-  echo "🔍 Searching for available backups..."
-
   # Priority 1: Legacy single backup file
   if [ -f "/var/lib/mysql-persistent/backup.sql" ]; then
     if validate_backup "/var/lib/mysql-persistent/backup.sql"; then
-      echo "📦 Found valid legacy backup: backup.sql"
       echo "/var/lib/mysql-persistent/backup.sql"
       return 0
     fi
@@ -78,7 +75,6 @@ find_latest_backup() {
     if [ -d "$BACKUP_DIRS/daily" ] && [ "$(ls -A $BACKUP_DIRS/daily)" ]; then
       local latest_daily=$(ls -1t $BACKUP_DIRS/daily | head -n 1)
       if [ -n "$latest_daily" ] && [ -d "$BACKUP_DIRS/daily/$latest_daily" ]; then
-        echo "📦 Found daily backup: $latest_daily"
         echo "$BACKUP_DIRS/daily/$latest_daily"
         return 0
       fi
@@ -88,7 +84,6 @@ find_latest_backup() {
     if [ -d "$BACKUP_DIRS/hourly" ] && [ "$(ls -A $BACKUP_DIRS/hourly)" ]; then
       local latest_hourly=$(ls -1t $BACKUP_DIRS/hourly | head -n 1)
       if [ -n "$latest_hourly" ] && [ -d "$BACKUP_DIRS/hourly/$latest_hourly" ]; then
-        echo "📦 Found hourly backup: $latest_hourly"
         echo "$BACKUP_DIRS/hourly/$latest_hourly"
         return 0
       fi
@@ -97,13 +92,11 @@ find_latest_backup() {
     # Try legacy timestamped backups
     local latest_legacy=$(ls -1dt $BACKUP_DIRS/[0-9]* 2>/dev/null | head -n 1)
     if [ -n "$latest_legacy" ] && [ -d "$latest_legacy" ]; then
-      echo "📦 Found legacy timestamped backup: $(basename $latest_legacy)"
       echo "$latest_legacy"
       return 0
     fi
   fi
 
-  echo "ℹ️  No valid backups found"
   return 1
 }
 
@@ -162,19 +155,19 @@ else
 
   backup_path=$(find_latest_backup)
   if [ $? -eq 0 ] && [ -n "$backup_path" ]; then
-    echo "📦 Latest backup found: $backup_path"
-
     if [ -f "$backup_path" ]; then
-      # Single file backup
+      echo "📦 Found legacy backup file: $(basename $backup_path)"
       if restore_from_file "$backup_path"; then
         backup_restored=true
       fi
     elif [ -d "$backup_path" ]; then
-      # Directory backup
+      echo "📦 Found backup directory: $(basename $backup_path)"
       if restore_from_directory "$backup_path"; then
         backup_restored=true
       fi
     fi
+  else
+    echo "ℹ️  No valid backups found"
   fi
 fi
 

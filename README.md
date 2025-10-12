@@ -135,8 +135,8 @@ docker ps
 
 ### ✅ Core Server Components
 - **AzerothCore 3.3.5a** - WotLK server application
-- **MySQL 8.0** - Database with automated schema import
-- **Automated Backup System** - Scheduled database backups
+- **MySQL 8.0** - Database with intelligent initialization and restoration
+- **Smart Backup System** - Automated hourly/daily backups with intelligent restoration
 - **phpMyAdmin** - Web-based database administration
 - **Keira3** - Game content editor and developer tools
 
@@ -160,7 +160,8 @@ All modules are automatically downloaded, configured, and SQL scripts executed:
 | **mod-black-market** | Rare item auctions | ✅ INTEGRATED |
 
 ### ✅ Automated Configuration
-- **Database Setup** - Complete schema import and user creation
+- **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import
+- **Backup Management** - Automated scheduling, retention policies, and integrity validation
 - **Realmlist Configuration** - Server address and port setup
 - **Module Integration** - SQL scripts execution and config deployment
 - **Service Restart** - Automatic restart to apply configurations
@@ -335,7 +336,61 @@ open http://localhost:8081
 docker exec -it ac-mysql mysql -u root -p
 
 # Manual backup
-docker exec ac-mysql mysqldump -u root -p --all-databases > backup.sql
+./scripts/backup.sh
+
+# View backup status and restore options
+ls -la storage/azerothcore/backups/
+```
+
+### Backup and Restoration System
+
+The stack includes an intelligent backup and restoration system that automatically:
+
+**Automated Backup Schedule**
+- **Hourly backups**: Retained for 6 hours (configurable via `BACKUP_RETENTION_HOURS`)
+- **Daily backups**: Retained for 3 days (configurable via `BACKUP_RETENTION_DAYS`)
+- **Automatic cleanup**: Old backups removed based on retention policies
+
+**Smart Backup Detection**
+- **Multiple format support**: Detects daily, hourly, and legacy timestamped backups
+- **Priority-based selection**: Automatically selects the most recent available backup
+- **Integrity validation**: Verifies backup files before attempting restoration
+
+**Intelligent Startup Process**
+- **Automatic restoration**: Detects and restores from existing backups on startup
+- **Conditional import**: Skips database import when backup restoration succeeds
+- **Data protection**: Prevents overwriting restored data with fresh schema
+- **Status tracking**: Creates markers to communicate restoration status between services
+
+**Backup Structure**
+```
+storage/azerothcore/backups/
+├── daily/
+│   └── YYYYMMDD_HHMMSS/          # Daily backup directories
+│       ├── acore_auth.sql.gz
+│       ├── acore_characters.sql.gz
+│       ├── acore_world.sql.gz
+│       └── manifest.json
+└── hourly/
+    └── YYYYMMDD_HHMMSS/          # Hourly backup directories
+        ├── acore_auth.sql.gz
+        ├── acore_characters.sql.gz
+        └── acore_world.sql.gz
+```
+
+**Manual Backup Operations**
+```bash
+# Create immediate backup
+./scripts/backup.sh
+
+# Restore from specific backup (interactive)
+./scripts/restore.sh YYYYMMDD_HHMMSS
+
+# View backup contents
+zcat storage/azerothcore/backups/daily/20241004_090000/acore_world.sql.gz | head
+
+# Check restoration status
+cat storage/azerothcore/mysql-data/.restore-completed
 ```
 
 ---
@@ -373,8 +428,28 @@ ls storage/azerothcore/config/mod_*.conf*
 # Verify MySQL is running
 docker exec ac-mysql mysql -u root -p -e "SELECT 1;"
 
-# Check database initialization
+# Check database initialization and backup detection
+docker logs ac-db-init
+
+# Check conditional import status
 docker logs ac-db-import
+```
+
+**Backup and restoration issues**
+```bash
+# Check backup detection and restoration status
+docker logs ac-db-init | grep -E "(backup|restore)"
+
+# Verify backup directory contents
+ls -la storage/azerothcore/backups/
+
+# Check restoration status markers
+ls -la storage/azerothcore/mysql-data/.restore-*
+cat storage/azerothcore/mysql-data/.restore-completed
+
+# Force fresh database import (if needed)
+rm -f storage/azerothcore/mysql-data/.restore-*
+docker compose -f docker-compose-azerothcore-database.yml restart ac-db-init
 ```
 
 ### Getting Help
