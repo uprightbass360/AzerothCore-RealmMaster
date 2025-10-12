@@ -4,7 +4,7 @@
 # AzerothCore Docker Deployment & Health Check Script
 # ==============================================
 # This script deploys the complete AzerothCore stack and performs comprehensive health checks
-# Usage: ./deploy-and-check.sh [--skip-deploy] [--quick-check]
+# Usage: ./deploy-and-check.sh [--skip-deploy] [--quick-check] [--setup]
 
 set -e  # Exit on any error
 
@@ -18,6 +18,8 @@ NC='\033[0m' # No Color
 # Script options
 SKIP_DEPLOY=false
 QUICK_CHECK=false
+RUN_SETUP=false
+MODULES_ENABLED=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -30,10 +32,15 @@ while [[ $# -gt 0 ]]; do
             QUICK_CHECK=true
             shift
             ;;
+        --setup)
+            RUN_SETUP=true
+            shift
+            ;;
         -h|--help)
-            echo "Usage: $0 [--skip-deploy] [--quick-check]"
+            echo "Usage: $0 [--skip-deploy] [--quick-check] [--setup]"
             echo "  --skip-deploy    Skip deployment, only run health checks"
             echo "  --quick-check    Run basic health checks only"
+            echo "  --setup          Run interactive server setup before deployment"
             exit 0
             ;;
         *)
@@ -162,6 +169,7 @@ deploy_stack() {
     # Check if custom environment files exist first, then fallback to base files
     DB_ENV_FILE="../docker-compose-azerothcore-database-custom.env"
     SERVICES_ENV_FILE="../docker-compose-azerothcore-services-custom.env"
+    MODULES_ENV_FILE="../docker-compose-azerothcore-modules-custom.env"
     TOOLS_ENV_FILE="../docker-compose-azerothcore-tools-custom.env"
 
     # Fallback to base files if custom files don't exist
@@ -171,11 +179,14 @@ deploy_stack() {
     if [ ! -f "$SERVICES_ENV_FILE" ]; then
         SERVICES_ENV_FILE="../docker-compose-azerothcore-services.env"
     fi
+    if [ ! -f "$MODULES_ENV_FILE" ]; then
+        MODULES_ENV_FILE="../docker-compose-azerothcore-modules.env"
+    fi
     if [ ! -f "$TOOLS_ENV_FILE" ]; then
         TOOLS_ENV_FILE="../docker-compose-azerothcore-tools.env"
     fi
 
-    # Check if environment files exist
+    # Check if required environment files exist
     for env_file in "$DB_ENV_FILE" "$SERVICES_ENV_FILE" "$TOOLS_ENV_FILE"; do
         if [ ! -f "$env_file" ]; then
             print_status "ERROR" "Environment file $env_file not found"
@@ -184,8 +195,15 @@ deploy_stack() {
         fi
     done
 
+    # Check if modules are enabled (set global variable)
+    if [ -f "$MODULES_ENV_FILE" ]; then
+        MODULES_ENABLED=true
+    else
+        MODULES_ENABLED=false
+    fi
+
     print_status "INFO" "Step 1: Deploying database layer..."
-    docker compose --env-file "$DB_ENV_FILE" -f ../docker-compose-azerothcore-database.yml up -d
+    docker compose --env-file "$DB_ENV_FILE" -f ../docker-compose-azerothcore-database.yml up -d --remove-orphans
 
     # Wait for database initialization
     wait_for_service "MySQL" 24 "docker exec ac-mysql mysql -uroot -pazerothcore123 -e 'SELECT 1' >/dev/null 2>&1"
@@ -194,7 +212,7 @@ deploy_stack() {
     wait_for_service "Database Import" 36 "docker inspect ac-db-import --format='{{.State.ExitCode}}' 2>/dev/null | grep -q '^0$' || docker logs ac-db-import 2>/dev/null | grep -q 'Database import complete'"
 
     print_status "INFO" "Step 2: Deploying services layer..."
-    docker compose --env-file "$SERVICES_ENV_FILE" -f ../docker-compose-azerothcore-services.yml up -d
+    docker compose --env-file "$SERVICES_ENV_FILE" -f ../docker-compose-azerothcore-services.yml up -d --remove-orphans
 
     # Wait for client data extraction
     print_status "INFO" "Waiting for client data download and extraction (this may take 10-20 minutes)..."
@@ -203,8 +221,22 @@ deploy_stack() {
     # Wait for worldserver to be healthy
     wait_for_service "World Server" 24 "check_container_health ac-worldserver"
 
-    print_status "INFO" "Step 3: Deploying tools layer..."
-    docker compose --env-file "$TOOLS_ENV_FILE" -f ../docker-compose-azerothcore-tools.yml up -d
+    # Deploy modules if enabled
+    if [ "$MODULES_ENABLED" = true ]; then
+        print_status "INFO" "Step 3: Deploying modules layer..."
+        docker compose --env-file "$MODULES_ENV_FILE" -f ../docker-compose-azerothcore-modules.yml up -d --remove-orphans
+
+        # Wait for modules to be ready
+        sleep 5
+
+        STEP_NUMBER=4
+    else
+        print_status "INFO" "Modules layer skipped (no custom modules configuration found)"
+        STEP_NUMBER=3
+    fi
+
+    print_status "INFO" "Step $STEP_NUMBER: Deploying tools layer..."
+    docker compose --env-file "$TOOLS_ENV_FILE" -f ../docker-compose-azerothcore-tools.yml up -d --remove-orphans
 
     # Wait for tools to be ready
     sleep 10
@@ -218,6 +250,12 @@ perform_health_checks() {
 
     # Check all containers
     local containers=("ac-mysql" "ac-backup" "ac-authserver" "ac-worldserver" "ac-phpmyadmin" "ac-keira3")
+
+    # Add modules container if modules are enabled
+    if [ "$MODULES_ENABLED" = true ]; then
+        containers+=("ac-modules")
+    fi
+
     local container_failures=0
 
     for container in "${containers[@]}"; do
@@ -327,6 +365,31 @@ main() {
     if ! docker compose version &> /dev/null; then
         print_status "ERROR" "Docker Compose is not available"
         exit 1
+    fi
+
+    # Run setup if requested
+    if [ "$RUN_SETUP" = true ]; then
+        print_status "HEADER" "RUNNING SERVER SETUP"
+        print_status "INFO" "Starting interactive server configuration..."
+
+        # Change to parent directory to run setup script
+        cd "$(dirname "$(pwd)")"
+
+        if [ -f "scripts/setup-server.sh" ]; then
+            bash scripts/setup-server.sh
+            if [ $? -ne 0 ]; then
+                print_status "ERROR" "Server setup failed or was cancelled"
+                exit 1
+            fi
+        else
+            print_status "ERROR" "Setup script not found at scripts/setup-server.sh"
+            exit 1
+        fi
+
+        # Return to scripts directory
+        cd scripts
+        print_status "SUCCESS" "Server setup completed!"
+        echo ""
     fi
 
     # Deploy the stack unless skipped

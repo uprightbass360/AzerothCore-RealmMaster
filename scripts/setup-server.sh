@@ -269,13 +269,14 @@ main() {
     print_status "HEADER" "MODULE CONFIGURATION"
     echo "AzerothCore supports 25+ enhancement modules. Choose your setup:"
     echo "1) Suggested Modules (recommended for beginners)"
-    echo "2) Manual Selection (advanced users)"
-    echo "3) No Modules (vanilla experience)"
+    echo "2) Playerbots Setup (AI companions + solo-friendly modules)"
+    echo "3) Manual Selection (advanced users)"
+    echo "4) No Modules (vanilla experience)"
     echo ""
 
     MODULE_SELECTION_MODE=""
     while true; do
-        read -p "$(echo -e "${YELLOW}🔧 Select module configuration [1-3]: ${NC}")" module_choice
+        read -p "$(echo -e "${YELLOW}🔧 Select module configuration [1-4]: ${NC}")" module_choice
         case $module_choice in
             1)
                 MODULE_SELECTION_MODE="suggested"
@@ -292,6 +293,23 @@ main() {
                 break
                 ;;
             2)
+                MODULE_SELECTION_MODE="playerbots"
+                print_status "INFO" "Playerbots Setup Selected:"
+                echo "  🤖 Playerbots - AI companions and guild members"
+                echo "  ✅ Solo LFG - Dungeon finder for solo players"
+                echo "  ✅ Solocraft - Scale content for solo players"
+                echo "  ✅ Autobalance - Dynamic dungeon difficulty"
+                echo "  ✅ AH Bot - Auction house automation"
+                echo "  ✅ Transmog - Equipment appearance customization"
+                echo "  ✅ NPC Buffer - Convenience buffs"
+                echo "  ✅ Learn Spells - Auto-learn class spells"
+                echo "  ✅ Fireworks - Level-up celebrations"
+                echo ""
+                print_status "WARNING" "Playerbots requires special build - this setup uses uprightbass360/azerothcore-wotlk-playerbots"
+                echo ""
+                break
+                ;;
+            3)
                 MODULE_SELECTION_MODE="manual"
                 print_status "INFO" "Manual Module Selection:"
                 echo "  You will be prompted for each of the 25+ available modules"
@@ -299,7 +317,7 @@ main() {
                 echo ""
                 break
                 ;;
-            3)
+            4)
                 MODULE_SELECTION_MODE="none"
                 print_status "INFO" "No Modules Selected:"
                 echo "  Pure AzerothCore experience without enhancements"
@@ -308,7 +326,7 @@ main() {
                 break
                 ;;
             *)
-                print_status "ERROR" "Please select 1, 2, or 3"
+                print_status "ERROR" "Please select 1, 2, 3, or 4"
                 ;;
         esac
     done
@@ -359,15 +377,27 @@ main() {
         MODULE_LEARN_SPELLS=1
         MODULE_FIREWORKS=1
 
+    elif [ "$MODULE_SELECTION_MODE" = "playerbots" ]; then
+        # Enable playerbots + solo-friendly modules
+        MODULE_PLAYERBOTS=1
+        MODULE_SOLO_LFG=1
+        MODULE_SOLOCRAFT=1
+        MODULE_AUTOBALANCE=1
+        MODULE_AHBOT=1
+        MODULE_TRANSMOG=1
+        MODULE_NPC_BUFFER=1
+        MODULE_LEARN_SPELLS=1
+        MODULE_FIREWORKS=1
+
     elif [ "$MODULE_SELECTION_MODE" = "manual" ]; then
         print_status "PROMPT" "Configure each module (y/n):"
 
         # Core Gameplay Modules
         echo -e "\n${BLUE}🎮 Core Gameplay Modules:${NC}"
+        MODULE_PLAYERBOTS=$(prompt_yes_no "Playerbots - AI companions (uses uprightbass360/azerothcore-wotlk-playerbots build)" "n")
         MODULE_SOLO_LFG=$(prompt_yes_no "Solo LFG - Dungeon finder for solo players" "n")
         MODULE_SOLOCRAFT=$(prompt_yes_no "Solocraft - Scale dungeons/raids for solo play" "n")
         MODULE_AUTOBALANCE=$(prompt_yes_no "Autobalance - Dynamic difficulty scaling" "n")
-        MODULE_PLAYERBOTS=$(prompt_yes_no "Playerbots - AI companions (REQUIRES SPECIAL BUILD)" "n")
 
         # Quality of Life Modules
         echo -e "\n${BLUE}🛠️ Quality of Life Modules:${NC}"
@@ -431,6 +461,8 @@ main() {
     # Module summary
     if [ "$MODULE_SELECTION_MODE" = "suggested" ]; then
         echo "Modules: Suggested preset (8 modules)"
+    elif [ "$MODULE_SELECTION_MODE" = "playerbots" ]; then
+        echo "Modules: Playerbots preset (9 modules including AI companions)"
     elif [ "$MODULE_SELECTION_MODE" = "manual" ]; then
         ENABLED_COUNT=0
         [ "$MODULE_SOLO_LFG" = "1" ] && ENABLED_COUNT=$((ENABLED_COUNT + 1))
@@ -653,6 +685,30 @@ main() {
         echo "  set realmlist ${SERVER_ADDRESS} ${REALM_PORT}"
     fi
     echo ""
+
+    # Playerbots usage information
+    if [ "$MODULE_SELECTION_MODE" = "playerbots" ] || [ "$MODULE_PLAYERBOTS" = "1" ]; then
+        print_status "HEADER" "PLAYERBOTS USAGE"
+        echo "Your server includes AI playerbots! Here are the key commands:"
+        echo ""
+        echo "🤖 Guild Bot Management:"
+        echo "  .bot add <name>           - Add a random bot to your guild"
+        echo "  .bot add <name> <class>   - Add a bot of specific class"
+        echo "  .bot remove <name>        - Remove a bot from your guild"
+        echo "  .guild create <name>      - Create a guild (if needed)"
+        echo ""
+        echo "🎮 Bot Control:"
+        echo "  .bot invite <name>        - Invite bot to group"
+        echo "  .bot uninvite <name>      - Remove bot from group"
+        echo "  .bot command <action>     - Send commands to your bots"
+        echo ""
+        echo "⚙️ Bot Configuration:"
+        echo "  .bot settings             - View bot configuration options"
+        echo "  .bot stats                - Show server bot statistics"
+        echo ""
+        echo "📖 For more commands, visit: https://github.com/celguar/playerbots"
+        echo ""
+    fi
 
     print_status "SUCCESS" "🎉 Server setup complete!"
     print_status "INFO" "Your custom environment files are ready for deployment."
