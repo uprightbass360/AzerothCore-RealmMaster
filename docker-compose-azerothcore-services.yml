@@ -19,7 +19,20 @@ services:
       - sh
       - -c
       - |
-        apk add --no-cache curl unzip wget ca-certificates p7zip jq
+        # Auto-detect package manager and install dependencies
+        if command -v apk >/dev/null 2>&1; then
+          # Alpine Linux
+          apk add --no-cache curl unzip wget ca-certificates p7zip jq
+        elif command -v apt-get >/dev/null 2>&1; then
+          # Ubuntu/Debian
+          apt-get update && apt-get install -y --no-install-recommends curl unzip wget ca-certificates p7zip-full jq && rm -rf /var/lib/apt/lists/*
+        elif command -v yum >/dev/null 2>&1; then
+          # CentOS/RHEL
+          yum install -y curl unzip wget ca-certificates p7zip jq
+        else
+          echo "❌ Unsupported package manager - please install: curl unzip wget ca-certificates p7zip jq"
+          exit 1
+        fi
 
         # Fix ownership of mount points to match NFS
         chown -R 1001:1001 /azerothcore/data /cache

@@ -178,21 +178,25 @@ soft_cleanup() {
 
     get_confirmation "This will stop all AzerothCore containers but preserve all data."
 
-    # Stop tools layer
+    # Stop modules layer (if exists)
+    execute_command "Stop modules layer" \
+        "docker compose --env-file docker-compose-azerothcore-modules-custom.env -f docker-compose-azerothcore-modules.yml down 2>/dev/null || docker compose --env-file docker-compose-azerothcore-modules.env -f docker-compose-azerothcore-modules.yml down 2>/dev/null || true"
+
+    # Stop tools layer (if exists)
     execute_command "Stop tools layer" \
-        "docker compose --env-file ../docker-compose-azerothcore-tools.env -f ../docker-compose-azerothcore-tools.yml down"
+        "docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml down 2>/dev/null || docker compose --env-file docker-compose-azerothcore-tools.env -f docker-compose-azerothcore-tools.yml down 2>/dev/null || true"
 
     # Stop services layer
     execute_command "Stop services layer" \
-        "docker compose --env-file ../docker-compose-azerothcore-services.env -f ../docker-compose-azerothcore-services.yml down"
+        "docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml down 2>/dev/null || docker compose --env-file docker-compose-azerothcore-services.env -f docker-compose-azerothcore-services.yml down"
 
     # Stop database layer
     execute_command "Stop database layer" \
-        "docker compose --env-file ../docker-compose-azerothcore-database.env -f ../docker-compose-azerothcore-database.yml down"
+        "docker compose --env-file docker-compose-azerothcore-database-custom.env -f docker-compose-azerothcore-database.yml down 2>/dev/null || docker compose --env-file docker-compose-azerothcore-database.env -f docker-compose-azerothcore-database.yml down"
 
     print_status "SUCCESS" "Soft cleanup completed - all containers stopped"
     print_status "INFO" "Data volumes and images are preserved"
-    print_status "INFO" "Use 'docker compose up -d' to restart services"
+    print_status "INFO" "Use deployment script to restart services"
 }
 
 # Function to perform hard cleanup
@@ -202,14 +206,17 @@ hard_cleanup() {
     get_confirmation "This will remove all containers and networks but preserve data volumes and images."
 
     # Remove containers and networks
+    execute_command "Remove modules layer (containers + networks)" \
+        "docker compose --env-file docker-compose-azerothcore-modules-custom.env -f docker-compose-azerothcore-modules.yml down --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-modules.env -f docker-compose-azerothcore-modules.yml down --remove-orphans 2>/dev/null || true"
+
     execute_command "Remove tools layer (containers + networks)" \
-        "docker compose --env-file ../docker-compose-azerothcore-tools.env -f ../docker-compose-azerothcore-tools.yml down --remove-orphans"
+        "docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml down --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-tools.env -f docker-compose-azerothcore-tools.yml down --remove-orphans 2>/dev/null || true"
 
     execute_command "Remove services layer (containers + networks)" \
-        "docker compose --env-file ../docker-compose-azerothcore-services.env -f ../docker-compose-azerothcore-services.yml down --remove-orphans"
+        "docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml down --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-services.env -f docker-compose-azerothcore-services.yml down --remove-orphans"
 
     execute_command "Remove database layer (containers + networks)" \
-        "docker compose --env-file ../docker-compose-azerothcore-database.env -f ../docker-compose-azerothcore-database.yml down --remove-orphans"
+        "docker compose --env-file docker-compose-azerothcore-database-custom.env -f docker-compose-azerothcore-database.yml down --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-database.env -f docker-compose-azerothcore-database.yml down --remove-orphans"
 
     # Clean up any remaining AzerothCore containers
     execute_command "Remove any remaining AzerothCore containers" \
@@ -232,14 +239,17 @@ nuclear_cleanup() {
     get_confirmation "This will permanently delete ALL AzerothCore data, containers, networks, volumes, and images. This action CANNOT be undone!"
 
     # Stop and remove everything
+    execute_command "Stop and remove modules layer (with volumes)" \
+        "docker compose --env-file docker-compose-azerothcore-modules-custom.env -f docker-compose-azerothcore-modules.yml down --volumes --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-modules.env -f docker-compose-azerothcore-modules.yml down --volumes --remove-orphans 2>/dev/null || true"
+
     execute_command "Stop and remove tools layer (with volumes)" \
-        "docker compose --env-file ../docker-compose-azerothcore-tools.env -f ../docker-compose-azerothcore-tools.yml down --volumes --remove-orphans"
+        "docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml down --volumes --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-tools.env -f docker-compose-azerothcore-tools.yml down --volumes --remove-orphans 2>/dev/null || true"
 
     execute_command "Stop and remove services layer (with volumes)" \
-        "docker compose --env-file ../docker-compose-azerothcore-services.env -f ../docker-compose-azerothcore-services.yml down --volumes --remove-orphans"
+        "docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml down --volumes --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-services.env -f docker-compose-azerothcore-services.yml down --volumes --remove-orphans"
 
     execute_command "Stop and remove database layer (with volumes)" \
-        "docker compose --env-file ../docker-compose-azerothcore-database.env -f ../docker-compose-azerothcore-database.yml down --volumes --remove-orphans"
+        "docker compose --env-file docker-compose-azerothcore-database-custom.env -f docker-compose-azerothcore-database.yml down --volumes --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-database.env -f docker-compose-azerothcore-database.yml down --volumes --remove-orphans"
 
     # Remove any remaining containers
     execute_command "Remove any remaining AzerothCore containers" \
@@ -264,8 +274,8 @@ nuclear_cleanup() {
         "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'phpmyadmin|uprightbass360/keira3' | xargs -r docker rmi"
 
     # Clean up local data directories
-    execute_command "Remove local data directories" \
-        "sudo rm -rf ../local-data-tools ../backups"
+    execute_command "Remove local storage directories" \
+        "sudo rm -rf ./storage ./backups 2>/dev/null || rm -rf ./storage ./backups 2>/dev/null || true"
 
     # System cleanup
     execute_command "Clean up unused Docker resources" \
