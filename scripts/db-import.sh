@@ -21,6 +21,26 @@ WorldDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT
 CharacterDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_CHARACTERS_NAME}"
 Updates.EnableDatabases = 7
 Updates.AutoSetup = 1
+
+# Required configuration properties
+MySQLExecutable = ""
+TempDir = ""
+SourceDirectory = ""
+Updates.AllowedModules = "all"
+LoginDatabase.WorkerThreads = 1
+LoginDatabase.SynchThreads = 1
+WorldDatabase.WorkerThreads = 1
+WorldDatabase.SynchThreads = 1
+CharacterDatabase.WorkerThreads = 1
+CharacterDatabase.SynchThreads = 1
+Updates.Redundancy = 1
+Updates.AllowRehash = 1
+Updates.ArchivedRedundancy = 0
+Updates.CleanDeadRefMaxCount = 3
+
+# Logging configuration
+Appender.Console=1,3,6
+Logger.root=3,Console
 EOF
 
 echo 'Running database import...'

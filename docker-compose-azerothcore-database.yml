@@ -120,6 +120,9 @@ services:
     image: ${AC_DB_IMPORT_IMAGE}
     container_name: ${CONTAINER_DB_IMPORT}
     user: "0:0"
+    depends_on:
+      ac-mysql:
+        condition: service_healthy
     networks:
       - azerothcore
     volumes:
@@ -133,10 +136,6 @@ services:
       AC_CLOSE_IDLE_CONNECTIONS: "false"
       AC_UPDATES_ENABLE_DATABASES: "7"
       AC_UPDATES_AUTO_SETUP: "1"
-      AC_LOG_LEVEL: "1"
-      AC_LOGGER_ROOT_CONFIG: "1,Console"
-      AC_LOGGER_SERVER_CONFIG: "1,Console"
-      AC_APPENDER_CONSOLE_CONFIG: "1,2,0"
 # Use the default AzerothCore dbimport entrypoint
     restart: "no"
 

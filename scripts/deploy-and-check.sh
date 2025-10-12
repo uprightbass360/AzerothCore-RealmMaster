@@ -159,25 +159,42 @@ check_web_service() {
 deploy_stack() {
     print_status "HEADER" "DEPLOYING AZEROTHCORE STACK"
 
-    # Check if environment files exist (in parent directory)
-    for env_file in "../docker-compose-azerothcore-database.env" "../docker-compose-azerothcore-services.env" "../docker-compose-azerothcore-tools.env"; do
+    # Check if custom environment files exist first, then fallback to base files
+    DB_ENV_FILE="../docker-compose-azerothcore-database-custom.env"
+    SERVICES_ENV_FILE="../docker-compose-azerothcore-services-custom.env"
+    TOOLS_ENV_FILE="../docker-compose-azerothcore-tools-custom.env"
+
+    # Fallback to base files if custom files don't exist
+    if [ ! -f "$DB_ENV_FILE" ]; then
+        DB_ENV_FILE="../docker-compose-azerothcore-database.env"
+    fi
+    if [ ! -f "$SERVICES_ENV_FILE" ]; then
+        SERVICES_ENV_FILE="../docker-compose-azerothcore-services.env"
+    fi
+    if [ ! -f "$TOOLS_ENV_FILE" ]; then
+        TOOLS_ENV_FILE="../docker-compose-azerothcore-tools.env"
+    fi
+
+    # Check if environment files exist
+    for env_file in "$DB_ENV_FILE" "$SERVICES_ENV_FILE" "$TOOLS_ENV_FILE"; do
         if [ ! -f "$env_file" ]; then
             print_status "ERROR" "Environment file $env_file not found"
+            print_status "INFO" "Run ./scripts/setup-server.sh first to create environment files"
             exit 1
         fi
     done
 
     print_status "INFO" "Step 1: Deploying database layer..."
-    docker compose --env-file ../docker-compose-azerothcore-database.env -f ../docker-compose-azerothcore-database.yml up -d
+    docker compose --env-file "$DB_ENV_FILE" -f ../docker-compose-azerothcore-database.yml up -d
 
     # Wait for database initialization
     wait_for_service "MySQL" 24 "docker exec ac-mysql mysql -uroot -pazerothcore123 -e 'SELECT 1' >/dev/null 2>&1"
 
     # Wait for database import
-    wait_for_service "Database Import" 36 "docker logs ac-db-import 2>/dev/null | grep -q 'Database import complete'"
+    wait_for_service "Database Import" 36 "docker inspect ac-db-import --format='{{.State.ExitCode}}' 2>/dev/null | grep -q '^0$' || docker logs ac-db-import 2>/dev/null | grep -q 'Database import complete'"
 
     print_status "INFO" "Step 2: Deploying services layer..."
-    docker compose --env-file ../docker-compose-azerothcore-services.env -f ../docker-compose-azerothcore-services.yml up -d
+    docker compose --env-file "$SERVICES_ENV_FILE" -f ../docker-compose-azerothcore-services.yml up -d
 
     # Wait for client data extraction
     print_status "INFO" "Waiting for client data download and extraction (this may take 10-20 minutes)..."
@@ -187,7 +204,7 @@ deploy_stack() {
     wait_for_service "World Server" 24 "check_container_health ac-worldserver"
 
     print_status "INFO" "Step 3: Deploying tools layer..."
-    docker compose --env-file ../docker-compose-azerothcore-tools.env -f ../docker-compose-azerothcore-tools.yml up -d
+    docker compose --env-file "$TOOLS_ENV_FILE" -f ../docker-compose-azerothcore-tools.yml up -d
 
     # Wait for tools to be ready
     sleep 10
@@ -268,11 +285,11 @@ perform_health_checks() {
     if [ $total_failures -eq 0 ]; then
         print_status "SUCCESS" "All services are healthy and operational!"
         print_status "INFO" "Available services:"
-        echo "  🌐 PHPMyAdmin:     http://localhost:8081"
+        echo "  🌐 PHPMyAdmin:      http://localhost:8081"
         echo "  🛠️  Keira3:         http://localhost:4201"
-        echo "  🎮 Game Server:    localhost:8215"
-        echo "  🔐 Auth Server:    localhost:3784"
-        echo "  🔧 SOAP API:       localhost:7778"
+        echo "  🎮 Game Server:     localhost:8215"
+        echo "  🔐 Auth Server:     localhost:3784"
+        echo "  🔧 SOAP API:        localhost:7778"
         echo "  🗄️  MySQL:          localhost:64306"
         echo ""
         print_status "INFO" "Default credentials:"

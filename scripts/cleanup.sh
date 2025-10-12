@@ -8,6 +8,11 @@
 
 set -e  # Exit on any error
 
+# Change to the project root directory (parent of scripts directory)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -246,10 +251,10 @@ nuclear_cleanup() {
         "docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml down --volumes --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-tools.env -f docker-compose-azerothcore-tools.yml down --volumes --remove-orphans 2>/dev/null || true"
 
     execute_command "Stop and remove services layer (with volumes)" \
-        "docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml down --volumes --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-services.env -f docker-compose-azerothcore-services.yml down --volumes --remove-orphans"
+        "docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml down --volumes --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-services.env -f docker-compose-azerothcore-services.yml down --volumes --remove-orphans 2>/dev/null || true"
 
     execute_command "Stop and remove database layer (with volumes)" \
-        "docker compose --env-file docker-compose-azerothcore-database-custom.env -f docker-compose-azerothcore-database.yml down --volumes --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-database.env -f docker-compose-azerothcore-database.yml down --volumes --remove-orphans"
+        "docker compose --env-file docker-compose-azerothcore-database-custom.env -f docker-compose-azerothcore-database.yml down --volumes --remove-orphans 2>/dev/null || docker compose --env-file docker-compose-azerothcore-database.env -f docker-compose-azerothcore-database.yml down --volumes --remove-orphans 2>/dev/null || true"
 
     # Remove any remaining containers
     execute_command "Remove any remaining AzerothCore containers" \
