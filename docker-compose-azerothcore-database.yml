@@ -23,10 +23,8 @@ services:
     volumes:
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
       - ${HOST_BACKUP_PATH}:/backups
-      - type: tmpfs
-        target: /var/lib/mysql-runtime
-        tmpfs:
-          size: 2G
+    tmpfs:
+      - /var/lib/mysql-runtime:size=2G
     command:
       - mysqld
       - --datadir=/var/lib/mysql-runtime
