@@ -39,13 +39,11 @@ services:
         mkdir -p /cache
         chown ${CONTAINER_USER} /cache /azerothcore/data 2>/dev/null || true
 
-        # Download and execute client data script from GitHub as mapped user
+        # Download and execute client data script from GitHub
         echo "📥 Downloading client data script from GitHub..."
         curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/download-client-data.sh -o /tmp/download-client-data.sh
         chmod +x /tmp/download-client-data.sh
-
-        # Switch to mapped user for file operations
-        su -s /bin/sh $${CONTAINER_USER%%:*} -c '/tmp/download-client-data.sh' || /tmp/download-client-data.sh
+        /tmp/download-client-data.sh
     restart: "no"
     networks:
       - azerothcore
@@ -212,8 +210,7 @@ services:
         curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/manage-modules-sql.sh -o /scripts/manage-modules-sql.sh
         chmod +x /tmp/manage-modules.sh /scripts/manage-modules-sql.sh
 
-        # Run module management as mapped user
-        su -s /bin/sh $${CONTAINER_USER%%:*} -c '/tmp/manage-modules.sh' || /tmp/manage-modules.sh
+        /tmp/manage-modules.sh
     restart: "no"
     networks:
       - azerothcore

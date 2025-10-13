@@ -322,7 +322,7 @@ main() {
     BACKUP_DAILY_TIME=$(prompt_input "Daily backup time (24h format, e.g., 09 for 9 AM)" "09" "")
 
     # Optional: Timezone
-    TIMEZONE=$(prompt_input "Server timezone" "UTC" "")
+    TIMEZONE=$(prompt_input "Server timezone" "America/New_York" "")
 
     # Module Configuration
     print_status "HEADER" "MODULE CONFIGURATION"
