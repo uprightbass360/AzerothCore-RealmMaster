@@ -262,8 +262,9 @@ deploy_stack() {
     docker compose --env-file "$SERVICES_ENV_FILE" -f ./docker-compose-azerothcore-services.yml up -d
 
     # Wait for client data extraction
-    print_status "INFO" "Waiting for client data download and extraction (this may take 10-20 minutes)..."
-    wait_for_service "Client Data" 120 "docker logs ac-client-data 2>/dev/null | grep -q 'Game data setup complete'"
+    print_status "INFO" "Waiting for client data download and extraction (this may take 15-25 minutes)..."
+    print_status "INFO" "Press Ctrl+C to exit if needed..."
+    wait_for_service "Client Data" 999999 "docker logs ac-client-data 2>/dev/null | grep -q 'Game data setup complete'"
 
     # Wait for worldserver to be healthy
     wait_for_service "World Server" 24 "check_container_health ac-worldserver"
