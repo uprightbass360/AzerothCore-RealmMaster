@@ -10,16 +10,17 @@ services:
     image: ${AC_CLIENT_DATA_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_CLIENT_DATA}
-    user: "${CONTAINER_USER}"  # Use mapped user for NFS compatibility
     volumes:
       - ${STORAGE_PATH}/data:/azerothcore/data
       - ${STORAGE_PATH}/cache:/cache
     working_dir: /tmp
+    environment:
+      - CONTAINER_USER=${CONTAINER_USER}
     command:
       - sh
       - -c
       - |
-        # Auto-detect package manager and install dependencies
+        # Auto-detect package manager and install dependencies (as root)
         if command -v apk >/dev/null 2>&1; then
           # Alpine Linux
           apk add --no-cache curl unzip wget ca-certificates p7zip jq
@@ -34,14 +35,17 @@ services:
           exit 1
         fi
 
-        # Create cache directory if it doesn't exist
+        # Create cache directory with correct ownership
         mkdir -p /cache
+        chown ${CONTAINER_USER} /cache /azerothcore/data 2>/dev/null || true
 
-        # Download and execute client data script from GitHub
+        # Download and execute client data script from GitHub as mapped user
         echo "📥 Downloading client data script from GitHub..."
         curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/download-client-data.sh -o /tmp/download-client-data.sh
         chmod +x /tmp/download-client-data.sh
-        /tmp/download-client-data.sh
+
+        # Switch to mapped user for file operations
+        su -s /bin/sh $${CONTAINER_USER%%:*} -c '/tmp/download-client-data.sh' || /tmp/download-client-data.sh
     restart: "no"
     networks:
       - azerothcore
@@ -143,7 +147,6 @@ services:
     image: ${ALPINE_GIT_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_MODULES}
-    user: "${CONTAINER_USER}"  # Use mapped user for NFS compatibility
     volumes:
       - ${STORAGE_PATH}/modules:/modules
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
@@ -193,17 +196,24 @@ services:
       - DB_AUTH_NAME=${DB_AUTH_NAME}
       - DB_WORLD_NAME=${DB_WORLD_NAME}
       - DB_CHARACTERS_NAME=${DB_CHARACTERS_NAME}
+      - CONTAINER_USER=${CONTAINER_USER}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        # Install packages as root
         apk add --no-cache curl
+
+        # Set ownership for module directories
+        mkdir -p /scripts
+        chown ${CONTAINER_USER} /modules /azerothcore/env/dist/etc 2>/dev/null || true
 
         echo "📥 Downloading module management script from GitHub..."
         curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/manage-modules.sh -o /tmp/manage-modules.sh
         curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/manage-modules-sql.sh -o /scripts/manage-modules-sql.sh
         chmod +x /tmp/manage-modules.sh /scripts/manage-modules-sql.sh
 
-        /tmp/manage-modules.sh
+        # Run module management as mapped user
+        su -s /bin/sh $${CONTAINER_USER%%:*} -c '/tmp/manage-modules.sh' || /tmp/manage-modules.sh
     restart: "no"
     networks:
       - azerothcore
@@ -213,7 +223,6 @@ services:
     image: ${ALPINE_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_POST_INSTALL}
-    user: "${CONTAINER_USER}"  # Use mapped user for NFS compatibility
     volumes:
       - ${STORAGE_PATH}/config:/azerothcore/config
       - ${STORAGE_PATH}/install-markers:/install-markers
@@ -234,15 +243,19 @@ services:
       NETWORK_NAME: ${NETWORK_NAME}
       CONTAINER_AUTHSERVER: ${CONTAINER_AUTHSERVER}
       CONTAINER_WORLDSERVER: ${CONTAINER_WORLDSERVER}
+      CONTAINER_USER: ${CONTAINER_USER}
     depends_on:
       - ac-modules
     command:
       - sh
       - -c
       - |
-        # Install required packages
+        # Install required packages as root
         echo "📦 Installing required packages..."
         apk add --no-cache bash curl docker-cli
+
+        # Set ownership for config directories
+        chown ${CONTAINER_USER} /azerothcore/config /install-markers 2>/dev/null || true
 
         # Download post-install script from GitHub (fallback to local for testing)
         echo "📥 Downloading auto post-install script..."

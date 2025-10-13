@@ -118,7 +118,6 @@ services:
   ac-db-import:
     image: ${AC_DB_IMPORT_IMAGE}
     container_name: ${CONTAINER_DB_IMPORT}
-    user: "${CONTAINER_USER}"
     depends_on:
       ac-mysql:
         condition: service_healthy
@@ -144,12 +143,16 @@ services:
       DB_AUTH_NAME: ${DB_AUTH_NAME}
       DB_WORLD_NAME: ${DB_WORLD_NAME}
       DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
+      CONTAINER_USER: ${CONTAINER_USER}
     command:
       - sh
       - -c
       - |
-        # Install curl for downloading conditional db import script
+        # Install curl for downloading conditional db import script (as root)
         microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
+
+        # Set ownership for config directories
+        chown ${CONTAINER_USER} /azerothcore/env/dist/etc 2>/dev/null || true
 
         # Download conditional db import script from GitHub
         echo "📥 Downloading conditional database import script from GitHub..."
