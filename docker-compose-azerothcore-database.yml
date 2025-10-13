@@ -126,6 +126,7 @@ services:
       - azerothcore
     volumes:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_PATH}/logs:/azerothcore/env/dist/logs
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
     environment:
       AC_DATA_DIR: "/azerothcore/data"
