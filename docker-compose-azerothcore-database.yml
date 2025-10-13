@@ -118,7 +118,7 @@ services:
   ac-db-import:
     image: ${AC_DB_IMPORT_IMAGE}
     container_name: ${CONTAINER_DB_IMPORT}
-    user: "0:0"
+    user: "${CONTAINER_USER}"
     depends_on:
       ac-mysql:
         condition: service_healthy

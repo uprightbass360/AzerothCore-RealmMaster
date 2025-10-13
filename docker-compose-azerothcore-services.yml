@@ -10,7 +10,7 @@ services:
     image: ${AC_CLIENT_DATA_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_CLIENT_DATA}
-    user: "0:0"  # Run as root to install packages
+    user: "${CONTAINER_USER}"  # Use mapped user for NFS compatibility
     volumes:
       - ${STORAGE_PATH}/data:/azerothcore/data
       - ${STORAGE_PATH}/cache:/cache
@@ -34,9 +34,6 @@ services:
           exit 1
         fi
 
-        # Fix ownership of mount points to match NFS
-        chown -R 1001:1001 /azerothcore/data /cache
-
         # Create cache directory if it doesn't exist
         mkdir -p /cache
 
@@ -54,7 +51,7 @@ services:
     image: ${AC_AUTHSERVER_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_AUTHSERVER}
-    user: "0:0"  # Run as root to handle NFS permissions
+    user: "${CONTAINER_USER}"  # Use mapped user for NFS compatibility
     environment:
       AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
       AC_UPDATES_ENABLE_DATABASES: "0"
@@ -84,7 +81,7 @@ services:
     image: ${AC_WORLDSERVER_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_WORLDSERVER}
-    user: "0:0"  # Run as root to handle NFS permissions
+    user: "${CONTAINER_USER}"  # Use mapped user for NFS compatibility
     stdin_open: true
     tty: true
     depends_on:
@@ -146,7 +143,7 @@ services:
     image: ${ALPINE_GIT_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_MODULES}
-    user: "0:0"  # Run as root to handle NFS permissions
+    user: "${CONTAINER_USER}"  # Use mapped user for NFS compatibility
     volumes:
       - ${STORAGE_PATH}/modules:/modules
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
@@ -216,7 +213,7 @@ services:
     image: ${ALPINE_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_POST_INSTALL}
-    user: "0:0"  # Run as root for full permissions
+    user: "${CONTAINER_USER}"  # Use mapped user for NFS compatibility
     volumes:
       - ${STORAGE_PATH}/config:/azerothcore/config
       - ${STORAGE_PATH}/install-markers:/install-markers

@@ -13,7 +13,7 @@ services:
     image: ${ALPINE_GIT_IMAGE}
     pull_policy: ${IMAGE_PULL_POLICY}
     container_name: ${CONTAINER_MODULES}
-    user: "0:0"  # Run as root to handle NFS permissions
+    user: "${CONTAINER_USER}"  # Use mapped user for NFS compatibility
     volumes:
       - ${STORAGE_PATH}/modules:/modules
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
