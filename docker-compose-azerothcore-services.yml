@@ -22,8 +22,8 @@ services:
       - |
         # Auto-detect package manager and install dependencies (as root)
         if command -v apk >/dev/null 2>&1; then
-          # Alpine Linux
-          apk add --no-cache curl unzip wget ca-certificates p7zip jq
+          # Alpine Linux - install full wget and bash for script compatibility
+          apk add --no-cache curl unzip wget bash ca-certificates p7zip jq
         elif command -v apt-get >/dev/null 2>&1; then
           # Ubuntu/Debian
           apt-get update && apt-get install -y --no-install-recommends curl unzip wget ca-certificates p7zip-full jq && rm -rf /var/lib/apt/lists/*
@@ -43,7 +43,7 @@ services:
         echo "📥 Downloading client data script from GitHub..."
         curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/download-client-data.sh -o /tmp/download-client-data.sh
         chmod +x /tmp/download-client-data.sh
-        /tmp/download-client-data.sh
+        bash /tmp/download-client-data.sh
     restart: "no"
     networks:
       - azerothcore
@@ -199,7 +199,7 @@ services:
     command:
       - |
         # Install packages as root
-        apk add --no-cache curl
+        apk add --no-cache curl bash
 
         # Set ownership for module directories
         mkdir -p /scripts
@@ -210,7 +210,7 @@ services:
         curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/manage-modules-sql.sh -o /scripts/manage-modules-sql.sh
         chmod +x /tmp/manage-modules.sh /scripts/manage-modules-sql.sh
 
-        /tmp/manage-modules.sh
+        bash /tmp/manage-modules.sh
     restart: "no"
     networks:
       - azerothcore
