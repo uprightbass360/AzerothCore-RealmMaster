@@ -193,67 +193,76 @@ get_client_data_progress() {
 
 # Main status display function
 show_status() {
-    clear 2>/dev/null || true
-    print_status "HEADER" "AZEROTHCORE SERVICE STATUS"
-    echo ""
+    # Capture all output to a temp file, then display at once
+    local temp_file=$(mktemp)
 
-    # Database Layer
-    printf "${MAGENTA}=== DATABASE LAYER ===${NC}\n"
-    display_service_status "ac-mysql" "MySQL Database" "Core database server"
-    if docker ps --format "table {{.Names}}" | grep -q "^ac-mysql$"; then
-        get_database_info
-    fi
-    display_service_status "ac-backup" "Backup Service" "Database backup automation"
-    display_service_status "ac-db-init" "DB Initializer" "Database initialization (one-time)"
-    display_service_status "ac-db-import" "DB Import" "Database import (one-time)"
-    echo ""
-
-    # Services Layer
-    printf "${MAGENTA}=== SERVICES LAYER ===${NC}\n"
-    display_service_status "ac-authserver" "Auth Server" "Player authentication"
-    display_service_status "ac-worldserver" "World Server" "Game world simulation"
-    display_service_status "ac-client-data" "Client Data" "Game data download/extraction"
-    if docker ps --format "table {{.Names}}" | grep -q "^ac-client-data$"; then
-        get_client_data_progress
-    fi
-    echo ""
-
-    # Support Services
-    printf "${MAGENTA}=== SUPPORT SERVICES ===${NC}\n"
-    display_service_status "ac-modules" "Module Manager" "Server module management"
-    display_service_status "ac-eluna" "Eluna Engine" "Lua scripting engine"
-    display_service_status "ac-post-install" "Post-Install" "Configuration automation"
-    echo ""
-
-    # Network and ports
-    printf "${MAGENTA}=== NETWORK STATUS ===${NC}\n"
-    if docker network ls | grep -q azerothcore; then
-        printf "${CYAN}%-20s${NC} ${GREEN}●${NC} Network 'azerothcore' exists\n" "Docker Network"
-    else
-        printf "${CYAN}%-20s${NC} ${RED}●${NC} Network 'azerothcore' missing\n" "Docker Network"
-    fi
-
-    # Check if auth server port is accessible
-    if docker ps --format "table {{.Names}}\t{{.Ports}}" | grep ac-authserver | grep -q "3784"; then
-        printf "${CYAN}%-20s${NC} ${GREEN}●${NC} Port 3784 (Auth) exposed\n" "Auth Port"
-    else
-        printf "${CYAN}%-20s${NC} ${RED}●${NC} Port 3784 (Auth) not exposed\n" "Auth Port"
-    fi
-
-    # Check if world server port is accessible
-    if docker ps --format "table {{.Names}}\t{{.Ports}}" | grep ac-worldserver | grep -q "8215"; then
-        printf "${CYAN}%-20s${NC} ${GREEN}●${NC} Port 8215 (World) exposed\n" "World Port"
-    else
-        printf "${CYAN}%-20s${NC} ${RED}●${NC} Port 8215 (World) not exposed\n" "World Port"
-    fi
-
-    echo ""
-    printf "${CYAN}Last updated: $(date '+%Y-%m-%d %H:%M:%S')${NC}\n"
-
-    if [ "$WATCH_MODE" = true ]; then
+    {
+        print_status "HEADER" "AZEROTHCORE SERVICE STATUS"
         echo ""
-        print_status "INFO" "Press Ctrl+C to exit watch mode"
-    fi
+
+        # Database Layer
+        printf "${MAGENTA}=== DATABASE LAYER ===${NC}\n"
+        display_service_status "ac-mysql" "MySQL Database" "Core database server"
+        if docker ps --format "table {{.Names}}" | grep -q "^ac-mysql$"; then
+            get_database_info
+        fi
+        display_service_status "ac-backup" "Backup Service" "Database backup automation"
+        display_service_status "ac-db-init" "DB Initializer" "Database initialization (one-time)"
+        display_service_status "ac-db-import" "DB Import" "Database import (one-time)"
+        echo ""
+
+        # Services Layer
+        printf "${MAGENTA}=== SERVICES LAYER ===${NC}\n"
+        display_service_status "ac-authserver" "Auth Server" "Player authentication"
+        display_service_status "ac-worldserver" "World Server" "Game world simulation"
+        display_service_status "ac-client-data" "Client Data" "Game data download/extraction"
+        if docker ps --format "table {{.Names}}" | grep -q "^ac-client-data$"; then
+            get_client_data_progress
+        fi
+        echo ""
+
+        # Support Services
+        printf "${MAGENTA}=== SUPPORT SERVICES ===${NC}\n"
+        display_service_status "ac-modules" "Module Manager" "Server module management"
+        display_service_status "ac-eluna" "Eluna Engine" "Lua scripting engine"
+        display_service_status "ac-post-install" "Post-Install" "Configuration automation"
+        echo ""
+
+        # Network and ports
+        printf "${MAGENTA}=== NETWORK STATUS ===${NC}\n"
+        if docker network ls | grep -q azerothcore; then
+            printf "${CYAN}%-20s${NC} ${GREEN}●${NC} Network 'azerothcore' exists\n" "Docker Network"
+        else
+            printf "${CYAN}%-20s${NC} ${RED}●${NC} Network 'azerothcore' missing\n" "Docker Network"
+        fi
+
+        # Check if auth server port is accessible
+        if docker ps --format "table {{.Names}}\t{{.Ports}}" | grep ac-authserver | grep -q "3784"; then
+            printf "${CYAN}%-20s${NC} ${GREEN}●${NC} Port 3784 (Auth) exposed\n" "Auth Port"
+        else
+            printf "${CYAN}%-20s${NC} ${RED}●${NC} Port 3784 (Auth) not exposed\n" "Auth Port"
+        fi
+
+        # Check if world server port is accessible
+        if docker ps --format "table {{.Names}}\t{{.Ports}}" | grep ac-worldserver | grep -q "8215"; then
+            printf "${CYAN}%-20s${NC} ${GREEN}●${NC} Port 8215 (World) exposed\n" "World Port"
+        else
+            printf "${CYAN}%-20s${NC} ${RED}●${NC} Port 8215 (World) not exposed\n" "World Port"
+        fi
+
+        echo ""
+        printf "${CYAN}Last updated: $(date '+%Y-%m-%d %H:%M:%S')${NC}\n"
+
+        if [ "$WATCH_MODE" = true ]; then
+            echo ""
+            print_status "INFO" "Press Ctrl+C to exit watch mode"
+        fi
+    } > "$temp_file"
+
+    # Clear screen and display all content at once
+    clear 2>/dev/null || printf '\033[2J\033[H'
+    cat "$temp_file"
+    rm "$temp_file"
 }
 
 # Main execution
