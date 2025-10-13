@@ -167,23 +167,23 @@ deploy_stack() {
     print_status "HEADER" "DEPLOYING AZEROTHCORE STACK"
 
     # Check if custom environment files exist first, then fallback to base files
-    DB_ENV_FILE="../docker-compose-azerothcore-database-custom.env"
-    SERVICES_ENV_FILE="../docker-compose-azerothcore-services-custom.env"
-    MODULES_ENV_FILE="../docker-compose-azerothcore-modules-custom.env"
-    TOOLS_ENV_FILE="../docker-compose-azerothcore-tools-custom.env"
+    DB_ENV_FILE="./docker-compose-azerothcore-database-custom.env"
+    SERVICES_ENV_FILE="./docker-compose-azerothcore-services-custom.env"
+    MODULES_ENV_FILE="./docker-compose-azerothcore-modules-custom.env"
+    TOOLS_ENV_FILE="./docker-compose-azerothcore-tools-custom.env"
 
     # Fallback to base files if custom files don't exist
     if [ ! -f "$DB_ENV_FILE" ]; then
-        DB_ENV_FILE="../docker-compose-azerothcore-database.env"
+        DB_ENV_FILE="./docker-compose-azerothcore-database.env"
     fi
     if [ ! -f "$SERVICES_ENV_FILE" ]; then
-        SERVICES_ENV_FILE="../docker-compose-azerothcore-services.env"
+        SERVICES_ENV_FILE="./docker-compose-azerothcore-services.env"
     fi
     if [ ! -f "$MODULES_ENV_FILE" ]; then
-        MODULES_ENV_FILE="../docker-compose-azerothcore-modules.env"
+        MODULES_ENV_FILE="./docker-compose-azerothcore-modules.env"
     fi
     if [ ! -f "$TOOLS_ENV_FILE" ]; then
-        TOOLS_ENV_FILE="../docker-compose-azerothcore-tools.env"
+        TOOLS_ENV_FILE="./docker-compose-azerothcore-tools.env"
     fi
 
     # Check if required environment files exist
@@ -203,7 +203,7 @@ deploy_stack() {
     fi
 
     print_status "INFO" "Step 1: Deploying database layer..."
-    docker compose --env-file "$DB_ENV_FILE" -f ../docker-compose-azerothcore-database.yml up -d --remove-orphans
+    docker compose --env-file "$DB_ENV_FILE" -f ./docker-compose-azerothcore-database.yml up -d --remove-orphans
 
     # Wait for database initialization
     wait_for_service "MySQL" 24 "docker exec ac-mysql mysql -uroot -pazerothcore123 -e 'SELECT 1' >/dev/null 2>&1"
@@ -212,7 +212,7 @@ deploy_stack() {
     wait_for_service "Database Import" 36 "docker inspect ac-db-import --format='{{.State.ExitCode}}' 2>/dev/null | grep -q '^0$' || docker logs ac-db-import 2>/dev/null | grep -q 'Database import complete'"
 
     print_status "INFO" "Step 2: Deploying services layer..."
-    docker compose --env-file "$SERVICES_ENV_FILE" -f ../docker-compose-azerothcore-services.yml up -d
+    docker compose --env-file "$SERVICES_ENV_FILE" -f ./docker-compose-azerothcore-services.yml up -d
 
     # Wait for client data extraction
     print_status "INFO" "Waiting for client data download and extraction (this may take 10-20 minutes)..."
@@ -224,7 +224,7 @@ deploy_stack() {
     # Deploy modules if enabled
     if [ "$MODULES_ENABLED" = true ]; then
         print_status "INFO" "Step 3: Deploying modules layer..."
-        docker compose --env-file "$MODULES_ENV_FILE" -f ../docker-compose-azerothcore-modules.yml up -d
+        docker compose --env-file "$MODULES_ENV_FILE" -f ./docker-compose-azerothcore-modules.yml up -d
 
         # Wait for modules to be ready
         sleep 5
@@ -236,7 +236,7 @@ deploy_stack() {
     fi
 
     print_status "INFO" "Step $STEP_NUMBER: Deploying tools layer..."
-    docker compose --env-file "$TOOLS_ENV_FILE" -f ../docker-compose-azerothcore-tools.yml up -d
+    docker compose --env-file "$TOOLS_ENV_FILE" -f ./docker-compose-azerothcore-tools.yml up -d
 
     # Wait for tools to be ready
     sleep 10
