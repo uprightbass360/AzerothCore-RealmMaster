@@ -25,6 +25,7 @@ NC='\033[0m' # No Color
 CLEANUP_LEVEL=""
 DRY_RUN=false
 FORCE=false
+PRESERVE_BACKUPS=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -49,6 +50,10 @@ while [[ $# -gt 0 ]]; do
             FORCE=true
             shift
             ;;
+        --preserve-backups)
+            PRESERVE_BACKUPS=true
+            shift
+            ;;
         -h|--help)
             echo "AzerothCore Docker Cleanup Script"
             echo ""
@@ -61,6 +66,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "OPTIONS:"
             echo "  --dry-run   Show what would be done without actually doing it"
+            echo "  --preserve-backups   Keep database backup files when cleaning storage"
             echo "  --force     Skip confirmation prompts"
             echo "  --help      Show this help message"
             echo ""
@@ -279,8 +285,43 @@ nuclear_cleanup() {
         "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'phpmyadmin|uprightbass360/keira3' | xargs -r docker rmi"
 
     # Clean up local data directories
-    execute_command "Remove local storage directories" \
-        "sudo rm -rf ./storage ./backups 2>/dev/null || rm -rf ./storage ./backups 2>/dev/null || true"
+    if [ "$PRESERVE_BACKUPS" = true ]; then
+        # Create a function to clean storage while preserving backups
+        cleanup_storage_preserve_backups() {
+            if [ -d "./storage" ]; then
+                # Find the storage path from environment files
+                STORAGE_ROOT=$(grep "^STORAGE_ROOT=" docker-compose-azerothcore-database*.env 2>/dev/null | head -1 | cut -d'=' -f2 || echo "/nfs/containers")
+                BACKUP_PATH="${STORAGE_ROOT}/azerothcore/backups"
+
+                # Temporarily move backups if they exist
+                if [ -d "${BACKUP_PATH}" ]; then
+                    print_status "INFO" "Preserving backups at ${BACKUP_PATH}"
+                    sudo mkdir -p /tmp/azerothcore-backups-preserve 2>/dev/null || mkdir -p /tmp/azerothcore-backups-preserve
+                    sudo cp -r "${BACKUP_PATH}" /tmp/azerothcore-backups-preserve/ 2>/dev/null || cp -r "${BACKUP_PATH}" /tmp/azerothcore-backups-preserve/
+                fi
+
+                # Remove storage directories
+                sudo rm -rf ./storage 2>/dev/null || rm -rf ./storage 2>/dev/null || true
+
+                # Restore backups if they were preserved
+                if [ -d "/tmp/azerothcore-backups-preserve/backups" ]; then
+                    sudo mkdir -p "${STORAGE_ROOT}/azerothcore" 2>/dev/null || mkdir -p "${STORAGE_ROOT}/azerothcore"
+                    sudo mv /tmp/azerothcore-backups-preserve/backups "${BACKUP_PATH}" 2>/dev/null || mv /tmp/azerothcore-backups-preserve/backups "${BACKUP_PATH}"
+                    sudo rm -rf /tmp/azerothcore-backups-preserve 2>/dev/null || rm -rf /tmp/azerothcore-backups-preserve
+                    print_status "SUCCESS" "Backups preserved at ${BACKUP_PATH}"
+                fi
+            fi
+
+            # Still remove ./backups directory (local backups, not NFS backups)
+            sudo rm -rf ./backups 2>/dev/null || rm -rf ./backups 2>/dev/null || true
+        }
+
+        execute_command "Remove storage directories (preserving backups)" \
+            "cleanup_storage_preserve_backups"
+    else
+        execute_command "Remove local storage directories" \
+            "sudo rm -rf ./storage ./backups 2>/dev/null || rm -rf ./storage ./backups 2>/dev/null || true"
+    fi
 
     # System cleanup
     execute_command "Clean up unused Docker resources" \
