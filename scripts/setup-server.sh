@@ -632,6 +632,30 @@ main() {
         sed -i "s#MODULE_ARAC=.*#MODULE_ARAC=${MODULE_ARAC}#" docker-compose-azerothcore-modules-custom.env
     fi
 
+    # Format selection
+    print_status "HEADER" "OUTPUT FORMAT"
+    echo "Select your preferred deployment format:"
+    echo "1) Environment files (Docker Compose + env files)"
+    echo "2) Flattened YAML files (Portainer Stack compatible)"
+    echo ""
+
+    while true; do
+        read -p "$(echo -e "${YELLOW}🔧 Select output format [1-2]: ${NC}")" format_type
+        case $format_type in
+            1)
+                OUTPUT_FORMAT="env"
+                break
+                ;;
+            2)
+                OUTPUT_FORMAT="portainer"
+                break
+                ;;
+            *)
+                print_status "ERROR" "Please select 1 or 2"
+                ;;
+        esac
+    done
+
     print_status "SUCCESS" "Custom environment files created:"
     echo "  - docker-compose-azerothcore-database-custom.env"
     echo "  - docker-compose-azerothcore-services-custom.env"
@@ -641,27 +665,62 @@ main() {
     fi
     echo ""
 
+    # Generate Portainer YAML files if selected
+    if [ "$OUTPUT_FORMAT" = "portainer" ]; then
+        generate_portainer_yamls
+    fi
+
     # Deployment instructions
     print_status "HEADER" "DEPLOYMENT INSTRUCTIONS"
-    echo "To deploy your server with the custom configuration:"
-    echo ""
-    echo "1. Deploy database layer:"
-    echo "   docker compose --env-file docker-compose-azerothcore-database-custom.env -f docker-compose-azerothcore-database.yml up -d"
-    echo ""
-    echo "2. Deploy services layer:"
-    echo "   docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml up -d"
-    echo ""
-    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
-        echo "3. Deploy modules layer (installs and configures selected modules):"
-        echo "   docker compose --env-file docker-compose-azerothcore-modules-custom.env -f docker-compose-azerothcore-modules.yml up -d"
+
+    if [ "$OUTPUT_FORMAT" = "portainer" ]; then
+        echo "To deploy your server using Portainer stacks:"
         echo ""
-        echo "4. Deploy tools layer (optional):"
-        echo "   docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml up -d"
+        echo "1. Create and deploy database stack:"
+        echo "   • Copy portainer-database-stack.yml contents"
+        echo "   • Create new stack in Portainer"
+        echo "   • Wait for healthy status"
         echo ""
+        echo "2. Create and deploy services stack:"
+        echo "   • Copy portainer-services-stack.yml contents"
+        echo "   • Create new stack in Portainer"
+        echo ""
+        if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+            echo "3. Create and deploy modules stack:"
+            echo "   • Copy portainer-modules-stack.yml contents"
+            echo "   • Create new stack in Portainer"
+            echo ""
+            echo "4. Create and deploy tools stack (optional):"
+            echo "   • Copy portainer-tools-stack.yml contents"
+            echo "   • Create new stack in Portainer"
+            echo ""
+        else
+            echo "3. Create and deploy tools stack (optional):"
+            echo "   • Copy portainer-tools-stack.yml contents"
+            echo "   • Create new stack in Portainer"
+            echo ""
+        fi
     else
-        echo "3. Deploy tools layer (optional):"
-        echo "   docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml up -d"
+        echo "To deploy your server with Docker Compose:"
         echo ""
+        echo "1. Deploy database layer:"
+        echo "   docker compose --env-file docker-compose-azerothcore-database-custom.env -f docker-compose-azerothcore-database.yml up -d"
+        echo ""
+        echo "2. Deploy services layer:"
+        echo "   docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml up -d"
+        echo ""
+        if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+            echo "3. Deploy modules layer (installs and configures selected modules):"
+            echo "   docker compose --env-file docker-compose-azerothcore-modules-custom.env -f docker-compose-azerothcore-modules.yml up -d"
+            echo ""
+            echo "4. Deploy tools layer (optional):"
+            echo "   docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml up -d"
+            echo ""
+        else
+            echo "3. Deploy tools layer (optional):"
+            echo "   docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml up -d"
+            echo ""
+        fi
     fi
 
     if [ "$DEPLOYMENT_TYPE" != "local" ]; then
@@ -711,7 +770,45 @@ main() {
     fi
 
     print_status "SUCCESS" "🎉 Server setup complete!"
-    print_status "INFO" "Your custom environment files are ready for deployment."
+    if [ "$OUTPUT_FORMAT" = "portainer" ]; then
+        print_status "INFO" "Your Portainer YAML stack files are ready for deployment."
+    else
+        print_status "INFO" "Your custom environment files are ready for deployment."
+    fi
+}
+
+# Function to generate flattened Portainer YAML files
+generate_portainer_yamls() {
+    print_status "INFO" "Generating Portainer-compatible YAML files..."
+
+    # Generate database stack
+    print_status "INFO" "Creating portainer-database-stack.yml..."
+    docker compose --env-file docker-compose-azerothcore-database-custom.env -f docker-compose-azerothcore-database.yml config > portainer-database-stack.yml
+
+    # Generate services stack
+    print_status "INFO" "Creating portainer-services-stack.yml..."
+    docker compose --env-file docker-compose-azerothcore-services-custom.env -f docker-compose-azerothcore-services.yml config > portainer-services-stack.yml
+
+    # Generate tools stack
+    print_status "INFO" "Creating portainer-tools-stack.yml..."
+    docker compose --env-file docker-compose-azerothcore-tools-custom.env -f docker-compose-azerothcore-tools.yml config > portainer-tools-stack.yml
+
+    # Generate modules stack (if modules are enabled)
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        print_status "INFO" "Creating portainer-modules-stack.yml..."
+        docker compose --env-file docker-compose-azerothcore-modules-custom.env -f docker-compose-azerothcore-modules.yml config > portainer-modules-stack.yml
+    fi
+
+    print_status "SUCCESS" "Portainer YAML files generated:"
+    echo "  - portainer-database-stack.yml"
+    echo "  - portainer-services-stack.yml"
+    echo "  - portainer-tools-stack.yml"
+    if [ "$MODULE_SELECTION_MODE" != "none" ]; then
+        echo "  - portainer-modules-stack.yml"
+    fi
+    echo ""
+    print_status "INFO" "These files can be copied and pasted directly into Portainer stacks."
+    print_status "INFO" "Deploy in order: database → services → modules → tools"
 }
 
 # Run main function

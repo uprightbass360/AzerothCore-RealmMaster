@@ -212,7 +212,7 @@ deploy_stack() {
     wait_for_service "Database Import" 36 "docker inspect ac-db-import --format='{{.State.ExitCode}}' 2>/dev/null | grep -q '^0$' || docker logs ac-db-import 2>/dev/null | grep -q 'Database import complete'"
 
     print_status "INFO" "Step 2: Deploying services layer..."
-    docker compose --env-file "$SERVICES_ENV_FILE" -f ../docker-compose-azerothcore-services.yml up -d --remove-orphans
+    docker compose --env-file "$SERVICES_ENV_FILE" -f ../docker-compose-azerothcore-services.yml up -d
 
     # Wait for client data extraction
     print_status "INFO" "Waiting for client data download and extraction (this may take 10-20 minutes)..."
@@ -224,7 +224,7 @@ deploy_stack() {
     # Deploy modules if enabled
     if [ "$MODULES_ENABLED" = true ]; then
         print_status "INFO" "Step 3: Deploying modules layer..."
-        docker compose --env-file "$MODULES_ENV_FILE" -f ../docker-compose-azerothcore-modules.yml up -d --remove-orphans
+        docker compose --env-file "$MODULES_ENV_FILE" -f ../docker-compose-azerothcore-modules.yml up -d
 
         # Wait for modules to be ready
         sleep 5
@@ -236,7 +236,7 @@ deploy_stack() {
     fi
 
     print_status "INFO" "Step $STEP_NUMBER: Deploying tools layer..."
-    docker compose --env-file "$TOOLS_ENV_FILE" -f ../docker-compose-azerothcore-tools.yml up -d --remove-orphans
+    docker compose --env-file "$TOOLS_ENV_FILE" -f ../docker-compose-azerothcore-tools.yml up -d
 
     # Wait for tools to be ready
     sleep 10
