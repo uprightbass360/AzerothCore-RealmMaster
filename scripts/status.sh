@@ -111,38 +111,38 @@ get_container_status() {
         case "$status" in
             "running")
                 if [ "$health" = "healthy" ]; then
-                    echo "${GREEN}●${NC} Running (healthy) - Started: $uptime"
+                    printf "${GREEN}●${NC} Running (healthy) - Started: %s\n" "$uptime"
                 elif [ "$health" = "unhealthy" ]; then
-                    echo "${RED}●${NC} Running (unhealthy) - Started: $uptime"
+                    printf "${RED}●${NC} Running (unhealthy) - Started: %s\n" "$uptime"
                 elif [ "$health" = "starting" ]; then
-                    echo "${YELLOW}●${NC} Running (starting) - Started: $uptime"
+                    printf "${YELLOW}●${NC} Running (starting) - Started: %s\n" "$uptime"
                 else
-                    echo "${GREEN}●${NC} Running - Started: $uptime"
+                    printf "${GREEN}●${NC} Running - Started: %s\n" "$uptime"
                 fi
                 ;;
             "exited")
                 local exit_code=$(docker inspect --format='{{.State.ExitCode}}' "$container_name" 2>/dev/null || echo "unknown")
                 if [ "$exit_code" = "0" ]; then
-                    echo "${YELLOW}●${NC} Exited (0) - Completed successfully"
+                    printf "${YELLOW}●${NC} Exited (0) - Completed successfully\n"
                 else
-                    echo "${RED}●${NC} Exited ($exit_code) - Failed"
+                    printf "${RED}●${NC} Exited (%s) - Failed\n" "$exit_code"
                 fi
                 ;;
             "restarting")
-                echo "${YELLOW}●${NC} Restarting - Started: $uptime"
+                printf "${YELLOW}●${NC} Restarting - Started: %s\n" "$uptime"
                 ;;
             "paused")
-                echo "${YELLOW}●${NC} Paused - Started: $uptime"
+                printf "${YELLOW}●${NC} Paused - Started: %s\n" "$uptime"
                 ;;
             "created")
-                echo "${CYAN}●${NC} Created (not started)"
+                printf "${CYAN}●${NC} Created (not started)\n"
                 ;;
             *)
-                echo "${RED}●${NC} $status"
+                printf "${RED}●${NC} %s\n" "$status"
                 ;;
         esac
     else
-        echo "${RED}●${NC} Not found"
+        printf "${RED}●${NC} Not found\n"
     fi
 }
 
