@@ -256,6 +256,65 @@ main() {
         done
     fi
 
+    # Storage directory pre-creation option
+    print_status "HEADER" "STORAGE DIRECTORY SETUP"
+    echo "Docker may have permission issues with NFS/network storage when auto-creating directories."
+    echo "Pre-creating directories with correct permissions can prevent deployment issues."
+    echo ""
+    echo "Would you like to pre-create storage directories?"
+    echo "1) Yes - Create directories now (recommended for NFS/network storage)"
+    echo "2) No - Let Docker auto-create directories (may cause permission issues)"
+
+    while true; do
+        read -p "$(echo -e "${YELLOW}🔧 Pre-create storage directories? [1-2]: ${NC}")" precreate_option
+        case $precreate_option in
+            1)
+                PRE_CREATE_DIRECTORIES=true
+                break
+                ;;
+            2)
+                PRE_CREATE_DIRECTORIES=false
+                break
+                ;;
+            *)
+                print_status "ERROR" "Please select 1 or 2"
+                ;;
+        esac
+    done
+
+    # Create directories if requested
+    if [ "$PRE_CREATE_DIRECTORIES" = true ]; then
+        print_status "INFO" "Creating storage directories..."
+        STORAGE_PATH="${STORAGE_ROOT}/azerothcore"
+
+        # Create all required directories
+        DIRECTORIES=(
+            "$STORAGE_PATH/config"
+            "$STORAGE_PATH/data"
+            "$STORAGE_PATH/cache"
+            "$STORAGE_PATH/logs"
+            "$STORAGE_PATH/modules"
+            "$STORAGE_PATH/mysql-data"
+            "$STORAGE_PATH/typescript"
+            "$STORAGE_PATH/backups"
+        )
+
+        for dir in "${DIRECTORIES[@]}"; do
+            if [ ! -d "$dir" ]; then
+                mkdir -p "$dir"
+                print_status "SUCCESS" "Created: $dir"
+            else
+                print_status "INFO" "Already exists: $dir"
+            fi
+        done
+
+        # Set permissions for better compatibility
+        chmod -R 755 "$STORAGE_PATH" 2>/dev/null || print_status "WARNING" "Could not set directory permissions (this may be normal for NFS)"
+
+        print_status "SUCCESS" "Storage directories created successfully!"
+        echo ""
+    fi
+
     # Backup configuration
     print_status "HEADER" "BACKUP CONFIGURATION"
     BACKUP_RETENTION_DAYS=$(prompt_input "Days to keep daily backups" "3" validate_number)
