@@ -93,8 +93,22 @@ wait_for_service() {
     local service_name=$1
     local max_attempts=$2
     local check_command=$3
+    local container_name=""
 
-    print_status "INFO" "Waiting for $service_name to be ready..."
+    # Extract container name from common patterns
+    if echo "$check_command" | grep -q "ac-client-data"; then
+        container_name="ac-client-data"
+    elif echo "$check_command" | grep -q "ac-db-import"; then
+        container_name="ac-db-import"
+    elif echo "$check_command" | grep -q "ac-mysql"; then
+        container_name="ac-mysql"
+    elif echo "$check_command" | grep -q "ac-worldserver"; then
+        container_name="ac-worldserver"
+    elif echo "$check_command" | grep -q "ac-authserver"; then
+        container_name="ac-authserver"
+    fi
+
+    print_status "INFO" "Waiting for $service_name to be ready... (timeout: $((max_attempts * 5))s)"
 
     for i in $(seq 1 $max_attempts); do
         if eval "$check_command" &>/dev/null; then
@@ -104,10 +118,43 @@ wait_for_service() {
 
         if [ $i -eq $max_attempts ]; then
             print_status "ERROR" "$service_name failed to start after $max_attempts attempts"
+            if [ -n "$container_name" ]; then
+                print_status "INFO" "Last few log lines from $container_name:"
+                docker logs "$container_name" --tail 5 2>/dev/null | sed 's/^/    /' || echo "    (no logs available)"
+            fi
             return 1
         fi
 
-        echo -n "."
+        # Show progress with more informative output
+        local elapsed=$((i * 5))
+        local remaining=$(( (max_attempts - i) * 5))
+
+        if [ -n "$container_name" ]; then
+            # Get container status
+            local status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null || echo "unknown")
+            local health=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "no-health-check")
+
+            # Show different progress info based on service
+            case "$service_name" in
+                "Client Data")
+                    local last_log=$(docker logs "$container_name" --tail 1 2>/dev/null | head -c 80 || echo "...")
+                    printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, ${remaining}s remaining | Status: $status | Latest: $last_log\n"
+                    ;;
+                "Database Import")
+                    printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, ${remaining}s remaining | Status: $status | Importing databases...\n"
+                    ;;
+                *)
+                    printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, ${remaining}s remaining | Status: $status"
+                    if [ "$health" != "no-health-check" ]; then
+                        printf " | Health: $health"
+                    fi
+                    printf "\n"
+                    ;;
+            esac
+        else
+            printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, ${remaining}s remaining | Checking...\n"
+        fi
+
         sleep 5
     done
 }
