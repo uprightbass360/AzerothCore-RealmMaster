@@ -37,15 +37,112 @@ fi
 echo ""
 echo "🔧 Starting database import process..."
 
-# Wait for databases to be ready
-echo "⏳ Waiting for databases to be accessible..."
-for i in $(seq 1 120); do
+# First attempt backup restoration
+echo "🔍 Checking for backups to restore..."
+
+BACKUP_DIRS="/backups"
+
+# Function to find and validate the most recent backup
+find_latest_backup() {
+  # Priority 1: Legacy single backup file
+  if [ -f "/var/lib/mysql-persistent/backup.sql" ]; then
+    if head -10 "/var/lib/mysql-persistent/backup.sql" | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+      echo "/var/lib/mysql-persistent/backup.sql"
+      return 0
+    fi
+  fi
+
+  # Priority 2: Modern timestamped backups
+  if [ -d "$BACKUP_DIRS" ] && [ "$(ls -A $BACKUP_DIRS)" ]; then
+    # Try daily backups first
+    if [ -d "$BACKUP_DIRS/daily" ] && [ "$(ls -A $BACKUP_DIRS/daily)" ]; then
+      local latest_daily=$(ls -1t $BACKUP_DIRS/daily | head -n 1)
+      if [ -n "$latest_daily" ] && [ -d "$BACKUP_DIRS/daily/$latest_daily" ]; then
+        # Validate backup has actual data
+        if ls "$BACKUP_DIRS/daily/$latest_daily"/*.sql.gz >/dev/null 2>&1; then
+          for backup_file in "$BACKUP_DIRS/daily/$latest_daily"/*.sql.gz; do
+            if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
+              if zcat "$backup_file" | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+                echo "$BACKUP_DIRS/daily/$latest_daily"
+                return 0
+              fi
+            fi
+          done
+        fi
+      fi
+    fi
+  fi
+  return 1
+}
+
+# Function to restore from timestamped backup directory
+restore_from_directory() {
+  local backup_dir="$1"
+  echo "🔄 Restoring from backup directory: $backup_dir"
+
+  local restore_success=true
+
+  # Restore each database backup
+  for backup_file in "$backup_dir"/*.sql.gz; do
+    if [ -f "$backup_file" ]; then
+      local db_name=$(basename "$backup_file" .sql.gz)
+      echo "📥 Restoring database: $db_name"
+
+      if zcat "$backup_file" | mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD}; then
+        echo "✅ Successfully restored $db_name"
+      else
+        echo "❌ Failed to restore $db_name"
+        restore_success=false
+      fi
+    fi
+  done
+
+  if [ "$restore_success" = true ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Attempt backup restoration
+backup_path=$(find_latest_backup)
+if [ $? -eq 0 ] && [ -n "$backup_path" ]; then
+  echo "📦 Found backup directory: $(basename $backup_path)"
+  if restore_from_directory "$backup_path"; then
+    echo "✅ Database restoration completed successfully!"
+    echo "$(date): Backup successfully restored from $backup_path" > "$RESTORE_SUCCESS_MARKER"
+    echo "🚫 Skipping schema import - data already restored from backup"
+    exit 0
+  else
+    echo "❌ Backup restoration failed - proceeding with fresh setup"
+    echo "$(date): Backup restoration failed - proceeding with fresh setup" > "$RESTORE_FAILED_MARKER"
+  fi
+else
+  echo "ℹ️  No valid backups found - proceeding with fresh setup"
+  echo "$(date): No backup found - fresh setup needed" > "$RESTORE_FAILED_MARKER"
+fi
+
+# Create fresh databases if restoration didn't happen
+echo "🗄️ Creating fresh AzerothCore databases..."
+mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "
+CREATE DATABASE IF NOT EXISTS ${DB_AUTH_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS ${DB_WORLD_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS ${DB_CHARACTERS_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+SHOW DATABASES;" || {
+  echo "❌ Failed to create databases"
+  exit 1
+}
+echo "✅ Fresh databases created - proceeding with schema import"
+
+# Wait for databases to be ready (they should exist now)
+echo "⏳ Verifying databases are accessible..."
+for i in $(seq 1 10); do
   if mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "USE ${DB_AUTH_NAME}; USE ${DB_WORLD_NAME}; USE ${DB_CHARACTERS_NAME};" >/dev/null 2>&1; then
     echo "✅ All databases accessible"
     break
   fi
-  echo "⏳ Waiting for databases... attempt $i/120"
-  sleep 5
+  echo "⏳ Waiting for databases... attempt $i/10"
+  sleep 2
 done
 
 # Verify databases are actually empty before importing

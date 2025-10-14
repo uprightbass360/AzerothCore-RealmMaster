@@ -48,6 +48,9 @@ services:
   ac-backup:
     image: ${MYSQL_IMAGE}
     container_name: ${CONTAINER_BACKUP}
+    depends_on:
+      ac-db-import:
+        condition: service_completed_successfully
     environment:
       MYSQL_HOST: ${CONTAINER_MYSQL}
       MYSQL_PORT: ${MYSQL_PORT}
@@ -79,10 +82,13 @@ services:
     networks:
       - azerothcore
 
-  # Step 3: Database initialization (one-time setup)
+  # Step 3: Database initialization (conditional - only runs if import fails)
   ac-db-init:
     image: ${MYSQL_IMAGE}
     container_name: ${CONTAINER_DB_INIT}
+    depends_on:
+      ac-db-import:
+        condition: service_completed_successfully
     volumes:
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
       - ${HOST_BACKUP_PATH}:/backups
@@ -104,17 +110,41 @@ services:
       - sh
       - -c
       - |
-        # Install curl for downloading db init script (handle different package managers)
+        # Check if databases were already restored/imported
+        if [ -f "/var/lib/mysql-persistent/.restore-completed" ]; then
+          echo "✅ Databases already restored from backup - init not needed"
+          exit 0
+        fi
+
+        if mysql -h ${MYSQL_HOST} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "
+          SELECT COUNT(*) FROM information_schema.tables
+          WHERE table_schema IN ('${DB_AUTH_NAME}', '${DB_WORLD_NAME}', '${DB_CHARACTERS_NAME}');" -s -N 2>/dev/null | grep -q -v '^0$'; then
+          echo "✅ Databases already populated - init not needed"
+          exit 0
+        fi
+
+        echo "🔧 Databases need initialization - proceeding with fresh setup"
+
+        # Install curl for downloading db init script
         microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
 
-        # Download enhanced db init script from GitHub
-        echo "📥 Downloading enhanced database initialization script from GitHub..."
-        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-init-enhanced.sh -o /tmp/db-init-enhanced.sh
-        chmod +x /tmp/db-init-enhanced.sh
-        /tmp/db-init-enhanced.sh
+        # Create fresh databases only
+        echo "🗄️ Creating fresh AzerothCore databases..."
+        mysql -h ${MYSQL_HOST} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "
+        CREATE DATABASE IF NOT EXISTS ${DB_AUTH_NAME} DEFAULT CHARACTER SET ${MYSQL_CHARACTER_SET} COLLATE ${MYSQL_COLLATION};
+        CREATE DATABASE IF NOT EXISTS ${DB_WORLD_NAME} DEFAULT CHARACTER SET ${MYSQL_CHARACTER_SET} COLLATE ${MYSQL_COLLATION};
+        CREATE DATABASE IF NOT EXISTS ${DB_CHARACTERS_NAME} DEFAULT CHARACTER SET ${MYSQL_CHARACTER_SET} COLLATE ${MYSQL_COLLATION};
+        SHOW DATABASES;" || {
+          echo "❌ Failed to create databases"
+          exit 1
+        }
+
+        # Set marker for import to proceed
+        echo "$(date): Fresh databases created - import needed" > /var/lib/mysql-persistent/.restore-failed
+        echo "✅ Fresh databases created!"
     restart: "no"
 
-  # Step 4: Database import (one-time setup - run after db-init)
+  # Step 4: Database import (one-time setup - attempts restore first)
   ac-db-import:
     image: ${AC_DB_IMPORT_IMAGE}
     container_name: ${CONTAINER_DB_IMPORT}
@@ -122,8 +152,6 @@ services:
     depends_on:
       ac-mysql:
         condition: service_healthy
-      ac-db-init:
-        condition: service_completed_successfully
     networks:
       - azerothcore
     volumes:
