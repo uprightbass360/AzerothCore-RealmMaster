@@ -191,6 +191,69 @@ main() {
         esac
     done
 
+    # Permission scheme selection
+    print_status "HEADER" "PERMISSION SCHEME"
+    echo "Select your container permission scheme:"
+    echo "1) Local Development (WSL/Docker Desktop)"
+    echo "   - PUID=0, PGID=0 (root permissions)"
+    echo "   - Best for: Local development, WSL, Docker Desktop"
+    echo "   - Storage: Local directories with full access"
+    echo ""
+    echo "2) NFS Server Deployment"
+    echo "   - PUID=1001, PGID=1000 (sharing user)"
+    echo "   - Best for: NFS mounts, multi-user servers"
+    echo "   - Storage: Network storage with user mapping"
+    echo ""
+    echo "3) Custom"
+    echo "   - User-specified PUID/PGID values"
+    echo "   - Best for: Specific user requirements"
+    echo "   - Storage: User-specified storage path"
+    echo "   - Manual PUID/PGID input with validation"
+    echo ""
+
+    while true; do
+        read -p "$(echo -e "${YELLOW}🔧 Select permission scheme [1-3]: ${NC}")" permission_scheme
+        case $permission_scheme in
+            1)
+                PERMISSION_SCHEME="local-dev"
+                PUID=0
+                PGID=0
+                SCHEME_DESCRIPTION="Local Development (0:0) - Root permissions for local development"
+                print_status "INFO" "Permission scheme: Local Development"
+                echo "  - PUID=0, PGID=0 (root permissions)"
+                echo "  - Optimized for WSL and Docker Desktop environments"
+                echo ""
+                break
+                ;;
+            2)
+                PERMISSION_SCHEME="nfs-server"
+                PUID=1001
+                PGID=1000
+                SCHEME_DESCRIPTION="NFS Server Deployment (1001:1000) - Sharing user for network storage"
+                print_status "INFO" "Permission scheme: NFS Server Deployment"
+                echo "  - PUID=1001, PGID=1000 (sharing user)"
+                echo "  - Compatible with NFS mounts and multi-user servers"
+                echo ""
+                break
+                ;;
+            3)
+                PERMISSION_SCHEME="custom"
+                print_status "INFO" "Permission scheme: Custom"
+                echo "  - Manual PUID/PGID configuration"
+                echo ""
+                PUID=$(prompt_input "Enter PUID (user ID)" "1000" validate_number)
+                PGID=$(prompt_input "Enter PGID (group ID)" "1000" validate_number)
+                SCHEME_DESCRIPTION="Custom (${PUID}:${PGID}) - User-specified permissions"
+                print_status "SUCCESS" "Custom permissions set: PUID=${PUID}, PGID=${PGID}"
+                echo ""
+                break
+                ;;
+            *)
+                print_status "ERROR" "Please select 1, 2, or 3"
+                ;;
+        esac
+    done
+
     # Server configuration
     print_status "HEADER" "SERVER CONFIGURATION"
 
@@ -508,6 +571,7 @@ main() {
     # Summary
     print_status "HEADER" "CONFIGURATION SUMMARY"
     echo "Deployment Type: $DEPLOYMENT_TYPE"
+    echo "Permission Scheme: $SCHEME_DESCRIPTION"
     echo "Server Address: $SERVER_ADDRESS"
     echo "Client Port: $REALM_PORT"
     echo "Auth Port: $AUTH_EXTERNAL_PORT"
@@ -595,6 +659,10 @@ main() {
     sed -i "s#BACKUP_DAILY_TIME=.*#BACKUP_DAILY_TIME=${BACKUP_DAILY_TIME}#" docker-compose-azerothcore-database-custom.env
     sed -i "s#TZ=.*#TZ=${TIMEZONE}#" docker-compose-azerothcore-database-custom.env
 
+    # Apply permission scheme settings
+    sed -i "s#PUID=.*#PUID=${PUID}#" docker-compose-azerothcore-database-custom.env
+    sed -i "s#PGID=.*#PGID=${PGID}#" docker-compose-azerothcore-database-custom.env
+
     # Toggle database images based on playerbots module selection
     if [ "$MODULE_PLAYERBOTS" = "1" ]; then
         # Swap AC_DB_IMPORT_IMAGE to enable mod-playerbots database
@@ -615,6 +683,10 @@ main() {
     sed -i "s#SOAP_EXTERNAL_PORT=.*#SOAP_EXTERNAL_PORT=${SOAP_EXTERNAL_PORT}#" docker-compose-azerothcore-services-custom.env
     sed -i "s#SERVER_ADDRESS=.*#SERVER_ADDRESS=${SERVER_ADDRESS}#" docker-compose-azerothcore-services-custom.env
     sed -i "s#REALM_PORT=.*#REALM_PORT=${REALM_PORT}#" docker-compose-azerothcore-services-custom.env
+
+    # Apply permission scheme settings
+    sed -i "s#PUID=.*#PUID=${PUID}#" docker-compose-azerothcore-services-custom.env
+    sed -i "s#PGID=.*#PGID=${PGID}#" docker-compose-azerothcore-services-custom.env
 
     # Toggle Docker images based on playerbots module selection
     if [ "$MODULE_PLAYERBOTS" = "1" ]; then
@@ -639,6 +711,10 @@ main() {
     # Substitute values in tools env file using a different delimiter
     sed -i "s#STORAGE_ROOT=.*#STORAGE_ROOT=${STORAGE_ROOT}#" docker-compose-azerothcore-tools-custom.env
 
+    # Apply permission scheme settings
+    sed -i "s#PUID=.*#PUID=${PUID}#" docker-compose-azerothcore-tools-custom.env
+    sed -i "s#PGID=.*#PGID=${PGID}#" docker-compose-azerothcore-tools-custom.env
+
     # Toggle tools images based on playerbots module selection
     if [ "$MODULE_PLAYERBOTS" = "1" ]; then
         # Swap AC_TOOLS_IMAGE to enable mod-playerbots tools
@@ -655,6 +731,10 @@ main() {
         # Substitute values in modules env file
         sed -i "s#STORAGE_ROOT=.*#STORAGE_ROOT=${STORAGE_ROOT}#" docker-compose-azerothcore-modules-custom.env
         sed -i "s#MYSQL_ROOT_PASSWORD=.*#MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}#" docker-compose-azerothcore-modules-custom.env
+
+        # Apply permission scheme settings
+        sed -i "s#PUID=.*#PUID=${PUID}#" docker-compose-azerothcore-modules-custom.env
+        sed -i "s#PGID=.*#PGID=${PGID}#" docker-compose-azerothcore-modules-custom.env
 
         # Set all module variables
         sed -i "s#MODULE_PLAYERBOTS=.*#MODULE_PLAYERBOTS=${MODULE_PLAYERBOTS}#" docker-compose-azerothcore-modules-custom.env

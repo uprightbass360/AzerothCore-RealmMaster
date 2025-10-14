@@ -139,6 +139,26 @@ if [ $UNZIP_EXIT_CODE -ne 0 ]; then
   exit 1
 fi
 
+# Handle nested Data directory issue - move contents if extracted to Data subdirectory
+if [ -d "/azerothcore/data/Data" ] && [ -n "$(ls -A /azerothcore/data/Data 2>/dev/null)" ]; then
+  echo '🔧 Fixing data directory structure (moving from Data/ subdirectory)...'
+
+  # Move all contents from Data subdirectory to the root data directory
+  for item in /azerothcore/data/Data/*; do
+    if [ -e "$item" ]; then
+      mv "$item" /azerothcore/data/ 2>/dev/null || {
+        echo "⚠️  Could not move $(basename "$item"), using copy instead..."
+        cp -r "$item" /azerothcore/data/
+        rm -rf "$item"
+      }
+    fi
+  done
+
+  # Remove empty Data directory
+  rmdir /azerothcore/data/Data 2>/dev/null || true
+  echo '✅ Data directory structure fixed'
+fi
+
 # Clean up temporary extraction file (keep cached version)
 rm -f data.zip
 
