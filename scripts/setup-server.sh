@@ -690,18 +690,11 @@ main() {
 
     # Toggle Docker images based on playerbots module selection
     if [ "$MODULE_PLAYERBOTS" = "1" ]; then
-        # Swap specific images that have _DISABLED variants
-        sed -i 's/\(AC_AUTHSERVER_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-services-custom.env
-        sed -i 's/\(AC_AUTHSERVER_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-services-custom.env
-        sed -i 's/\(AC_AUTHSERVER_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-services-custom.env
-
-        sed -i 's/\(AC_WORLDSERVER_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-services-custom.env
-        sed -i 's/\(AC_WORLDSERVER_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-services-custom.env
-        sed -i 's/\(AC_WORLDSERVER_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-services-custom.env
-
-        sed -i 's/\(AC_CLIENT_DATA_IMAGE\)=\(.*\)/\1_TEMP=\2/' docker-compose-azerothcore-services-custom.env
-        sed -i 's/\(AC_CLIENT_DATA_IMAGE\)_DISABLED=\(.*\)/\1=\2/' docker-compose-azerothcore-services-custom.env
-        sed -i 's/\(AC_CLIENT_DATA_IMAGE\)_TEMP=\(.*\)/\1_DISABLED=\2/' docker-compose-azerothcore-services-custom.env
+        # Switch to playerbots images (using _PLAYERBOTS variants)
+        sed -i 's/^AC_AUTHSERVER_IMAGE=.*/AC_AUTHSERVER_IMAGE=uprightbass360\/azerothcore-wotlk-playerbots:authserver-Playerbot/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/^AC_WORLDSERVER_IMAGE=.*/AC_WORLDSERVER_IMAGE=uprightbass360\/azerothcore-wotlk-playerbots:worldserver-Playerbot/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/^AC_CLIENT_DATA_IMAGE=.*/AC_CLIENT_DATA_IMAGE=uprightbass360\/azerothcore-wotlk-playerbots:client-data-Playerbot/' docker-compose-azerothcore-services-custom.env
+        sed -i 's/^MODULE_PLAYERBOTS=.*/MODULE_PLAYERBOTS=1/' docker-compose-azerothcore-services-custom.env
     fi
 
     # Create custom tools environment file
