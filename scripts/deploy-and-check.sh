@@ -255,8 +255,74 @@ deploy_stack() {
     # Wait for database initialization
     wait_for_service "MySQL" 24 "docker exec ac-mysql mysql -uroot -pazerothcore123 -e 'SELECT 1' >/dev/null 2>&1"
 
-    # Wait for database import
-    wait_for_service "Database Import" 36 "docker inspect ac-db-import --format='{{.State.ExitCode}}' 2>/dev/null | grep -q '^0$' || docker logs ac-db-import 2>/dev/null | grep -q 'Database import complete'"
+    # Wait for database import (can succeed with backup restore OR fail without backup)
+    print_status "INFO" "Waiting for Database Import to complete (backup restore attempt)..."
+
+    local import_result=""
+    local elapsed=0
+    local max_time=180  # 3 minutes max for import to complete
+
+    while [ $elapsed -lt $max_time ]; do
+        local import_status=$(docker inspect ac-db-import --format='{{.State.Status}}' 2>/dev/null || echo "unknown")
+
+        if [ "$import_status" = "exited" ]; then
+            local exit_code=$(docker inspect ac-db-import --format='{{.State.ExitCode}}' 2>/dev/null || echo "unknown")
+            if [ "$exit_code" = "0" ]; then
+                print_status "SUCCESS" "Database Import completed successfully (backup restored)"
+                import_result="restored"
+                break
+            else
+                print_status "INFO" "Database Import failed (no valid backup found - expected for fresh setup)"
+                import_result="failed"
+                break
+            fi
+        fi
+
+        printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, $((max_time - elapsed))s remaining | Status: $import_status | Checking for backup...\n"
+        sleep 5
+        elapsed=$((elapsed + 5))
+    done
+
+    if [ -z "$import_result" ]; then
+        print_status "ERROR" "Database Import did not complete within timeout"
+        exit 1
+    fi
+
+    # If import failed (no backup), wait for init to create databases
+    if [ "$import_result" = "failed" ]; then
+        print_status "INFO" "Waiting for Database Init to create fresh databases..."
+        local init_elapsed=0
+        local init_max_time=120  # 2 minutes for init
+
+        while [ $init_elapsed -lt $init_max_time ]; do
+            local init_status=$(docker inspect ac-db-init --format='{{.State.Status}}' 2>/dev/null || echo "created")
+
+            if [ "$init_status" = "exited" ]; then
+                local init_exit_code=$(docker inspect ac-db-init --format='{{.State.ExitCode}}' 2>/dev/null || echo "unknown")
+                if [ "$init_exit_code" = "0" ]; then
+                    print_status "SUCCESS" "Database Init completed successfully (fresh databases created)"
+                    break
+                else
+                    print_status "ERROR" "Database Init failed"
+                    print_status "INFO" "Last few log lines from ac-db-init:"
+                    docker logs ac-db-init --tail 10 2>/dev/null || true
+                    exit 1
+                fi
+            elif [ "$init_status" = "running" ]; then
+                printf "${YELLOW}⏳${NC} ${init_elapsed}s elapsed, $((init_max_time - init_elapsed))s remaining | Status: $init_status | Creating databases...\n"
+            else
+                printf "${YELLOW}⏳${NC} ${init_elapsed}s elapsed, $((init_max_time - init_elapsed))s remaining | Status: $init_status | Waiting to start...\n"
+            fi
+
+            sleep 5
+            init_elapsed=$((init_elapsed + 5))
+        done
+
+        if [ $init_elapsed -ge $init_max_time ]; then
+            print_status "ERROR" "Database Init did not complete within timeout"
+            exit 1
+        fi
+    fi
 
     print_status "INFO" "Step 2: Deploying services layer..."
     docker compose --env-file "$SERVICES_ENV_FILE" -f ./docker-compose-azerothcore-services.yml up -d

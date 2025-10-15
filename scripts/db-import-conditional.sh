@@ -107,7 +107,7 @@ restore_from_directory() {
 # Attempt backup restoration
 backup_path=$(find_latest_backup)
 if [ $? -eq 0 ] && [ -n "$backup_path" ]; then
-  echo "📦 Found backup directory: $(basename $backup_path)"
+  echo "📦 Found backup: $(basename $backup_path)"
   if restore_from_directory "$backup_path"; then
     echo "✅ Database restoration completed successfully!"
     echo "$(date): Backup successfully restored from $backup_path" > "$RESTORE_SUCCESS_MARKER"
