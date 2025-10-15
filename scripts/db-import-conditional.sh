@@ -153,6 +153,34 @@ if [ -z "$backup_path" ] && [ -d "$BACKUP_DIRS" ]; then
       fi
     else
       echo "📅 No daily backup directory found"
+      # Check for timestamped backup directories (legacy format: YYYYMMDD_HHMMSS)
+      echo "🔍 Checking for timestamped backup directories..."
+      timestamped_backups=$(ls -1t $BACKUP_DIRS 2>/dev/null | grep -E '^[0-9]{8}_[0-9]{6}$' | head -n 1)
+      if [ -n "$timestamped_backups" ]; then
+        latest_timestamped="$timestamped_backups"
+        echo "📦 Found timestamped backup: $latest_timestamped"
+        if [ -d "$BACKUP_DIRS/$latest_timestamped" ]; then
+          # Check if directory has .sql.gz files
+          if ls "$BACKUP_DIRS/$latest_timestamped"/*.sql.gz >/dev/null 2>&1; then
+            # Validate at least one backup file has content
+            echo "🔍 Validating timestamped backup content..."
+            for backup_file in "$BACKUP_DIRS/$latest_timestamped"/*.sql.gz; do
+              if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
+                # Use timeout to prevent hanging on zcat
+                if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+                  echo "✅ Valid timestamped backup found: $(basename $backup_file)"
+                  backup_path="$BACKUP_DIRS/$latest_timestamped"
+                  break
+                fi
+              fi
+            done
+          else
+            echo "⚠️  No .sql.gz files found in timestamped backup directory"
+          fi
+        fi
+      else
+        echo "📅 No timestamped backup directories found"
+      fi
     fi
   else
     echo "📁 Backup directory is empty"

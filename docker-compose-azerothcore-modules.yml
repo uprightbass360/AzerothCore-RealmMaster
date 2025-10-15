@@ -720,14 +720,14 @@ services:
 
         # Create current module state hash
         for module_var in MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT; do
-          eval "value=\$$module_var"
-          CURRENT_STATE="$CURRENT_STATE$module_var=$value|"
+          eval "value=\$$${module_var}"
+          CURRENT_STATE="$${CURRENT_STATE}$${module_var}=$${value}|"
         done
 
         # Check if state has changed
-        if [ -f "$MODULES_STATE_FILE" ]; then
-          PREVIOUS_STATE=$(cat "$MODULES_STATE_FILE")
-          if [ "$CURRENT_STATE" != "$PREVIOUS_STATE" ]; then
+        if [ -f "$${MODULES_STATE_FILE}" ]; then
+          PREVIOUS_STATE=$$(cat "$${MODULES_STATE_FILE}")
+          if [ "$${CURRENT_STATE}" != "$${PREVIOUS_STATE}" ]; then
             echo "🔄 Module configuration has changed - rebuild required"
             REBUILD_REQUIRED=1
           else
@@ -739,47 +739,48 @@ services:
         fi
 
         # Save current state
-        echo "$CURRENT_STATE" > "$MODULES_STATE_FILE"
+        echo "$${CURRENT_STATE}" > "$${MODULES_STATE_FILE}"
 
-        # Check if any C++ modules are enabled (all current modules require compilation)
+        # Check if any C++ modules are enabled (modules requiring source compilation)
+        # NOTE: mod-playerbots uses pre-built images and doesn't require rebuild
         ENABLED_MODULES=""
-        [ "$MODULE_PLAYERBOTS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-playerbots"
-        [ "$MODULE_AOE_LOOT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-aoe-loot"
-        [ "$MODULE_LEARN_SPELLS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-learn-spells"
-        [ "$MODULE_FIREWORKS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-fireworks-on-level"
-        [ "$MODULE_INDIVIDUAL_PROGRESSION" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-individual-progression"
-        [ "$MODULE_AHBOT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-ahbot"
-        [ "$MODULE_AUTOBALANCE" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-autobalance"
-        [ "$MODULE_TRANSMOG" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-transmog"
-        [ "$MODULE_NPC_BUFFER" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-npc-buffer"
-        [ "$MODULE_DYNAMIC_XP" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-dynamic-xp"
-        [ "$MODULE_SOLO_LFG" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-solo-lfg"
-        [ "$MODULE_1V1_ARENA" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-1v1-arena"
-        [ "$MODULE_PHASED_DUELS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-phased-duels"
-        [ "$MODULE_BREAKING_NEWS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-breaking-news-override"
-        [ "$MODULE_BOSS_ANNOUNCER" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-boss-announcer"
-        [ "$MODULE_ACCOUNT_ACHIEVEMENTS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-account-achievements"
-        [ "$MODULE_AUTO_REVIVE" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-auto-revive"
-        [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-gain-honor-guard"
-        [ "$MODULE_ELUNA" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-eluna"
-        [ "$MODULE_TIME_IS_TIME" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-time-is-time"
-        [ "$MODULE_POCKET_PORTAL" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-pocket-portal"
-        [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-random-enchants"
-        [ "$MODULE_SOLOCRAFT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-solocraft"
-        [ "$MODULE_PVP_TITLES" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-pvp-titles"
-        [ "$MODULE_NPC_BEASTMASTER" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-npc-beastmaster"
-        [ "$MODULE_NPC_ENCHANTER" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-npc-enchanter"
-        [ "$MODULE_INSTANCE_RESET" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-instance-reset"
-        [ "$MODULE_LEVEL_GRANT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-quest-count-level"
+        # [ "$MODULE_PLAYERBOTS" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-playerbots"  # Uses pre-built images
+        [ "$MODULE_AOE_LOOT" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-aoe-loot"
+        [ "$MODULE_LEARN_SPELLS" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-learn-spells"
+        [ "$MODULE_FIREWORKS" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-fireworks-on-level"
+        [ "$MODULE_INDIVIDUAL_PROGRESSION" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-individual-progression"
+        [ "$MODULE_AHBOT" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-ahbot"
+        [ "$MODULE_AUTOBALANCE" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-autobalance"
+        [ "$MODULE_TRANSMOG" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-transmog"
+        [ "$MODULE_NPC_BUFFER" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-npc-buffer"
+        [ "$MODULE_DYNAMIC_XP" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-dynamic-xp"
+        [ "$MODULE_SOLO_LFG" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-solo-lfg"
+        [ "$MODULE_1V1_ARENA" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-1v1-arena"
+        [ "$MODULE_PHASED_DUELS" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-phased-duels"
+        [ "$MODULE_BREAKING_NEWS" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-breaking-news-override"
+        [ "$MODULE_BOSS_ANNOUNCER" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-boss-announcer"
+        [ "$MODULE_ACCOUNT_ACHIEVEMENTS" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-account-achievements"
+        [ "$MODULE_AUTO_REVIVE" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-auto-revive"
+        [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-gain-honor-guard"
+        [ "$MODULE_ELUNA" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-eluna"
+        [ "$MODULE_TIME_IS_TIME" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-time-is-time"
+        [ "$MODULE_POCKET_PORTAL" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-pocket-portal"
+        [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-random-enchants"
+        [ "$MODULE_SOLOCRAFT" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-solocraft"
+        [ "$MODULE_PVP_TITLES" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-pvp-titles"
+        [ "$MODULE_NPC_BEASTMASTER" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-npc-beastmaster"
+        [ "$MODULE_NPC_ENCHANTER" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-npc-enchanter"
+        [ "$MODULE_INSTANCE_RESET" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-instance-reset"
+        [ "$MODULE_LEVEL_GRANT" = "1" ] && ENABLED_MODULES="$${ENABLED_MODULES} mod-quest-count-level"
 
-        if [ -n "$ENABLED_MODULES" ]; then
-          ENABLED_COUNT=$(echo $ENABLED_MODULES | wc -w)
-          echo "🔧 Detected $ENABLED_COUNT enabled C++ modules requiring compilation:"
-          for mod in $ENABLED_MODULES; do
-            echo "   • $mod"
+        if [ -n "$${ENABLED_MODULES}" ]; then
+          ENABLED_COUNT=$$(echo $${ENABLED_MODULES} | wc -w)
+          echo "🔧 Detected $${ENABLED_COUNT} enabled C++ modules requiring compilation:"
+          for mod in $${ENABLED_MODULES}; do
+            echo "   • $${mod}"
           done
 
-          if [ "$REBUILD_REQUIRED" = "1" ]; then
+          if [ "$${REBUILD_REQUIRED}" = "1" ]; then
             echo ""
             echo "🚨 REBUILD REQUIRED 🚨"
             echo "Module configuration has changed. To integrate C++ modules into AzerothCore:"
