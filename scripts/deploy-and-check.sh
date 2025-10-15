@@ -88,6 +88,14 @@ check_port() {
     fi
 }
 
+# Function to format seconds as MM:SS
+format_time() {
+    local total_seconds=$1
+    local minutes=$((total_seconds / 60))
+    local seconds=$((total_seconds % 60))
+    printf "%d:%02d" "$minutes" "$seconds"
+}
+
 # Function to wait for a service to be ready
 wait_for_service() {
     local service_name=$1
@@ -108,7 +116,8 @@ wait_for_service() {
         container_name="ac-authserver"
     fi
 
-    print_status "INFO" "Waiting for $service_name to be ready... (timeout: $((max_attempts * 5))s)"
+    local timeout_formatted=$(format_time $((max_attempts * 5)))
+    print_status "INFO" "Waiting for $service_name to be ready... (timeout: $timeout_formatted)"
 
     for i in $(seq 1 $max_attempts); do
         if eval "$check_command" &>/dev/null; then
@@ -128,6 +137,8 @@ wait_for_service() {
         # Show progress with more informative output
         local elapsed=$((i * 5))
         local remaining=$(( (max_attempts - i) * 5))
+        local elapsed_formatted=$(format_time $elapsed)
+        local remaining_formatted=$(format_time $remaining)
 
         if [ -n "$container_name" ]; then
             # Get container status
@@ -138,21 +149,21 @@ wait_for_service() {
             case "$service_name" in
                 "Client Data")
                     local last_log=$(docker logs "$container_name" --tail 1 2>/dev/null | head -c 80 || echo "...")
-                    printf "%s⏳%s %ss elapsed, %ss remaining | Status: %s | Latest: %s\n" "${YELLOW}" "${NC}" "${elapsed}" "${remaining}" "$status" "$last_log"
+                    printf "${YELLOW}⏳${NC} %s elapsed, %s remaining | Status: %s | Latest: %s\n" "$elapsed_formatted" "$remaining_formatted" "$status" "$last_log"
                     ;;
                 "Database Import")
-                    printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, ${remaining}s remaining | Status: $status | Importing databases...\n"
+                    printf "${YELLOW}⏳${NC} %s elapsed, %s remaining | Status: %s | Importing databases...\n" "$elapsed_formatted" "$remaining_formatted" "$status"
                     ;;
                 *)
-                    printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, ${remaining}s remaining | Status: $status"
+                    printf "${YELLOW}⏳${NC} %s elapsed, %s remaining | Status: %s" "$elapsed_formatted" "$remaining_formatted" "$status"
                     if [ "$health" != "no-health-check" ]; then
-                        printf " | Health: $health"
+                        printf " | Health: %s" "$health"
                     fi
                     printf "\n"
                     ;;
             esac
         else
-            printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, ${remaining}s remaining | Checking...\n"
+            printf "${YELLOW}⏳${NC} %s elapsed, %s remaining | Checking...\n" "$elapsed_formatted" "$remaining_formatted"
         fi
 
         sleep 5
@@ -325,7 +336,7 @@ deploy_stack() {
     fi
 
     print_status "INFO" "Step 2: Deploying services layer..."
-    docker compose --env-file "$SERVICES_ENV_FILE" -f ./docker-compose-azerothcore-services.yml up -d
+    docker compose --env-file "$SERVICES_ENV_FILE" -f ./docker-compose-azerothcore-services.yml up -d 2>&1 | grep -v "Found orphan containers"
 
     # Wait for client data extraction
     print_status "INFO" "Waiting for client data download and extraction (this may take 15-25 minutes)..."
@@ -338,7 +349,7 @@ deploy_stack() {
     # Deploy modules if enabled
     if [ "$MODULES_ENABLED" = true ]; then
         print_status "INFO" "Step 3: Deploying modules layer..."
-        docker compose --env-file "$MODULES_ENV_FILE" -f ./docker-compose-azerothcore-modules.yml up -d
+        docker compose --env-file "$MODULES_ENV_FILE" -f ./docker-compose-azerothcore-modules.yml up -d 2>&1 | grep -v "Found orphan containers"
 
         # Wait for modules to be ready
         sleep 5
