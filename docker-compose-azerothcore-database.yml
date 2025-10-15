@@ -158,6 +158,7 @@ services:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/env/dist/logs
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
+      - ./scripts/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
     environment:
       AC_DATA_DIR: "/azerothcore/data"
       AC_LOGS_DIR: "/azerothcore/logs"
@@ -176,20 +177,15 @@ services:
       DB_WORLD_NAME: ${DB_WORLD_NAME}
       DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
       CONTAINER_USER: ${CONTAINER_USER}
-    command:
+    entrypoint:
       - sh
       - -c
       - |
-        # Install curl for downloading conditional db import script (as root)
-        microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
-
         # Set ownership for config directories
         chown ${CONTAINER_USER} /azerothcore/env/dist/etc 2>/dev/null || true
 
-        # Download conditional db import script from GitHub
-        echo "📥 Downloading conditional database import script from GitHub..."
-        curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/db-import-conditional.sh -o /tmp/db-import-conditional.sh
-        chmod +x /tmp/db-import-conditional.sh
+        # Use local conditional db import script
+        echo "📥 Using local database import script..."
         /tmp/db-import-conditional.sh
     restart: "no"
 

@@ -138,7 +138,7 @@ wait_for_service() {
             case "$service_name" in
                 "Client Data")
                     local last_log=$(docker logs "$container_name" --tail 1 2>/dev/null | head -c 80 || echo "...")
-                    printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, ${remaining}s remaining | Status: $status | Latest: $last_log\n"
+                    printf "%s⏳%s %ss elapsed, %ss remaining | Status: %s | Latest: %s\n" "${YELLOW}" "${NC}" "${elapsed}" "${remaining}" "$status" "$last_log"
                     ;;
                 "Database Import")
                     printf "${YELLOW}⏳${NC} ${elapsed}s elapsed, ${remaining}s remaining | Status: $status | Importing databases...\n"
@@ -330,7 +330,7 @@ deploy_stack() {
     # Wait for client data extraction
     print_status "INFO" "Waiting for client data download and extraction (this may take 15-25 minutes)..."
     print_status "INFO" "Press Ctrl+C to exit if needed..."
-    wait_for_service "Client Data" 999999 "docker logs ac-client-data 2>/dev/null | grep -q 'Game data setup complete'"
+    wait_for_service "Client Data" 480 "docker logs ac-client-data 2>/dev/null | grep -q 'Game data setup complete'"
 
     # Wait for worldserver to be healthy
     wait_for_service "World Server" 24 "check_container_health ac-worldserver"

@@ -290,8 +290,8 @@ nuclear_cleanup() {
         cleanup_storage_preserve_backups() {
             if [ -d "./storage" ]; then
                 # Find the storage path from environment files
-                STORAGE_ROOT=$(grep "^STORAGE_ROOT=" docker-compose-azerothcore-database*.env 2>/dev/null | head -1 | cut -d'=' -f2 || echo "/nfs/containers")
-                BACKUP_PATH="${STORAGE_ROOT}/azerothcore/backups"
+                STORAGE_ROOT=$(grep "^STORAGE_ROOT=" docker-compose-azerothcore-database*.env 2>/dev/null | head -1 | cut -d'=' -f2 || echo "/nfs/azerothcore")
+                BACKUP_PATH="${STORAGE_ROOT}/backups"
 
                 # Temporarily move backups if they exist
                 if [ -d "${BACKUP_PATH}" ]; then
@@ -305,7 +305,7 @@ nuclear_cleanup() {
 
                 # Restore backups if they were preserved
                 if [ -d "/tmp/azerothcore-backups-preserve/backups" ]; then
-                    sudo mkdir -p "${STORAGE_ROOT}/azerothcore" 2>/dev/null || mkdir -p "${STORAGE_ROOT}/azerothcore"
+                    sudo mkdir -p "${STORAGE_ROOT}" 2>/dev/null || mkdir -p "${STORAGE_ROOT}"
                     sudo mv /tmp/azerothcore-backups-preserve/backups "${BACKUP_PATH}" 2>/dev/null || mv /tmp/azerothcore-backups-preserve/backups "${BACKUP_PATH}"
                     sudo rm -rf /tmp/azerothcore-backups-preserve 2>/dev/null || rm -rf /tmp/azerothcore-backups-preserve
                     print_status "SUCCESS" "Backups preserved at ${BACKUP_PATH}"

@@ -102,7 +102,7 @@ AUTH_EXTERNAL_PORT=3784
 
 # Storage location
 STORAGE_ROOT=./storage  # Local setup
-# STORAGE_ROOT=/nfs/containers  # NFS/network storage
+# STORAGE_ROOT=/nfs/azerothcore  # NFS/network storage
 
 # Database settings
 MYSQL_ROOT_PASSWORD=your-secure-password

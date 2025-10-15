@@ -4,10 +4,23 @@ set -e
 echo "🔧 Conditional AzerothCore Database Import"
 echo "========================================"
 
-# Restoration status markers
+# Restoration status markers - use writable location
 RESTORE_STATUS_DIR="/var/lib/mysql-persistent"
+MARKER_STATUS_DIR="/tmp"
 RESTORE_SUCCESS_MARKER="$RESTORE_STATUS_DIR/.restore-completed"
 RESTORE_FAILED_MARKER="$RESTORE_STATUS_DIR/.restore-failed"
+RESTORE_SUCCESS_MARKER_TMP="$MARKER_STATUS_DIR/.restore-completed"
+RESTORE_FAILED_MARKER_TMP="$MARKER_STATUS_DIR/.restore-failed"
+
+# Ensure we can write to the status directory, fallback to tmp
+mkdir -p "$RESTORE_STATUS_DIR" 2>/dev/null || true
+if ! touch "$RESTORE_STATUS_DIR/.test-write" 2>/dev/null; then
+  echo "⚠️  Cannot write to $RESTORE_STATUS_DIR, using $MARKER_STATUS_DIR for markers"
+  RESTORE_SUCCESS_MARKER="$RESTORE_SUCCESS_MARKER_TMP"
+  RESTORE_FAILED_MARKER="$RESTORE_FAILED_MARKER_TMP"
+else
+  rm -f "$RESTORE_STATUS_DIR/.test-write" 2>/dev/null || true
+fi
 
 echo "🔍 Checking restoration status..."
 
@@ -42,53 +55,36 @@ echo "🔍 Checking for backups to restore..."
 
 BACKUP_DIRS="/backups"
 
-# Function to find and validate the most recent backup
-find_latest_backup() {
-  # Priority 1: Legacy single backup file
-  if [ -f "/var/lib/mysql-persistent/backup.sql" ]; then
-    if head -10 "/var/lib/mysql-persistent/backup.sql" | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
-      echo "/var/lib/mysql-persistent/backup.sql"
-      return 0
-    fi
-  fi
 
-  # Priority 2: Modern timestamped backups
-  if [ -d "$BACKUP_DIRS" ] && [ "$(ls -A $BACKUP_DIRS)" ]; then
-    # Try daily backups first
-    if [ -d "$BACKUP_DIRS/daily" ] && [ "$(ls -A $BACKUP_DIRS/daily)" ]; then
-      local latest_daily=$(ls -1t $BACKUP_DIRS/daily | head -n 1)
-      if [ -n "$latest_daily" ] && [ -d "$BACKUP_DIRS/daily/$latest_daily" ]; then
-        # Validate backup has actual data
-        if ls "$BACKUP_DIRS/daily/$latest_daily"/*.sql.gz >/dev/null 2>&1; then
-          for backup_file in "$BACKUP_DIRS/daily/$latest_daily"/*.sql.gz; do
-            if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
-              if zcat "$backup_file" | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
-                echo "$BACKUP_DIRS/daily/$latest_daily"
-                return 0
-              fi
-            fi
-          done
-        fi
-      fi
-    fi
-  fi
-  return 1
-}
-
-# Function to restore from timestamped backup directory
+# Function to restore from backup (directory or single file)
 restore_from_directory() {
-  local backup_dir="$1"
-  echo "🔄 Restoring from backup directory: $backup_dir"
+  local backup_path="$1"
+  echo "🔄 Restoring from backup: $backup_path"
 
   local restore_success=true
 
-  # Restore each database backup
-  for backup_file in "$backup_dir"/*.sql.gz; do
+  # Handle single .sql file (legacy backup)
+  if [ -f "$backup_path" ] && [[ "$backup_path" == *.sql ]]; then
+    echo "📥 Restoring legacy backup file: $(basename "$backup_path")"
+    if timeout 300 mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} < "$backup_path"; then
+      echo "✅ Successfully restored legacy backup"
+      return 0
+    else
+      echo "❌ Failed to restore legacy backup"
+      return 1
+    fi
+  fi
+
+  # Handle directory with .sql.gz files (modern timestamped backups)
+  if [ -d "$backup_path" ]; then
+    echo "🔄 Restoring from backup directory: $backup_path"
+    # Restore each database backup
+    for backup_file in "$backup_path"/*.sql.gz; do
     if [ -f "$backup_file" ]; then
       local db_name=$(basename "$backup_file" .sql.gz)
       echo "📥 Restoring database: $db_name"
 
-      if zcat "$backup_file" | mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD}; then
+      if timeout 300 zcat "$backup_file" | mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD}; then
         echo "✅ Successfully restored $db_name"
       else
         echo "❌ Failed to restore $db_name"
@@ -97,16 +93,76 @@ restore_from_directory() {
     fi
   done
 
-  if [ "$restore_success" = true ]; then
-    return 0
-  else
-    return 1
+    if [ "$restore_success" = true ]; then
+      return 0
+    else
+      return 1
+    fi
   fi
+
+  # If we get here, backup_path is neither a valid .sql file nor a directory
+  echo "❌ Invalid backup path: $backup_path (not a .sql file or directory)"
+  return 1
 }
 
-# Attempt backup restoration
-backup_path=$(find_latest_backup)
-if [ $? -eq 0 ] && [ -n "$backup_path" ]; then
+# Attempt backup restoration with full functionality restored
+echo "🔄 Checking for backups..."
+backup_path=""
+
+# Priority 1: Legacy single backup file with content validation
+echo "🔍 Checking for legacy backup file..."
+if [ -f "/var/lib/mysql-persistent/backup.sql" ]; then
+  echo "📄 Found legacy backup file, validating content..."
+  if timeout 10 head -10 "/var/lib/mysql-persistent/backup.sql" 2>/dev/null | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+    echo "✅ Legacy backup file validated"
+    backup_path="/var/lib/mysql-persistent/backup.sql"
+  else
+    echo "⚠️  Legacy backup file exists but appears invalid or empty"
+  fi
+else
+  echo "🔍 No legacy backup found"
+fi
+
+# Priority 2: Modern timestamped backups (only if no legacy backup found)
+if [ -z "$backup_path" ] && [ -d "$BACKUP_DIRS" ]; then
+  echo "📁 Backup directory exists, checking for timestamped backups..."
+  if [ "$(ls -A $BACKUP_DIRS 2>/dev/null | wc -l)" -gt 0 ]; then
+    # Check daily backups first
+    if [ -d "$BACKUP_DIRS/daily" ] && [ "$(ls -A $BACKUP_DIRS/daily 2>/dev/null | wc -l)" -gt 0 ]; then
+      echo "📅 Found daily backup directory, finding latest..."
+      latest_daily=$(ls -1t $BACKUP_DIRS/daily 2>/dev/null | head -n 1)
+      if [ -n "$latest_daily" ] && [ -d "$BACKUP_DIRS/daily/$latest_daily" ]; then
+        echo "📦 Checking backup directory: $latest_daily"
+        # Check if directory has .sql.gz files
+        if ls "$BACKUP_DIRS/daily/$latest_daily"/*.sql.gz >/dev/null 2>&1; then
+          # Validate at least one backup file has content
+          echo "🔍 Validating backup content..."
+          for backup_file in "$BACKUP_DIRS/daily/$latest_daily"/*.sql.gz; do
+            if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
+              # Use timeout to prevent hanging on zcat
+              if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+                echo "✅ Valid backup found: $(basename $backup_file)"
+                backup_path="$BACKUP_DIRS/daily/$latest_daily"
+                break
+              fi
+            fi
+          done
+        else
+          echo "⚠️  No .sql.gz files found in backup directory"
+        fi
+      fi
+    else
+      echo "📅 No daily backup directory found"
+    fi
+  else
+    echo "📁 Backup directory is empty"
+  fi
+else
+  echo "📁 No backup directory found or legacy backup already selected"
+fi
+
+echo "🔄 Final backup path result: '$backup_path'"
+if [ -n "$backup_path" ]; then
   echo "📦 Found backup: $(basename $backup_path)"
   if restore_from_directory "$backup_path"; then
     echo "✅ Database restoration completed successfully!"
@@ -210,7 +266,12 @@ if ./dbimport; then
   echo "✅ Database import completed successfully!"
 
   # Create import completion marker
-  echo "$(date): Database import completed successfully" > "$RESTORE_STATUS_DIR/.import-completed"
+  if touch "$RESTORE_STATUS_DIR/.import-completed" 2>/dev/null; then
+    echo "$(date): Database import completed successfully" > "$RESTORE_STATUS_DIR/.import-completed"
+  else
+    echo "$(date): Database import completed successfully" > "$MARKER_STATUS_DIR/.import-completed"
+    echo "⚠️  Using temporary location for completion marker"
+  fi
 
   # Verify import was successful
   echo "🔍 Verifying import results..."
@@ -230,7 +291,12 @@ if ./dbimport; then
   fi
 else
   echo "❌ Database import failed!"
-  echo "$(date): Database import failed" > "$RESTORE_STATUS_DIR/.import-failed"
+  if touch "$RESTORE_STATUS_DIR/.import-failed" 2>/dev/null; then
+    echo "$(date): Database import failed" > "$RESTORE_STATUS_DIR/.import-failed"
+  else
+    echo "$(date): Database import failed" > "$MARKER_STATUS_DIR/.import-failed"
+    echo "⚠️  Using temporary location for failed marker"
+  fi
   exit 1
 fi
 

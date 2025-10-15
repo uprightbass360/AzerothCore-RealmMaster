@@ -167,6 +167,12 @@ display_service_status() {
     printf "${CYAN}%-20s${NC} " "$service_display_name"
     get_container_status "$container_name"
 
+    # Show image name if container exists
+    if docker ps -a --format "table {{.Names}}" | grep -q "^${container_name}$"; then
+        local image_name=$(docker inspect --format='{{.Config.Image}}' "$container_name" 2>/dev/null || echo "unknown")
+        printf "    ${CYAN}🏷️  Image: $image_name${NC}\n"
+    fi
+
     if [ "$SHOW_LOGS" = true ]; then
         show_service_logs "$container_name" "$service_display_name"
     fi
@@ -188,6 +194,45 @@ get_client_data_progress() {
         if [ -n "$last_progress" ]; then
             printf "    ${CYAN}📊 $last_progress${NC}\n"
         fi
+    fi
+}
+
+# Function to get enabled modules info
+get_enabled_modules() {
+    printf "${CYAN}%-20s${NC} " "Enabled Modules"
+
+    # Check if modules are enabled by looking for environment files
+    local modules_enabled=false
+    local module_count=0
+    local modules_list=""
+
+    if [ -f "docker-compose-azerothcore-modules.env" ] || [ -f "docker-compose-azerothcore-modules-custom.env" ]; then
+        # Check for playerbots module
+        if docker ps --format "table {{.Names}}" | grep -q "^ac-modules$"; then
+            if docker logs ac-modules 2>/dev/null | grep -q "playerbot\|playerbots"; then
+                modules_list="playerbots"
+                module_count=$((module_count + 1))
+                modules_enabled=true
+            fi
+        fi
+
+        # Check for eluna module
+        if docker ps --format "table {{.Names}}" | grep -q "^ac-eluna$"; then
+            if [ -n "$modules_list" ]; then
+                modules_list="$modules_list, eluna"
+            else
+                modules_list="eluna"
+            fi
+            module_count=$((module_count + 1))
+            modules_enabled=true
+        fi
+    fi
+
+    if [ "$modules_enabled" = true ]; then
+        printf "${GREEN}●${NC} $module_count modules active\n"
+        printf "    ${CYAN}📦 Modules: $modules_list${NC}\n"
+    else
+        printf "${YELLOW}●${NC} No modules enabled\n"
     fi
 }
 
@@ -226,6 +271,11 @@ show_status() {
         display_service_status "ac-modules" "Module Manager" "Server module management"
         display_service_status "ac-eluna" "Eluna Engine" "Lua scripting engine"
         display_service_status "ac-post-install" "Post-Install" "Configuration automation"
+        echo ""
+
+        # Enabled Modules
+        printf "${MAGENTA}=== MODULE STATUS ===${NC}\n"
+        get_enabled_modules
         echo ""
 
         # Network and ports

@@ -294,7 +294,7 @@ main() {
     else
         echo "Storage options:"
         echo "1) ./storage (local directory)"
-        echo "2) /nfs/containers (NFS mount)"
+        echo "2) /nfs/azerothcore (NFS mount)"
         echo "3) Custom path"
 
         while true; do
@@ -305,7 +305,7 @@ main() {
                     break
                     ;;
                 2)
-                    STORAGE_ROOT="/nfs/containers"
+                    STORAGE_ROOT="/nfs/azerothcore"
                     break
                     ;;
                 3)
@@ -348,7 +348,7 @@ main() {
     # Create directories if requested
     if [ "$PRE_CREATE_DIRECTORIES" = true ]; then
         print_status "INFO" "Creating storage directories..."
-        STORAGE_PATH="${STORAGE_ROOT}/azerothcore"
+        STORAGE_PATH="${STORAGE_ROOT}"
 
         # Create all required directories
         DIRECTORIES=(
