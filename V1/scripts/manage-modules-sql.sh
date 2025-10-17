@@ -1,5 +1,4 @@
 #!/bin/bash
-# ac-compose
 set -e
 
 # Function to execute SQL files for a module

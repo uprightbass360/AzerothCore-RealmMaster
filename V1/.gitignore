@@ -1,0 +1,6 @@
+data/
+backups/
+local-data-tools/
+storage/
+.claude/
+*custom.env

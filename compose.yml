@@ -1,0 +1,592 @@
+name: ${COMPOSE_PROJECT_NAME:-ac-compose}
+services:
+  # =====================
+  # Database Layer (db)
+  # =====================
+  ac-mysql:
+    profiles: ["db"]
+    image: ${MYSQL_IMAGE:-mysql:8.0}
+    container_name: ${CONTAINER_MYSQL:-ac-mysql}
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      MYSQL_ROOT_HOST: '${MYSQL_ROOT_HOST:-%}'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'no'
+      MYSQL_DATADIR: /var/lib/mysql-runtime
+      MYSQL_CHARACTER_SET: ${MYSQL_CHARACTER_SET:-utf8mb4}
+      MYSQL_COLLATION: ${MYSQL_COLLATION:-utf8mb4_unicode_ci}
+      MYSQL_MAX_CONNECTIONS: ${MYSQL_MAX_CONNECTIONS:-1000}
+      MYSQL_INNODB_BUFFER_POOL_SIZE: ${MYSQL_INNODB_BUFFER_POOL_SIZE:-256M}
+      MYSQL_INNODB_LOG_FILE_SIZE: ${MYSQL_INNODB_LOG_FILE_SIZE:-64M}
+    ports:
+      - "${MYSQL_EXTERNAL_PORT:-64306}:${MYSQL_PORT:-3306}"
+    volumes:
+      - ${STORAGE_PATH:-./storage}/mysql-data:/var/lib/mysql-persistent
+      - ${HOST_BACKUP_PATH:-${STORAGE_PATH:-./storage}/backups}:/backups
+    tmpfs:
+      - /var/lib/mysql-runtime:size=2G
+    command:
+      - mysqld
+      - --datadir=/var/lib/mysql-runtime
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=${MYSQL_CHARACTER_SET:-utf8mb4}
+      - --collation-server=${MYSQL_COLLATION:-utf8mb4_unicode_ci}
+      - --max_connections=${MYSQL_MAX_CONNECTIONS:-1000}
+      - --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-256M}
+      - --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE:-64M}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u ${MYSQL_USER:-root} -p${MYSQL_ROOT_PASSWORD:-azerothcore123} --silent || exit 1"]
+      interval: ${MYSQL_HEALTHCHECK_INTERVAL:-20s}
+      timeout: ${MYSQL_HEALTHCHECK_TIMEOUT:-15s}
+      retries: ${MYSQL_HEALTHCHECK_RETRIES:-25}
+      start_period: ${MYSQL_HEALTHCHECK_START_PERIOD:-120s}
+    networks:
+      - azerothcore
+
+  ac-db-import:
+    profiles: ["db"]
+    image: ${AC_DB_IMPORT_IMAGE:-acore/ac-wotlk-db-import:14.0.0-dev}
+    container_name: ${CONTAINER_DB_IMPORT:-ac-db-import}
+    user: "0:0"
+    depends_on:
+      ac-mysql:
+        condition: service_healthy
+    networks:
+      - azerothcore
+    volumes:
+      - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_PATH:-./storage}/logs:/azerothcore/logs
+      - ${STORAGE_PATH:-./storage}/mysql-data:/var/lib/mysql-persistent
+      - ./scripts/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
+    environment:
+      AC_DATA_DIR: "/azerothcore/data"
+      AC_LOGS_DIR: "/azerothcore/logs"
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_AUTH_NAME:-acore_auth}"
+      AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_WORLD_NAME:-acore_world}"
+      AC_CHARACTER_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_CHARACTERS_NAME:-acore_characters}"
+      AC_CLOSE_IDLE_CONNECTIONS: "false"
+      AC_UPDATES_ENABLE_DATABASES: "7"
+      AC_UPDATES_AUTO_SETUP: "1"
+      CONTAINER_MYSQL: ${CONTAINER_MYSQL:-ac-mysql}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      DB_AUTH_NAME: ${DB_AUTH_NAME:-acore_auth}
+      DB_WORLD_NAME: ${DB_WORLD_NAME:-acore_world}
+      DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME:-acore_characters}
+      CONTAINER_USER: ${CONTAINER_USER:-0:0}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        chown ${CONTAINER_USER:-0:0} /azerothcore/env/dist/etc 2>/dev/null || true
+        echo "📥 Using local database import script..."
+        /tmp/db-import-conditional.sh
+    restart: "no"
+
+  ac-db-init:
+    profiles: ["db"]
+    image: ${MYSQL_IMAGE:-mysql:8.0}
+    container_name: ${CONTAINER_DB_INIT:-ac-db-init}
+    depends_on:
+      ac-db-import:
+        condition: service_completed_successfully
+    volumes:
+      - ${STORAGE_PATH:-./storage}/mysql-data:/var/lib/mysql-persistent
+      - ${HOST_BACKUP_PATH:-${STORAGE_PATH:-./storage}/backups}:/backups
+    networks:
+      - azerothcore
+    environment:
+      MYSQL_PWD: ${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      MYSQL_HOST: ${CONTAINER_MYSQL:-ac-mysql}
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      DB_WAIT_RETRIES: ${DB_WAIT_RETRIES:-60}
+      DB_WAIT_SLEEP: ${DB_WAIT_SLEEP:-10}
+      DB_AUTH_NAME: ${DB_AUTH_NAME:-acore_auth}
+      DB_WORLD_NAME: ${DB_WORLD_NAME:-acore_world}
+      DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME:-acore_characters}
+      MYSQL_CHARACTER_SET: ${MYSQL_CHARACTER_SET:-utf8mb4}
+      MYSQL_COLLATION: ${MYSQL_COLLATION:-utf8mb4_unicode_ci}
+    command:
+      - sh
+      - -c
+      - |
+        if [ -f "/var/lib/mysql-persistent/.restore-completed" ]; then
+          echo "✅ Databases already restored from backup - init not needed"; exit 0; fi
+        if mysql -h ${MYSQL_HOST:-ac-mysql} -u${MYSQL_USER:-root} -p${MYSQL_ROOT_PASSWORD:-azerothcore123} -e "
+          SELECT COUNT(*) FROM information_schema.tables WHERE table_schema IN ('${DB_AUTH_NAME:-acore_auth}', '${DB_WORLD_NAME:-acore_world}', '${DB_CHARACTERS_NAME:-acore_characters}');" -s -N 2>/dev/null | grep -q -v '^0$'; then
+          echo "✅ Databases already populated - init not needed"; exit 0; fi
+        echo "🔧 Creating fresh AzerothCore databases..."
+        microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
+        mysql -h ${MYSQL_HOST:-ac-mysql} -u${MYSQL_USER:-root} -p${MYSQL_ROOT_PASSWORD:-azerothcore123} -e "
+        CREATE DATABASE IF NOT EXISTS ${DB_AUTH_NAME:-acore_auth} DEFAULT CHARACTER SET ${MYSQL_CHARACTER_SET:-utf8mb4} COLLATE ${MYSQL_COLLATION:-utf8mb4_unicode_ci};
+        CREATE DATABASE IF NOT EXISTS ${DB_WORLD_NAME:-acore_world} DEFAULT CHARACTER SET ${MYSQL_CHARACTER_SET:-utf8mb4} COLLATE ${MYSQL_COLLATION:-utf8mb4_unicode_ci};
+        CREATE DATABASE IF NOT EXISTS ${DB_CHARACTERS_NAME:-acore_characters} DEFAULT CHARACTER SET ${MYSQL_CHARACTER_SET:-utf8mb4} COLLATE ${MYSQL_COLLATION:-utf8mb4_unicode_ci};
+        SHOW DATABASES;" || { echo "❌ Failed to create databases"; exit 1; }
+        echo "$(date): Fresh databases created - import needed" > /var/lib/mysql-persistent/.restore-failed
+        echo "✅ Fresh databases created!"
+    restart: "no"
+
+  ac-backup:
+    profiles: ["db"]
+    image: ${MYSQL_IMAGE:-mysql:8.0}
+    container_name: ${CONTAINER_BACKUP:-ac-backup}
+    depends_on:
+      ac-db-import:
+        condition: service_completed_successfully
+    environment:
+      MYSQL_HOST: ${CONTAINER_MYSQL:-ac-mysql}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-3}
+      BACKUP_RETENTION_HOURS: ${BACKUP_RETENTION_HOURS:-6}
+      BACKUP_DAILY_TIME: ${BACKUP_DAILY_TIME:-09}
+      DB_AUTH_NAME: ${DB_AUTH_NAME:-acore_auth}
+      DB_WORLD_NAME: ${DB_WORLD_NAME:-acore_world}
+      DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME:-acore_characters}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ${HOST_BACKUP_PATH:-${STORAGE_PATH:-./storage}/backups}:/backups
+      - ./scripts:/tmp/scripts:ro
+    working_dir: /tmp
+    command:
+      - /bin/bash
+      - -c
+      - |
+        microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
+        echo "📥 Downloading backup scheduler script (local copy preferred if mounted)..."
+        if [ -f /tmp/scripts/backup-scheduler.sh ]; then
+          chmod +x /tmp/scripts/backup-scheduler.sh 2>/dev/null || true
+          bash /tmp/scripts/backup-scheduler.sh
+        else
+          echo "No local scheduler provided"
+        fi
+    restart: unless-stopped
+    networks:
+      - azerothcore
+
+  # =====================
+  # Client Data (client-data)
+  # =====================
+  ac-client-data-standard:
+    profiles: ["client-data"]
+    image: ${AC_CLIENT_DATA_IMAGE:-acore/ac-wotlk-client-data:14.0.0-dev}
+    container_name: ac-client-data
+    user: "0:0"
+    volumes:
+      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
+      - ${STORAGE_PATH:-./storage}/cache:/cache
+      - ./scripts:/tmp/scripts:ro
+    working_dir: /tmp
+    environment:
+      - CONTAINER_USER=${CONTAINER_USER:-0:0}
+      - CLIENT_DATA_VERSION=${CLIENT_DATA_VERSION:-}
+    command:
+      - sh
+      - -c
+      - |
+        if command -v apk >/dev/null 2>&1; then
+          apk add --no-cache curl unzip wget bash ca-certificates p7zip aria2 jq
+        elif command -v apt-get >/dev/null 2>&1; then
+          apt-get update && apt-get install -y --no-install-recommends curl unzip wget bash ca-certificates p7zip-full aria2 jq && rm -rf /var/lib/apt/lists/*
+        elif command -v yum >/dev/null 2>&1; then
+          yum install -y curl unzip wget bash ca-certificates p7zip aria2 jq
+        fi
+        mkdir -p /cache && chown ${CONTAINER_USER:-0:0} /cache /azerothcore/data 2>/dev/null || true
+        if [ -f /tmp/scripts/download-client-data.sh ]; then
+          chmod +x /tmp/scripts/download-client-data.sh 2>/dev/null || true
+          bash /tmp/scripts/download-client-data.sh
+        else
+          echo "No local client-data script"
+        fi
+    restart: "no"
+    networks:
+      - azerothcore
+
+  ac-client-data-playerbots:
+    profiles: ["client-data-bots"]
+    image: ${AC_CLIENT_DATA_IMAGE_PLAYERBOTS:-uprightbass360/azerothcore-wotlk-playerbots:client-data-Playerbot}
+    container_name: ac-client-data
+    user: "0:0"
+    volumes:
+      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
+      - ${STORAGE_PATH:-./storage}/cache:/cache
+      - ./scripts:/tmp/scripts:ro
+    working_dir: /tmp
+    environment:
+      - CONTAINER_USER=${CONTAINER_USER:-0:0}
+      - CLIENT_DATA_VERSION=${CLIENT_DATA_VERSION:-}
+    command:
+      - sh
+      - -c
+      - |
+        if command -v apk >/dev/null 2>&1; then
+          apk add --no-cache curl unzip wget bash ca-certificates p7zip aria2 jq
+        elif command -v apt-get >/dev/null 2>&1; then
+          apt-get update && apt-get install -y --no-install-recommends curl unzip wget bash ca-certificates p7zip-full aria2 jq && rm -rf /var/lib/apt/lists/*
+        elif command -v yum >/dev/null 2>&1; then
+          yum install -y curl unzip wget bash ca-certificates p7zip aria2 jq
+        fi
+        mkdir -p /cache && chown ${CONTAINER_USER:-0:0} /cache /azerothcore/data 2>/dev/null || true
+        if [ -f /tmp/scripts/download-client-data.sh ]; then
+          chmod +x /tmp/scripts/download-client-data.sh 2>/dev/null || true
+          bash /tmp/scripts/download-client-data.sh
+        else
+          echo "No local client-data script"
+        fi
+    restart: "no"
+    networks:
+      - azerothcore
+
+  # =====================
+  # Services - Standard (services-standard)
+  # =====================
+  ac-authserver-standard:
+    profiles: ["services-standard"]
+    image: ${AC_AUTHSERVER_IMAGE:-acore/ac-wotlk-authserver:14.0.0-dev}
+    container_name: ac-authserver
+    user: "${CONTAINER_USER:-0:0}"
+    depends_on:
+      ac-mysql:
+        condition: service_healthy
+      ac-db-import:
+        condition: service_completed_successfully
+      ac-db-init:
+        condition: service_completed_successfully
+    environment:
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_AUTH_NAME:-acore_auth}"
+      AC_UPDATES_ENABLE_DATABASES: "0"
+      AC_BIND_IP: "0.0.0.0"
+      AC_LOG_LEVEL: "1"
+      AC_LOGGER_ROOT_CONFIG: "1,Console"
+      AC_LOGGER_SERVER_CONFIG: "1,Console"
+      AC_APPENDER_CONSOLE_CONFIG: "1,2,0"
+    ports:
+      - "${AUTH_EXTERNAL_PORT:-3784}:${AUTH_PORT:-3724}"
+    restart: unless-stopped
+    networks:
+      - azerothcore
+    volumes:
+      - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
+    cap_add: ["SYS_NICE"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep '[a]uthserver' | grep -v grep || exit 1"]
+      interval: ${AUTH_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${AUTH_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${AUTH_HEALTHCHECK_RETRIES:-3}
+      start_period: ${AUTH_HEALTHCHECK_START_PERIOD:-60s}
+
+  ac-worldserver-standard:
+    profiles: ["services-standard"]
+    image: ${AC_WORLDSERVER_IMAGE:-acore/ac-wotlk-worldserver:14.0.0-dev}
+    container_name: ac-worldserver
+    user: "${CONTAINER_USER:-0:0}"
+    stdin_open: true
+    tty: true
+    depends_on:
+      - ac-authserver-standard
+      - ac-client-data-standard
+    environment:
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_AUTH_NAME:-acore_auth}"
+      AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_WORLD_NAME:-acore_world}"
+      AC_CHARACTER_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_CHARACTERS_NAME:-acore_characters}"
+      AC_UPDATES_ENABLE_DATABASES: "0"
+      AC_BIND_IP: "0.0.0.0"
+      AC_DATA_DIR: "/azerothcore/data"
+      AC_SOAP_PORT: "7878"
+      AC_PROCESS_PRIORITY: "0"
+      AC_ELUNA_ENABLED: "${AC_ELUNA_ENABLED:-1}"
+      AC_ELUNA_TRACE_BACK: "${AC_ELUNA_TRACE_BACK:-1}"
+      AC_ELUNA_AUTO_RELOAD: "${AC_ELUNA_AUTO_RELOAD:-1}"
+      AC_ELUNA_BYTECODE_CACHE: "${AC_ELUNA_BYTECODE_CACHE:-1}"
+      AC_ELUNA_SCRIPT_PATH: "${AC_ELUNA_SCRIPT_PATH:-lua_scripts}"
+      AC_ELUNA_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS:-}"
+      AC_ELUNA_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS:-}"
+      AC_ELUNA_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL:-1}"
+      PLAYERBOT_ENABLED: "${PLAYERBOT_ENABLED:-0}"
+      PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS:-40}"
+      AC_LOG_LEVEL: "2"
+    ports:
+      - "${WORLD_EXTERNAL_PORT:-8215}:${WORLD_PORT:-8085}"
+      - "${SOAP_EXTERNAL_PORT:-7778}:${SOAP_PORT:-7878}"
+    volumes:
+      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
+      - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_PATH:-./storage}/logs:/azerothcore/logs
+      - ${STORAGE_PATH:-./storage}/modules:/azerothcore/modules
+      - ${STORAGE_PATH:-./storage}/lua_scripts:/azerothcore/lua_scripts
+    restart: unless-stopped
+    networks:
+      - azerothcore
+    cap_add: ["SYS_NICE"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep '[w]orldserver' | grep -v grep || exit 1"]
+      interval: ${WORLD_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${WORLD_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${WORLD_HEALTHCHECK_RETRIES:-3}
+      start_period: ${WORLD_HEALTHCHECK_START_PERIOD:-120s}
+
+  # =====================
+  # Services - Playerbots (services-playerbots)
+  # =====================
+  ac-authserver-playerbots:
+    profiles: ["services-playerbots"]
+    image: ${AC_AUTHSERVER_IMAGE_PLAYERBOTS:-uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot}
+    container_name: ac-authserver
+    user: "${CONTAINER_USER:-0:0}"
+    depends_on:
+      ac-mysql:
+        condition: service_healthy
+      ac-db-import:
+        condition: service_completed_successfully
+      ac-db-init:
+        condition: service_completed_successfully
+    environment:
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_AUTH_NAME:-acore_auth}"
+      AC_UPDATES_ENABLE_DATABASES: "0"
+      AC_BIND_IP: "0.0.0.0"
+      AC_LOG_LEVEL: "1"
+      AC_LOGGER_ROOT_CONFIG: "1,Console"
+      AC_LOGGER_SERVER_CONFIG: "1,Console"
+      AC_APPENDER_CONSOLE_CONFIG: "1,2,0"
+    ports:
+      - "${AUTH_EXTERNAL_PORT:-3784}:${AUTH_PORT:-3724}"
+    restart: unless-stopped
+    networks:
+      - azerothcore
+    volumes:
+      - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
+    cap_add: ["SYS_NICE"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep '[a]uthserver' | grep -v grep || exit 1"]
+      interval: ${AUTH_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${AUTH_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${AUTH_HEALTHCHECK_RETRIES:-3}
+      start_period: ${AUTH_HEALTHCHECK_START_PERIOD:-60s}
+
+  ac-worldserver-playerbots:
+    profiles: ["services-playerbots"]
+    image: ${AC_WORLDSERVER_IMAGE_PLAYERBOTS:-uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot}
+    container_name: ac-worldserver
+    user: "${CONTAINER_USER:-0:0}"
+    stdin_open: true
+    tty: true
+    depends_on:
+      - ac-authserver-playerbots
+      - ac-client-data-playerbots
+    environment:
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_AUTH_NAME:-acore_auth}"
+      AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_WORLD_NAME:-acore_world}"
+      AC_CHARACTER_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_CHARACTERS_NAME:-acore_characters}"
+      AC_UPDATES_ENABLE_DATABASES: "0"
+      AC_BIND_IP: "0.0.0.0"
+      AC_DATA_DIR: "/azerothcore/data"
+      AC_SOAP_PORT: "7878"
+      AC_PROCESS_PRIORITY: "0"
+      AC_ELUNA_ENABLED: "${AC_ELUNA_ENABLED:-1}"
+      AC_ELUNA_TRACE_BACK: "${AC_ELUNA_TRACE_BACK:-1}"
+      AC_ELUNA_AUTO_RELOAD: "${AC_ELUNA_AUTO_RELOAD:-1}"
+      AC_ELUNA_BYTECODE_CACHE: "${AC_ELUNA_BYTECODE_CACHE:-1}"
+      AC_ELUNA_SCRIPT_PATH: "${AC_ELUNA_SCRIPT_PATH:-lua_scripts}"
+      AC_ELUNA_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS:-}"
+      AC_ELUNA_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS:-}"
+      AC_ELUNA_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL:-1}"
+      PLAYERBOT_ENABLED: "${PLAYERBOT_ENABLED:-1}"
+      PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS:-40}"
+      AC_LOG_LEVEL: "2"
+    ports:
+      - "${WORLD_EXTERNAL_PORT:-8215}:${WORLD_PORT:-8085}"
+      - "${SOAP_EXTERNAL_PORT:-7778}:${SOAP_PORT:-7878}"
+    volumes:
+      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
+      - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_PATH:-./storage}/logs:/azerothcore/logs
+      - ${STORAGE_PATH:-./storage}/modules:/azerothcore/modules
+      - ${STORAGE_PATH:-./storage}/lua_scripts:/azerothcore/lua_scripts
+    restart: unless-stopped
+    networks:
+      - azerothcore
+    cap_add: ["SYS_NICE"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep '[w]orldserver' | grep -v grep || exit 1"]
+      interval: ${WORLD_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${WORLD_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${WORLD_HEALTHCHECK_RETRIES:-3}
+      start_period: ${WORLD_HEALTHCHECK_START_PERIOD:-120s}
+
+  # =====================
+  # Modules & Post-install (modules)
+  # =====================
+  ac-modules:
+    profiles: ["modules"]
+    image: ${ALPINE_GIT_IMAGE:-alpine/git:latest}
+    container_name: ${CONTAINER_MODULES:-ac-modules}
+    user: "0:0"
+    depends_on:
+      ac-mysql:
+        condition: service_healthy
+      ac-db-import:
+        condition: service_completed_successfully
+      ac-db-init:
+        condition: service_completed_successfully
+    volumes:
+      - ${STORAGE_PATH:-./storage}/modules:/modules
+      - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
+      - ./scripts:/tmp/scripts:ro
+    environment:
+      - MODULE_PLAYERBOTS=${MODULE_PLAYERBOTS:-0}
+      - MODULE_AOE_LOOT=${MODULE_AOE_LOOT:-0}
+      - MODULE_LEARN_SPELLS=${MODULE_LEARN_SPELLS:-0}
+      - MODULE_FIREWORKS=${MODULE_FIREWORKS:-0}
+      - MODULE_INDIVIDUAL_PROGRESSION=${MODULE_INDIVIDUAL_PROGRESSION:-0}
+      - MODULE_AHBOT=${MODULE_AHBOT:-0}
+      - MODULE_AUTOBALANCE=${MODULE_AUTOBALANCE:-0}
+      - MODULE_TRANSMOG=${MODULE_TRANSMOG:-0}
+      - MODULE_NPC_BUFFER=${MODULE_NPC_BUFFER:-0}
+      - MODULE_DYNAMIC_XP=${MODULE_DYNAMIC_XP:-0}
+      - MODULE_SOLO_LFG=${MODULE_SOLO_LFG:-0}
+      - MODULE_1V1_ARENA=${MODULE_1V1_ARENA:-0}
+      - MODULE_PHASED_DUELS=${MODULE_PHASED_DUELS:-0}
+      - MODULE_BREAKING_NEWS=${MODULE_BREAKING_NEWS:-0}
+      - MODULE_BOSS_ANNOUNCER=${MODULE_BOSS_ANNOUNCER:-0}
+      - MODULE_ACCOUNT_ACHIEVEMENTS=${MODULE_ACCOUNT_ACHIEVEMENTS:-0}
+      - MODULE_AUTO_REVIVE=${MODULE_AUTO_REVIVE:-0}
+      - MODULE_GAIN_HONOR_GUARD=${MODULE_GAIN_HONOR_GUARD:-0}
+      - MODULE_ELUNA=${MODULE_ELUNA:-0}
+      - MODULE_ARAC=${MODULE_ARAC:-0}
+      - MODULE_TIME_IS_TIME=${MODULE_TIME_IS_TIME:-0}
+      - MODULE_POCKET_PORTAL=${MODULE_POCKET_PORTAL:-0}
+      - MODULE_RANDOM_ENCHANTS=${MODULE_RANDOM_ENCHANTS:-0}
+      - MODULE_SOLOCRAFT=${MODULE_SOLOCRAFT:-0}
+      - MODULE_PVP_TITLES=${MODULE_PVP_TITLES:-0}
+      - MODULE_NPC_BEASTMASTER=${MODULE_NPC_BEASTMASTER:-0}
+      - MODULE_NPC_ENCHANTER=${MODULE_NPC_ENCHANTER:-0}
+      - MODULE_INSTANCE_RESET=${MODULE_INSTANCE_RESET:-0}
+      - MODULE_LEVEL_GRANT=${MODULE_LEVEL_GRANT:-0}
+      - MODULE_ASSISTANT=${MODULE_ASSISTANT:-0}
+      - MODULE_REAGENT_BANK=${MODULE_REAGENT_BANK:-0}
+      - MODULE_BLACK_MARKET_AUCTION_HOUSE=${MODULE_BLACK_MARKET_AUCTION_HOUSE:-0}
+      - CONTAINER_MYSQL=${CONTAINER_MYSQL:-ac-mysql}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      - DB_AUTH_NAME=${DB_AUTH_NAME:-acore_auth}
+      - DB_WORLD_NAME=${DB_WORLD_NAME:-acore_world}
+      - DB_CHARACTERS_NAME=${DB_CHARACTERS_NAME:-acore_characters}
+      - CONTAINER_USER=${CONTAINER_USER:-0:0}
+    entrypoint: ["/bin/sh"]
+    command:
+      - -c
+      - |
+        apk add --no-cache curl bash && (chmod +x /tmp/scripts/manage-modules.sh /tmp/scripts/manage-modules-sql.sh 2>/dev/null || true) && /tmp/scripts/manage-modules.sh
+    restart: "no"
+    networks:
+      - azerothcore
+
+  ac-post-install:
+    profiles: ["modules"]
+    image: ${ALPINE_IMAGE:-alpine:latest}
+    container_name: ${CONTAINER_POST_INSTALL:-ac-post-install}
+    user: "0:0"
+    volumes:
+      - ${STORAGE_PATH:-./storage}/config:/azerothcore/config
+      - ${STORAGE_PATH:-./storage}/install-markers:/install-markers
+      - ./scripts:/tmp/scripts:ro
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+    working_dir: /tmp
+    environment:
+      MYSQL_HOST: ${CONTAINER_MYSQL:-ac-mysql}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      DB_AUTH_NAME: ${DB_AUTH_NAME:-acore_auth}
+      DB_WORLD_NAME: ${DB_WORLD_NAME:-acore_world}
+      DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME:-acore_characters}
+      STORAGE_PATH: ${STORAGE_PATH:-./storage}
+      SERVER_ADDRESS: ${SERVER_ADDRESS:-127.0.0.1}
+      REALM_PORT: ${REALM_PORT:-8215}
+      NETWORK_NAME: ${NETWORK_NAME:-azerothcore}
+      CONTAINER_AUTHSERVER: ac-authserver
+      CONTAINER_WORLDSERVER: ac-worldserver
+      CONTAINER_USER: ${CONTAINER_USER:-0:0}
+    depends_on:
+      ac-modules:
+        condition: service_completed_successfully
+      ac-mysql:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache bash curl docker-cli
+        chown ${CONTAINER_USER:-0:0} /azerothcore/config /install-markers 2>/dev/null || true
+        echo "📥 Running local auto-post-install script..."
+        (chmod +x /tmp/scripts/auto-post-install.sh 2>/dev/null || true) && bash /tmp/scripts/auto-post-install.sh
+    restart: "no"
+    networks:
+      - azerothcore
+
+  # =====================
+  # Tools (tools)
+  # =====================
+  ac-phpmyadmin:
+    profiles: ["tools"]
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: ac-phpmyadmin
+    environment:
+      PMA_HOST: ${PMA_HOST:-ac-mysql}
+      PMA_PORT: ${PMA_PORT:-3306}
+      PMA_USER: ${PMA_USER:-root}
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      PMA_ARBITRARY: ${PMA_ARBITRARY:-1}
+      PMA_ABSOLUTE_URI: ${PMA_ABSOLUTE_URI:-}
+      UPLOAD_LIMIT: ${PMA_UPLOAD_LIMIT:-300M}
+      MEMORY_LIMIT: ${PMA_MEMORY_LIMIT:-512M}
+      MAX_EXECUTION_TIME: ${PMA_MAX_EXECUTION_TIME:-600}
+    ports:
+      - "${PMA_EXTERNAL_PORT:-8081}:80"
+    restart: unless-stopped
+    networks:
+      - azerothcore
+
+  ac-keira3:
+    profiles: ["tools"]
+    image: uprightbass360/keira3:latest
+    container_name: ac-keira3
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - KEIRA_PORT=8080
+      - KEIRA_HOST=0.0.0.0
+      - KEIRA_DATABASE_HOST=${KEIRA_DATABASE_HOST:-ac-mysql}
+      - KEIRA_DATABASE_PORT=${KEIRA_DATABASE_PORT:-3306}
+      - KEIRA_DATABASE_USER=root
+      - KEIRA_DATABASE_PASSWORD=${MYSQL_ROOT_PASSWORD:-azerothcore123}
+      - KEIRA_DATABASE_NAME=${DB_WORLD_NAME:-acore_world}
+    ports:
+      - "${KEIRA3_EXTERNAL_PORT:-4201}:8080"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:8080/health || nc -z localhost 8080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - azerothcore
+
+networks:
+  azerothcore:
+    name: ${NETWORK_NAME:-azerothcore}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${NETWORK_SUBNET:-172.20.0.0/16}
+          gateway: ${NETWORK_GATEWAY:-172.20.0.1}
