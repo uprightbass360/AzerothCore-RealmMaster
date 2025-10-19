@@ -639,6 +639,12 @@ services:
       MAX_EXECUTION_TIME: ${PMA_MAX_EXECUTION_TIME:-600}
     ports:
       - "${PMA_EXTERNAL_PORT:-8081}:80"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -fsS http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
     networks:
       - azerothcore

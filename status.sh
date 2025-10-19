@@ -11,13 +11,14 @@ cd "$PROJECT_DIR"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BLUE='\033[0;34m'; NC='\033[0m'
 
-WATCH_MODE=false
+WATCH_MODE=true
 LOG_LINES=5
 SHOW_LOGS=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --watch|-w) WATCH_MODE=true; shift;;
+    --once) WATCH_MODE=false; shift;;
     --logs|-l) SHOW_LOGS=true; shift;;
     --lines) LOG_LINES="$2"; shift 2;;
     -h|--help)
@@ -25,7 +26,8 @@ while [[ $# -gt 0 ]]; do
 ac-compose realm status
 
 Usage: $0 [options]
-  -w, --watch        Continuously refresh every 3s
+  -w, --watch        Continuously refresh every 3s (default)
+      --once         Show a single snapshot then exit
   -l, --logs         Show trailing logs for each service
       --lines N      Number of log lines when --logs is used (default 5)
 EOF
@@ -195,6 +197,41 @@ module_summary(){
   fi
 }
 
+user_stats(){
+  if ! container_running "ac-mysql"; then
+    printf "USERS: %sDatabase offline%s\n" "$RED" "$NC"
+    return
+  fi
+
+  local mysql_pw db_auth db_characters
+  mysql_pw="$(read_env MYSQL_ROOT_PASSWORD azerothcore123)"
+  db_auth="$(read_env DB_AUTH_NAME acore_auth)"
+  db_characters="$(read_env DB_CHARACTERS_NAME acore_characters)"
+
+  local exec_mysql
+  exec_mysql(){
+    local database="$1" query="$2"
+    docker exec ac-mysql mysql -N -B -u root -p"${mysql_pw}" "$database" -e "$query" 2>/dev/null | tail -n1
+  }
+
+  local account_total account_online character_total last_week
+  account_total="$(exec_mysql "$db_auth" "SELECT COUNT(*) FROM account;")"
+  account_online="$(exec_mysql "$db_auth" "SELECT COUNT(*) FROM account WHERE online = 1;")"
+  character_total="$(exec_mysql "$db_characters" "SELECT COUNT(*) FROM characters;")"
+  last_week="$(exec_mysql "$db_auth" "SELECT COUNT(*) FROM account WHERE last_login >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY);")"
+
+  [[ -z "$account_total" ]] && account_total="0"
+  [[ -z "$account_online" ]] && account_online="0"
+  [[ -z "$character_total" ]] && character_total="0"
+  [[ -z "$last_week" ]] && last_week="0"
+
+  printf "USERS: Accounts %b%s%b | Online %b%s%b | Characters %b%s%b | Active 7d %b%s%b\n" \
+    "$GREEN" "$account_total" "$NC" \
+    "$YELLOW" "$account_online" "$NC" \
+    "$CYAN" "$character_total" "$NC" \
+    "$BLUE" "$last_week" "$NC"
+}
+
 ports_summary(){
   local names=("Auth" "World" "SOAP" "MySQL" "phpMyAdmin" "Keira3")
   local ports=("$AUTH_PORT" "$WORLD_PORT" "$SOAP_PORT" "$MYSQL_PORT" "$PMA_PORT" "$KEIRA_PORT")
@@ -223,8 +260,7 @@ show_realm_status_header(){
   echo -e "${BLUE}═══════════════════════════${NC}"
 }
 
-print_status(){
-  clear 2>/dev/null || printf '\033[2J\033[H'
+render_snapshot(){
   show_realm_status_header
   printf "\nTIME %s  PROJECT %s\n\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$PROJECT_NAME"
   printf "%-20s %-28s %s\n" "SERVICE" "STATE" "IMAGE"
@@ -242,16 +278,26 @@ print_status(){
   print_service ac-keira3 "Keira3"
   echo ""
   module_summary
+  user_stats
   echo ""
   echo "$(ports_summary)"
   echo "$(network_summary)"
 }
 
+display_snapshot(){
+  local tmp
+  tmp="$(mktemp)"
+  render_snapshot >"$tmp"
+  clear 2>/dev/null || printf '\033[2J\033[H'
+  cat "$tmp"
+  rm -f "$tmp"
+}
+
 if [ "$WATCH_MODE" = true ]; then
   while true; do
-    print_status
+    display_snapshot
     sleep 3
   done
 else
-  print_status
+  display_snapshot
 fi

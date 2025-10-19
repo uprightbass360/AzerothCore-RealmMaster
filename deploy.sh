@@ -148,6 +148,61 @@ modules_need_rebuild(){
   [[ -f "$sentinel" ]]
 }
 
+determine_profile(){
+  if [ -n "$TARGET_PROFILE" ]; then
+    echo "$TARGET_PROFILE"
+    return
+  fi
+
+  local module_playerbots
+  local playerbot_enabled
+  module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
+  playerbot_enabled="$(read_env PLAYERBOT_ENABLED "0")"
+  if [ "$module_playerbots" = "1" ] || [ "$playerbot_enabled" = "1" ]; then
+    echo "playerbots"
+    return
+  fi
+
+  local compile_vars=(
+    MODULE_AOE_LOOT
+    MODULE_LEARN_SPELLS
+    MODULE_FIREWORKS
+    MODULE_INDIVIDUAL_PROGRESSION
+    MODULE_AHBOT
+    MODULE_AUTOBALANCE
+    MODULE_TRANSMOG
+    MODULE_NPC_BUFFER
+    MODULE_DYNAMIC_XP
+    MODULE_SOLO_LFG
+    MODULE_1V1_ARENA
+    MODULE_PHASED_DUELS
+    MODULE_BREAKING_NEWS
+    MODULE_BOSS_ANNOUNCER
+    MODULE_ACCOUNT_ACHIEVEMENTS
+    MODULE_AUTO_REVIVE
+    MODULE_GAIN_HONOR_GUARD
+    MODULE_TIME_IS_TIME
+    MODULE_POCKET_PORTAL
+    MODULE_RANDOM_ENCHANTS
+    MODULE_SOLOCRAFT
+    MODULE_PVP_TITLES
+    MODULE_NPC_BEASTMASTER
+    MODULE_NPC_ENCHANTER
+    MODULE_INSTANCE_RESET
+    MODULE_LEVEL_GRANT
+  )
+
+  local var
+  for var in "${compile_vars[@]}"; do
+    if [ "$(read_env "$var" "0")" = "1" ]; then
+      echo "modules"
+      return
+    fi
+  done
+
+  echo "standard"
+}
+
 rebuild_source(){
   local src_dir="$1"
   local compose_file="$src_dir/docker-compose.yml"
@@ -171,16 +226,6 @@ rebuild_source(){
 }
 
 tag_module_images(){
-  local module_playerbots
-  local playerbot_enabled
-  module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
-  playerbot_enabled="$(read_env PLAYERBOT_ENABLED "0")"
-
-  if [ "$module_playerbots" = "1" ] || [ "$playerbot_enabled" = "1" ]; then
-    info "Playerbot mode detected; skipping module image tagging."
-    return
-  fi
-
   local source_world="acore/ac-wotlk-worldserver:master"
   local source_auth="acore/ac-wotlk-authserver:master"
   local target_world
@@ -214,15 +259,20 @@ stage_runtime(){
 
 tail_world_logs(){
   info "Tailing worldserver logs (Ctrl+C to stop)"
-  compose logs -f ac-worldserver
+  if ! docker logs --follow --tail "${WORLD_LOG_TAIL:-200}" ac-worldserver; then
+    warn "Worldserver logs unavailable; container may not be running."
+  fi
 }
 
 main(){
   show_deployment_header
 
   local src_dir
+  local resolved_profile
   show_step 1 5 "Setting up source repository"
   src_dir="$(ensure_source_repo)"
+
+  resolved_profile="$(determine_profile)"
 
   if [ "$KEEP_RUNNING" -ne 1 ]; then
     show_step 2 5 "Stopping runtime stack"
@@ -238,10 +288,12 @@ main(){
     else
       show_step 4 5 "Building realm with modules (this may take 15-45 minutes)"
       rebuild_source "$src_dir"
-      tag_module_images
     fi
   else
     info "No module rebuild required."
+  fi
+
+  if [ "$resolved_profile" = "modules" ]; then
     tag_module_images
   fi
 
