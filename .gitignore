@@ -1,5 +1,9 @@
 data/
 backups/
+manual-backups/
+V1/
+ImportBackup/
+source/*
 local-data-tools/
 storage/
 source/
