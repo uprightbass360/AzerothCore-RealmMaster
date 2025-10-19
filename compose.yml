@@ -22,6 +22,7 @@ services:
     volumes:
       - ${STORAGE_PATH:-./storage}/mysql-data:/var/lib/mysql-persistent
       - ${HOST_BACKUP_PATH:-${STORAGE_PATH:-./storage}/backups}:/backups
+      - ${HOST_ZONEINFO_PATH:-/usr/share/zoneinfo}:/usr/share/zoneinfo:ro
     tmpfs:
       - /var/lib/mysql-runtime:size=${MYSQL_RUNTIME_TMPFS_SIZE:-8G}
     command:
@@ -33,6 +34,7 @@ services:
       - --max_connections=${MYSQL_MAX_CONNECTIONS:-1000}
       - --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-256M}
       - --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE:-64M}
+      - --innodb-redo-log-capacity=${MYSQL_INNODB_REDO_LOG_CAPACITY:-512M}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u ${MYSQL_USER:-root} -p${MYSQL_ROOT_PASSWORD:-azerothcore123} --silent || exit 1"]

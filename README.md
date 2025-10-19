@@ -306,6 +306,12 @@ When C++ modules are enabled, the system automatically:
 3. Rebuilds server images with modules compiled in
 4. Tags custom images for deployment
 
+### MySQL Runtime Storage & Timezone Data
+
+- `MYSQL_RUNTIME_TMPFS_SIZE` controls the in-memory datadir used by the MySQL container. Increase this value if you see `No space left on device` errors inside `/var/lib/mysql-runtime`.
+- `MYSQL_INNODB_REDO_LOG_CAPACITY` increases redo log headroom (defaults to `512M`). Raise it further if logs report `log_checkpointer` lag.
+- `HOST_ZONEINFO_PATH` should point to a host directory containing timezone definitions (defaults to `/usr/share/zoneinfo`). The path is mounted read-only so the container can load timezone tables without extra image customization. Set it to a valid directory on your host if your OS stores zoneinfo elsewhere.
+
 ---
 
 ## 🔧 Troubleshooting

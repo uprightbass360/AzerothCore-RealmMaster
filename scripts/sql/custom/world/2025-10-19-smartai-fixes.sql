@@ -1,5 +1,10 @@
--- Fix SmartAI boolean parameters for action 53 (Start Waypoint) on specific creatures.
--- This script is idempotent and can be executed multiple times safely.
+
+-- Normalize Start Waypoint boolean flags that were set to invalid values (e.g., 2 instead of 0/1).
+UPDATE smart_scripts
+SET action_param1 = 1
+WHERE action_type = 53
+  AND source_type IN (0, 9)
+  AND action_param1 NOT IN (0, 1);
 
 UPDATE smart_scripts
 SET action_param1 = 1
