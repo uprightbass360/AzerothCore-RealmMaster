@@ -101,6 +101,20 @@ if [ -f "$ENV_FILE" ]; then
   set -a; source "$ENV_FILE"; set +a
 fi
 STORAGE_PATH="${STORAGE_PATH:-$STORAGE_PATH_DEFAULT}"
+PROJECT_NAME="${COMPOSE_PROJECT_NAME:-ac-compose}"
+
+remove_storage_dir(){
+  local path="$1"
+  if [ -d "$path" ]; then
+    rm -rf "$path" 2>/dev/null || sudo rm -rf "$path" 2>/dev/null || true
+  fi
+}
+
+remove_project_volumes(){
+  docker volume ls --format '{{.Name}}' \
+    | grep -E "^${PROJECT_NAME}|^azerothcore" \
+    | xargs -r docker volume rm >/dev/null 2>&1 || true
+}
 
 soft_cleanup() {
   print_status HEADER "SOFT CLEANUP - Stop runtime stack"
@@ -133,6 +147,7 @@ hard_cleanup() {
     --profile db
   )
   execute_command "Removing containers and networks" docker compose -f "$COMPOSE_FILE" "${profiles[@]}" down --remove-orphans
+  execute_command "Remove project volumes" remove_project_volumes
   # Remove straggler containers matching project name (defensive)
   execute_command "Remove stray project containers" "docker ps -a --format '{{.Names}}' | grep -E '^ac-' | xargs -r docker rm -f"
   # Remove project network if present and not automatically removed
@@ -159,6 +174,7 @@ nuclear_cleanup() {
     --profile db
   )
   execute_command "Removing containers, networks and volumes" docker compose -f "$COMPOSE_FILE" "${profiles[@]}" down --volumes --remove-orphans
+  execute_command "Remove leftover volumes" remove_project_volumes
 
   # Remove project images (server/tool images typical to this project)
   execute_command "Remove acore images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^acore/' | xargs -r docker rmi"
@@ -170,15 +186,15 @@ nuclear_cleanup() {
     print_status INFO "Preserving backups under ${STORAGE_PATH}/backups"
     TMP_PRESERVE="${PROJECT_DIR}/.preserve-backups"
     if [ -d "${STORAGE_PATH}/backups" ]; then
-      execute_command "Staging backups" "mkdir -p '${TMP_PRESERVE}' && cp -r '${STORAGE_PATH}/backups' '${TMP_PRESERVE}/'"
+      execute_command "Staging backups" "mkdir -p '${TMP_PRESERVE}' && cp -a '${STORAGE_PATH}/backups' '${TMP_PRESERVE}/'"
     fi
-    execute_command "Removing storage" "rm -rf '${STORAGE_PATH}' 2>/dev/null || true"
+    execute_command "Removing storage" "remove_storage_dir '${STORAGE_PATH}'"
     if [ -d "${TMP_PRESERVE}/backups" ]; then
       execute_command "Restoring backups" "mkdir -p '${STORAGE_PATH}' && mv '${TMP_PRESERVE}/backups' '${STORAGE_PATH}/backups' && rm -rf '${TMP_PRESERVE}'"
       print_status SUCCESS "Backups preserved at ${STORAGE_PATH}/backups"
     fi
   else
-    execute_command "Removing storage and local backups" "rm -rf '${STORAGE_PATH}' '${PROJECT_DIR}/backups' 2>/dev/null || true"
+    execute_command "Removing storage and local backups" "remove_storage_dir '${STORAGE_PATH}'; remove_storage_dir '${PROJECT_DIR}/backups'"
   fi
 
   # Optional system prune for project context

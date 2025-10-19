@@ -1,5 +1,5 @@
 #!/bin/bash
-# ac-compose condensed status view
+# ac-compose condensed realm status view
 
 set -e
 
@@ -9,7 +9,7 @@ ENV_FILE="$PROJECT_DIR/.env"
 
 cd "$PROJECT_DIR"
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BLUE='\033[0;34m'; NC='\033[0m'
 
 WATCH_MODE=false
 LOG_LINES=5
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
     --lines) LOG_LINES="$2"; shift 2;;
     -h|--help)
       cat <<EOF
-ac-compose status
+ac-compose realm status
 
 Usage: $0 [options]
   -w, --watch        Continuously refresh every 3s
@@ -68,32 +68,42 @@ container_running(){
 
 format_state(){
   local status="$1" health="$2" started="$3" exit_code="$4"
+  local started_fmt
+  if [ -n "$started" ] && [[ "$started" != "--:--:--" ]]; then
+    started_fmt="$(date -d "$started" '+%H:%M:%S' 2>/dev/null || echo "")"
+    if [ -z "$started_fmt" ]; then
+      started_fmt="$(echo "$started" | cut -c12-19)"
+    fi
+    [ -z "$started_fmt" ] && started_fmt="--:--:--"
+  else
+    started_fmt="--:--:--"
+  fi
   case "$status" in
     running)
-      local desc="running" colour="$GREEN"
+      local desc="running (since $started_fmt)" colour="$GREEN"
       if [ "$health" = "healthy" ]; then
-        desc="healthy"
+        desc="healthy (since $started_fmt)"
       elif [ "$health" = "none" ]; then
-        desc="running"
+        desc="running (since $started_fmt)"
       else
-        desc="$health"; colour="$YELLOW"
+        desc="$health (since $started_fmt)"; colour="$YELLOW"
         [ "$health" = "unhealthy" ] && colour="$RED"
       fi
-      echo -e "${colour}●${NC} ${desc} (since ${started%:*})"
+      echo "${colour}|● ${desc}"
       ;;
     exited)
       local colour="$YELLOW"
       [ "$exit_code" != "0" ] && colour="$RED"
-      echo -e "${colour}○${NC} completed"
+      echo "${colour}|○ exited (code $exit_code)"
       ;;
     restarting)
-      echo -e "${YELLOW}●${NC} restarting"
+      echo "${YELLOW}|● restarting"
       ;;
     created)
-      echo -e "${CYAN}○${NC} created"
+      echo "${CYAN}|○ created"
       ;;
     *)
-      echo -e "${RED}○${NC} $status"
+      echo "${RED}|○ $status"
       ;;
   esac
 }
@@ -131,12 +141,16 @@ print_service(){
     started="$(docker inspect --format='{{.State.StartedAt}}' "$container" 2>/dev/null | cut -c12-19 2>/dev/null || echo "--:--:--")"
     exit_code="$(docker inspect --format='{{.State.ExitCode}}' "$container" 2>/dev/null || echo "?")"
     image="$(docker inspect --format='{{.Config.Image}}' "$container" 2>/dev/null || echo "-")"
-    printf "%-20s %-28s %s\n" "$label" "$(format_state "$status" "$health" "$started" "$exit_code")" "$(short_image "$image")"
+    local state_info colour text
+    state_info="$(format_state "$status" "$health" "$started" "$exit_code")"
+    colour="${state_info%%|*}"
+    text="${state_info#*|}"
+    printf "%-20s %b%-30s%b %s\n" "$label" "$colour" "$text" "$NC" "$(short_image "$image")"
     if [ "$SHOW_LOGS" = true ]; then
       docker logs "$container" --tail "$LOG_LINES" 2>/dev/null | sed 's/^/    /' || printf "    (no logs available)\n"
     fi
   else
-    printf "%-20s ${RED}○${NC} missing               -\n" "$label"
+    printf "%-20s %b%-30s%b %s\n" "$label" "$RED" "○ missing" "$NC" "-"
   fi
 }
 
@@ -166,9 +180,15 @@ module_summary(){
   fi
 
   if container_running "ac-worldserver"; then
-    local ws_image="$(docker inspect --format='{{.Config.Image}}' ac-worldserver 2>/dev/null || echo "")"
     local playerbot="disabled"
-    [[ "$ws_image" == *playerbots* ]] && playerbot="running"
+    local module_playerbots
+    module_playerbots="$(read_env MODULE_PLAYERBOTS 0)"
+    if [ "$module_playerbots" = "1" ]; then
+      playerbot="enabled"
+      if docker inspect --format='{{.State.Status}}' ac-worldserver 2>/dev/null | grep -q "running"; then
+        playerbot="running"
+      fi
+    fi
     local eluna="disabled"
     [ "$ELUNA_ENABLED" = "1" ] && eluna="running"
     echo "RUNTIME: playerbots $playerbot | eluna $eluna"
@@ -198,9 +218,15 @@ network_summary(){
   fi
 }
 
+show_realm_status_header(){
+  echo -e "${BLUE}🏰 REALM STATUS DASHBOARD 🏰${NC}"
+  echo -e "${BLUE}═══════════════════════════${NC}"
+}
+
 print_status(){
   clear 2>/dev/null || printf '\033[2J\033[H'
-  printf "TIME %s  PROJECT %s\n\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$PROJECT_NAME"
+  show_realm_status_header
+  printf "\nTIME %s  PROJECT %s\n\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$PROJECT_NAME"
   printf "%-20s %-28s %s\n" "SERVICE" "STATE" "IMAGE"
   printf "%-20s %-28s %s\n" "--------------------" "----------------------------" "------------------------------"
   print_service ac-mysql "MySQL"

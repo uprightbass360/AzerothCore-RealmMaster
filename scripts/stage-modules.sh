@@ -4,6 +4,19 @@
 
 set -e
 
+BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+
+show_staging_header(){
+  echo -e "\n${BLUE}    ⚔️  REALM STAGING SYSTEM  ⚔️${NC}"
+  echo -e "${BLUE}    ══════════════════════════════${NC}"
+  echo -e "${BLUE}         🎯 Configuring Your Realm 🎯${NC}\n"
+}
+
+show_staging_step(){
+  local step="$1" message="$2"
+  echo -e "${YELLOW}🔧 ${step}: ${message}...${NC}"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_DIR/.env"
@@ -117,6 +130,8 @@ declare -A MODULE_REPO_MAP=(
   [MODULE_LEVEL_GRANT]=mod-quest-count-level
 )
 
+show_staging_header
+
 # Check for enabled C++ modules that require compilation
 compile_modules=()
 for key in "${!MODULE_REPO_MAP[@]}"; do
@@ -131,7 +146,8 @@ MODULE_PLAYERBOTS="$(read_env MODULE_PLAYERBOTS "0")"
 
 # Determine target profile if not specified
 if [ -z "$TARGET_PROFILE" ]; then
-  if [ ${#compile_modules[@]} -gt 0 ]; then
+  show_staging_step "Profile Detection" "Analyzing enabled modules"
+if [ ${#compile_modules[@]} -gt 0 ]; then
     echo "🔧 Detected ${#compile_modules[@]} C++ modules requiring compilation:"
     for mod in "${compile_modules[@]}"; do
       echo "   • $mod"
@@ -165,6 +181,7 @@ if [ "$TARGET_PROFILE" = "modules" ]; then
   fi
 
   if [ "$REBUILD_NEEDED" = "1" ]; then
+    show_staging_step "Source Rebuild" "Preparing custom build with modules"
     echo "🚀 Triggering source rebuild with modules..."
     if confirm "Proceed with source rebuild? (15-45 minutes)" n; then
       "$SCRIPT_DIR/rebuild-with-modules.sh" ${ASSUME_YES:+--yes}
@@ -178,6 +195,7 @@ if [ "$TARGET_PROFILE" = "modules" ]; then
 fi
 
 # Stage the services
+show_staging_step "Service Orchestration" "Preparing realm services"
 echo "🎬 Staging services with profile: services-$TARGET_PROFILE"
 
 # Stop any currently running services
@@ -199,11 +217,14 @@ case "$TARGET_PROFILE" in
 esac
 
 # Start the target profile
+show_staging_step "Realm Activation" "Bringing services online"
 echo "🟢 Starting services-$TARGET_PROFILE profile..."
 docker compose "${PROFILE_ARGS[@]}" up -d
 
 echo ""
-echo "🎉 SUCCESS! AzerothCore staged with profile: services-$TARGET_PROFILE"
+echo -e "${GREEN}⚔️ Realm staging completed successfully! ⚔️${NC}"
+echo -e "${GREEN}🏰 Profile: services-$TARGET_PROFILE${NC}"
+echo -e "${GREEN}🗡️ Your realm is ready for adventure!${NC}"
 
 # Show status
 echo ""

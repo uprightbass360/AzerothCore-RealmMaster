@@ -22,6 +22,23 @@ ok(){ echo -e "${GREEN}✅ $*${NC}"; }
 warn(){ echo -e "${YELLOW}⚠️  $*${NC}"; }
 err(){ echo -e "${RED}❌ $*${NC}"; }
 
+show_deployment_header(){
+  echo -e "\n${BLUE}    ⚔️  AZEROTHCORE REALM DEPLOYMENT  ⚔️${NC}"
+  echo -e "${BLUE}    ════════════════════════════════════${NC}"
+  echo -e "${BLUE}         🏰 Bringing Your Realm Online 🏰${NC}\n"
+}
+
+show_step(){
+  local step="$1" total="$2" message="$3"
+  echo -e "${YELLOW}🔧 Step ${step}/${total}: ${message}...${NC}"
+}
+
+show_realm_ready(){
+  echo -e "\n${GREEN}⚔️ The realm has been forged! ⚔️${NC}"
+  echo -e "${GREEN}🏰 Adventurers may now enter your world${NC}"
+  echo -e "${GREEN}🗡️ May your server bring epic adventures!${NC}\n"
+}
+
 usage(){
   cat <<EOF
 Usage: $(basename "$0") [options]
@@ -135,6 +152,10 @@ rebuild_source(){
   local src_dir="$1"
   local compose_file="$src_dir/docker-compose.yml"
   if [ ! -f "$compose_file" ]; then
+    warn "Source docker-compose.yml missing at $compose_file; running setup-source.sh"
+    (cd "$ROOT_DIR" && ./scripts/setup-source.sh)
+  fi
+  if [ ! -f "$compose_file" ]; then
     err "Source docker-compose.yml missing at $compose_file"
     return 1
   fi
@@ -187,19 +208,25 @@ tail_world_logs(){
 }
 
 main(){
+  show_deployment_header
+
   local src_dir
+  show_step 1 5 "Setting up source repository"
   src_dir="$(ensure_source_repo)"
 
   if [ "$KEEP_RUNNING" -ne 1 ]; then
+    show_step 2 5 "Stopping runtime stack"
     stop_runtime_stack
   fi
 
+  show_step 3 5 "Syncing modules"
   sync_modules
 
   if modules_need_rebuild; then
     if [ "$SKIP_REBUILD" -eq 1 ]; then
       warn "Modules require rebuild, but --skip-rebuild was provided."
     else
+      show_step 4 5 "Building realm with modules (this may take 15-45 minutes)"
       rebuild_source "$src_dir"
       tag_module_images
     fi
@@ -208,12 +235,16 @@ main(){
     tag_module_images
   fi
 
+  show_step 5 5 "Bringing your realm online"
   stage_runtime
 
+  show_realm_ready
+
   if [ "$WATCH_LOGS" -eq 1 ]; then
+    info "Watching your realm come to life (Ctrl+C to stop watching)"
     tail_world_logs
   else
-    ok "Deployment completed. Logs not tailed (--no-watch)."
+    ok "Realm deployment completed. Use './status.sh' to monitor your realm."
   fi
 }
 

@@ -1,148 +1,400 @@
-# ac-compose Deployment Guide
+# AzerothCore Docker/Compose Stack
 
-This guide walks through the end-to-end deployment workflow for the `ac-compose` stack. It focuses on the supported automation scripts, the order in which to run them, the default services/ports that come online, and the optional manual steps you may need when enabling additional modules.
+A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with enhanced modules, automated management, and production-ready features.
 
+## 🚀 Quick Start
 
-## 1. Prerequisites
+### Prerequisites
+- **Docker** and **Docker Compose v2** installed
+- **4GB+ RAM** and **20GB+ storage**
+- **Linux/macOS/WSL2** (Windows with WSL2 recommended)
 
-Before you begin:
+### ⚡ Automated Setup (Recommended)
 
-- **Docker** and **Docker Compose v2** installed on the host.
-- A POSIX-compatible shell (the provided scripts target Bash).
-- Sufficient disk space for game assets, module clones, and source builds ( ≈ 20 GB recommended).
-- Network access to GitHub (or a local mirror) for cloning AzerothCore source and modules.
+**1. Get the Code**
+```bash
+git clone https://github.com/uprightbass360/acore-compose.git
+cd acore-compose
+```
 
-> Tip: If you use a distinct user/group mapping (e.g., NFS-backed storage) the setup wizard will let you pick non-root UIDs/GIDs.
-
-
-## 2. Generate `.env` via `setup.sh`
-
-All environment configuration lives in `ac-compose/.env`. Generate or refresh it by running:
-
+**2. Run Interactive Setup**
 ```bash
 ./setup.sh
 ```
 
-The wizard will ask you to confirm:
-
-1. **Deployment type** (local, LAN, or public) – sets bind address and default ports.
-2. **Filesystem ownership** for container volumes.
-3. **Exterior ports** for Auth (default 3784), World (8215), SOAP (7778), and MySQL (64306).
-4. **Storage path** (default `./storage`) and backup retention.
-5. **Module preset**. The wizard defaults to a safe set (Solo LFG, Solocraft, Autobalance, Transmog, NPC Buffer, Learn Spells, Fireworks). Manual mode lets you toggle more modules, while warning you about unsafe or incompatible ones.
-
-### Module notes from the wizard
-
-- **AHBot** – remains disabled until the upstream module exports `Addmod_ahbotScripts()` (linker failure otherwise).
-- **Quest Count Level** – disabled: relies on deprecated ConfigMgr calls and fails to compile.
-- **Eluna** – bundled with AzerothCore by default. To disable the runtime later, edit the `AC_ELUNA_ENABLED` flag under “Eluna runtime” in `.env`.
-- Other disabled modules (Individual Progression, Breaking News, TimeIsTime, Pocket Portal, Random Enchants, NPC Beastmaster/Enchanter, Instance Reset, etc.) require additional SQL, DBC, or in-game configuration. Inline comments in `.env` describe these requirements.
-
-When the wizard completes, it writes the fully populated `.env`. Re-run `./setup.sh` anytime you want to regenerate the file; make backups first if you have custom edits.
-
-
-## 3. (Optional) Clone AzerothCore Source
-
-Certain modules require recompiling the AzerothCore core. If you plan to enable any of them, clone/update the source repository first:
-
+**3. Deploy Your Realm**
 ```bash
-./scripts/setup-source.sh
+./deploy.sh
 ```
 
-This script:
+**4. Create Admin Account**
 
-- Reads `MODULES_REBUILD_SOURCE_PATH` (default `./source/azerothcore`).
-- Clones or updates the repository (uses the Playerbot fork if `MODULE_PLAYERBOTS=1`).
-- Ensures the desired branch is checked out.
-
-You can rerun it whenever you need to pull upstream updates.
-
-
-## 4. Deploy with `deploy.sh`
-
-Use `deploy.sh` to perform a full module-aware deployment. Example:
+Once the worldserver is running:
 
 ```bash
-./deploy.sh --profile modules
+# Attach to worldserver console
+docker attach ac-worldserver
+
+# In the worldserver console, create admin account:
+account create admin yourpassword
+account set gmlevel admin 3 -1
+server info
+
+# Detach from console without stopping: Ctrl+P, Ctrl+Q
 ```
 
-What the script does:
+**5. Configure Game Client**
 
-1. Stops any running stack (unless `--keep-running` is supplied) to avoid container-name conflicts.
-2. Runs the modules manager (`docker compose --profile db --profile modules up ac-modules`) to clone missing modules, apply configuration, and execute module SQL.
-3. Rebuilds AzerothCore from source if any C++ modules are enabled. The helper also tags the freshly-built images as `acore/ac-wotlk-{worldserver,authserver}:modules-latest` for subsequent compose runs.
-4. Stages the runtime profile by invoking `./scripts/stage-modules.sh --yes`.
-5. Tails the `ac-worldserver` logs by default (omit with `--no-watch`).
+**Client Connection Instructions**:
 
-Useful flags:
+1. **Locate your WoW 3.3.5a client directory**
+2. **Edit `realmlist.wtf` file** (in your WoW client folder):
+   ```
+   set realmlist SERVER_ADDRESS
+   ```
 
-- `--profile {standard|playerbots|modules}` – force a specific services profile instead of auto-detecting by module toggles.
-- `--skip-rebuild` – skip the source rebuild even if modules demand it (not recommended unless you are certain rebuilt images already exist).
-- `--keep-running` – do not stop existing containers before syncing modules (use sparingly; stale `ac-db-import` containers can block the rebuild stage).
-- `--no-watch` – exit after staging without tailing worldserver logs.
-
-All Docker Compose commands run with the project name derived from `COMPOSE_PROJECT_NAME` in `.env` (default `ac-compose`).
-
-
-### If you prefer a health check after deployment
-
-Run:
-
+**Examples based on your server configuration**:
 ```bash
-./verify-deployment.sh --skip-deploy --quick
+# Local development
+set realmlist 127.0.0.1
+
+# LAN server
+set realmlist 192.168.1.100
+
+# Public server with custom port
+set realmlist your-domain.com 8215
+# or for IP with custom port
+set realmlist 203.0.113.100 8215
 ```
 
-This script inspects container health states and key ports without altering the running stack.
+**6. Access Your Realm**
+- **Game Server**: `your-server-ip:8215` (or port you configured)
+- **Database Admin**: http://localhost:8081 (phpMyAdmin)
+- **Game Content Editor**: http://localhost:4201 (Keira3)
 
-
-## 5. Service Inventory & Default Ports
-
-| Service / Container        | Role                                | Ports (host → container) | Profile(s)                 |
-|----------------------------|-------------------------------------|--------------------------|----------------------------|
-| `ac-mysql`                 | MySQL 8.0 database                  | `64306 → 3306`           | `db`                       |
-| `ac-db-import`             | One-shot DB import/update           | –                        | `db`                       |
-| `ac-db-init`               | Schema bootstrap helper             | –                        | `db`                       |
-| `ac-authserver`            | Auth server (no modules)            | `3784 → 3724`            | `services-standard`        |
-| `ac-worldserver`           | World server (no modules)           | `8215 → 8085`, `7778 → 7878` (SOAP) | `services-standard`        |
-| `ac-authserver-modules`    | Auth server w/ custom build         | `3784 → 3724`            | `services-modules`         |
-| `ac-worldserver-modules`   | World server w/ custom build        | `8215 → 8085`, `7778 → 7878` | `services-modules`       |
-| `ac-authserver-playerbots` | Playerbots auth image               | `3784 → 3724`            | `services-playerbots`      |
-| `ac-worldserver-playerbots`| Playerbots world image              | `8215 → 8085`, `7778 → 7878` | `services-playerbots`   |
-| `ac-client-data-standard`  | Client-data fetcher                 | –                        | `client-data`              |
-| `ac-modules`               | Module management / SQL executor    | –                        | `modules`                  |
-| `ac-phpmyadmin`            | phpMyAdmin UI                       | `8081 → 80`              | `tools`                    |
-| `ac-keira3`                | Keira3 world editor                 | `4201 → 8080`            | `tools`                    |
-
-Additional services (e.g., backups, monitoring) can be enabled by editing `.env` and the compose file as needed.
-
-
-## 6. Manual Tasks & Advanced Options
-
-- **Disabling Eluna**: Eluna’s runtime flags live near the end of `.env`. Set `AC_ELUNA_ENABLED=0` if you do not want Lua scripting loaded.
-- **Enabling experimental modules**: Edit `.env` toggles. Review the inline comments carefully—some modules require additional SQL, DBC patches, or configuration files before they work safely.
-- **Custom `.env` variants**: You can create `.env.custom` files and run `docker compose --env-file` if you maintain multiple environments. The setup wizard always writes `./.env`.
-- **Manual source rebuild**: If you prefer to rebuild without staging services, run `./scripts/rebuild-with-modules.sh --yes`. The script now stops and cleans up its own compose project to avoid lingering containers.
-- **Health check**: `verify-deployment.sh` can also be run without `--skip-deploy` to bring up a stack and verify container states using the default profiles.
-
-
-## 7. Clean-Up & Re-running
-
-- To tear down everything: `docker compose --profile db --profile services-standard --profile services-playerbots --profile services-modules --profile client-data --profile modules --profile tools down`.
-- To force the module manager to re-run (e.g., after toggling modules in `.env`): `docker compose --profile db --profile modules up --build ac-modules`.
-- Storage (logs, configs, client data) lives under `./storage` by default; remove directories carefully if you need a clean slate.
-
-
-## 8. Further Reading
-
-For a full description of individual modules, sample workflows, or deeper dive into AzerothCore internals, consult the original **V1 README** and linked documentation inside the `V1/` directory. Those docs provide module-specific CMake and SQL references you can adapt if you decide to maintain custom forks.
+✅ **That's it!** Your realm is ready with all enabled modules installed and configured.
 
 ---
 
-You now have a repeatable, script-driven deployment process:
+## 📋 What Gets Installed Automatically
 
-1. Configure once with `setup.sh`.
-2. (Optional) Pull upstream source via `scripts/setup-source.sh`.
-3. Deploy and stage via `deploy.sh`.
-4. Verify with `verify-deployment.sh` or directly inspect `docker compose ps`.
+### ✅ Core Server Components
+- **AzerothCore 3.3.5a** - WotLK server application
+- **MySQL 8.0** - Database with intelligent initialization and restoration
+- **Smart Module System** - Automated module management and source builds
+- **phpMyAdmin** - Web-based database administration
+- **Keira3** - Game content editor and developer tools
 
-Happy adventuring!
+### ✅ Available Enhanced Modules
+
+All modules are automatically downloaded, configured, and SQL scripts executed when enabled:
+
+| Module | Description | Default Status |
+|--------|-------------|----------------|
+| **mod-solo-lfg** | Solo dungeon finder access | ✅ ENABLED |
+| **mod-solocraft** | Dynamic instance scaling for solo play | ✅ ENABLED |
+| **mod-autobalance** | Automatic raid/dungeon balancing | ✅ ENABLED |
+| **mod-transmog** | Appearance customization system | ✅ ENABLED |
+| **mod-npc-buffer** | NPC buffing services | ✅ ENABLED |
+| **mod-learn-spells** | Automatic spell learning | ✅ ENABLED |
+| **mod-fireworks** | Level-up celebrations | ✅ ENABLED |
+| **mod-playerbots** | AI companions for solo play | 🔧 OPTIONAL |
+| **mod-aoe-loot** | Streamlined loot collection | 🔧 OPTIONAL |
+| **mod-individual-progression** | Personal advancement system | ❌ DISABLED* |
+| **mod-ahbot** | Auction house bot | ❌ DISABLED* |
+| **mod-dynamic-xp** | Dynamic experience rates | 🔧 OPTIONAL |
+| **mod-1v1-arena** | Solo arena battles | 🔧 OPTIONAL |
+| **mod-phased-duels** | Phased dueling system | 🔧 OPTIONAL |
+| **mod-breaking-news** | Server announcement system | ❌ DISABLED* |
+| **mod-boss-announcer** | Boss kill announcements | 🔧 OPTIONAL |
+| **mod-account-achievements** | Account-wide achievements | 🔧 OPTIONAL |
+| **mod-auto-revive** | Automatic resurrection | 🔧 OPTIONAL |
+| **mod-gain-honor-guard** | Honor from guard kills | 🔧 OPTIONAL |
+| **mod-time-is-time** | Time manipulation | ❌ DISABLED* |
+| **mod-pocket-portal** | Portal convenience | ❌ DISABLED* |
+| **mod-random-enchants** | Random item enchantments | 🔧 OPTIONAL |
+| **mod-pvp-titles** | PvP title system | 🔧 OPTIONAL |
+| **mod-npc-beastmaster** | Pet management NPC | ❌ DISABLED* |
+| **mod-npc-enchanter** | Enchanting services NPC | ❌ DISABLED* |
+| **mod-instance-reset** | Instance reset controls | ❌ DISABLED* |
+
+*\* Disabled modules require additional configuration or have compatibility issues*
+
+### ✅ Automated Configuration
+- **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import
+- **Module Integration** - Automatic source builds when C++ modules are enabled
+- **Realmlist Configuration** - Server address and port setup
+- **Service Orchestration** - Profile-based deployment (standard/playerbots/modules)
+- **Health Monitoring** - Container health checks and restart policies
+
+---
+
+## 🏗️ Architecture Overview
+
+### Container Profiles
+```
+┌─────────────────────────────────────────┐
+│               Tools Profile             │
+│  ┌─────────────┐  ┌─────────────┐      │
+│  │ phpMyAdmin  │  │   Keira3    │      │
+│  │   :8081     │  │   :4201     │      │
+│  └─────────────┘  └─────────────┘      │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│            Services Profiles            │
+│  Standard | Playerbots | Modules        │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ │
+│  │   Auth   │ │  World   │ │  Client  │ │
+│  │  :3784   │ │  :8215   │ │   Data   │ │
+│  └──────────┘ └──────────┘ └──────────┘ │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│          Database & Modules             │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ │
+│  │  MySQL   │ │  Module  │ │ DB-Init  │ │
+│  │  :64306  │ │ Manager  │ │  & Imp.  │ │
+│  └──────────┘ └──────────┘ └──────────┘ │
+└─────────────────────────────────────────┘
+```
+
+### Service Inventory & Ports
+
+| Service / Container | Role | Ports (host → container) | Profile |
+|---------------------|------|--------------------------|---------|
+| `ac-mysql` | MySQL 8.0 database | `64306 → 3306` | `db` |
+| `ac-authserver` | Auth server (standard) | `3784 → 3724` | `services-standard` |
+| `ac-worldserver` | World server (standard) | `8215 → 8085`, `7778 → 7878` | `services-standard` |
+| `ac-authserver-playerbots` | Playerbots auth | `3784 → 3724` | `services-playerbots` |
+| `ac-worldserver-playerbots` | Playerbots world | `8215 → 8085`, `7778 → 7878` | `services-playerbots` |
+| `ac-authserver-modules` | Custom build auth | `3784 → 3724` | `services-modules` |
+| `ac-worldserver-modules` | Custom build world | `8215 → 8085`, `7778 → 7878` | `services-modules` |
+| `ac-client-data` | Client data fetcher | – | `client-data` |
+| `ac-modules` | Module manager | – | `modules` |
+| `ac-phpmyadmin` | Database admin UI | `8081 → 80` | `tools` |
+| `ac-keira3` | Game content editor | `4201 → 8080` | `tools` |
+
+### Storage Structure
+```
+storage/
+├── config/           # Server configuration files
+├── data/             # Game client data (maps, DBC files)
+├── logs/             # Server log files
+├── modules/          # Module source code and configs
+├── mysql-data/       # Database files
+└── backups/          # Automated database backups
+```
+
+---
+
+## 🛠️ Management Commands
+
+### Health Monitoring
+```bash
+# Check realm status
+./status.sh
+
+# Watch services continuously
+./status.sh --watch
+
+# View service logs
+docker logs ac-worldserver -f
+docker logs ac-authserver -f
+
+# Check module management
+docker logs ac-modules --tail 50
+```
+
+### Module Management
+```bash
+# Reconfigure modules via interactive setup
+./setup.sh
+
+# Deploy with specific profile
+./deploy.sh --profile standard      # Standard AzerothCore
+./deploy.sh --profile playerbots    # Playerbots branch
+./deploy.sh --profile modules       # Custom modules build
+
+# Force source rebuild
+./scripts/rebuild-with-modules.sh --yes
+
+# Stage services without full deployment
+./scripts/stage-modules.sh
+
+# Launch management tooling (phpMyAdmin + Keira3)
+./scripts/deploy-tools.sh
+```
+
+### Database Operations
+```bash
+# Access database via phpMyAdmin
+open http://localhost:8081
+
+# Direct MySQL access
+docker exec -it ac-mysql mysql -u root -p
+
+# View available backups
+ls -la storage/backups/
+```
+
+### Deployment Verification
+```bash
+# Quick health check
+./verify-deployment.sh --skip-deploy --quick
+
+# Full deployment verification
+./verify-deployment.sh
+```
+
+---
+
+## 🔧 Advanced Configuration
+
+### Module-Specific Requirements
+
+Some modules require additional manual configuration after deployment:
+
+#### mod-playerbots
+- Requires playerbots-specific AzerothCore branch
+- Automatically handled when `MODULE_PLAYERBOTS=1` is set in setup
+
+#### mod-individual-progression
+- **Client patches required**: `patch-V.mpq` (found in module storage)
+- **Server config**: Add `EnablePlayerSettings = 1` and `DBC.EnforceItemAttributes = 0` to worldserver.conf
+
+#### mod-transmog / mod-npc-* modules
+- **NPC spawning required**: Use GM commands to spawn service NPCs
+- Example: `.npc add 190010` for transmog NPC
+
+### Profile Selection
+
+The deployment system automatically selects profiles based on enabled modules:
+
+- **services-standard**: No special modules enabled
+- **services-playerbots**: `MODULE_PLAYERBOTS=1` enabled
+- **services-modules**: Any C++ modules enabled (requires source rebuild)
+
+### Custom Builds
+
+When C++ modules are enabled, the system automatically:
+1. Clones/updates AzerothCore source
+2. Syncs enabled modules into source tree
+3. Rebuilds server images with modules compiled in
+4. Tags custom images for deployment
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**Containers failing to start**
+```bash
+# Check container logs
+docker logs <container_name>
+
+# Verify network connectivity
+docker network ls | grep azerothcore
+
+# Check port conflicts
+ss -tulpn | grep -E "(3784|8215|8081|4201)"
+```
+
+**Module not working**
+```bash
+# Check if module is enabled in environment
+grep MODULE_NAME .env
+
+# Verify module installation
+ls storage/modules/
+
+# Check module-specific configuration
+ls storage/config/mod_*.conf*
+```
+
+**Database connection issues**
+```bash
+# Verify MySQL is running and responsive
+docker exec ac-mysql mysql -u root -p -e "SELECT 1;"
+
+# Check database initialization
+docker logs ac-db-init
+docker logs ac-db-import
+```
+
+**Source rebuild issues**
+```bash
+# Check rebuild logs
+docker logs ac-modules | grep -A20 -B5 "rebuild"
+
+# Verify source path exists
+ls -la ./source/azerothcore/
+
+# Force source setup
+./scripts/setup-source.sh
+```
+
+### Getting Help
+
+1. **Check service status**: `./status.sh --watch`
+2. **Review logs**: `docker logs <service-name> -f`
+3. **Verify configuration**: Check `.env` file for proper module toggles
+4. **Clean deployment**: Stop all services and redeploy with `./deploy.sh`
+
+---
+
+## 📚 Advanced Deployment Options
+
+### Custom Environment Configuration
+```bash
+# Generate environment with custom settings
+./setup.sh
+
+# Deploy with specific options
+./deploy.sh --profile modules --no-watch --keep-running
+```
+
+### Source Management
+```bash
+# Setup/update AzerothCore source
+./scripts/setup-source.sh
+
+# Rebuild with modules (manual)
+./scripts/rebuild-with-modules.sh --yes --source ./custom/path
+```
+
+### Cleanup Operations
+```bash
+# Stop all services
+docker compose --profile db --profile services-standard \
+  --profile services-playerbots --profile services-modules \
+  --profile client-data --profile modules --profile tools down
+
+# Clean rebuild (modules changed)
+rm -f storage/modules/.requires_rebuild
+./deploy.sh --profile modules
+```
+
+---
+
+## 🎯 Next Steps After Installation
+
+1. **Test Client Connection** - Connect with WoW 3.3.5a client using configured realmlist
+2. **Create Characters** - Test account creation and character creation
+3. **Verify Modules** - Test enabled module functionality in-game
+4. **Configure Optional Features** - Enable additional modules as needed
+5. **Set Up Backups** - Configure automated backup retention policies
+
+---
+
+## 📄 Project Credits
+
+This project builds upon:
+- **[AzerothCore](https://github.com/azerothcore/azerothcore-wotlk)** - Core server application
+- **[AzerothCore Module Community](https://github.com/azerothcore)** - Enhanced gameplay modules
+
+### Key Features
+- ✅ **Fully Automated Setup** - Interactive configuration and deployment
+- ✅ **Intelligent Module System** - Automatic source builds and profile selection
+- ✅ **Production Ready** - Health checks, backups, monitoring
+- ✅ **Cross-Platform** - Docker and Podman support
+- ✅ **Comprehensive Documentation** - Clear setup and troubleshooting guides

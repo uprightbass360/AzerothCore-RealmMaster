@@ -6,8 +6,43 @@ set -e
 execute_module_sql() {
   local module_dir="$1"
   local module_name="$2"
+  local playerbots_db="${DB_PLAYERBOTS_NAME:-acore_playerbots}"
+  local character_set="${MYSQL_CHARACTER_SET:-utf8mb4}"
+  local collation="${MYSQL_COLLATION:-utf8mb4_unicode_ci}"
+  local run_sorted_sql
+
+  run_sorted_sql() {
+    local dir="$1"
+    local target_db="$2"
+    local label="$3"
+    local skip_regex="${4:-}"
+    [ -d "$dir" ] || return
+    LC_ALL=C find "$dir" -type f -name "*.sql" | sort | while read -r sql_file; do
+      local base_name
+      base_name="$(basename "$sql_file")"
+      if [ -n "$skip_regex" ] && [[ "$base_name" =~ $skip_regex ]]; then
+        echo "  Skipping ${label}: ${base_name}"
+        continue
+      fi
+      echo "  Executing ${label}: ${base_name}"
+      if mariadb --ssl=false -h "${CONTAINER_MYSQL}" -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" "${target_db}" < "$sql_file" >/dev/null 2>&1; then
+        echo "    ✅ Successfully executed ${base_name}"
+      else
+        echo "    ❌ Failed to execute $sql_file"
+      fi
+    done
+  }
 
   echo "Processing SQL scripts for $module_name..."
+
+  if [ "$module_name" = "Playerbots" ]; then
+    echo "  Ensuring database ${playerbots_db} exists..."
+    if mariadb --ssl=false -h "${CONTAINER_MYSQL}" -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS \`${playerbots_db}\` CHARACTER SET ${character_set} COLLATE ${collation};" >/dev/null 2>&1; then
+      echo "    ✅ Playerbots database ready"
+    else
+      echo "    ❌ Failed to ensure playerbots database"
+    fi
+  fi
 
   # Find and execute SQL files in the module
   if [ -d "$module_dir/data/sql" ]; then
@@ -45,6 +80,16 @@ execute_module_sql() {
           echo "    ❌ Failed to execute $sql_file"
         fi
       done
+    fi
+
+    # Execute playerbots database scripts
+    if [ "$module_name" = "Playerbots" ] && [ -d "$module_dir/data/sql/playerbots" ]; then
+      local pb_root="$module_dir/data/sql/playerbots"
+      run_sorted_sql "$pb_root/base" "$playerbots_db" "playerbots SQL"
+      run_sorted_sql "$pb_root/custom" "$playerbots_db" "playerbots SQL"
+      run_sorted_sql "$pb_root/updates" "$playerbots_db" "playerbots SQL"
+      run_sorted_sql "$pb_root/archive" "$playerbots_db" "playerbots SQL"
+      echo "  Skipping playerbots create scripts (handled by automation)"
     fi
 
     # Execute base SQL files (common pattern)

@@ -8,6 +8,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_DIR/.env"
 
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+show_rebuild_step(){
+  local step="$1" total="$2" message="$3"
+  echo -e "${YELLOW}🔧 Step ${step}/${total}: ${message}...${NC}"
+}
+
 usage(){
   cat <<EOF
 Usage: $(basename "$0") [options]
@@ -79,19 +89,11 @@ SENTINEL_FILE="$MODULES_DIR/.requires_rebuild"
 
 REBUILD_SOURCE_PATH="$SOURCE_OVERRIDE"
 if [ -z "$REBUILD_SOURCE_PATH" ]; then
-  REBUILD_SOURCE_PATH="$(read_env MODULES_REBUILD_SOURCE_PATH "")"
+  REBUILD_SOURCE_PATH="$(read_env MODULES_REBUILD_SOURCE_PATH "./source/azerothcore")"
 fi
 
 if [ -z "$REBUILD_SOURCE_PATH" ]; then
-  cat <<EOF
-❌ MODULES_REBUILD_SOURCE_PATH is not configured.
-
-Set MODULES_REBUILD_SOURCE_PATH in .env to the AzerothCore source repository
-that contains the Docker Compose file used for source builds, then rerun:
-
-  scripts/rebuild-with-modules.sh --yes
-EOF
-  exit 1
+  REBUILD_SOURCE_PATH="./source/azerothcore"
 fi
 
 if [[ "$REBUILD_SOURCE_PATH" != /* ]]; then
@@ -170,10 +172,10 @@ fi
 if [ -d "$MODULES_DIR" ]; then
   echo "🔄 Syncing enabled modules into source tree..."
   mkdir -p modules
+  find modules -mindepth 1 -maxdepth 1 -type d -name 'mod-*' -exec rm -rf {} + 2>/dev/null || true
   if command -v rsync >/dev/null 2>&1; then
-    rsync -a --delete "$MODULES_DIR"/ modules/
+    rsync -a "$MODULES_DIR"/ modules/
   else
-    rm -rf modules/*
     cp -R "$MODULES_DIR"/. modules/
   fi
 else
@@ -183,12 +185,32 @@ fi
 echo "🚀 Building AzerothCore with modules..."
 docker compose build --no-cache
 
+show_rebuild_step 5 5 "Cleaning up build containers"
 echo "🧹 Cleaning up source build containers..."
 docker compose down --remove-orphans >/dev/null 2>&1 || true
 
 popd >/dev/null
 
-rm -f "$SENTINEL_FILE" 2>/dev/null || true
+if [ -n "$SENTINEL_FILE" ]; then
+  if ! rm -f "$SENTINEL_FILE" 2>/dev/null; then
+    if [ -f "$SENTINEL_FILE" ] && command -v docker >/dev/null 2>&1; then
+      DB_IMPORT_IMAGE="$(read_env AC_DB_IMPORT_IMAGE "acore/ac-wotlk-db-import:14.0.0-dev")"
+      if docker image inspect "$DB_IMPORT_IMAGE" >/dev/null 2>&1; then
+        docker run --rm \
+          --entrypoint /bin/sh \
+          --user 0:0 \
+          -v "$MODULES_DIR":/modules \
+          "$DB_IMPORT_IMAGE" \
+          -c 'rm -f /modules/.requires_rebuild' >/dev/null 2>&1 || true
+      fi
+    fi
+  fi
+  if [ -f "$SENTINEL_FILE" ]; then
+    echo "⚠️  Unable to remove rebuild sentinel at $SENTINEL_FILE. Remove manually if rebuild detection persists."
+  fi
+fi
 
 echo ""
-echo "🎉 SUCCESS! AzerothCore source build completed with modules."
+echo -e "${GREEN}⚔️ Module build forged successfully! ⚔️${NC}"
+echo -e "${GREEN}🏰 Your custom AzerothCore images are ready${NC}"
+echo -e "${GREEN}🗡️ Time to stage your enhanced realm!${NC}"

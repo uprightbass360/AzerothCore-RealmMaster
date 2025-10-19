@@ -558,6 +558,9 @@ services:
       - DB_AUTH_NAME=${DB_AUTH_NAME:-acore_auth}
       - DB_WORLD_NAME=${DB_WORLD_NAME:-acore_world}
       - DB_CHARACTERS_NAME=${DB_CHARACTERS_NAME:-acore_characters}
+      - DB_PLAYERBOTS_NAME=${DB_PLAYERBOTS_NAME:-acore_playerbots}
+      - MYSQL_CHARACTER_SET=${MYSQL_CHARACTER_SET:-utf8mb4}
+      - MYSQL_COLLATION=${MYSQL_COLLATION:-utf8mb4_unicode_ci}
       - CONTAINER_USER=${CONTAINER_USER:-0:0}
     entrypoint: ["/bin/sh"]
     command:
@@ -587,6 +590,9 @@ services:
       DB_AUTH_NAME: ${DB_AUTH_NAME:-acore_auth}
       DB_WORLD_NAME: ${DB_WORLD_NAME:-acore_world}
       DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME:-acore_characters}
+      DB_PLAYERBOTS_NAME: ${DB_PLAYERBOTS_NAME:-acore_playerbots}
+      MYSQL_CHARACTER_SET: ${MYSQL_CHARACTER_SET:-utf8mb4}
+      MYSQL_COLLATION: ${MYSQL_COLLATION:-utf8mb4_unicode_ci}
       STORAGE_PATH: ${STORAGE_PATH:-./storage}
       SERVER_ADDRESS: ${SERVER_ADDRESS:-127.0.0.1}
       REALM_PORT: ${REALM_PORT:-8215}
