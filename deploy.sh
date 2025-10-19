@@ -17,26 +17,26 @@ KEEP_RUNNING=0
 SKIP_REBUILD=0
 
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
-info(){ echo -e "${BLUE}ℹ️  $*${NC}"; }
-ok(){ echo -e "${GREEN}✅ $*${NC}"; }
-warn(){ echo -e "${YELLOW}⚠️  $*${NC}"; }
-err(){ echo -e "${RED}❌ $*${NC}"; }
+info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
+ok(){ printf '%b\n' "${GREEN}✅ $*${NC}"; }
+warn(){ printf '%b\n' "${YELLOW}⚠️  $*${NC}"; }
+err(){ printf '%b\n' "${RED}❌ $*${NC}"; }
 
 show_deployment_header(){
-  echo -e "\n${BLUE}    ⚔️  AZEROTHCORE REALM DEPLOYMENT  ⚔️${NC}"
-  echo -e "${BLUE}    ════════════════════════════════════${NC}"
-  echo -e "${BLUE}         🏰 Bringing Your Realm Online 🏰${NC}\n"
+  printf '\n%b\n' "${BLUE}⚔️  AZEROTHCORE REALM DEPLOYMENT  ⚔️${NC}"
+  printf '%b\n' "${BLUE}════════════════════════════════════════${NC}"
+  printf '%b\n\n' "${BLUE}🏰 Bringing Your Realm Online 🏰${NC}"
 }
 
 show_step(){
   local step="$1" total="$2" message="$3"
-  echo -e "${YELLOW}🔧 Step ${step}/${total}: ${message}...${NC}"
+  printf '%b\n' "${YELLOW}🔧 Step ${step}/${total}: ${message}...${NC}"
 }
 
 show_realm_ready(){
-  echo -e "\n${GREEN}⚔️ The realm has been forged! ⚔️${NC}"
-  echo -e "${GREEN}🏰 Adventurers may now enter your world${NC}"
-  echo -e "${GREEN}🗡️ May your server bring epic adventures!${NC}\n"
+  printf '\n%b\n' "${GREEN}⚔️ The realm has been forged! ⚔️${NC}"
+  printf '%b\n' "${GREEN}🏰 Adventurers may now enter your world${NC}"
+  printf '%b\n\n' "${GREEN}🗡️ May your server bring epic adventures!${NC}"
 }
 
 usage(){
@@ -171,6 +171,16 @@ rebuild_source(){
 }
 
 tag_module_images(){
+  local module_playerbots
+  local playerbot_enabled
+  module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
+  playerbot_enabled="$(read_env PLAYERBOT_ENABLED "0")"
+
+  if [ "$module_playerbots" = "1" ] || [ "$playerbot_enabled" = "1" ]; then
+    info "Playerbot mode detected; skipping module image tagging."
+    return
+  fi
+
   local source_world="acore/ac-wotlk-worldserver:master"
   local source_auth="acore/ac-wotlk-authserver:master"
   local target_world

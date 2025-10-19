@@ -7,14 +7,14 @@ set -e
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
 show_staging_header(){
-  echo -e "\n${BLUE}    ⚔️  REALM STAGING SYSTEM  ⚔️${NC}"
-  echo -e "${BLUE}    ══════════════════════════════${NC}"
-  echo -e "${BLUE}         🎯 Configuring Your Realm 🎯${NC}\n"
+  printf '\n%b\n' "${BLUE}⚔️  REALM STAGING SYSTEM  ⚔️${NC}"
+  printf '%b\n' "${BLUE}══════════════════════════════${NC}"
+  printf '%b\n\n' "${BLUE}🎯 Configuring Your Realm 🎯${NC}"
 }
 
 show_staging_step(){
   local step="$1" message="$2"
-  echo -e "${YELLOW}🔧 ${step}: ${message}...${NC}"
+  printf '%b\n' "${YELLOW}🔧 ${step}: ${message}...${NC}"
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -147,16 +147,19 @@ MODULE_PLAYERBOTS="$(read_env MODULE_PLAYERBOTS "0")"
 # Determine target profile if not specified
 if [ -z "$TARGET_PROFILE" ]; then
   show_staging_step "Profile Detection" "Analyzing enabled modules"
-if [ ${#compile_modules[@]} -gt 0 ]; then
+  if [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
+    TARGET_PROFILE="playerbots"
+    echo "🤖 Playerbot profile enabled"
+    if [ ${#compile_modules[@]} -gt 0 ]; then
+      echo "   ⚠️  Detected ${#compile_modules[@]} C++ modules. Ensure your playerbot images include these features."
+    fi
+  elif [ ${#compile_modules[@]} -gt 0 ]; then
     echo "🔧 Detected ${#compile_modules[@]} C++ modules requiring compilation:"
     for mod in "${compile_modules[@]}"; do
       echo "   • $mod"
     done
     TARGET_PROFILE="modules"
     echo "🧩 Using modules profile for custom source build"
-  elif [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
-    TARGET_PROFILE="playerbots"
-    echo "🤖 Playerbot profile enabled"
   else
     TARGET_PROFILE="standard"
     echo "✅ No special modules detected - using standard profile"
@@ -204,12 +207,13 @@ docker compose \
   --profile services-standard \
   --profile services-playerbots \
   --profile services-modules \
+  --profile tools \
   --profile client-data \
   --profile client-data-bots \
   down 2>/dev/null || true
 
 # Build list of profiles to start
-PROFILE_ARGS=(--profile "services-$TARGET_PROFILE" --profile db --profile modules)
+PROFILE_ARGS=(--profile "services-$TARGET_PROFILE" --profile db --profile modules --profile tools)
 case "$TARGET_PROFILE" in
   standard) PROFILE_ARGS+=(--profile client-data) ;;
   playerbots) PROFILE_ARGS+=(--profile client-data-bots) ;;
@@ -221,12 +225,11 @@ show_staging_step "Realm Activation" "Bringing services online"
 echo "🟢 Starting services-$TARGET_PROFILE profile..."
 docker compose "${PROFILE_ARGS[@]}" up -d
 
-echo ""
-echo -e "${GREEN}⚔️ Realm staging completed successfully! ⚔️${NC}"
-echo -e "${GREEN}🏰 Profile: services-$TARGET_PROFILE${NC}"
-echo -e "${GREEN}🗡️ Your realm is ready for adventure!${NC}"
+printf '\n%b\n' "${GREEN}⚔️ Realm staging completed successfully! ⚔️${NC}"
+printf '%b\n' "${GREEN}🏰 Profile: services-$TARGET_PROFILE${NC}"
+printf '%b\n' "${GREEN}🗡️ Your realm is ready for adventure!${NC}"
 
 # Show status
-echo ""
+printf '\n'
 echo "📊 Service Status:"
-docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" | grep -E "(ac-worldserver|ac-authserver|NAME)" || true
+docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" | grep -E "(ac-worldserver|ac-authserver|ac-phpmyadmin|ac-keira3|NAME)" || true
