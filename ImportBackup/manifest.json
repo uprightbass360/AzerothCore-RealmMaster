@@ -1,7 +1,0 @@
-{
-  "generated_at": "2025-10-19T14:18:18-04:00",
-  "databases": {
-    "auth": "acore_auth",
-    "characters": "acore_characters"
-  }
-}
