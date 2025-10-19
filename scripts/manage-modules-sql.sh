@@ -1,6 +1,29 @@
 #!/bin/bash
 # ac-compose
 set -e
+trap 'echo "    ❌ SQL helper error (line ${LINENO}): ${BASH_COMMAND}" >&2' ERR
+
+CUSTOM_SQL_ROOT="/tmp/scripts/sql/custom"
+ALT_CUSTOM_SQL_ROOT="/scripts/sql/custom"
+
+run_custom_sql_group(){
+  local subdir="$1" target_db="$2" label="$3"
+  local dir="${CUSTOM_SQL_ROOT}/${subdir}"
+  if [ ! -d "$dir" ] && [ -d "${ALT_CUSTOM_SQL_ROOT}/${subdir}" ]; then
+    dir="${ALT_CUSTOM_SQL_ROOT}/${subdir}"
+  fi
+  [ -d "$dir" ] || return 0
+  LC_ALL=C find "$dir" -type f -name "*.sql" | sort | while read -r sql_file; do
+    local base_name
+    base_name="$(basename "$sql_file")"
+    echo "  Executing ${label}: ${base_name}"
+    if mariadb --ssl=false -h "${CONTAINER_MYSQL}" -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" "${target_db}" < "$sql_file" >/dev/null 2>&1; then
+      echo "    ✅ Successfully executed ${base_name}"
+    else
+      echo "    ❌ Failed to execute $sql_file"
+    fi
+  done || true
+}
 
 # Function to execute SQL files for a module
 execute_module_sql() {
@@ -30,7 +53,7 @@ execute_module_sql() {
       else
         echo "    ❌ Failed to execute $sql_file"
       fi
-    done
+    done || true
   }
 
   echo "Processing SQL scripts for $module_name..."
@@ -57,6 +80,7 @@ execute_module_sql() {
         fi
       done
     fi
+    run_sorted_sql "$module_dir/data/sql/db-world" "${DB_WORLD_NAME}" "world SQL"
 
     # Execute auth database scripts
     if [ -d "$module_dir/data/sql/auth" ]; then
@@ -69,6 +93,7 @@ execute_module_sql() {
         fi
       done
     fi
+    run_sorted_sql "$module_dir/data/sql/db-auth" "${DB_AUTH_NAME}" "auth SQL"
 
     # Execute character database scripts
     if [ -d "$module_dir/data/sql/characters" ]; then
@@ -81,6 +106,7 @@ execute_module_sql() {
         fi
       done
     fi
+    run_sorted_sql "$module_dir/data/sql/db-characters" "${DB_CHARACTERS_NAME}" "characters SQL"
 
     # Execute playerbots database scripts
     if [ "$module_name" = "Playerbots" ] && [ -d "$module_dir/data/sql/playerbots" ]; then
@@ -106,6 +132,8 @@ execute_module_sql() {
       mysql -h "${CONTAINER_MYSQL}" -P 3306 -u root -p"${MYSQL_ROOT_PASSWORD}" "${DB_WORLD_NAME}" < "$sql_file" 2>/dev/null || echo "    Warning: Failed to execute $sql_file"
     done
   fi
+
+  return 0
 }
 
 # Main function to execute SQL for all enabled modules
@@ -240,4 +268,10 @@ execute_module_sql_scripts() {
   if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && [ -d "mod-black-market" ]; then
     execute_module_sql "mod-black-market" "Black Market"
   fi
+
+  run_custom_sql_group world "${DB_WORLD_NAME}" "custom world SQL"
+  run_custom_sql_group auth "${DB_AUTH_NAME}" "custom auth SQL"
+  run_custom_sql_group characters "${DB_CHARACTERS_NAME}" "custom characters SQL"
+
+  return 0
 }

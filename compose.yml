@@ -23,7 +23,7 @@ services:
       - ${STORAGE_PATH:-./storage}/mysql-data:/var/lib/mysql-persistent
       - ${HOST_BACKUP_PATH:-${STORAGE_PATH:-./storage}/backups}:/backups
     tmpfs:
-      - /var/lib/mysql-runtime:size=2G
+      - /var/lib/mysql-runtime:size=${MYSQL_RUNTIME_TMPFS_SIZE:-8G}
     command:
       - mysqld
       - --datadir=/var/lib/mysql-runtime

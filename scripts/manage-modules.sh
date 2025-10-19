@@ -547,6 +547,13 @@ for module_dir in mod-*; do
   fi
 done
 
+if [ "$MODULE_AUTOBALANCE" = "1" ]; then
+  if [ -f "/azerothcore/env/dist/etc/AutoBalance.conf.dist" ]; then
+    sed -i 's/^AutoBalance\.LevelScaling\.EndGameBoost.*/AutoBalance.LevelScaling.EndGameBoost = false    # disabled pending proper implementation/' \
+      /azerothcore/env/dist/etc/AutoBalance.conf.dist || true
+  fi
+fi
+
 # Load SQL runner if present
 if [ -f "/scripts/manage-modules-sql.sh" ]; then
   . /scripts/manage-modules-sql.sh
@@ -557,10 +564,15 @@ else
 fi
 
 # Execute SQLs for enabled modules (via helper)
+SQL_EXECUTION_FAILED=0
 if declare -f execute_module_sql_scripts >/dev/null 2>&1; then
   echo 'Executing module SQL scripts...'
-  execute_module_sql_scripts
-  echo 'SQL execution complete.'
+  if execute_module_sql_scripts; then
+    echo 'SQL execution complete.'
+  else
+    echo '⚠️  Module SQL scripts reported errors'
+    SQL_EXECUTION_FAILED=1
+  fi
 fi
 
 # Module state tracking and rebuild logic
@@ -653,6 +665,10 @@ fi
 echo 'Module management complete.'
 
 REBUILD_SENTINEL="/modules/.requires_rebuild"
+if [ "$SQL_EXECUTION_FAILED" = "1" ]; then
+  echo "⚠️  SQL execution encountered issues; review logs above."
+fi
+
 if [ "$REBUILD_REQUIRED" = "1" ] && [ -n "$ENABLED_MODULES" ]; then
   echo "$ENABLED_MODULES" > "$REBUILD_SENTINEL"
 else
