@@ -19,22 +19,135 @@ validate_ip(){ [[ $1 =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; }
 validate_port(){ [[ $1 =~ ^[0-9]+$ ]] && [ $1 -ge 1 ] && [ $1 -le 65535 ]; }
 validate_number(){ [[ $1 =~ ^[0-9]+$ ]]; }
 
+NON_INTERACTIVE=0
+
 ask(){
   local prompt="$1"; local def="$2"; local validator="$3"; local v
   while true; do
-    if [ -n "$def" ]; then
-      read -p "$(echo -e "${YELLOW}🔧 ${prompt} [${def}]: ${NC}")" v; v=${v:-$def}
+    if [ "$NON_INTERACTIVE" = "1" ]; then
+      v="$def"
     else
-      read -p "$(echo -e "${YELLOW}🔧 ${prompt}: ${NC}")" v
+      if [ -n "$def" ]; then
+        read -p "$(echo -e "${YELLOW}🔧 ${prompt} [${def}]: ${NC}")" v; v=${v:-$def}
+      else
+        read -p "$(echo -e "${YELLOW}🔧 ${prompt}: ${NC}")" v
+      fi
     fi
-    if [ -z "$validator" ] || $validator "$v"; then echo "$v"; return 0; fi
+    if [ -z "$v" ] && [ "$NON_INTERACTIVE" = "1" ]; then
+      say ERROR "Non-interactive mode requires a value for '${prompt}'."
+      exit 1
+    fi
+    if [ -z "$validator" ] || $validator "$v"; then
+      echo "$v"
+      return 0
+    fi
+    if [ "$NON_INTERACTIVE" = "1" ]; then
+      say ERROR "Invalid value '${v}' provided for '${prompt}' in non-interactive mode."
+      exit 1
+    fi
     say ERROR "Invalid input. Please try again."
   done
 }
 
-ask_yn(){ local p="$1"; local d="$2"; local v; while true; do
-  if [ "$d" = "y" ]; then read -p "$(echo -e "${YELLOW}🔧 ${p} [Y/n]: ${NC}")" v; v=${v:-y}; else read -p "$(echo -e "${YELLOW}🔧 ${p} [y/N]: ${NC}")" v; v=${v:-n}; fi
-  case "$v" in [Yy]*) echo 1; return 0;; [Nn]*) echo 0; return 0;; esac; say ERROR "Please answer y or n"; done; }
+ask_yn(){
+  local p="$1"; local d="$2"; local v
+  if [ "$NON_INTERACTIVE" = "1" ]; then
+    if [ "$d" = "y" ]; then
+      echo 1
+    else
+      echo 0
+    fi
+    return 0
+  fi
+  while true; do
+    if [ "$d" = "y" ]; then
+      read -p "$(echo -e "${YELLOW}🔧 ${p} [Y/n]: ${NC}")" v; v=${v:-y}
+    else
+      read -p "$(echo -e "${YELLOW}🔧 ${p} [y/N]: ${NC}")" v; v=${v:-n}
+    fi
+    case "$v" in
+      [Yy]*) echo 1; return 0;;
+      [Nn]*) echo 0; return 0;;
+    esac
+    say ERROR "Please answer y or n"
+  done
+}
+
+normalize_module_name(){
+  local mod="$1"
+  mod="${mod^^}"
+  mod="${mod//-/_}"
+  mod="${mod//./_}"
+  mod="${mod// /_}"
+  if [[ "$mod" = MOD_* ]]; then
+    mod="${mod#MOD_}"
+  fi
+  if [[ "$mod" != MODULE_* ]]; then
+    mod="MODULE_${mod}"
+  fi
+  echo "$mod"
+}
+
+declare -A MODULE_ENABLE_SET=()
+
+KNOWN_MODULE_VARS=(
+  MODULE_PLAYERBOTS
+  MODULE_AOE_LOOT
+  MODULE_LEARN_SPELLS
+  MODULE_FIREWORKS
+  MODULE_INDIVIDUAL_PROGRESSION
+  MODULE_AHBOT
+  MODULE_AUTOBALANCE
+  MODULE_TRANSMOG
+  MODULE_NPC_BUFFER
+  MODULE_DYNAMIC_XP
+  MODULE_SOLO_LFG
+  MODULE_1V1_ARENA
+  MODULE_PHASED_DUELS
+  MODULE_BREAKING_NEWS
+  MODULE_BOSS_ANNOUNCER
+  MODULE_ACCOUNT_ACHIEVEMENTS
+  MODULE_AUTO_REVIVE
+  MODULE_GAIN_HONOR_GUARD
+  MODULE_ARAC
+  MODULE_TIME_IS_TIME
+  MODULE_POCKET_PORTAL
+  MODULE_RANDOM_ENCHANTS
+  MODULE_SOLOCRAFT
+  MODULE_PVP_TITLES
+  MODULE_NPC_BEASTMASTER
+  MODULE_NPC_ENCHANTER
+  MODULE_INSTANCE_RESET
+  MODULE_LEVEL_GRANT
+  MODULE_CHALLENGE_MODES
+  MODULE_OLLAMA_CHAT
+  MODULE_SKELETON_MODULE
+  MODULE_BG_SLAVERYVALLEY
+  MODULE_ELUNA_TS
+  MODULE_PLAYER_BOT_LEVEL_BRACKETS
+  MODULE_STATBOOSTER
+  MODULE_DUNGEON_RESPAWN
+  MODULE_AZEROTHSHARD
+  MODULE_WORGOBLIN
+  MODULE_ASSISTANT
+  MODULE_REAGENT_BANK
+  MODULE_BLACK_MARKET_AUCTION_HOUSE
+)
+
+declare -A KNOWN_MODULE_LOOKUP=()
+for __mod in "${KNOWN_MODULE_VARS[@]}"; do
+  KNOWN_MODULE_LOOKUP["$__mod"]=1
+done
+unset __mod
+
+module_default(){
+  local key="$1"
+  if [ "${MODULE_ENABLE_SET[$key]}" = "1" ]; then
+    echo y
+  else
+    echo n
+  fi
+}
 
 show_wow_header(){
   echo -e "\n${BLUE}    ⚔️  AZEROTHCORE DEPLOYMENT SYSTEM  ⚔️${NC}"
@@ -49,12 +162,34 @@ show_realm_configured(){
 }
 
 main(){
-  # Basic arg handling for help
-  if [[ $# -gt 0 ]]; then
+  local CLI_DEPLOYMENT_TYPE=""
+  local CLI_PERMISSION_SCHEME=""
+  local CLI_CUSTOM_UID=""
+  local CLI_CUSTOM_GID=""
+  local CLI_SERVER_ADDRESS=""
+  local CLI_REALM_PORT=""
+  local CLI_AUTH_PORT=""
+  local CLI_SOAP_PORT=""
+  local CLI_MYSQL_PORT=""
+  local CLI_MYSQL_PASSWORD=""
+  local CLI_STORAGE_PATH=""
+  local CLI_BACKUP_DAYS=""
+  local CLI_BACKUP_HOURS=""
+  local CLI_BACKUP_TIME=""
+  local CLI_MODULE_MODE=""
+  local CLI_PLAYERBOT_ENABLED=""
+  local CLI_PLAYERBOT_MAX=""
+  local CLI_AUTO_REBUILD=0
+  local CLI_RUN_REBUILD=0
+  local CLI_MODULES_SOURCE=""
+  local FORCE_OVERWRITE=0
+  local CLI_ENABLE_MODULES_RAW=()
+
+  while [[ $# -gt 0 ]]; do
     case "$1" in
       -h|--help)
         cat <<'EOF'
-Usage: ./setup.sh
+Usage: ./setup.sh [options]
 
 Description:
   Interactive wizard that generates ac-compose/.env for the
@@ -62,11 +197,182 @@ Description:
   MySQL credentials, backup retention, and module presets or manual
   toggles.
 
-Notes:
-  - The generated .env is read automatically by docker compose.
-  - Run deploy with: deploy.sh or docker compose --profile ... up -d
+Options:
+  -h, --help                      Show this help message and exit
+  --non-interactive               Use defaults/arguments without prompting
+  --deployment-type TYPE          Deployment type: local, lan, or public
+  --permission-scheme SCHEME      Permissions: local, nfs, or custom
+  --custom-uid UID                UID when --permission-scheme=custom
+  --custom-gid GID                GID when --permission-scheme=custom
+  --server-address ADDRESS        Realm/public address
+  --realm-port PORT               Client connection port (default 8215)
+  --auth-port PORT                Authserver external port (default 3784)
+  --soap-port PORT                SOAP external port (default 7778)
+  --mysql-port PORT               MySQL external port (default 64306)
+  --mysql-password PASSWORD       MySQL root password (default azerothcore123)
+  --storage-path PATH             Storage directory
+  --backup-retention-days N       Daily backup retention (default 3)
+  --backup-retention-hours N      Hourly backup retention (default 6)
+  --backup-daily-time HH          Daily backup hour 00-23 (default 09)
+  --module-mode MODE              suggested, playerbots, manual, or none
+  --enable-modules LIST           Comma-separated module list (MODULE_* or shorthand)
+  --playerbot-enabled 0|1         Override PLAYERBOT_ENABLED flag
+  --playerbot-max-bots N          Override PLAYERBOT_MAX_BOTS value
+  --auto-rebuild-on-deploy        Enable automatic rebuild during deploys
+  --run-rebuild-now               Trigger module rebuild after setup completes
+  --modules-rebuild-source PATH   Source checkout used for module rebuilds
+  --force                         Overwrite existing .env without prompting
 EOF
         exit 0
+        ;;
+      --non-interactive)
+        NON_INTERACTIVE=1
+        shift
+        ;;
+      --deployment-type)
+        [[ $# -ge 2 ]] || { say ERROR "--deployment-type requires a value"; exit 1; }
+        CLI_DEPLOYMENT_TYPE="$2"; shift 2
+        ;;
+      --deployment-type=*)
+        CLI_DEPLOYMENT_TYPE="${1#*=}"; shift
+        ;;
+      --permission-scheme)
+        [[ $# -ge 2 ]] || { say ERROR "--permission-scheme requires a value"; exit 1; }
+        CLI_PERMISSION_SCHEME="$2"; shift 2
+        ;;
+      --permission-scheme=*)
+        CLI_PERMISSION_SCHEME="${1#*=}"; shift
+        ;;
+      --custom-uid)
+        [[ $# -ge 2 ]] || { say ERROR "--custom-uid requires a value"; exit 1; }
+        CLI_CUSTOM_UID="$2"; shift 2
+        ;;
+      --custom-uid=*)
+        CLI_CUSTOM_UID="${1#*=}"; shift
+        ;;
+      --custom-gid)
+        [[ $# -ge 2 ]] || { say ERROR "--custom-gid requires a value"; exit 1; }
+        CLI_CUSTOM_GID="$2"; shift 2
+        ;;
+      --custom-gid=*)
+        CLI_CUSTOM_GID="${1#*=}"; shift
+        ;;
+      --server-address)
+        [[ $# -ge 2 ]] || { say ERROR "--server-address requires a value"; exit 1; }
+        CLI_SERVER_ADDRESS="$2"; shift 2
+        ;;
+      --server-address=*)
+        CLI_SERVER_ADDRESS="${1#*=}"; shift
+        ;;
+      --realm-port)
+        [[ $# -ge 2 ]] || { say ERROR "--realm-port requires a value"; exit 1; }
+        CLI_REALM_PORT="$2"; shift 2
+        ;;
+      --realm-port=*)
+        CLI_REALM_PORT="${1#*=}"; shift
+        ;;
+      --auth-port)
+        [[ $# -ge 2 ]] || { say ERROR "--auth-port requires a value"; exit 1; }
+        CLI_AUTH_PORT="$2"; shift 2
+        ;;
+      --auth-port=*)
+        CLI_AUTH_PORT="${1#*=}"; shift
+        ;;
+      --soap-port)
+        [[ $# -ge 2 ]] || { say ERROR "--soap-port requires a value"; exit 1; }
+        CLI_SOAP_PORT="$2"; shift 2
+        ;;
+      --soap-port=*)
+        CLI_SOAP_PORT="${1#*=}"; shift
+        ;;
+      --mysql-port)
+        [[ $# -ge 2 ]] || { say ERROR "--mysql-port requires a value"; exit 1; }
+        CLI_MYSQL_PORT="$2"; shift 2
+        ;;
+      --mysql-port=*)
+        CLI_MYSQL_PORT="${1#*=}"; shift
+        ;;
+      --mysql-password)
+        [[ $# -ge 2 ]] || { say ERROR "--mysql-password requires a value"; exit 1; }
+        CLI_MYSQL_PASSWORD="$2"; shift 2
+        ;;
+      --mysql-password=*)
+        CLI_MYSQL_PASSWORD="${1#*=}"; shift
+        ;;
+      --storage-path)
+        [[ $# -ge 2 ]] || { say ERROR "--storage-path requires a value"; exit 1; }
+        CLI_STORAGE_PATH="$2"; shift 2
+        ;;
+      --storage-path=*)
+        CLI_STORAGE_PATH="${1#*=}"; shift
+        ;;
+      --backup-retention-days)
+        [[ $# -ge 2 ]] || { say ERROR "--backup-retention-days requires a value"; exit 1; }
+        CLI_BACKUP_DAYS="$2"; shift 2
+        ;;
+      --backup-retention-days=*)
+        CLI_BACKUP_DAYS="${1#*=}"; shift
+        ;;
+      --backup-retention-hours)
+        [[ $# -ge 2 ]] || { say ERROR "--backup-retention-hours requires a value"; exit 1; }
+        CLI_BACKUP_HOURS="$2"; shift 2
+        ;;
+      --backup-retention-hours=*)
+        CLI_BACKUP_HOURS="${1#*=}"; shift
+        ;;
+      --backup-daily-time)
+        [[ $# -ge 2 ]] || { say ERROR "--backup-daily-time requires a value"; exit 1; }
+        CLI_BACKUP_TIME="$2"; shift 2
+        ;;
+      --backup-daily-time=*)
+        CLI_BACKUP_TIME="${1#*=}"; shift
+        ;;
+      --module-mode)
+        [[ $# -ge 2 ]] || { say ERROR "--module-mode requires a value"; exit 1; }
+        CLI_MODULE_MODE="$2"; shift 2
+        ;;
+      --module-mode=*)
+        CLI_MODULE_MODE="${1#*=}"; shift
+        ;;
+      --enable-modules)
+        [[ $# -ge 2 ]] || { say ERROR "--enable-modules requires a value"; exit 1; }
+        CLI_ENABLE_MODULES_RAW+=("$2"); shift 2
+        ;;
+      --enable-modules=*)
+        CLI_ENABLE_MODULES_RAW+=("${1#*=}"); shift
+        ;;
+      --playerbot-enabled)
+        [[ $# -ge 2 ]] || { say ERROR "--playerbot-enabled requires 0 or 1"; exit 1; }
+        CLI_PLAYERBOT_ENABLED="$2"; shift 2
+        ;;
+      --playerbot-enabled=*)
+        CLI_PLAYERBOT_ENABLED="${1#*=}"; shift
+        ;;
+      --playerbot-max-bots)
+        [[ $# -ge 2 ]] || { say ERROR "--playerbot-max-bots requires a value"; exit 1; }
+        CLI_PLAYERBOT_MAX="$2"; shift 2
+        ;;
+      --playerbot-max-bots=*)
+        CLI_PLAYERBOT_MAX="${1#*=}"; shift
+        ;;
+      --auto-rebuild-on-deploy)
+        CLI_AUTO_REBUILD=1
+        shift
+        ;;
+      --run-rebuild-now)
+        CLI_RUN_REBUILD=1
+        shift
+        ;;
+      --modules-rebuild-source)
+        [[ $# -ge 2 ]] || { say ERROR "--modules-rebuild-source requires a value"; exit 1; }
+        CLI_MODULES_SOURCE="$2"; shift 2
+        ;;
+      --modules-rebuild-source=*)
+        CLI_MODULES_SOURCE="${1#*=}"; shift
+        ;;
+      --force)
+        FORCE_OVERWRITE=1
+        shift
         ;;
       *)
         echo "Unknown argument: $1" >&2
@@ -74,7 +380,30 @@ EOF
         exit 1
         ;;
     esac
+  done
+
+  if [ ${#CLI_ENABLE_MODULES_RAW[@]} -gt 0 ]; then
+    local raw part norm
+    for raw in "${CLI_ENABLE_MODULES_RAW[@]}"; do
+      IFS=',' read -ra parts <<<"$raw"
+      for part in "${parts[@]}"; do
+        part="${part//[[:space:]]/}"
+        [ -z "$part" ] && continue
+        norm="$(normalize_module_name "$part")"
+        if [ -z "${KNOWN_MODULE_LOOKUP[$norm]}" ]; then
+          say WARNING "Ignoring unknown module identifier: ${part}"
+          continue
+        fi
+        MODULE_ENABLE_SET["$norm"]=1
+      done
+    done
+    unset raw part norm parts
   fi
+
+  if [ ${#CLI_ENABLE_MODULES_RAW[@]} -gt 0 ] && [ -z "$CLI_MODULE_MODE" ]; then
+    CLI_MODULE_MODE="manual"
+  fi
+
   show_wow_header
   say INFO "This will create ac-compose/.env for compose profiles."
 
@@ -83,92 +412,188 @@ EOF
   echo "1) 🏠 Local Development (127.0.0.1, local storage)"
   echo "2) 🌐 LAN Server (local network IP)"
   echo "3) ☁️  Public Server (domain or public IP)"
-  local DEPLOYMENT_TYPE
+  local DEPLOYMENT_TYPE_INPUT="${CLI_DEPLOYMENT_TYPE}"
+  local DEPLOYMENT_TYPE=""
+  if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$DEPLOYMENT_TYPE_INPUT" ]; then
+    DEPLOYMENT_TYPE_INPUT="local"
+  fi
   while true; do
-    read -p "$(echo -e "${YELLOW}🔧 Select deployment type [1-3]: ${NC}")" x
-    case "$x" in
-      1) DEPLOYMENT_TYPE=local; break;;
-      2) DEPLOYMENT_TYPE=lan; break;;
-      3) DEPLOYMENT_TYPE=public; break;;
-      *) say ERROR "Please select 1, 2, or 3";;
+    if [ -z "$DEPLOYMENT_TYPE_INPUT" ]; then
+      read -p "$(echo -e "${YELLOW}🔧 Select deployment type [1-3]: ${NC}")" DEPLOYMENT_TYPE_INPUT
+    fi
+    case "${DEPLOYMENT_TYPE_INPUT,,}" in
+      1|local)
+        DEPLOYMENT_TYPE=local
+        ;;
+      2|lan)
+        DEPLOYMENT_TYPE=lan
+        ;;
+      3|public)
+        DEPLOYMENT_TYPE=public
+        ;;
+      *)
+        if [ -n "$CLI_DEPLOYMENT_TYPE" ] || [ "$NON_INTERACTIVE" = "1" ]; then
+          say ERROR "Invalid deployment type: ${DEPLOYMENT_TYPE_INPUT}"
+          exit 1
+        fi
+        say ERROR "Please select 1, 2, or 3"
+        DEPLOYMENT_TYPE_INPUT=""
+        continue
+        ;;
     esac
+    break
   done
+  if [ -n "$CLI_DEPLOYMENT_TYPE" ] || [ "$NON_INTERACTIVE" = "1" ]; then
+    say INFO "Deployment type set to ${DEPLOYMENT_TYPE}."
+  fi
 
   # Permission scheme
   say HEADER "PERMISSION SCHEME"
   echo "1) 🏠 Local Dev (0:0)"
   echo "2) 🗂️  NFS Server (1001:1000)"
   echo "3) ⚙️  Custom"
+  local PERMISSION_SCHEME_INPUT="${CLI_PERMISSION_SCHEME}"
+  local PERMISSION_SCHEME_NAME=""
   local CONTAINER_USER
+  if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$PERMISSION_SCHEME_INPUT" ]; then
+    PERMISSION_SCHEME_INPUT="local"
+  fi
   while true; do
-    read -p "$(echo -e "${YELLOW}🔧 Select permission scheme [1-3]: ${NC}")" x
-    case "$x" in
-      1) CONTAINER_USER="0:0"; break;;
-      2) CONTAINER_USER="1001:1000"; break;;
-      3) local uid gid; uid=$(ask "Enter PUID (user id)" 1000 validate_number); gid=$(ask "Enter PGID (group id)" 1000 validate_number); CONTAINER_USER="${uid}:${gid}"; break;;
-      *) say ERROR "Please select 1, 2, or 3";;
+    if [ -z "$PERMISSION_SCHEME_INPUT" ]; then
+      read -p "$(echo -e "${YELLOW}🔧 Select permission scheme [1-3]: ${NC}")" PERMISSION_SCHEME_INPUT
+    fi
+    case "${PERMISSION_SCHEME_INPUT,,}" in
+      1|local)
+        CONTAINER_USER="0:0"
+        PERMISSION_SCHEME_NAME="local"
+        ;;
+      2|nfs)
+        CONTAINER_USER="1001:1000"
+        PERMISSION_SCHEME_NAME="nfs"
+        ;;
+      3|custom)
+        local uid gid
+        uid="${CLI_CUSTOM_UID:-$(ask "Enter PUID (user id)" 1000 validate_number)}"
+        gid="${CLI_CUSTOM_GID:-$(ask "Enter PGID (group id)" 1000 validate_number)}"
+        CONTAINER_USER="${uid}:${gid}"
+        PERMISSION_SCHEME_NAME="custom"
+        ;;
+      *)
+        if [ -n "$CLI_PERMISSION_SCHEME" ] || [ "$NON_INTERACTIVE" = "1" ]; then
+          say ERROR "Invalid permission scheme: ${PERMISSION_SCHEME_INPUT}"
+          exit 1
+        fi
+        say ERROR "Please select 1, 2, or 3"
+        PERMISSION_SCHEME_INPUT=""
+        continue
+        ;;
     esac
+    break
   done
+  if [ -n "$CLI_PERMISSION_SCHEME" ] || [ "$NON_INTERACTIVE" = "1" ]; then
+    say INFO "Permission scheme set to ${PERMISSION_SCHEME_NAME:-$PERMISSION_SCHEME_INPUT}."
+  fi
 
   # Server config
   say HEADER "SERVER CONFIGURATION"
-  local SERVER_ADDRESS
-  if [ "$DEPLOYMENT_TYPE" = "local" ]; then
+  local SERVER_ADDRESS=""
+  if [ -n "$CLI_SERVER_ADDRESS" ]; then
+    SERVER_ADDRESS="$CLI_SERVER_ADDRESS"
+  elif [ "$DEPLOYMENT_TYPE" = "local" ]; then
     SERVER_ADDRESS=127.0.0.1
   elif [ "$DEPLOYMENT_TYPE" = "lan" ]; then
-    local LAN_IP; LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk 'NR==1{print $7}')
-    SERVER_ADDRESS=$(ask "Enter server IP address" "${LAN_IP:-192.168.1.100}" validate_ip)
+    local LAN_IP
+    LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk 'NR==1{print $7}')
+    SERVER_ADDRESS=$(ask "Enter server IP address" "${CLI_SERVER_ADDRESS:-${LAN_IP:-192.168.1.100}}" validate_ip)
   else
-    SERVER_ADDRESS=$(ask "Enter server address (IP or domain)" "your-domain.com" )
+    SERVER_ADDRESS=$(ask "Enter server address (IP or domain)" "${CLI_SERVER_ADDRESS:-your-domain.com}" )
   fi
 
   local REALM_PORT AUTH_EXTERNAL_PORT SOAP_EXTERNAL_PORT MYSQL_EXTERNAL_PORT
-  REALM_PORT=$(ask "Enter client connection port" 8215 validate_port)
-  AUTH_EXTERNAL_PORT=$(ask "Enter auth server port" 3784 validate_port)
-  SOAP_EXTERNAL_PORT=$(ask "Enter SOAP API port" 7778 validate_port)
-  MYSQL_EXTERNAL_PORT=$(ask "Enter MySQL external port" 64306 validate_port)
+  REALM_PORT=$(ask "Enter client connection port" "${CLI_REALM_PORT:-8215}" validate_port)
+  AUTH_EXTERNAL_PORT=$(ask "Enter auth server port" "${CLI_AUTH_PORT:-3784}" validate_port)
+  SOAP_EXTERNAL_PORT=$(ask "Enter SOAP API port" "${CLI_SOAP_PORT:-7778}" validate_port)
+  MYSQL_EXTERNAL_PORT=$(ask "Enter MySQL external port" "${CLI_MYSQL_PORT:-64306}" validate_port)
 
   # DB config
   say HEADER "DATABASE CONFIGURATION"
-  local MYSQL_ROOT_PASSWORD; MYSQL_ROOT_PASSWORD=$(ask "Enter MySQL root password" "azerothcore123")
+  local MYSQL_ROOT_PASSWORD; MYSQL_ROOT_PASSWORD=$(ask "Enter MySQL root password" "${CLI_MYSQL_PASSWORD:-azerothcore123}")
 
   # Storage
   say HEADER "STORAGE CONFIGURATION"
   local STORAGE_PATH
-  if [ "$DEPLOYMENT_TYPE" = "local" ]; then
+  if [ -n "$CLI_STORAGE_PATH" ]; then
+    STORAGE_PATH="$CLI_STORAGE_PATH"
+  elif [ "$DEPLOYMENT_TYPE" = "local" ]; then
     STORAGE_PATH=./storage
   else
-    echo "1) 💾 ./storage (local)"
-    echo "2) 🌐 /nfs/azerothcore (NFS)"
-    echo "3) 📁 Custom"
-    while true; do
-      read -p "$(echo -e "${YELLOW}🔧 Select storage option [1-3]: ${NC}")" s
-      case "$s" in
-        1) STORAGE_PATH=./storage; break;;
-        2) STORAGE_PATH=/nfs/azerothcore; break;;
-        3) STORAGE_PATH=$(ask "Enter custom storage path" "/mnt/azerothcore-data"); break;;
-        *) say ERROR "Please select 1, 2, or 3";;
-      esac
-    done
+    if [ "$NON_INTERACTIVE" = "1" ]; then
+      STORAGE_PATH=/mnt/azerothcore-data
+    else
+      echo "1) 💾 ./storage (local)"
+      echo "2) 🌐 /nfs/azerothcore (NFS)"
+      echo "3) 📁 Custom"
+      while true; do
+        read -p "$(echo -e "${YELLOW}🔧 Select storage option [1-3]: ${NC}")" s
+        case "$s" in
+          1) STORAGE_PATH=./storage; break;;
+          2) STORAGE_PATH=/nfs/azerothcore; break;;
+          3) STORAGE_PATH=$(ask "Enter custom storage path" "/mnt/azerothcore-data"); break;;
+          *) say ERROR "Please select 1, 2, or 3";;
+        esac
+      done
+    fi
   fi
 
   # Backup
   say HEADER "BACKUP CONFIGURATION"
   local BACKUP_RETENTION_DAYS BACKUP_RETENTION_HOURS BACKUP_DAILY_TIME
-  BACKUP_RETENTION_DAYS=$(ask "Daily backups retention (days)" 3 validate_number)
-  BACKUP_RETENTION_HOURS=$(ask "Hourly backups retention (hours)" 6 validate_number)
-  BACKUP_DAILY_TIME=$(ask "Daily backup hour (00-23, UTC)" 09 validate_number)
+  BACKUP_RETENTION_DAYS=$(ask "Daily backups retention (days)" "${CLI_BACKUP_DAYS:-3}" validate_number)
+  BACKUP_RETENTION_HOURS=$(ask "Hourly backups retention (hours)" "${CLI_BACKUP_HOURS:-6}" validate_number)
+  BACKUP_DAILY_TIME=$(ask "Daily backup hour (00-23, UTC)" "${CLI_BACKUP_TIME:-09}" validate_number)
 
+  local MODE=""
+  if [ -n "$CLI_MODULE_MODE" ]; then
+    case "${CLI_MODULE_MODE,,}" in
+      1|suggested) MODE=1 ;;
+      2|playerbots) MODE=2 ;;
+      3|manual) MODE=3 ;;
+      4|none) MODE=4 ;;
+      *) say ERROR "Invalid module mode: ${CLI_MODULE_MODE}"; exit 1 ;;
+    esac
+  fi
+  if [ -z "$MODE" ] && [ ${#MODULE_ENABLE_SET[@]} -gt 0 ]; then
+    MODE=3
+  fi
+  if [ ${#MODULE_ENABLE_SET[@]} -gt 0 ] && [ -n "$MODE" ] && [ "$MODE" != "3" ] && [ "$MODE" != "4" ]; then
+    say INFO "Switching module preset to manual to honor --enable-modules list."
+    MODE=3
+  fi
+  if [ "$MODE" = "4" ] && [ ${#MODULE_ENABLE_SET[@]} -gt 0 ]; then
+    say ERROR "--enable-modules cannot be used together with module-mode=none."
+    exit 1
+  fi
   # Module config
   say HEADER "MODULE PRESET"
   echo "1) ⭐ Suggested Modules"
   echo "2) 🤖 Playerbots + Suggested modules"
   echo "3) ⚙️  Manual selection"
   echo "4) 🚫 No modules"
-  local MODE; while true; do
-    read -p "$(echo -e "${YELLOW}🔧 Select module configuration [1-4]: ${NC}")" MODE
-    case "$MODE" in 1|2|3|4) break;; *) say ERROR "Please select 1, 2, 3, or 4";; esac
-  done
+  if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$MODE" ]; then
+    MODE=1
+  fi
+  if [ -z "$MODE" ]; then
+    local MODE_SELECTION
+    while true; do
+      read -p "$(echo -e "${YELLOW}🔧 Select module configuration [1-4]: ${NC}")" MODE_SELECTION
+      case "$MODE_SELECTION" in
+        1|2|3|4) MODE="$MODE_SELECTION"; break;;
+        *) say ERROR "Please select 1, 2, 3, or 4";;
+      esac
+    done
+  else
+    say INFO "Module preset set to ${MODE}."
+  fi
 
   # Initialize toggles
   local MODULE_PLAYERBOTS=0 MODULE_AOE_LOOT=0 MODULE_LEARN_SPELLS=0 MODULE_FIREWORKS=0 MODULE_INDIVIDUAL_PROGRESSION=0 \
@@ -176,7 +601,24 @@ EOF
         MODULE_1V1_ARENA=0 MODULE_PHASED_DUELS=0 MODULE_BREAKING_NEWS=0 MODULE_BOSS_ANNOUNCER=0 MODULE_ACCOUNT_ACHIEVEMENTS=0 \
         MODULE_AUTO_REVIVE=0 MODULE_GAIN_HONOR_GUARD=0 MODULE_TIME_IS_TIME=0 MODULE_POCKET_PORTAL=0 \
         MODULE_RANDOM_ENCHANTS=0 MODULE_SOLOCRAFT=0 MODULE_PVP_TITLES=0 MODULE_NPC_BEASTMASTER=0 MODULE_NPC_ENCHANTER=0 \
-        MODULE_INSTANCE_RESET=0 MODULE_LEVEL_GRANT=0 MODULE_ASSISTANT=0 MODULE_REAGENT_BANK=0 MODULE_BLACK_MARKET_AUCTION_HOUSE=0 MODULE_ARAC=0
+        MODULE_INSTANCE_RESET=0 MODULE_LEVEL_GRANT=0 MODULE_ASSISTANT=0 MODULE_REAGENT_BANK=0 MODULE_BLACK_MARKET_AUCTION_HOUSE=0 MODULE_ARAC=0 \
+        MODULE_CHALLENGE_MODES=0 MODULE_OLLAMA_CHAT=0 MODULE_SKELETON_MODULE=0 MODULE_BG_SLAVERYVALLEY=0 MODULE_ELUNA_TS=0 \
+        MODULE_PLAYER_BOT_LEVEL_BRACKETS=0 MODULE_STATBOOSTER=0 MODULE_DUNGEON_RESPAWN=0 MODULE_AZEROTHSHARD=0 MODULE_WORGOBLIN=0
+
+  local mod_var
+  for mod_var in "${!MODULE_ENABLE_SET[@]}"; do
+    if [ -n "${KNOWN_MODULE_LOOKUP[$mod_var]}" ]; then
+      eval "$mod_var=1"
+    fi
+  done
+
+  if { [ "${MODULE_PLAYER_BOT_LEVEL_BRACKETS}" = "1" ] || [ "${MODULE_OLLAMA_CHAT}" = "1" ]; } && [ "$MODULE_PLAYERBOTS" != "1" ]; then
+    MODULE_PLAYERBOTS=1
+    MODULE_ENABLE_SET["MODULE_PLAYERBOTS"]=1
+    if [ ${#MODULE_ENABLE_SET[@]} -gt 0 ]; then
+      say INFO "Automatically enabling MODULE_PLAYERBOTS to satisfy playerbot-dependent modules."
+    fi
+  fi
 
   declare -A DISABLED_MODULE_REASONS=(
     [MODULE_AHBOT]="Requires upstream Addmod_ahbotScripts symbol (fails link)"
@@ -185,9 +627,9 @@ EOF
 
   local PLAYERBOT_ENABLED=0 PLAYERBOT_MAX_BOTS=40
 
-  local AUTO_REBUILD_ON_DEPLOY=0
-  local MODULES_REBUILD_SOURCE_PATH_VALUE=""
-  local RUN_REBUILD_NOW=0
+  local AUTO_REBUILD_ON_DEPLOY=$CLI_AUTO_REBUILD
+  local MODULES_REBUILD_SOURCE_PATH_VALUE="${CLI_MODULES_SOURCE}"
+  local RUN_REBUILD_NOW=$CLI_RUN_REBUILD
   local NEEDS_CXX_REBUILD=0
 
   if [ "$MODE" = "1" ]; then
@@ -200,45 +642,77 @@ EOF
       say WARNING "${key#MODULE_}: ${DISABLED_MODULE_REASONS[$key]}"
     done
     # Core Gameplay
-    MODULE_PLAYERBOTS=$(ask_yn "Playerbots - AI companions" n)
-    MODULE_SOLO_LFG=$(ask_yn "Solo LFG - Solo dungeon finder" n)
-    MODULE_SOLOCRAFT=$(ask_yn "Solocraft - Scale dungeons/raids for solo" n)
-    MODULE_AUTOBALANCE=$(ask_yn "Autobalance - Dynamic difficulty" n)
+    MODULE_PLAYERBOTS=$(ask_yn "Playerbots - AI companions" "$(module_default MODULE_PLAYERBOTS)")
+    MODULE_PLAYER_BOT_LEVEL_BRACKETS=$(ask_yn "Playerbot Level Brackets - Evenly distribute bot levels" "$(module_default MODULE_PLAYER_BOT_LEVEL_BRACKETS)")
+    MODULE_OLLAMA_CHAT=$(ask_yn "Ollama Chat - LLM dialogue for playerbots (requires external Ollama API)" "$(module_default MODULE_OLLAMA_CHAT)")
+    MODULE_SOLO_LFG=$(ask_yn "Solo LFG - Solo dungeon finder" "$(module_default MODULE_SOLO_LFG)")
+    MODULE_SOLOCRAFT=$(ask_yn "Solocraft - Scale dungeons/raids for solo" "$(module_default MODULE_SOLOCRAFT)")
+    MODULE_CHALLENGE_MODES=$(ask_yn "Challenge Modes - Timed dungeon keystones" "$(module_default MODULE_CHALLENGE_MODES)")
+    MODULE_AUTOBALANCE=$(ask_yn "Autobalance - Dynamic difficulty" "$(module_default MODULE_AUTOBALANCE)")
     # QoL
-    MODULE_TRANSMOG=$(ask_yn "Transmog - Appearance changes" n)
-    MODULE_NPC_BUFFER=$(ask_yn "NPC Buffer - Buff NPCs" n)
-    MODULE_LEARN_SPELLS=$(ask_yn "Learn Spells - Auto-learn" n)
-    MODULE_AOE_LOOT=$(ask_yn "AOE Loot - Multi-corpse loot" n)
-    MODULE_FIREWORKS=$(ask_yn "Fireworks - Level-up FX" n)
-    MODULE_ASSISTANT=$(ask_yn "Assistant - Multi-service NPC" n)
+    MODULE_TRANSMOG=$(ask_yn "Transmog - Appearance changes" "$(module_default MODULE_TRANSMOG)")
+    MODULE_NPC_BUFFER=$(ask_yn "NPC Buffer - Buff NPCs" "$(module_default MODULE_NPC_BUFFER)")
+    MODULE_LEARN_SPELLS=$(ask_yn "Learn Spells - Auto-learn" "$(module_default MODULE_LEARN_SPELLS)")
+    MODULE_AOE_LOOT=$(ask_yn "AOE Loot - Multi-corpse loot" "$(module_default MODULE_AOE_LOOT)")
+    MODULE_FIREWORKS=$(ask_yn "Fireworks - Level-up FX" "$(module_default MODULE_FIREWORKS)")
+    MODULE_ASSISTANT=$(ask_yn "Assistant - Multi-service NPC" "$(module_default MODULE_ASSISTANT)")
+    MODULE_STATBOOSTER=$(ask_yn "Stat Booster - Random enchant upgrades" "$(module_default MODULE_STATBOOSTER)")
+    MODULE_DUNGEON_RESPAWN=$(ask_yn "Dungeon Respawn - Return to entrance on death" "$(module_default MODULE_DUNGEON_RESPAWN)")
+    MODULE_SKELETON_MODULE=$(ask_yn "Skeleton Module - Blank module template" "$(module_default MODULE_SKELETON_MODULE)")
     # Economy
-    MODULE_AHBOT=$(ask_yn "AH Bot - Auction automation" n)
-    MODULE_REAGENT_BANK=$(ask_yn "Reagent Bank - Materials storage" n)
-    MODULE_BLACK_MARKET_AUCTION_HOUSE=$(ask_yn "Black Market - MoP-style" n)
+    MODULE_AHBOT=$(ask_yn "AH Bot - Auction automation" "$(module_default MODULE_AHBOT)")
+    MODULE_REAGENT_BANK=$(ask_yn "Reagent Bank - Materials storage" "$(module_default MODULE_REAGENT_BANK)")
+    MODULE_BLACK_MARKET_AUCTION_HOUSE=$(ask_yn "Black Market - MoP-style" "$(module_default MODULE_BLACK_MARKET_AUCTION_HOUSE)")
     # PvP
-    MODULE_1V1_ARENA=$(ask_yn "1v1 Arena" n)
-    MODULE_PHASED_DUELS=$(ask_yn "Phased Duels" n)
-    MODULE_PVP_TITLES=$(ask_yn "PvP Titles" n)
+    MODULE_1V1_ARENA=$(ask_yn "1v1 Arena" "$(module_default MODULE_1V1_ARENA)")
+    MODULE_PHASED_DUELS=$(ask_yn "Phased Duels" "$(module_default MODULE_PHASED_DUELS)")
+    MODULE_PVP_TITLES=$(ask_yn "PvP Titles" "$(module_default MODULE_PVP_TITLES)")
+    MODULE_BG_SLAVERYVALLEY=$(ask_yn "Slavery Valley - Custom battleground" "$(module_default MODULE_BG_SLAVERYVALLEY)")
     # Progression
-    MODULE_INDIVIDUAL_PROGRESSION=$(ask_yn "Individual Progression (Vanilla→TBC→WotLK)" n)
-    MODULE_DYNAMIC_XP=$(ask_yn "Dynamic XP" n)
-    MODULE_ACCOUNT_ACHIEVEMENTS=$(ask_yn "Account Achievements" n)
+    MODULE_INDIVIDUAL_PROGRESSION=$(ask_yn "Individual Progression (Vanilla→TBC→WotLK)" "$(module_default MODULE_INDIVIDUAL_PROGRESSION)")
+    MODULE_DYNAMIC_XP=$(ask_yn "Dynamic XP" "$(module_default MODULE_DYNAMIC_XP)")
+    MODULE_ACCOUNT_ACHIEVEMENTS=$(ask_yn "Account Achievements" "$(module_default MODULE_ACCOUNT_ACHIEVEMENTS)")
+    MODULE_AZEROTHSHARD=$(ask_yn "AzerothShard - Blended custom features" "$(module_default MODULE_AZEROTHSHARD)")
     # Server Features
-    MODULE_BREAKING_NEWS=$(ask_yn "Breaking News" n)
-    MODULE_BOSS_ANNOUNCER=$(ask_yn "Boss Announcer" n)
-    MODULE_AUTO_REVIVE=$(ask_yn "Auto Revive" n)
+    MODULE_BREAKING_NEWS=$(ask_yn "Breaking News" "$(module_default MODULE_BREAKING_NEWS)")
+    MODULE_BOSS_ANNOUNCER=$(ask_yn "Boss Announcer" "$(module_default MODULE_BOSS_ANNOUNCER)")
+    MODULE_AUTO_REVIVE=$(ask_yn "Auto Revive" "$(module_default MODULE_AUTO_REVIVE)")
+    MODULE_ELUNA_TS=$(ask_yn "Eluna TS - TypeScript toolchain for Lua" "$(module_default MODULE_ELUNA_TS)")
     # Utility
-    MODULE_NPC_BEASTMASTER=$(ask_yn "NPC Beastmaster" n)
-    MODULE_NPC_ENCHANTER=$(ask_yn "NPC Enchanter" n)
-    MODULE_RANDOM_ENCHANTS=$(ask_yn "Random Enchants" n)
-    MODULE_POCKET_PORTAL=$(ask_yn "Pocket Portal" n)
-    MODULE_INSTANCE_RESET=$(ask_yn "Instance Reset" n)
-    MODULE_TIME_IS_TIME=$(ask_yn "Time is Time" n)
-    MODULE_GAIN_HONOR_GUARD=$(ask_yn "Gain Honor Guard" n)
-    MODULE_ARAC=$(ask_yn "All Races All Classes (requires client patch)" n)
+    MODULE_NPC_BEASTMASTER=$(ask_yn "NPC Beastmaster" "$(module_default MODULE_NPC_BEASTMASTER)")
+    MODULE_NPC_ENCHANTER=$(ask_yn "NPC Enchanter" "$(module_default MODULE_NPC_ENCHANTER)")
+    MODULE_RANDOM_ENCHANTS=$(ask_yn "Random Enchants" "$(module_default MODULE_RANDOM_ENCHANTS)")
+    MODULE_POCKET_PORTAL=$(ask_yn "Pocket Portal" "$(module_default MODULE_POCKET_PORTAL)")
+    MODULE_INSTANCE_RESET=$(ask_yn "Instance Reset" "$(module_default MODULE_INSTANCE_RESET)")
+    MODULE_TIME_IS_TIME=$(ask_yn "Time is Time" "$(module_default MODULE_TIME_IS_TIME)")
+    MODULE_GAIN_HONOR_GUARD=$(ask_yn "Gain Honor Guard" "$(module_default MODULE_GAIN_HONOR_GUARD)")
+    MODULE_ARAC=$(ask_yn "All Races All Classes (requires client patch)" "$(module_default MODULE_ARAC)")
+    MODULE_WORGOBLIN=$(ask_yn "Worgoblin - Worgen & Goblin races (client patch required)" "$(module_default MODULE_WORGOBLIN)")
   fi
 
-  for mod_var in MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE; do
+  if [ -n "$CLI_PLAYERBOT_ENABLED" ]; then
+    if [[ "$CLI_PLAYERBOT_ENABLED" != "0" && "$CLI_PLAYERBOT_ENABLED" != "1" ]]; then
+      say ERROR "--playerbot-enabled must be 0 or 1"
+      exit 1
+    fi
+    PLAYERBOT_ENABLED="$CLI_PLAYERBOT_ENABLED"
+  fi
+  if [ -n "$CLI_PLAYERBOT_MAX" ]; then
+    if ! [[ "$CLI_PLAYERBOT_MAX" =~ ^[0-9]+$ ]]; then
+      say ERROR "--playerbot-max-bots must be numeric"
+      exit 1
+    fi
+    PLAYERBOT_MAX_BOTS="$CLI_PLAYERBOT_MAX"
+  fi
+
+  if [ "$MODULE_PLAYERBOTS" = "1" ]; then
+    if [ -z "$CLI_PLAYERBOT_ENABLED" ]; then
+      PLAYERBOT_ENABLED=1
+    fi
+    PLAYERBOT_MAX_BOTS=$(ask "Maximum concurrent playerbots" "${CLI_PLAYERBOT_MAX:-40}" validate_number)
+  fi
+
+  for mod_var in MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_OLLAMA_CHAT MODULE_CHALLENGE_MODES MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN; do
     eval "value=\$$mod_var"
     if [ "$value" = "1" ]; then
       NEEDS_CXX_REBUILD=1
@@ -262,8 +736,16 @@ EOF
   if [ "$NEEDS_CXX_REBUILD" = "1" ]; then
     echo ""
     say WARNING "These modules require compiling AzerothCore from source."
-    RUN_REBUILD_NOW=$(ask_yn "Run module rebuild immediately?" n)
-    AUTO_REBUILD_ON_DEPLOY=$(ask_yn "Enable automatic rebuild during future deploys?" n)
+    if [ "$CLI_RUN_REBUILD" = "1" ]; then
+      RUN_REBUILD_NOW=1
+    else
+      RUN_REBUILD_NOW=$(ask_yn "Run module rebuild immediately?" n)
+    fi
+    if [ "$CLI_AUTO_REBUILD" = "1" ]; then
+      AUTO_REBUILD_ON_DEPLOY=1
+    else
+      AUTO_REBUILD_ON_DEPLOY=$(ask_yn "Enable automatic rebuild during future deploys?" "$( [ "$AUTO_REBUILD_ON_DEPLOY" = "1" ] && echo y || echo n )")
+    fi
     if [ "$RUN_REBUILD_NOW" = "1" ] || [ "$AUTO_REBUILD_ON_DEPLOY" = "1" ]; then
       if [ -z "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
         MODULES_REBUILD_SOURCE_PATH_VALUE="./source/azerothcore"
@@ -276,7 +758,13 @@ EOF
   local ENV_OUT="$(dirname "$0")/.env"
   if [ -f "$ENV_OUT" ]; then
     say WARNING ".env already exists at $(realpath "$ENV_OUT" 2>/dev/null || echo "$ENV_OUT"). It will be overwritten."
-    local cont; cont=$(ask_yn "Continue and overwrite?" n); [ "$cont" = "1" ] || { say ERROR "Aborted"; exit 1; }
+    local cont
+    if [ "$FORCE_OVERWRITE" = "1" ]; then
+      cont=1
+    else
+      cont=$(ask_yn "Continue and overwrite?" n)
+    fi
+    [ "$cont" = "1" ] || { say ERROR "Aborted"; exit 1; }
   fi
 
   if [ -z "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
@@ -371,6 +859,16 @@ MODULE_NPC_BEASTMASTER=$MODULE_NPC_BEASTMASTER
 MODULE_NPC_ENCHANTER=$MODULE_NPC_ENCHANTER
 MODULE_INSTANCE_RESET=$MODULE_INSTANCE_RESET
 MODULE_LEVEL_GRANT=$MODULE_LEVEL_GRANT
+MODULE_CHALLENGE_MODES=$MODULE_CHALLENGE_MODES
+MODULE_OLLAMA_CHAT=$MODULE_OLLAMA_CHAT
+MODULE_SKELETON_MODULE=$MODULE_SKELETON_MODULE
+MODULE_BG_SLAVERYVALLEY=$MODULE_BG_SLAVERYVALLEY
+MODULE_ELUNA_TS=$MODULE_ELUNA_TS
+MODULE_PLAYER_BOT_LEVEL_BRACKETS=$MODULE_PLAYER_BOT_LEVEL_BRACKETS
+MODULE_STATBOOSTER=$MODULE_STATBOOSTER
+MODULE_DUNGEON_RESPAWN=$MODULE_DUNGEON_RESPAWN
+MODULE_AZEROTHSHARD=$MODULE_AZEROTHSHARD
+MODULE_WORGOBLIN=$MODULE_WORGOBLIN
 MODULE_ASSISTANT=$MODULE_ASSISTANT
 MODULE_REAGENT_BANK=$MODULE_REAGENT_BANK
 MODULE_BLACK_MARKET_AUCTION_HOUSE=$MODULE_BLACK_MARKET_AUCTION_HOUSE
@@ -444,7 +942,3 @@ EOF
 }
 
 main "$@"
-  if [ "$MODULE_PLAYERBOTS" = "1" ]; then
-    PLAYERBOT_ENABLED=1
-    PLAYERBOT_MAX_BOTS=$(ask "Maximum concurrent playerbots" 40 validate_number)
-  fi

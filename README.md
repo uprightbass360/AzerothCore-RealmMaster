@@ -91,36 +91,46 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 
 | Module | Description | Default Status |
 |--------|-------------|----------------|
-| **mod-solo-lfg** | Solo dungeon finder access | ✅ ENABLED |
-| **mod-solocraft** | Dynamic instance scaling for solo play | ✅ ENABLED |
-| **mod-autobalance** | Automatic raid/dungeon balancing | ✅ ENABLED |
-| **mod-transmog** | Appearance customization system | ✅ ENABLED |
-| **mod-npc-buffer** | NPC buffing services | ✅ ENABLED |
-| **mod-learn-spells** | Automatic spell learning | ✅ ENABLED |
-| **mod-fireworks** | Level-up celebrations | ✅ ENABLED |
-| **mod-playerbots** | AI companions for solo play | 🔧 OPTIONAL |
-| **mod-aoe-loot** | Streamlined loot collection | 🔧 OPTIONAL |
-| **mod-individual-progression** | Personal advancement system | ❌ DISABLED* |
-| **mod-ahbot** | Auction house bot | ❌ DISABLED* |
-| **mod-dynamic-xp** | Dynamic experience rates | 🔧 OPTIONAL |
-| **mod-1v1-arena** | Solo arena battles | 🔧 OPTIONAL |
-| **mod-phased-duels** | Phased dueling system | 🔧 OPTIONAL |
-| **mod-breaking-news** | Server announcement system | ❌ DISABLED* |
-| **mod-boss-announcer** | Boss kill announcements | 🔧 OPTIONAL |
-| **mod-account-achievements** | Account-wide achievements | 🔧 OPTIONAL |
-| **mod-auto-revive** | Automatic resurrection | 🔧 OPTIONAL |
-| **mod-gain-honor-guard** | Honor from guard kills | 🔧 OPTIONAL |
-| **mod-arac** | All races/classes unlocked | 🔧 OPTIONAL |
-| **mod-time-is-time** | Time manipulation | ❌ DISABLED* |
-| **mod-pocket-portal** | Portal convenience | ❌ DISABLED* |
-| **mod-random-enchants** | Random item enchantments | 🔧 OPTIONAL |
-| **mod-pvp-titles** | PvP title system | 🔧 OPTIONAL |
-| **mod-npc-beastmaster** | Pet management NPC | ❌ DISABLED* |
-| **mod-npc-enchanter** | Enchanting services NPC | ❌ DISABLED* |
-| **mod-assistant** | AI automation features | 🔧 OPTIONAL |
-| **mod-reagent-bank** | Reagent storage system | 🔧 OPTIONAL |
-| **mod-black-market** | Rare item auctions | 🔧 OPTIONAL |
-| **mod-instance-reset** | Instance reset controls | ❌ DISABLED* |
+| **[mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg)** | Solo dungeon finder access | ✅ ENABLED |
+| **[mod-solocraft](https://github.com/azerothcore/mod-solocraft)** | Dynamic instance scaling for solo play | ✅ ENABLED |
+| **[mod-autobalance](https://github.com/azerothcore/mod-autobalance)** | Automatic raid/dungeon balancing | ✅ ENABLED |
+| **[mod-transmog](https://github.com/azerothcore/mod-transmog)** | Appearance customization system | ✅ ENABLED |
+| **[mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer)** | NPC buffing services | ✅ ENABLED |
+| **[mod-learn-spells](https://github.com/azerothcore/mod-learn-spells)** | Automatic spell learning | ✅ ENABLED |
+| **[mod-fireworks](https://github.com/azerothcore/mod-fireworks-on-level)** | Level-up celebrations | ✅ ENABLED |
+| **[mod-playerbots](https://github.com/mod-playerbots/mod-playerbots)** | AI companions for solo play | 🔧 OPTIONAL |
+| **[mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot)** | Streamlined loot collection | 🔧 OPTIONAL |
+| **[mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression)** | Personal advancement system | ❌ DISABLED* |
+| **[mod-ahbot](https://github.com/azerothcore/mod-ahbot)** | Auction house bot | ❌ DISABLED* |
+| **[mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp)** | Dynamic experience rates | 🔧 OPTIONAL |
+| **[mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena)** | Solo arena battles | 🔧 OPTIONAL |
+| **[mod-phased-duels](https://github.com/azerothcore/mod-phased-duels)** | Phased dueling system | 🔧 OPTIONAL |
+| **[mod-breaking-news](https://github.com/azerothcore/mod-breaking-news-override)** | Server announcement system | ❌ DISABLED* |
+| **[mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer)** | Boss kill announcements | 🔧 OPTIONAL |
+| **[mod-account-achievements](https://github.com/azerothcore/mod-account-achievements)** | Account-wide achievements | 🔧 OPTIONAL |
+| **[mod-auto-revive](https://github.com/azerothcore/mod-auto-revive)** | Automatic resurrection | 🔧 OPTIONAL |
+| **[mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard)** | Honor from guard kills | 🔧 OPTIONAL |
+| **[mod-arac](https://github.com/heyitsbench/mod-arac)** | All races/classes unlocked | 🔧 OPTIONAL |
+| **[mod-time-is-time](https://github.com/dunjeon/mod-TimeIsTime)** | Time manipulation | ❌ DISABLED* |
+| **[mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal)** | Portal convenience | ❌ DISABLED* |
+| **[mod-random-enchants](https://github.com/azerothcore/mod-random-enchants)** | Random item enchantments | 🔧 OPTIONAL |
+| **[mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles)** | PvP title system | 🔧 OPTIONAL |
+| **[mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster)** | Pet management NPC | ❌ DISABLED* |
+| **[mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter)** | Enchanting services NPC | ❌ DISABLED* |
+| **[mod-assistant](https://github.com/noisiver/mod-assistant)** | AI automation features | 🔧 OPTIONAL |
+| **[mod-reagent-bank](https://github.com/ZhengPeiRu21/mod-reagent-bank)** | Reagent storage system | 🔧 OPTIONAL |
+| **[mod-black-market](https://github.com/Youpeoples/Black-Market-Auction-House)** | Rare item auctions | 🔧 OPTIONAL |
+| **[mod-instance-reset](https://github.com/azerothcore/mod-instance-reset)** | Instance reset controls | ❌ DISABLED* |
+| **[mod-challenge-modes](https://github.com/ZhengPeiRu21/mod-challenge-modes)** | Timed dungeon challenge system | 🔧 OPTIONAL |
+| **[mod-ollama-chat](https://github.com/DustinHendrickson/mod-ollama-chat)** | Playerbot LLM chat bridge (requires Ollama) | ❌ DISABLED* |
+| **[mod-player-bot-level-brackets](https://github.com/DustinHendrickson/mod-player-bot-level-brackets)** | Balance playerbot populations across level brackets | 🔧 OPTIONAL |
+| **[mod-bg-slaveryvalley](https://github.com/Helias/mod-bg-slaveryvalley)** | Custom Slavery Valley battleground | ❌ DISABLED* |
+| **[mod-azerothshard](https://github.com/azerothcore/mod-azerothshard)** | AzerothShard quality-of-life bundle | 🔧 OPTIONAL |
+| **[mod-worgoblin](https://github.com/heyitsbench/mod-worgoblin)** | Worgen & Goblin playable races | ❌ DISABLED* |
+| **[StatBooster](https://github.com/AnchyDev/StatBooster)** | Random enchant stat upgrade system | 🔧 OPTIONAL |
+| **[DungeonRespawn](https://github.com/AnchyDev/DungeonRespawn)** | Return to dungeon entrance on death | 🔧 OPTIONAL |
+| **[skeleton-module](https://github.com/azerothcore/skeleton-module)** | Empty starter module template | 🔧 OPTIONAL |
+| **[eluna-ts](https://github.com/azerothcore/eluna-ts)** | TypeScript toolchain for Eluna Lua scripts | 🔧 OPTIONAL |
 
 *\* Disabled modules require additional configuration or have compatibility issues*
 
@@ -158,13 +168,20 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 │  │   Auth   │ │  World   │ │  Client  │ │
 │  │  :3784   │ │  :8215   │ │   Data   │ │
 │  └──────────┘ └──────────┘ └──────────┘ │
+│  ┌─────────────────────────────────────┐ │
+│  │      Post-Install Config            │ │
+│  └─────────────────────────────────────┘ │
 └─────────────────────────────────────────┘
 ┌─────────────────────────────────────────┐
-│          Database & Modules             │
+│        Database & Module System         │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ │
 │  │  MySQL   │ │  Module  │ │ DB-Init  │ │
-│  │  :64306  │ │ Manager  │ │  & Imp.  │ │
+│  │  :64306  │ │ Manager  │ │  Setup   │ │
 │  └──────────┘ └──────────┘ └──────────┘ │
+│  ┌──────────┐ ┌─────────────────────────┐ │
+│  │ DB-Import│ │      Backup System      │ │
+│  │  Schema  │ │    (Automated Tasks)    │ │
+│  └──────────┘ └─────────────────────────┘ │
 └─────────────────────────────────────────┘
 ```
 
@@ -173,6 +190,9 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | Service / Container | Role | Ports (host → container) | Profile |
 |---------------------|------|--------------------------|---------|
 | `ac-mysql` | MySQL 8.0 database | `64306 → 3306` | `db` |
+| `ac-db-init` | Database schema initialization | – | `db` |
+| `ac-db-import` | Database content import | – | `db` |
+| `ac-backup` | Automated backup system | – | `db` |
 | `ac-authserver` | Auth server (standard) | `3784 → 3724` | `services-standard` |
 | `ac-worldserver` | World server (standard) | `8215 → 8085`, `7778 → 7878` | `services-standard` |
 | `ac-authserver-playerbots` | Playerbots auth | `3784 → 3724` | `services-playerbots` |
@@ -181,6 +201,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | `ac-worldserver-modules` | Custom build world | `8215 → 8085`, `7778 → 7878` | `services-modules` |
 | `ac-client-data` | Client data fetcher | – | `client-data` |
 | `ac-modules` | Module manager | – | `modules` |
+| `ac-post-install` | Post-installation configuration | – | Auto-start |
 | `ac-phpmyadmin` | Database admin UI | `8081 → 80` | `tools` |
 | `ac-keira3` | Game content editor | `4201 → 8080` | `tools` |
 

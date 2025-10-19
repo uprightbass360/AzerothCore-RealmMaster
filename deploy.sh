@@ -191,6 +191,18 @@ determine_profile(){
     MODULE_NPC_ENCHANTER
     MODULE_INSTANCE_RESET
     MODULE_LEVEL_GRANT
+    MODULE_ARAC
+    MODULE_ASSISTANT
+    MODULE_REAGENT_BANK
+    MODULE_CHALLENGE_MODES
+    MODULE_OLLAMA_CHAT
+    MODULE_PLAYER_BOT_LEVEL_BRACKETS
+    MODULE_STATBOOSTER
+    MODULE_DUNGEON_RESPAWN
+    MODULE_SKELETON_MODULE
+    MODULE_BG_SLAVERYVALLEY
+    MODULE_AZEROTHSHARD
+    MODULE_WORGOBLIN
   )
 
   local var
@@ -342,6 +354,7 @@ main(){
   fi
 
   show_step 5 5 "Bringing your realm online"
+  info "Pulling images and waiting for containers to become healthy; this may take a few minutes on first deploy."
   stage_runtime
 
   show_realm_ready

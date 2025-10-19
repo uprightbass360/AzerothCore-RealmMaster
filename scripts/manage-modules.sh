@@ -169,6 +169,56 @@ if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" != "1" ] && [ -d "mod-black-market" ];
   rm -rf mod-black-market
 fi
 
+if [ "$MODULE_CHALLENGE_MODES" != "1" ] && [ -d "mod-challenge-modes" ]; then
+  echo 'Removing mod-challenge-modes (disabled)...'
+  rm -rf mod-challenge-modes
+fi
+
+if [ "$MODULE_OLLAMA_CHAT" != "1" ] && [ -d "mod-ollama-chat" ]; then
+  echo 'Removing mod-ollama-chat (disabled)...'
+  rm -rf mod-ollama-chat
+fi
+
+if [ "$MODULE_PLAYER_BOT_LEVEL_BRACKETS" != "1" ] && [ -d "mod-player-bot-level-brackets" ]; then
+  echo 'Removing mod-player-bot-level-brackets (disabled)...'
+  rm -rf mod-player-bot-level-brackets
+fi
+
+if [ "$MODULE_STATBOOSTER" != "1" ] && [ -d "StatBooster" ]; then
+  echo 'Removing StatBooster (disabled)...'
+  rm -rf StatBooster
+fi
+
+if [ "$MODULE_DUNGEON_RESPAWN" != "1" ] && [ -d "DungeonRespawn" ]; then
+  echo 'Removing DungeonRespawn (disabled)...'
+  rm -rf DungeonRespawn
+fi
+
+if [ "$MODULE_SKELETON_MODULE" != "1" ] && [ -d "skeleton-module" ]; then
+  echo 'Removing skeleton-module (disabled)...'
+  rm -rf skeleton-module
+fi
+
+if [ "$MODULE_BG_SLAVERYVALLEY" != "1" ] && [ -d "mod-bg-slaveryvalley" ]; then
+  echo 'Removing mod-bg-slaveryvalley (disabled)...'
+  rm -rf mod-bg-slaveryvalley
+fi
+
+if [ "$MODULE_AZEROTHSHARD" != "1" ] && [ -d "mod-azerothshard" ]; then
+  echo 'Removing mod-azerothshard (disabled)...'
+  rm -rf mod-azerothshard
+fi
+
+if [ "$MODULE_WORGOBLIN" != "1" ] && [ -d "mod-worgoblin" ]; then
+  echo 'Removing mod-worgoblin (disabled)...'
+  rm -rf mod-worgoblin
+fi
+
+if [ "$MODULE_ELUNA_TS" != "1" ] && [ -d "eluna-ts" ]; then
+  echo 'Removing eluna-ts (disabled)...'
+  rm -rf eluna-ts
+fi
+
 echo 'Installing enabled modules...'
 
 # Install Playerbots if enabled
@@ -421,6 +471,97 @@ if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && [ ! -d "mod-black-market" ]
   fi
 fi
 
+# Featured catalogue additions
+if [ "$MODULE_CHALLENGE_MODES" = "1" ] && [ ! -d "mod-challenge-modes" ]; then
+  echo '🏁 Installing mod-challenge-modes...'
+  echo '   📖 Project: https://github.com/ZhengPeiRu21/mod-challenge-modes'
+  echo '   ℹ️  Adds timed dungeon challenge runs with scaling modifiers'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+  git clone https://github.com/ZhengPeiRu21/mod-challenge-modes.git mod-challenge-modes
+fi
+
+if [ "$MODULE_OLLAMA_CHAT" = "1" ] && [ ! -d "mod-ollama-chat" ]; then
+  echo '🗣️ Installing mod-ollama-chat...'
+  echo '   📖 Project: https://github.com/DustinHendrickson/mod-ollama-chat'
+  echo '   ℹ️  Integrates playerbots with external LLM dialogue via the Ollama API'
+  echo '   ⚠️  Requires MODULE_PLAYERBOTS=1 and OLLAMA service configuration'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+  git clone https://github.com/DustinHendrickson/mod-ollama-chat.git mod-ollama-chat
+  if [ "$MODULE_PLAYERBOTS" != "1" ]; then
+    echo '   ⚠️  WARNING: Playerbots are disabled; enable MODULE_PLAYERBOTS for mod-ollama-chat to function.'
+  fi
+fi
+
+if [ "$MODULE_PLAYER_BOT_LEVEL_BRACKETS" = "1" ] && [ ! -d "mod-player-bot-level-brackets" ]; then
+  echo '📊 Installing mod-player-bot-level-brackets...'
+  echo '   📖 Project: https://github.com/DustinHendrickson/mod-player-bot-level-brackets'
+  echo '   ℹ️  Keeps playerbot populations balanced across configurable level ranges'
+  echo '   ⚠️  Requires MODULE_PLAYERBOTS=1'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+  git clone https://github.com/DustinHendrickson/mod-player-bot-level-brackets.git mod-player-bot-level-brackets
+  if [ "$MODULE_PLAYERBOTS" != "1" ]; then
+    echo '   ⚠️  WARNING: Playerbots are disabled; Level Brackets will be inert until MODULE_PLAYERBOTS=1.'
+  fi
+fi
+
+if [ "$MODULE_BG_SLAVERYVALLEY" = "1" ] && [ ! -d "mod-bg-slaveryvalley" ]; then
+  echo '⚔️  Installing mod-bg-slaveryvalley...'
+  echo '   📖 Project: https://github.com/Helias/mod-bg-slaveryvalley'
+  echo '   ℹ️  Introduces the custom Slavery Valley battleground'
+  echo '   ⚠️  Requires custom DBC/client patch assets for battleground entries'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+  git clone https://github.com/Helias/mod-bg-slaveryvalley.git mod-bg-slaveryvalley
+fi
+
+if [ "$MODULE_AZEROTHSHARD" = "1" ] && [ ! -d "mod-azerothshard" ]; then
+  echo '🧩 Installing mod-azerothshard...'
+  echo '   📖 Project: https://github.com/azerothcore/mod-azerothshard'
+  echo '   ℹ️  Bundle of AzerothShard quality-of-life tweaks and scripts'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+  git clone https://github.com/azerothcore/mod-azerothshard.git mod-azerothshard
+fi
+
+if [ "$MODULE_WORGOBLIN" = "1" ] && [ ! -d "mod-worgoblin" ]; then
+  echo '🐺 Installing mod-worgoblin...'
+  echo '   📖 Project: https://github.com/heyitsbench/mod-worgoblin'
+  echo '   ℹ️  Enables Worgen and Goblin as playable races'
+  echo '   ⚠️  Requires Patch-W.MPQ (or equivalent) and DBC/DB updates'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+  git clone https://github.com/heyitsbench/mod-worgoblin.git mod-worgoblin
+fi
+
+if [ "$MODULE_STATBOOSTER" = "1" ] && [ ! -d "StatBooster" ]; then
+  echo '📈 Installing StatBooster...'
+  echo '   📖 Project: https://github.com/AnchyDev/StatBooster'
+  echo '   ℹ️  Random enchant upgrade system for AzerothCore'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+  git clone https://github.com/AnchyDev/StatBooster.git StatBooster
+fi
+
+if [ "$MODULE_DUNGEON_RESPAWN" = "1" ] && [ ! -d "DungeonRespawn" ]; then
+  echo '🚪 Installing DungeonRespawn...'
+  echo '   📖 Project: https://github.com/AnchyDev/DungeonRespawn'
+  echo '   ℹ️  Teleports players back to the dungeon entrance after death'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+  git clone https://github.com/AnchyDev/DungeonRespawn.git DungeonRespawn
+fi
+
+if [ "$MODULE_SKELETON_MODULE" = "1" ] && [ ! -d "skeleton-module" ]; then
+  echo '🦴 Installing skeleton-module...'
+  echo '   📖 Project: https://github.com/azerothcore/skeleton-module'
+  echo '   ℹ️  Blank starter module for rapid prototyping'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+  git clone https://github.com/azerothcore/skeleton-module.git skeleton-module
+fi
+
+if [ "$MODULE_ELUNA_TS" = "1" ] && [ ! -d "eluna-ts" ]; then
+  echo '🧪 Installing eluna-ts...'
+  echo '   📖 Project: https://github.com/azerothcore/eluna-ts'
+  echo '   ℹ️  Provides a TypeScript toolchain that transpiles to Eluna Lua scripts'
+  echo '   🔧 OPTIONAL: Run npm install && npm run build inside eluna-ts for transpilation features'
+  git clone https://github.com/azerothcore/eluna-ts.git eluna-ts
+fi
+
 echo 'Managing configuration files...'
 
 # Remove configuration files for disabled modules
@@ -583,7 +724,7 @@ CURRENT_STATE=""
 REBUILD_REQUIRED=0
 
 # Create current module state hash
-for module_var in MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE; do
+for module_var in MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN MODULE_ELUNA_TS; do
   eval "value=\$$module_var"
   CURRENT_STATE="$CURRENT_STATE$module_var=$value|"
 done
@@ -635,6 +776,18 @@ ENABLED_MODULES=""
 [ "$MODULE_NPC_ENCHANTER" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-npc-enchanter"
 [ "$MODULE_INSTANCE_RESET" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-instance-reset"
 [ "$MODULE_LEVEL_GRANT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-quest-count-level"
+[ "$MODULE_ARAC" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-arac"
+[ "$MODULE_ASSISTANT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-assistant"
+[ "$MODULE_REAGENT_BANK" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-reagent-bank"
+[ "$MODULE_CHALLENGE_MODES" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-challenge-modes"
+[ "$MODULE_OLLAMA_CHAT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-ollama-chat"
+[ "$MODULE_PLAYER_BOT_LEVEL_BRACKETS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-player-bot-level-brackets"
+[ "$MODULE_STATBOOSTER" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES StatBooster"
+[ "$MODULE_DUNGEON_RESPAWN" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES DungeonRespawn"
+[ "$MODULE_SKELETON_MODULE" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES skeleton-module"
+[ "$MODULE_BG_SLAVERYVALLEY" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-bg-slaveryvalley"
+[ "$MODULE_AZEROTHSHARD" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-azerothshard"
+[ "$MODULE_WORGOBLIN" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-worgoblin"
 
 if [ -n "$ENABLED_MODULES" ]; then
   ENABLED_COUNT=$(echo $ENABLED_MODULES | wc -w)

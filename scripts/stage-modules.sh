@@ -128,6 +128,18 @@ declare -A MODULE_REPO_MAP=(
   [MODULE_NPC_ENCHANTER]=mod-npc-enchanter
   [MODULE_INSTANCE_RESET]=mod-instance-reset
   [MODULE_LEVEL_GRANT]=mod-quest-count-level
+  [MODULE_ARAC]=mod-arac
+  [MODULE_ASSISTANT]=mod-assistant
+  [MODULE_REAGENT_BANK]=mod-reagent-bank
+  [MODULE_CHALLENGE_MODES]=mod-challenge-modes
+  [MODULE_OLLAMA_CHAT]=mod-ollama-chat
+  [MODULE_PLAYER_BOT_LEVEL_BRACKETS]=mod-player-bot-level-brackets
+  [MODULE_STATBOOSTER]=StatBooster
+  [MODULE_DUNGEON_RESPAWN]=DungeonRespawn
+  [MODULE_SKELETON_MODULE]=skeleton-module
+  [MODULE_BG_SLAVERYVALLEY]=mod-bg-slaveryvalley
+  [MODULE_AZEROTHSHARD]=mod-azerothshard
+  [MODULE_WORGOBLIN]=mod-worgoblin
 )
 
 show_staging_header
@@ -200,6 +212,7 @@ fi
 # Stage the services
 show_staging_step "Service Orchestration" "Preparing realm services"
 echo "🎬 Staging services with profile: services-$TARGET_PROFILE"
+echo "⏳ Pulling images and starting containers; this can take several minutes on first run."
 
 # Stop any currently running services
 echo "🛑 Stopping current services..."
