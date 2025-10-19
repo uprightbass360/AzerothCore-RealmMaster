@@ -1,57 +1,104 @@
 #!/bin/bash
+# ac-compose
 set -e
 
-echo "🔧 Starting enhanced backup service with hourly and daily schedules..."
+BACKUP_DIR_BASE="/backups"
+HOURLY_DIR="$BACKUP_DIR_BASE/hourly"
+DAILY_DIR="$BACKUP_DIR_BASE/daily"
+RETENTION_HOURS=${BACKUP_RETENTION_HOURS:-6}
+RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-3}
+DAILY_TIME=${BACKUP_DAILY_TIME:-09}
+MYSQL_PORT=${MYSQL_PORT:-3306}
 
-# Install curl if not available (handle different package managers)
-# NOTE: curl is already available in mysql:8.0 base image, commenting out to fix operator precedence issue
-# microdnf install -y curl || yum install -y curl || apt-get update && apt-get install -y curl
+mkdir -p "$HOURLY_DIR" "$DAILY_DIR"
 
-# Download backup scripts from GitHub
-echo "📥 Downloading backup scripts from GitHub..."
-curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/backup.sh -o /tmp/backup.sh
-curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/backup-hourly.sh -o /tmp/backup-hourly.sh
-curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/backup-daily.sh -o /tmp/backup-daily.sh
-chmod +x /tmp/backup.sh /tmp/backup-hourly.sh /tmp/backup-daily.sh
+log() { echo "[$(date '+%F %T')] $*"; }
 
-# Wait for MySQL to be ready before starting backup service
-echo "⏳ Waiting for MySQL to be ready..."
-sleep 30
+# Build database list from env (include optional acore_playerbots if present)
+database_list() {
+  local dbs=("${DB_AUTH_NAME}" "${DB_WORLD_NAME}" "${DB_CHARACTERS_NAME}")
+  if mysql -h"${MYSQL_HOST}" -P"${MYSQL_PORT}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -e "USE acore_playerbots;" >/dev/null 2>&1; then
+    dbs+=("acore_playerbots")
+    log "Detected optional database: acore_playerbots (will be backed up)"
+  fi
+  printf '%s\n' "${dbs[@]}"
+}
 
-# Run initial daily backup
-echo "🚀 Running initial daily backup..."
-/tmp/backup-daily.sh
+run_backup() {
+  local tier_dir="$1"    # hourly or daily dir
+  local tier_type="$2"   # "hourly" or "daily"
+  local ts=$(date '+%Y%m%d_%H%M%S')
+  local target_dir="$tier_dir/$ts"
+  mkdir -p "$target_dir"
+  log "Starting ${tier_type} backup to $target_dir"
 
-# Enhanced scheduler with hourly and daily backups
-echo "⏰ Starting enhanced backup scheduler:"
-echo "   📅 Daily backups: ${BACKUP_DAILY_TIME}:00 UTC (retention: ${BACKUP_RETENTION_DAYS} days)"
-echo "   ⏰ Hourly backups: every hour (retention: ${BACKUP_RETENTION_HOURS} hours)"
+  local -a dbs
+  mapfile -t dbs < <(database_list)
 
-# Track last backup times to avoid duplicates
-last_daily_hour=""
-last_hourly_minute=""
+  for db in "${dbs[@]}"; do
+    log "Backing up database: $db"
+    if mysqldump \
+      -h"${MYSQL_HOST}" -P"${MYSQL_PORT}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" \
+      --single-transaction --routines --triggers --events \
+      --hex-blob --quick --lock-tables=false \
+      --add-drop-database --databases "$db" \
+      | gzip -c > "$target_dir/${db}.sql.gz"; then
+      log "✅ Successfully backed up $db"
+    else
+      log "❌ Failed to back up $db"
+    fi
+  done
+
+  # Create backup manifest (parity with scripts/backup.sh and backup-hourly.sh)
+  local size; size=$(du -sh "$target_dir" | cut -f1)
+  local mysql_ver; mysql_ver=$(mysql -h"${MYSQL_HOST}" -P"${MYSQL_PORT}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -e 'SELECT VERSION();' -s -N 2>/dev/null || echo "unknown")
+
+  if [ "$tier_type" = "hourly" ]; then
+    cat > "$target_dir/manifest.json" <<EOF
+{
+  "timestamp": "${ts}",
+  "type": "hourly",
+  "databases": [$(printf '"%s",' "${dbs[@]}" | sed 's/,$//')],
+  "backup_size": "${size}",
+  "retention_hours": ${RETENTION_HOURS},
+  "mysql_version": "${mysql_ver}"
+}
+EOF
+  else
+    cat > "$target_dir/manifest.json" <<EOF
+{
+  "timestamp": "${ts}",
+  "type": "daily",
+  "databases": [$(printf '"%s",' "${dbs[@]}" | sed 's/,$//')],
+  "backup_size": "${size}",
+  "retention_days": ${RETENTION_DAYS},
+  "mysql_version": "${mysql_ver}"
+}
+EOF
+  fi
+
+  log "Backup complete: $target_dir (size ${size})"
+}
+
+cleanup_old() {
+  find "$HOURLY_DIR" -mindepth 1 -maxdepth 1 -type d -mmin +$((RETENTION_HOURS*60)) -print -exec rm -rf {} + 2>/dev/null || true
+  find "$DAILY_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +$RETENTION_DAYS -print -exec rm -rf {} + 2>/dev/null || true
+}
+
+log "Backup scheduler starting: hourly($RETENTION_HOURS h), daily($RETENTION_DAYS d at ${DAILY_TIME}:00)"
 
 while true; do
-  current_hour=$(date +%H)
-  current_minute=$(date +%M)
-  current_time="$current_hour:$current_minute"
+  minute=$(date '+%M')
+  hour=$(date '+%H')
 
-  # Daily backup check (configurable time)
-  if [ "$current_hour" = "${BACKUP_DAILY_TIME}" ] && [ "$current_minute" = "00" ] && [ "$last_daily_hour" != "$current_hour" ]; then
-    echo "📅 [$(date)] Daily backup time reached, running daily backup..."
-    /tmp/backup-daily.sh
-    last_daily_hour="$current_hour"
-    # Sleep for 2 minutes to avoid running multiple times
-    sleep 120
-  # Hourly backup check (every hour at minute 0, except during daily backup)
-  elif [ "$current_minute" = "00" ] && [ "$current_hour" != "${BACKUP_DAILY_TIME}" ] && [ "$last_hourly_minute" != "$current_minute" ]; then
-    echo "⏰ [$(date)] Hourly backup time reached, running hourly backup..."
-    /tmp/backup-hourly.sh
-    last_hourly_minute="$current_minute"
-    # Sleep for 2 minutes to avoid running multiple times
-    sleep 120
-  else
-    # Sleep for 1 minute before checking again
-    sleep 60
+  if [ "$minute" = "00" ]; then
+    run_backup "$HOURLY_DIR" "hourly"
   fi
+
+  if [ "$hour" = "$DAILY_TIME" ] && [ "$minute" = "00" ]; then
+    run_backup "$DAILY_DIR" "daily"
+  fi
+
+  cleanup_old
+  sleep 60
 done

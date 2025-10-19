@@ -719,8 +719,8 @@ services:
         REBUILD_REQUIRED=0
 
         # Create current module state hash
-        for module_var in MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT; do
-          eval "value=\$$${module_var}"
+        for module_var in MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE; do
+          eval "value=\$$$module_var"
           CURRENT_STATE="$${CURRENT_STATE}$${module_var}=$${value}|"
         done
 
@@ -806,6 +806,165 @@ services:
         echo 'Module management complete. Keeping container alive...'
         tail -f /dev/null
     restart: "no"
+    networks:
+      - azerothcore
+
+  # Build Service for C++ Module Compilation
+  ac-build:
+    image: ubuntu:22.04
+    pull_policy: ${IMAGE_PULL_POLICY}
+    container_name: ac-build
+    user: "${CONTAINER_USER}"
+    volumes:
+      - ${STORAGE_PATH}:/azerothcore
+      - ${STORAGE_PATH}/modules:/azerothcore/modules
+      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - DB_AUTH_NAME=${DB_AUTH_NAME}
+      - DB_WORLD_NAME=${DB_WORLD_NAME}
+      - DB_CHARACTERS_NAME=${DB_CHARACTERS_NAME}
+      - MODULE_PLAYERBOTS=${MODULE_PLAYERBOTS}
+      - MODULE_AOE_LOOT=${MODULE_AOE_LOOT}
+      - MODULE_LEARN_SPELLS=${MODULE_LEARN_SPELLS}
+      - MODULE_FIREWORKS=${MODULE_FIREWORKS}
+      - MODULE_INDIVIDUAL_PROGRESSION=${MODULE_INDIVIDUAL_PROGRESSION}
+      - MODULE_AHBOT=${MODULE_AHBOT}
+      - MODULE_AUTOBALANCE=${MODULE_AUTOBALANCE}
+      - MODULE_TRANSMOG=${MODULE_TRANSMOG}
+      - MODULE_NPC_BUFFER=${MODULE_NPC_BUFFER}
+      - MODULE_DYNAMIC_XP=${MODULE_DYNAMIC_XP}
+      - MODULE_SOLO_LFG=${MODULE_SOLO_LFG}
+      - MODULE_1V1_ARENA=${MODULE_1V1_ARENA}
+      - MODULE_PHASED_DUELS=${MODULE_PHASED_DUELS}
+      - MODULE_BREAKING_NEWS=${MODULE_BREAKING_NEWS}
+      - MODULE_BOSS_ANNOUNCER=${MODULE_BOSS_ANNOUNCER}
+      - MODULE_ACCOUNT_ACHIEVEMENTS=${MODULE_ACCOUNT_ACHIEVEMENTS}
+      - MODULE_AUTO_REVIVE=${MODULE_AUTO_REVIVE}
+      - MODULE_GAIN_HONOR_GUARD=${MODULE_GAIN_HONOR_GUARD}
+      - MODULE_ELUNA=${MODULE_ELUNA}
+      - MODULE_TIME_IS_TIME=${MODULE_TIME_IS_TIME}
+      - MODULE_POCKET_PORTAL=${MODULE_POCKET_PORTAL}
+      - MODULE_RANDOM_ENCHANTS=${MODULE_RANDOM_ENCHANTS}
+      - MODULE_SOLOCRAFT=${MODULE_SOLOCRAFT}
+      - MODULE_PVP_TITLES=${MODULE_PVP_TITLES}
+      - MODULE_NPC_BEASTMASTER=${MODULE_NPC_BEASTMASTER}
+      - MODULE_NPC_ENCHANTER=${MODULE_NPC_ENCHANTER}
+      - MODULE_INSTANCE_RESET=${MODULE_INSTANCE_RESET}
+      - MODULE_LEVEL_GRANT=${MODULE_LEVEL_GRANT}
+      - MODULE_ARAC=${MODULE_ARAC}
+      - MODULE_ASSISTANT=${MODULE_ASSISTANT}
+      - MODULE_REAGENT_BANK=${MODULE_REAGENT_BANK}
+      - MODULE_BLACK_MARKET_AUCTION_HOUSE=${MODULE_BLACK_MARKET_AUCTION_HOUSE}
+    working_dir: /azerothcore
+    command: >
+      sh -c "
+        echo '🔧 AzerothCore Build Service Starting...'
+
+        # Check if rebuild is required by reading module state
+        MODULES_STATE_FILE='/azerothcore/modules/.modules_state'
+        if [ -f \"$$MODULES_STATE_FILE\" ]; then
+          # Check current module configuration
+          CURRENT_STATE=''
+          for module_var in MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE; do
+            eval \"value=\\\$$$module_var\"
+            CURRENT_STATE=\"$${CURRENT_STATE}$${module_var}=$${value}|\"
+          done
+
+          PREVIOUS_STATE=$$(cat \"$$MODULES_STATE_FILE\")
+
+          # Check if any C++ modules are enabled and if no built binaries exist
+          BUILD_REQUIRED=0
+          if [ \"$$CURRENT_STATE\" != \"$$PREVIOUS_STATE\" ]; then
+            echo '🔄 Module configuration changed - starting compilation...'
+            BUILD_REQUIRED=1
+          elif [ ! -f '/azerothcore/server/bin/worldserver' ]; then
+            echo '📝 No compiled binaries found - starting initial compilation...'
+            BUILD_REQUIRED=1
+          fi
+
+          if [ \"$$BUILD_REQUIRED\" = \"1\" ]; then
+
+            # Install required packages
+            apt-get update && apt-get install -y git cmake build-essential libssl-dev libreadline-dev zlib1g-dev libbz2-dev libncurses-dev mysql-client
+
+            # Clone AzerothCore source
+            if [ ! -d '/azerothcore/azerothcore-wotlk' ]; then
+              echo '📥 Cloning AzerothCore source...'
+              git clone --depth 1 --branch master https://github.com/azerothcore/azerothcore-wotlk.git
+            fi
+
+            cd /azerothcore/azerothcore-wotlk
+
+            # Setup modules directory and clone enabled modules
+            mkdir -p modules
+            cd modules
+
+            # Clone enabled C++ modules
+            if [ \"$$MODULE_AOE_LOOT\" = \"1\" ]; then
+              [ ! -d \"mod-aoe-loot\" ] && git clone https://github.com/azerothcore/mod-aoe-loot.git
+            fi
+            if [ \"$$MODULE_LEARN_SPELLS\" = \"1\" ]; then
+              [ ! -d \"mod-learn-spells\" ] && git clone https://github.com/azerothcore/mod-learn-spells.git
+            fi
+            if [ \"$$MODULE_FIREWORKS\" = \"1\" ]; then
+              [ ! -d \"mod-fireworks-on-level\" ] && git clone https://github.com/azerothcore/mod-fireworks-on-level.git
+            fi
+            if [ \"$$MODULE_AHBOT\" = \"1\" ]; then
+              [ ! -d \"mod-ahbot\" ] && git clone https://github.com/azerothcore/mod-ahbot.git
+            fi
+            if [ \"$$MODULE_AUTOBALANCE\" = \"1\" ]; then
+              [ ! -d \"mod-autobalance\" ] && git clone https://github.com/azerothcore/mod-autobalance.git
+            fi
+            if [ \"$$MODULE_TRANSMOG\" = \"1\" ]; then
+              [ ! -d \"mod-transmog\" ] && git clone https://github.com/azerothcore/mod-transmog.git
+            fi
+            if [ \"$$MODULE_NPC_BUFFER\" = \"1\" ]; then
+              [ ! -d \"mod-npc-buffer\" ] && git clone https://github.com/azerothcore/mod-npc-buffer.git
+            fi
+            if [ \"$$MODULE_SOLO_LFG\" = \"1\" ]; then
+              [ ! -d \"mod-solo-lfg\" ] && git clone https://github.com/azerothcore/mod-solo-lfg.git
+            fi
+            if [ \"$$MODULE_SOLOCRAFT\" = \"1\" ]; then
+              [ ! -d \"mod-solocraft\" ] && git clone https://github.com/azerothcore/mod-solocraft.git
+            fi
+
+            cd /azerothcore/azerothcore-wotlk
+
+            # Configure and build
+            echo '🔨 Configuring build...'
+            mkdir -p build
+            cd build
+
+            cmake .. -DCMAKE_INSTALL_PREFIX=/azerothcore/server -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DWITH_WARNINGS=1 -DTOOLS=0 -DSCRIPTS=static -DMODULES=static
+
+            echo '🏗️  Starting compilation (this may take 15-45 minutes)...'
+            make -j$$(nproc)
+
+            echo '📦 Installing binaries...'
+            make install
+
+            echo '✅ Build completed successfully!'
+
+            # Update state file to prevent rebuilds
+            echo \"$$CURRENT_STATE\" > \"$$MODULES_STATE_FILE\"
+
+          else
+            echo '✅ No module changes detected and binaries exist - build not required'
+          fi
+        else
+          echo '⚠️  Module state file not found - build service waiting for modules container'
+        fi
+
+        echo '🏁 Build service complete. Container will exit.'
+      "
+    restart: "no"
+    depends_on:
+      - ac-modules
     networks:
       - azerothcore
 

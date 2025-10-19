@@ -24,15 +24,15 @@ services:
         # Auto-detect package manager and install dependencies (as root)
         if command -v apk >/dev/null 2>&1; then
           # Alpine Linux - install full wget and bash for script compatibility
-          apk add --no-cache curl unzip wget bash ca-certificates p7zip jq
+          apk add --no-cache curl unzip wget bash ca-certificates p7zip aria2 jq
         elif command -v apt-get >/dev/null 2>&1; then
           # Ubuntu/Debian
-          apt-get update && apt-get install -y --no-install-recommends curl unzip wget ca-certificates p7zip-full jq && rm -rf /var/lib/apt/lists/*
+          apt-get update && apt-get install -y --no-install-recommends curl unzip wget bash ca-certificates p7zip-full aria2 jq && rm -rf /var/lib/apt/lists/*
         elif command -v yum >/dev/null 2>&1; then
           # CentOS/RHEL
-          yum install -y curl unzip wget ca-certificates p7zip jq
+          yum install -y curl unzip wget bash ca-certificates p7zip aria2 jq
         else
-          echo "❌ Unsupported package manager - please install: curl unzip wget ca-certificates p7zip jq"
+          echo "❌ Unsupported package manager - please install: curl unzip wget bash ca-certificates p7zip aria2 jq"
           exit 1
         fi
 

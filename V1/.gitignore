@@ -2,7 +2,5 @@ data/
 backups/
 local-data-tools/
 storage/
-source/
 .claude/
-.env
-
+*custom.env

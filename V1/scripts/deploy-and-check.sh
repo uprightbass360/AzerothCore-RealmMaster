@@ -339,9 +339,9 @@ deploy_stack() {
     docker compose --env-file "$SERVICES_ENV_FILE" -f ./docker-compose-azerothcore-services.yml up -d 2>&1 | grep -v "Found orphan containers"
 
     # Wait for client data extraction
-    print_status "INFO" "Waiting for client data download and extraction (this may take 15-25 minutes)..."
+    print_status "INFO" "Waiting for client data download and extraction (optimized: 8-15 minutes typical)..."
     print_status "INFO" "Press Ctrl+C to exit if needed..."
-    wait_for_service "Client Data" 480 "docker logs ac-client-data 2>/dev/null | grep -q 'Game data setup complete'"
+    wait_for_service "Client Data" 360 "docker logs ac-client-data 2>/dev/null | grep -q 'Game data setup complete'"
 
     # Wait for worldserver to be healthy
     wait_for_service "World Server" 24 "check_container_health ac-worldserver"
@@ -349,6 +349,14 @@ deploy_stack() {
     # Deploy modules if enabled
     if [ "$MODULES_ENABLED" = true ]; then
         print_status "INFO" "Step 3: Deploying modules layer..."
+
+        # Ensure ac-modules is recreated with the correct environment
+        # It may have been created earlier by the services layer using services env
+        if docker ps -a --format '{{.Names}}' | grep -q '^ac-modules$'; then
+            print_status "INFO" "Recreating ac-modules with modules env (removing existing container)"
+            docker rm -f ac-modules >/dev/null 2>&1 || true
+        fi
+
         docker compose --env-file "$MODULES_ENV_FILE" -f ./docker-compose-azerothcore-modules.yml up -d 2>&1 | grep -v "Found orphan containers"
 
         # Wait for modules to be ready

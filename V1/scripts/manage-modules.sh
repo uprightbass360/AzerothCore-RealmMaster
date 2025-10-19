@@ -1,11 +1,10 @@
 #!/bin/bash
-# ac-compose
 set -e
 
 echo 'Setting up git user'
-git config --global user.name "${GIT_USERNAME:-ac-compose}"
-git config --global user.email "${GIT_EMAIL:-noreply@azerothcore.org}"
-# PAT not needed for public repositories
+git config --global user.name "$GIT_USERNAME"
+git config --global user.email "$GIT_EMAIL"
+git config --global url.https://$GIT_PAT@github.com/.insteadOf https://github.com/
 
 echo 'Initializing module management...'
 cd /modules
@@ -539,6 +538,18 @@ if [ "$MODULE_LEVEL_GRANT" != "1" ]; then
   rm -f /azerothcore/env/dist/etc/levelGrant.conf*
 fi
 
+if [ "$MODULE_ASSISTANT" != "1" ]; then
+  rm -f /azerothcore/env/dist/etc/mod_assistant.conf*
+fi
+
+if [ "$MODULE_REAGENT_BANK" != "1" ]; then
+  rm -f /azerothcore/env/dist/etc/mod_reagent_bank.conf*
+fi
+
+if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" != "1" ]; then
+  rm -f /azerothcore/env/dist/etc/mod_black_market.conf*
+fi
+
 # Install configuration files for enabled modules
 for module_dir in mod-*; do
   if [ -d "$module_dir" ]; then
@@ -547,33 +558,15 @@ for module_dir in mod-*; do
   fi
 done
 
-if [ "$MODULE_AUTOBALANCE" = "1" ]; then
-  if [ -f "/azerothcore/env/dist/etc/AutoBalance.conf.dist" ]; then
-    sed -i 's/^AutoBalance\.LevelScaling\.EndGameBoost.*/AutoBalance.LevelScaling.EndGameBoost = false    # disabled pending proper implementation/' \
-      /azerothcore/env/dist/etc/AutoBalance.conf.dist || true
-  fi
-fi
+echo 'Configuration file management complete.'
 
-# Load SQL runner if present
-if [ -f "/scripts/manage-modules-sql.sh" ]; then
-  . /scripts/manage-modules-sql.sh
-elif [ -f "/tmp/scripts/manage-modules-sql.sh" ]; then
-  . /tmp/scripts/manage-modules-sql.sh
-else
-  echo "⚠️  SQL helper not found, skipping module SQL execution"
-fi
+# Source the SQL module management functions
+source /scripts/manage-modules-sql.sh
 
-# Execute SQLs for enabled modules (via helper)
-SQL_EXECUTION_FAILED=0
-if declare -f execute_module_sql_scripts >/dev/null 2>&1; then
-  echo 'Executing module SQL scripts...'
-  if execute_module_sql_scripts; then
-    echo 'SQL execution complete.'
-  else
-    echo '⚠️  Module SQL scripts reported errors'
-    SQL_EXECUTION_FAILED=1
-  fi
-fi
+echo 'Executing module SQL scripts...'
+execute_module_sql_scripts
+
+echo 'SQL execution complete.'
 
 # Module state tracking and rebuild logic
 echo 'Checking for module changes that require rebuild...'
@@ -583,7 +576,7 @@ CURRENT_STATE=""
 REBUILD_REQUIRED=0
 
 # Create current module state hash
-for module_var in MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE; do
+for module_var in MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT; do
   eval "value=\$$module_var"
   CURRENT_STATE="$CURRENT_STATE$module_var=$value|"
 done
@@ -605,9 +598,9 @@ fi
 # Save current state
 echo "$CURRENT_STATE" > "$MODULES_STATE_FILE"
 
-# Check if any C++ modules are enabled (modules requiring source compilation)
-# NOTE: mod-playerbots uses pre-built images and doesn't require rebuild
+# Check if any C++ modules are enabled (all current modules require compilation)
 ENABLED_MODULES=""
+[ "$MODULE_PLAYERBOTS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-playerbots"
 [ "$MODULE_AOE_LOOT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-aoe-loot"
 [ "$MODULE_LEARN_SPELLS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-learn-spells"
 [ "$MODULE_FIREWORKS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-fireworks-on-level"
@@ -626,6 +619,7 @@ ENABLED_MODULES=""
 [ "$MODULE_AUTO_REVIVE" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-auto-revive"
 [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-gain-honor-guard"
 [ "$MODULE_ELUNA" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-eluna"
+[ "$MODULE_ARAC" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-arac"
 [ "$MODULE_TIME_IS_TIME" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-time-is-time"
 [ "$MODULE_POCKET_PORTAL" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-pocket-portal"
 [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-random-enchants"
@@ -635,6 +629,9 @@ ENABLED_MODULES=""
 [ "$MODULE_NPC_ENCHANTER" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-npc-enchanter"
 [ "$MODULE_INSTANCE_RESET" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-instance-reset"
 [ "$MODULE_LEVEL_GRANT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-quest-count-level"
+[ "$MODULE_ASSISTANT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-assistant"
+[ "$MODULE_REAGENT_BANK" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-reagent-bank"
+# Note: mod-black-market is Lua-based, doesn't need C++ compilation
 
 if [ -n "$ENABLED_MODULES" ]; then
   ENABLED_COUNT=$(echo $ENABLED_MODULES | wc -w)
@@ -649,10 +646,14 @@ if [ -n "$ENABLED_MODULES" ]; then
     echo "Module configuration has changed. To integrate C++ modules into AzerothCore:"
     echo ""
     echo "1. Stop current services:"
-    echo "   docker compose down"
+    echo "   docker compose -f docker-compose-azerothcore-services.yml down"
     echo ""
-    echo "2. Build with source-based compilation (external process)"
-    echo "   ./scripts/rebuild-with-modules.sh (if available)"
+    echo "2. Build with source-based compilation:"
+    echo "   docker compose -f /tmp/acore-dev-test/docker-compose.yml build"
+    echo "   docker compose -f /tmp/acore-dev-test/docker-compose.yml up -d"
+    echo ""
+    echo "3. Or use the automated rebuild script (if available):"
+    echo "   ./scripts/rebuild-with-modules.sh"
     echo ""
     echo "📋 NOTE: Source-based build will compile AzerothCore with all enabled modules"
     echo "⏱️  Expected build time: 15-45 minutes depending on system performance"
@@ -664,18 +665,21 @@ fi
 
 echo 'Module management complete.'
 
-REBUILD_SENTINEL="/modules/.requires_rebuild"
-if [ "$SQL_EXECUTION_FAILED" = "1" ]; then
-  echo "⚠️  SQL execution encountered issues; review logs above."
-fi
-
-if [ "$REBUILD_REQUIRED" = "1" ] && [ -n "$ENABLED_MODULES" ]; then
-  echo "$ENABLED_MODULES" > "$REBUILD_SENTINEL"
+# Download rebuild script from GitHub for local access
+echo '📥 Downloading rebuild-with-modules.sh from GitHub...'
+apk add --no-cache curl
+if curl -fsSL https://raw.githubusercontent.com/uprightbass360/acore-compose/main/scripts/rebuild-with-modules.sh -o /tmp/rebuild-with-modules.sh 2>/dev/null; then
+  echo '✅ Downloaded rebuild-with-modules.sh from GitHub'
+  chmod +x /tmp/rebuild-with-modules.sh
+  echo '📍 Script available at: /tmp/rebuild-with-modules.sh'
+elif [ -f "/project/scripts/rebuild-with-modules.sh" ]; then
+  echo '📁 Using local rebuild-with-modules.sh for testing'
+  cp /project/scripts/rebuild-with-modules.sh /tmp/rebuild-with-modules.sh
+  chmod +x /tmp/rebuild-with-modules.sh
+  echo '✅ Copied to /tmp/rebuild-with-modules.sh'
 else
-  rm -f "$REBUILD_SENTINEL" 2>/dev/null || true
+  echo '⚠️  Warning: rebuild-with-modules.sh not found in GitHub or locally'
 fi
 
-# Optional: keep container alive for inspection in CI/debug contexts
-if [ "${MODULES_DEBUG_KEEPALIVE:-0}" = "1" ]; then
-  tail -f /dev/null
-fi
+echo 'Keeping container alive...'
+tail -f /dev/null
