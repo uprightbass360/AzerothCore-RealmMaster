@@ -15,6 +15,7 @@ TARGET_PROFILE=""
 WATCH_LOGS=1
 KEEP_RUNNING=0
 SKIP_REBUILD=0
+WORLD_LOG_SINCE=""
 
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
@@ -259,9 +260,52 @@ stage_runtime(){
 
 tail_world_logs(){
   info "Tailing worldserver logs (Ctrl+C to stop)"
-  if ! docker logs --follow --tail "${WORLD_LOG_TAIL:-200}" ac-worldserver; then
+  local args=(--follow)
+  if [ -n "$WORLD_LOG_SINCE" ]; then
+    args+=(--since "$WORLD_LOG_SINCE")
+  fi
+  local tail_opt="${WORLD_LOG_TAIL:-0}"
+  args+=(--tail "$tail_opt")
+  if ! docker logs "${args[@]}" ac-worldserver; then
     warn "Worldserver logs unavailable; container may not be running."
   fi
+}
+
+wait_for_worldserver_ready(){
+  local timeout="${WORLD_READY_TIMEOUT:-180}" start
+  start="$(date +%s)"
+  info "Waiting for worldserver to become healthy (timeout: ${timeout}s)"
+  while true; do
+    if ! docker ps --format '{{.Names}}' | grep -qx "ac-worldserver"; then
+      info "Worldserver container is not running yet; retrying..."
+    else
+      local health
+      health="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' ac-worldserver 2>/dev/null || echo none)"
+      case "$health" in
+        healthy)
+          WORLD_LOG_SINCE="$(docker inspect --format='{{.State.StartedAt}}' ac-worldserver 2>/dev/null)"
+          ok "Worldserver reported healthy"
+          return 0
+          ;;
+        none)
+          if docker inspect --format='{{.State.Status}}' ac-worldserver 2>/dev/null | grep -q '^running$'; then
+            WORLD_LOG_SINCE="$(docker inspect --format='{{.State.StartedAt}}' ac-worldserver 2>/dev/null)"
+            ok "Worldserver running (no healthcheck configured)"
+            return 0
+          fi
+          ;;
+        unhealthy)
+          warn "Worldserver healthcheck reports unhealthy; logs recommended"
+          return 1
+          ;;
+      esac
+    fi
+    if [ $(( $(date +%s) - start )) -ge "$timeout" ]; then
+      warn "Timed out waiting for worldserver health"
+      return 1
+    fi
+    sleep 3
+  done
 }
 
 main(){
@@ -303,8 +347,12 @@ main(){
   show_realm_ready
 
   if [ "$WATCH_LOGS" -eq 1 ]; then
-    info "Watching your realm come to life (Ctrl+C to stop watching)"
-    tail_world_logs
+    if wait_for_worldserver_ready; then
+      info "Watching your realm come to life (Ctrl+C to stop watching)"
+      tail_world_logs
+    else
+      warn "Skipping log tail; worldserver not healthy. Use './status.sh --once' or 'docker logs ac-worldserver'."
+    fi
   else
     ok "Realm deployment completed. Use './status.sh' to monitor your realm."
   fi
