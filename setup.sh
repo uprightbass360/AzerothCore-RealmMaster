@@ -52,7 +52,7 @@ Description:
 
 Notes:
   - The generated .env is read automatically by docker compose.
-  - Run deploy with: deploy-and-check.sh or docker compose --profile ... up -d
+  - Run deploy with: deploy.sh or docker compose --profile ... up -d
 EOF
         exit 0
         ;;
@@ -162,9 +162,14 @@ EOF
   local MODULE_PLAYERBOTS=0 MODULE_AOE_LOOT=0 MODULE_LEARN_SPELLS=0 MODULE_FIREWORKS=0 MODULE_INDIVIDUAL_PROGRESSION=0 \
         MODULE_AHBOT=0 MODULE_AUTOBALANCE=0 MODULE_TRANSMOG=0 MODULE_NPC_BUFFER=0 MODULE_DYNAMIC_XP=0 MODULE_SOLO_LFG=0 \
         MODULE_1V1_ARENA=0 MODULE_PHASED_DUELS=0 MODULE_BREAKING_NEWS=0 MODULE_BOSS_ANNOUNCER=0 MODULE_ACCOUNT_ACHIEVEMENTS=0 \
-        MODULE_AUTO_REVIVE=0 MODULE_GAIN_HONOR_GUARD=0 MODULE_ELUNA=1 MODULE_TIME_IS_TIME=0 MODULE_POCKET_PORTAL=0 \
+        MODULE_AUTO_REVIVE=0 MODULE_GAIN_HONOR_GUARD=0 MODULE_TIME_IS_TIME=0 MODULE_POCKET_PORTAL=0 \
         MODULE_RANDOM_ENCHANTS=0 MODULE_SOLOCRAFT=0 MODULE_PVP_TITLES=0 MODULE_NPC_BEASTMASTER=0 MODULE_NPC_ENCHANTER=0 \
         MODULE_INSTANCE_RESET=0 MODULE_LEVEL_GRANT=0 MODULE_ASSISTANT=0 MODULE_REAGENT_BANK=0 MODULE_BLACK_MARKET_AUCTION_HOUSE=0 MODULE_ARAC=0
+
+  declare -A DISABLED_MODULE_REASONS=(
+    [MODULE_AHBOT]="Requires upstream Addmod_ahbotScripts symbol (fails link)"
+    [MODULE_LEVEL_GRANT]="QuestCountLevel module relies on removed ConfigMgr APIs and fails to build"
+  )
 
   local PLAYERBOT_ENABLED=0 PLAYERBOT_MAX_BOTS=40
 
@@ -174,11 +179,14 @@ EOF
   local NEEDS_CXX_REBUILD=0
 
   if [ "$MODE" = "1" ]; then
-    MODULE_SOLO_LFG=1; MODULE_SOLOCRAFT=1; MODULE_AUTOBALANCE=1; MODULE_AHBOT=1; MODULE_TRANSMOG=1; MODULE_NPC_BUFFER=1; MODULE_LEARN_SPELLS=1; MODULE_FIREWORKS=1
+    MODULE_SOLO_LFG=1; MODULE_SOLOCRAFT=1; MODULE_AUTOBALANCE=1; MODULE_TRANSMOG=1; MODULE_NPC_BUFFER=1; MODULE_LEARN_SPELLS=1; MODULE_FIREWORKS=1
   elif [ "$MODE" = "2" ]; then
-    MODULE_PLAYERBOTS=1; MODULE_SOLO_LFG=1; MODULE_SOLOCRAFT=1; MODULE_AUTOBALANCE=1; MODULE_AHBOT=1; MODULE_TRANSMOG=1; MODULE_NPC_BUFFER=1; MODULE_LEARN_SPELLS=1; MODULE_FIREWORKS=1
+    MODULE_PLAYERBOTS=1; MODULE_SOLO_LFG=1; MODULE_SOLOCRAFT=1; MODULE_AUTOBALANCE=1; MODULE_TRANSMOG=1; MODULE_NPC_BUFFER=1; MODULE_LEARN_SPELLS=1; MODULE_FIREWORKS=1
   elif [ "$MODE" = "3" ]; then
     say INFO "Answer y/n for each module"
+    for key in "${!DISABLED_MODULE_REASONS[@]}"; do
+      say WARNING "${key#MODULE_}: ${DISABLED_MODULE_REASONS[$key]}"
+    done
     # Core Gameplay
     MODULE_PLAYERBOTS=$(ask_yn "Playerbots - AI companions" n)
     MODULE_SOLO_LFG=$(ask_yn "Solo LFG - Solo dungeon finder" n)
@@ -202,7 +210,6 @@ EOF
     # Progression
     MODULE_INDIVIDUAL_PROGRESSION=$(ask_yn "Individual Progression (Vanilla→TBC→WotLK)" n)
     MODULE_DYNAMIC_XP=$(ask_yn "Dynamic XP" n)
-    MODULE_LEVEL_GRANT=$(ask_yn "Level Grant" n)
     MODULE_ACCOUNT_ACHIEVEMENTS=$(ask_yn "Account Achievements" n)
     # Server Features
     MODULE_BREAKING_NEWS=$(ask_yn "Breaking News" n)
@@ -219,7 +226,7 @@ EOF
     MODULE_ARAC=$(ask_yn "All Races All Classes (requires client patch)" n)
   fi
 
-  for mod_var in MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE; do
+  for mod_var in MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE; do
     eval "value=\$$mod_var"
     if [ "$value" = "1" ]; then
       NEEDS_CXX_REBUILD=1
@@ -234,9 +241,8 @@ EOF
   printf "  %-18s %s\n" "Storage Path:" "$STORAGE_PATH"
   printf "  %-18s %s\n" "Container User:" "$CONTAINER_USER"
   printf "  %-18s Daily %s:00 UTC, keep %sd/%sh\n" "Backups:" "$BACKUP_DAILY_TIME" "$BACKUP_RETENTION_DAYS" "$BACKUP_RETENTION_HOURS"
-  printf "  %-18s preset %s (playerbots=%s solo_lfg=%s autobalance=%s transmog=%s ahbot=%s npc_buffer=%s learn_spells=%s fireworks=%s)\n" \
-    "Modules:" "$MODE" "$MODULE_PLAYERBOTS" "$MODULE_SOLO_LFG" "$MODULE_AUTOBALANCE" "$MODULE_TRANSMOG" "$MODULE_AHBOT" "$MODULE_NPC_BUFFER" "$MODULE_LEARN_SPELLS" "$MODULE_FIREWORKS"
-  printf "  %-18s enabled by default (edit .env to disable)\n" "Eluna:"
+  printf "  %-18s preset %s (playerbots=%s solo_lfg=%s autobalance=%s transmog=%s npc_buffer=%s learn_spells=%s fireworks=%s)\n" \
+    "Modules:" "$MODE" "$MODULE_PLAYERBOTS" "$MODULE_SOLO_LFG" "$MODULE_AUTOBALANCE" "$MODULE_TRANSMOG" "$MODULE_NPC_BUFFER" "$MODULE_LEARN_SPELLS" "$MODULE_FIREWORKS"
   if [ "$NEEDS_CXX_REBUILD" = "1" ]; then
     printf "  %-18s detected (source rebuild required)\n" "C++ modules:"
   fi
@@ -340,7 +346,6 @@ MODULE_BOSS_ANNOUNCER=$MODULE_BOSS_ANNOUNCER
 MODULE_ACCOUNT_ACHIEVEMENTS=$MODULE_ACCOUNT_ACHIEVEMENTS
 MODULE_AUTO_REVIVE=$MODULE_AUTO_REVIVE
 MODULE_GAIN_HONOR_GUARD=$MODULE_GAIN_HONOR_GUARD
-MODULE_ELUNA=$MODULE_ELUNA
 MODULE_ARAC=$MODULE_ARAC
 MODULE_TIME_IS_TIME=$MODULE_TIME_IS_TIME
 MODULE_POCKET_PORTAL=$MODULE_POCKET_PORTAL
@@ -415,10 +420,10 @@ EOF
   say INFO "Run with profiles (examples):"
   if [ "$MODULE_PLAYERBOTS" = "1" ]; then
     echo "  docker compose -f compose.yml --profile db --profile services-playerbots --profile client-data-bots --profile modules --profile tools up -d"
-    echo "  ./deploy-and-check.sh --profiles db,services-playerbots,client-data-bots,modules,tools"
+    echo "  ./deploy.sh --profile modules --no-watch"
   else
     echo "  docker compose -f compose.yml --profile db --profile services-standard --profile client-data --profile modules --profile tools up -d"
-    echo "  ./deploy-and-check.sh --profiles db,services-standard,client-data,modules,tools"
+    echo "  ./deploy.sh --profile modules --no-watch"
   fi
 }
 

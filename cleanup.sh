@@ -30,20 +30,18 @@ print_status() {
 
 usage(){
   cat <<EOF
-ac-compose Cleanup
-
 Usage: $0 [CLEANUP_LEVEL] [OPTIONS]
 
 CLEANUP LEVELS:
-  --soft        Stop project containers (preserves data)
-  --hard        Remove containers + networks (preserves volumes/images)
-  --nuclear     Complete removal: containers, networks, volumes, images (DESTROYS DATA)
+  --soft             Stop project containers (preserves data)
+  --hard             Remove containers + networks (preserves volumes/images)
+  --nuclear          Complete removal: containers, networks, volumes, images (DESTROYS DATA)
 
 OPTIONS:
-  --dry-run         Show actions without executing
-  --force           Skip confirmation prompts
-  --preserve-backups  Keep backups when nuking storage (moves them aside and restores)
-  -h, --help        Show this help
+  --dry-run          Show actions without executing
+  --force            Skip confirmation prompts
+  --preserve-backups Keep backups when nuking storage (moves them aside and restores)
+  -h, --help         Show this help
 EOF
 }
 
@@ -105,18 +103,38 @@ fi
 STORAGE_PATH="${STORAGE_PATH:-$STORAGE_PATH_DEFAULT}"
 
 soft_cleanup() {
-  print_status HEADER "SOFT CLEANUP - Stop containers"
+  print_status HEADER "SOFT CLEANUP - Stop runtime stack"
   confirm "This will stop all project containers (data preserved)."
-  execute_command "Stopping containers" docker compose -f "$COMPOSE_FILE" down
+  local profiles=(
+    --profile services-standard
+    --profile services-playerbots
+    --profile services-modules
+    --profile client-data
+    --profile client-data-bots
+    --profile modules
+    --profile tools
+    --profile db
+  )
+  execute_command "Stopping runtime profiles" docker compose -f "$COMPOSE_FILE" "${profiles[@]}" down
   print_status SUCCESS "Soft cleanup complete"
 }
 
 hard_cleanup() {
   print_status HEADER "HARD CLEANUP - Remove containers + networks"
   confirm "This will remove containers and networks (volumes/images preserved)."
-  execute_command "Removing containers and networks" docker compose -f "$COMPOSE_FILE" down --remove-orphans
-  # Remove straggler containers matching ac-* (defensive)
-  execute_command "Remove stray ac-* containers" "docker ps -a --format '{{.Names}}' | grep -E '^ac-' | xargs -r docker rm -f"
+  local profiles=(
+    --profile services-standard
+    --profile services-playerbots
+    --profile services-modules
+    --profile client-data
+    --profile client-data-bots
+    --profile modules
+    --profile tools
+    --profile db
+  )
+  execute_command "Removing containers and networks" docker compose -f "$COMPOSE_FILE" "${profiles[@]}" down --remove-orphans
+  # Remove straggler containers matching project name (defensive)
+  execute_command "Remove stray project containers" "docker ps -a --format '{{.Names}}' | grep -E '^ac-' | xargs -r docker rm -f"
   # Remove project network if present and not automatically removed
   if [ -n "${NETWORK_NAME:-}" ]; then
     execute_command "Remove project network ${NETWORK_NAME}" "docker network rm ${NETWORK_NAME} 2>/dev/null || true"
@@ -130,7 +148,17 @@ nuclear_cleanup() {
   confirm "Proceed with complete removal?"
 
   # Down with volumes
-  execute_command "Removing containers, networks and volumes" docker compose -f "$COMPOSE_FILE" down --volumes --remove-orphans
+  local profiles=(
+    --profile services-standard
+    --profile services-playerbots
+    --profile services-modules
+    --profile client-data
+    --profile client-data-bots
+    --profile modules
+    --profile tools
+    --profile db
+  )
+  execute_command "Removing containers, networks and volumes" docker compose -f "$COMPOSE_FILE" "${profiles[@]}" down --volumes --remove-orphans
 
   # Remove project images (server/tool images typical to this project)
   execute_command "Remove acore images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^acore/' | xargs -r docker rmi"

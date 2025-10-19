@@ -122,7 +122,6 @@ declare -A MODULE_REPO_MAP=(
   [MODULE_ACCOUNT_ACHIEVEMENTS]=mod-account-achievements
   [MODULE_AUTO_REVIVE]=mod-auto-revive
   [MODULE_GAIN_HONOR_GUARD]=mod-gain-honor-guard
-  [MODULE_ELUNA]=mod-eluna
   [MODULE_TIME_IS_TIME]=mod-TimeIsTime
   [MODULE_POCKET_PORTAL]=mod-pocket-portal
   [MODULE_RANDOM_ENCHANTS]=mod-random-enchants
@@ -184,8 +183,8 @@ fi
 echo "🚀 Building AzerothCore with modules..."
 docker compose build --no-cache
 
-echo "🟢 Starting source services..."
-docker compose up -d
+echo "🧹 Cleaning up source build containers..."
+docker compose down --remove-orphans >/dev/null 2>&1 || true
 
 popd >/dev/null
 

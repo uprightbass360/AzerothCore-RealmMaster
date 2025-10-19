@@ -366,6 +366,41 @@ services:
       retries: ${AUTH_HEALTHCHECK_RETRIES:-3}
       start_period: ${AUTH_HEALTHCHECK_START_PERIOD:-60s}
 
+  ac-authserver-modules:
+    profiles: ["services-modules"]
+    image: ${AC_AUTHSERVER_IMAGE_MODULES:-acore/ac-wotlk-authserver:modules-latest}
+    container_name: ac-authserver
+    user: "${CONTAINER_USER:-0:0}"
+    depends_on:
+      ac-mysql:
+        condition: service_healthy
+      ac-db-import:
+        condition: service_completed_successfully
+      ac-db-init:
+        condition: service_completed_successfully
+    environment:
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_AUTH_NAME:-acore_auth}"
+      AC_UPDATES_ENABLE_DATABASES: "0"
+      AC_BIND_IP: "0.0.0.0"
+      AC_LOG_LEVEL: "1"
+      AC_LOGGER_ROOT_CONFIG: "1,Console"
+      AC_LOGGER_SERVER_CONFIG: "1,Console"
+      AC_APPENDER_CONSOLE_CONFIG: "1,2,0"
+    ports:
+      - "${AUTH_EXTERNAL_PORT:-3784}:${AUTH_PORT:-3724}"
+    restart: unless-stopped
+    networks:
+      - azerothcore
+    volumes:
+      - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
+    cap_add: ["SYS_NICE"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep '[a]uthserver' | grep -v grep || exit 1"]
+      interval: ${AUTH_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${AUTH_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${AUTH_HEALTHCHECK_RETRIES:-3}
+      start_period: ${AUTH_HEALTHCHECK_START_PERIOD:-60s}
+
   ac-worldserver-playerbots:
     profiles: ["services-playerbots"]
     image: ${AC_WORLDSERVER_IMAGE_PLAYERBOTS:-uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot}
@@ -408,6 +443,56 @@ services:
     restart: unless-stopped
     networks:
       - azerothcore
+    cap_add: ["SYS_NICE"]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ps aux | grep '[w]orldserver' | grep -v grep || exit 1"]
+      interval: ${WORLD_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${WORLD_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${WORLD_HEALTHCHECK_RETRIES:-3}
+      start_period: ${WORLD_HEALTHCHECK_START_PERIOD:-120s}
+
+  ac-worldserver-modules:
+    profiles: ["services-modules"]
+    image: ${AC_WORLDSERVER_IMAGE_MODULES:-acore/ac-wotlk-worldserver:modules-latest}
+    container_name: ac-worldserver
+    user: "${CONTAINER_USER:-0:0}"
+    stdin_open: true
+    tty: true
+    depends_on:
+      - ac-authserver-modules
+      - ac-client-data-standard
+    environment:
+      AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_AUTH_NAME:-acore_auth}"
+      AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_WORLD_NAME:-acore_world}"
+      AC_CHARACTER_DATABASE_INFO: "${CONTAINER_MYSQL:-ac-mysql};${MYSQL_PORT:-3306};${MYSQL_USER:-root};${MYSQL_ROOT_PASSWORD:-azerothcore123};${DB_CHARACTERS_NAME:-acore_characters}"
+      AC_UPDATES_ENABLE_DATABASES: "0"
+      AC_BIND_IP: "0.0.0.0"
+      AC_DATA_DIR: "/azerothcore/data"
+      AC_SOAP_PORT: "7878"
+      AC_PROCESS_PRIORITY: "0"
+      AC_ELUNA_ENABLED: "${AC_ELUNA_ENABLED:-1}"
+      AC_ELUNA_TRACE_BACK: "${AC_ELUNA_TRACE_BACK:-1}"
+      AC_ELUNA_AUTO_RELOAD: "${AC_ELUNA_AUTO_RELOAD:-1}"
+      AC_ELUNA_BYTECODE_CACHE: "${AC_ELUNA_BYTECODE_CACHE:-1}"
+      AC_ELUNA_SCRIPT_PATH: "${AC_ELUNA_SCRIPT_PATH:-lua_scripts}"
+      AC_ELUNA_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS:-}"
+      AC_ELUNA_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS:-}"
+      AC_ELUNA_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL:-1}"
+      PLAYERBOT_ENABLED: "${PLAYERBOT_ENABLED:-0}"
+      PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS:-40}"
+      AC_LOG_LEVEL: "2"
+    volumes:
+      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
+      - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_PATH:-./storage}/logs:/azerothcore/logs
+      - ${STORAGE_PATH:-./storage}/modules:/azerothcore/modules
+      - ${STORAGE_PATH:-./storage}/lua_scripts:/azerothcore/lua_scripts
+    networks:
+      - azerothcore
+    ports:
+      - "${WORLD_EXTERNAL_PORT:-8215}:${WORLD_PORT:-8085}"
+      - "${SOAP_EXTERNAL_PORT:-7778}:${SOAP_PORT:-7878}"
+    restart: unless-stopped
     cap_add: ["SYS_NICE"]
     healthcheck:
       test: ["CMD", "sh", "-c", "ps aux | grep '[w]orldserver' | grep -v grep || exit 1"]
