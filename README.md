@@ -1,11 +1,11 @@
 # AzerothCore Docker/Compose Stack
 
-A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with enhanced modules, automated management, and production-ready features.
+A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with 20+ enhanced modules, intelligent automation, and production-ready features.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Docker** and **Docker Compose v2** installed
+- **Docker** or **Podman** with Docker Compose
 - **4GB+ RAM** and **20GB+ storage**
 - **Linux/macOS/WSL2** (Windows with WSL2 recommended)
 
@@ -110,22 +110,33 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **mod-account-achievements** | Account-wide achievements | 🔧 OPTIONAL |
 | **mod-auto-revive** | Automatic resurrection | 🔧 OPTIONAL |
 | **mod-gain-honor-guard** | Honor from guard kills | 🔧 OPTIONAL |
+| **mod-arac** | All races/classes unlocked | 🔧 OPTIONAL |
 | **mod-time-is-time** | Time manipulation | ❌ DISABLED* |
 | **mod-pocket-portal** | Portal convenience | ❌ DISABLED* |
 | **mod-random-enchants** | Random item enchantments | 🔧 OPTIONAL |
 | **mod-pvp-titles** | PvP title system | 🔧 OPTIONAL |
 | **mod-npc-beastmaster** | Pet management NPC | ❌ DISABLED* |
 | **mod-npc-enchanter** | Enchanting services NPC | ❌ DISABLED* |
+| **mod-assistant** | AI automation features | 🔧 OPTIONAL |
+| **mod-reagent-bank** | Reagent storage system | 🔧 OPTIONAL |
+| **mod-black-market** | Rare item auctions | 🔧 OPTIONAL |
 | **mod-instance-reset** | Instance reset controls | ❌ DISABLED* |
 
 *\* Disabled modules require additional configuration or have compatibility issues*
 
 ### ✅ Automated Configuration
 - **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import
+- **Backup Management** - Automated hourly/daily backups with intelligent restoration
 - **Module Integration** - Automatic source builds when C++ modules are enabled
 - **Realmlist Configuration** - Server address and port setup
 - **Service Orchestration** - Profile-based deployment (standard/playerbots/modules)
 - **Health Monitoring** - Container health checks and restart policies
+
+### ✅ Lua Scripting Environment
+- **Eluna Engine** - Built-in Lua scripting support with TypeScript compilation
+- **Script Auto-loading** - Scripts automatically loaded from `storage/lua_scripts/`
+- **Development Tools** - Script reloading with `.reload eluna` command
+- **Volume Mounting** - Hot-reload development environment
 
 ---
 
@@ -232,6 +243,10 @@ open http://localhost:8081
 # Direct MySQL access
 docker exec -it ac-mysql mysql -u root -p
 
+# Manual backup operations
+./scripts/backup.sh                              # Create immediate backup
+./scripts/restore.sh YYYYMMDD_HHMMSS            # Restore from specific backup
+
 # View available backups
 ls -la storage/backups/
 ```
@@ -263,7 +278,17 @@ Some modules require additional manual configuration after deployment:
 
 #### mod-transmog / mod-npc-* modules
 - **NPC spawning required**: Use GM commands to spawn service NPCs
-- Example: `.npc add 190010` for transmog NPC
+- Examples:
+  ```bash
+  .npc add 190010    # Transmog NPC
+  .npc add 290011    # Reagent Bank NPC
+  # Check module docs for enchanter/beastmaster NPC IDs
+  ```
+
+#### mod-arac (All Races All Classes)
+- **Client patches required**: `Patch-A.MPQ` (found in module storage)
+- **Installation**: Players must copy to `WoW/Data/` directory
+- **Server-side**: DBC files automatically applied during module installation
 
 ### Profile Selection
 
@@ -339,6 +364,41 @@ ls -la ./source/azerothcore/
 2. **Review logs**: `docker logs <service-name> -f`
 3. **Verify configuration**: Check `.env` file for proper module toggles
 4. **Clean deployment**: Stop all services and redeploy with `./deploy.sh`
+
+### Backup and Restoration System
+
+The stack includes an intelligent backup and restoration system:
+
+**Automated Backup Schedule**
+- **Hourly backups**: Retained for 6 hours (configurable via `BACKUP_RETENTION_HOURS`)
+- **Daily backups**: Retained for 3 days (configurable via `BACKUP_RETENTION_DAYS`)
+- **Automatic cleanup**: Old backups removed based on retention policies
+
+**Smart Backup Detection**
+- **Multiple format support**: Detects daily, hourly, and legacy timestamped backups
+- **Priority-based selection**: Automatically selects the most recent available backup
+- **Integrity validation**: Verifies backup files before attempting restoration
+
+**Intelligent Startup Process**
+- **Automatic restoration**: Detects and restores from existing backups on startup
+- **Conditional import**: Skips database import when backup restoration succeeds
+- **Data protection**: Prevents overwriting restored data with fresh schema
+
+**Backup Structure**
+```
+storage/backups/
+├── daily/
+│   └── YYYYMMDD_HHMMSS/          # Daily backup directories
+│       ├── acore_auth.sql.gz
+│       ├── acore_characters.sql.gz
+│       ├── acore_world.sql.gz
+│       └── manifest.json
+└── hourly/
+    └── YYYYMMDD_HHMMSS/          # Hourly backup directories
+        ├── acore_auth.sql.gz
+        ├── acore_characters.sql.gz
+        └── acore_world.sql.gz
+```
 
 ---
 
