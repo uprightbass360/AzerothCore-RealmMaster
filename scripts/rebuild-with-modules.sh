@@ -197,6 +197,16 @@ fi
 echo "🚀 Building AzerothCore with modules..."
 docker compose build --no-cache
 
+echo "🔖 Tagging modules-latest images"
+docker tag acore/ac-wotlk-worldserver:master acore/ac-wotlk-worldserver:modules-latest
+docker tag acore/ac-wotlk-authserver:master acore/ac-wotlk-authserver:modules-latest
+
+if [ "$(read_env MODULE_PLAYERBOTS "0")" = "1" ]; then
+  echo "🔁 Tagging playerbot images uprightbass360/azerothcore-wotlk-playerbots:*"
+  docker tag acore/ac-wotlk-worldserver:modules-latest uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot
+  docker tag acore/ac-wotlk-authserver:modules-latest uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot
+fi
+
 show_rebuild_step 5 5 "Cleaning up build containers"
 echo "🧹 Cleaning up source build containers..."
 docker compose down --remove-orphans >/dev/null 2>&1 || true

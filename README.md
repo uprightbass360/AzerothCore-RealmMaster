@@ -224,12 +224,40 @@ Use this workflow to build locally, then push the same stack to a remote host:
    docker compose --profile services-playerbots logs --tail 100 ac-worldserver
    ```
 
+### Remote Deploy Workflow
+1. **Configure & Build Locally**
+   ```bash
+   ./setup.sh --module-config sam --playerbot-max-bots 3000
+   ./scripts/rebuild-with-modules.sh --yes
+   ```
+2. **Migrate Stack to Remote**
+   ```bash
+   ./scripts/migrate-stack.sh \
+     --host docker-server \
+     --user sam \
+     --project-dir /home/sam/src/acore-compose
+   ```
+   (Exports rebuilt images to `images/acore-modules-images.tar`, including both `acore/...:modules-latest` and `uprightbass360/...:Playerbot` tags, then syncs `storage/` unless `--skip-storage` is provided.)
+3. **Deploy on Remote Host**
+   ```bash
+   ssh docker-server '
+     cd /home/sam/src/acore-compose &&
+     ./deploy.sh --skip-rebuild --no-watch
+   '
+   ```
+4. **Verify Services**
+   ```bash
+   ./status.sh --once
+   docker compose --profile services-playerbots logs --tail 100 ac-worldserver
+   ```
+
 ### Module Presets
 - Drop comma-separated module lists into `configurations/*.conf` (for example `configurations/playerbot-modules.conf`).
 - `setup.sh` automatically adds these presets to the module menu and enables the listed modules when selected or when `--module-config <name>` is provided.
 - Built-in presets:
   - `configurations/suggested-modules.conf` – default solo-friendly QoL stack.
   - `configurations/playerbots-suggested-modules.conf` – suggested stack plus playerbots.
+  - `configurations/playerbot-only.conf` – playerbot-focused profile (adjust `--playerbot-max-bots`).
 - Custom example:
   - `configurations/sam.conf` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
 

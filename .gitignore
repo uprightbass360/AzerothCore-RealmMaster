@@ -8,9 +8,10 @@ local-data-tools/
 storage/
 source/
 .claude/
-.env
+images/
 node_modules/
 .mcp*/
+.env
 package-lock.json
 package.json
 
