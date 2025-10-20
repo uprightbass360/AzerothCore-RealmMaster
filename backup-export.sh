@@ -8,7 +8,7 @@ DB_CHAR="${DB_CHARACTERS_NAME:-acore_characters}"
 
 usage(){
   cat <<EOF
-Usage: ./export-user-backup.sh [output_dir]
+Usage: ./backup-export.sh [output_dir]
 
 Creates a timestamped backup of the auth and character databases.
 If output_dir is provided, places the timestamped folder inside it

@@ -310,6 +310,10 @@ docker exec -it ac-mysql mysql -u root -p
 ./scripts/backup.sh                              # Create immediate backup
 ./scripts/restore.sh YYYYMMDD_HHMMSS            # Restore from specific backup
 
+# User data backup/import utilities
+./backup-export.sh [output_dir]                 # Export user accounts & characters
+./backup-import.sh [backup_dir]                 # Import user data from backup
+
 # View available backups
 ls -la storage/backups/
 ```
@@ -467,6 +471,17 @@ storage/backups/
         ├── acore_auth.sql.gz
         ├── acore_characters.sql.gz
         └── acore_world.sql.gz
+
+# User data import/export
+ExportBackup_YYYYMMDD_HHMMSS/     # Created by backup-export.sh
+├── acore_auth.sql.gz             # User accounts
+├── acore_characters.sql.gz       # Character data
+└── manifest.json
+
+ImportBackup/                     # Used by backup-import.sh
+├── acore_auth.sql[.gz]           # Required: accounts
+├── acore_characters.sql[.gz]     # Required: characters
+└── acore_world.sql[.gz]          # Optional: world data
 ```
 
 ---

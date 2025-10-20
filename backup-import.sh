@@ -15,7 +15,7 @@ COLOR_RESET='\033[0m'
 
 usage(){
   cat <<EOF
-Usage: ./import-user-backup.sh [backup_dir]
+Usage: ./backup-import.sh [backup_dir]
 
 Restores user accounts and characters from a backup folder.
 
