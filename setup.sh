@@ -869,22 +869,22 @@ fi
   printf "  %-18s %s\n" "Modules preset:" "$SUMMARY_MODE_TEXT"
   printf "  %-18s %s\n" "Playerbot Max Bots:" "$PLAYERBOT_MAX_BOTS"
   printf "  %-18s" "Enabled Modules:"
-  local first=1
+  local enabled_modules=()
   for module_var in "${KNOWN_MODULE_VARS[@]}"; do
     eval "value=\$$module_var"
     if [ "$value" = "1" ]; then
-      if [ $first -eq 1 ]; then
-        printf " %s" "${module_var#MODULE_}"
-        first=0
-      else
-        printf ", %s" "${module_var#MODULE_}"
-      fi
+      enabled_modules+=("${module_var#MODULE_}")
     fi
   done
-  if [ $first -eq 1 ]; then
-    printf " none"
+
+  if [ ${#enabled_modules[@]} -eq 0 ]; then
+    printf " none\n"
+  else
+    printf "\n"
+    for module in "${enabled_modules[@]}"; do
+      printf "                     • %s\n" "$module"
+    done
   fi
-  printf "\n"
   if [ "$NEEDS_CXX_REBUILD" = "1" ]; then
     printf "  %-18s detected (source rebuild required)\n" "C++ modules:"
   fi
@@ -906,6 +906,20 @@ fi
       if [ -z "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
         MODULES_REBUILD_SOURCE_PATH_VALUE="./source/azerothcore"
         say INFO "Using default source path: ${MODULES_REBUILD_SOURCE_PATH_VALUE}"
+      fi
+    fi
+  fi
+
+  if [ "$RUN_REBUILD_NOW" = "1" ]; then
+    local rebuild_source_path="${MODULES_REBUILD_SOURCE_PATH_VALUE:-./source/azerothcore}"
+    if [ ! -f "$rebuild_source_path/docker-compose.yml" ]; then
+      say INFO "Preparing source repository via scripts/setup-source.sh"
+      if ! ./scripts/setup-source.sh >/dev/null 2>&1; then
+        say WARNING "Source setup encountered issues; running interactively."
+        if ! ./scripts/setup-source.sh; then
+          say WARNING "Source setup failed; skipping automatic rebuild."
+          RUN_REBUILD_NOW=0
+        fi
       fi
     fi
   fi
