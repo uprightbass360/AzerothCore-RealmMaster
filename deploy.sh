@@ -241,24 +241,51 @@ rebuild_source(){
 tag_module_images(){
   local source_world="acore/ac-wotlk-worldserver:master"
   local source_auth="acore/ac-wotlk-authserver:master"
-  local target_world
-  local target_auth
-  target_world="$(read_env AC_WORLDSERVER_IMAGE_MODULES "acore/ac-wotlk-worldserver:modules-latest")"
-  target_auth="$(read_env AC_AUTHSERVER_IMAGE_MODULES "acore/ac-wotlk-authserver:modules-latest")"
 
-  if docker image inspect "$source_world" >/dev/null 2>&1; then
-    docker tag "$source_world" "$target_world"
-    ok "Tagged $target_world from $source_world"
-  else
-    warn "Source image $source_world not found; skipping tag"
-  fi
+  local targets_world=()
+  local targets_auth=()
 
-  if docker image inspect "$source_auth" >/dev/null 2>&1; then
-    docker tag "$source_auth" "$target_auth"
-    ok "Tagged $target_auth from $source_auth"
-  else
-    warn "Source image $source_auth not found; skipping tag"
-  fi
+  targets_world+=("$(read_env AC_WORLDSERVER_IMAGE_MODULES "acore/ac-wotlk-worldserver:modules-latest")")
+  targets_world+=("$(read_env AC_WORLDSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot")")
+  targets_auth+=("$(read_env AC_AUTHSERVER_IMAGE_MODULES "acore/ac-wotlk-authserver:modules-latest")")
+  targets_auth+=("$(read_env AC_AUTHSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot")")
+
+  local tagged_world=()
+  local tagged_auth=()
+
+  tag_image(){
+    local src="$1" target="$2" label="$3"
+    [[ -n "$target" ]] || return 0
+    case "$label" in
+      world) for image in "${tagged_world[@]}"; do [[ "$image" == "$target" ]] && return 0; done ;;
+      auth) for image in "${tagged_auth[@]}"; do [[ "$image" == "$target" ]] && return 0; done ;;
+    esac
+    case "$target" in
+      *modules-latest*)
+        if docker image inspect "$src" >/dev/null 2>&1; then
+          docker tag "$src" "$target"
+          ok "Tagged $target from $src ($label)"
+        else
+          warn "Source image $src not found; skipping tag for $label"
+        fi
+        ;;
+      *)
+        info "Skipping tag for $label image $target (non modules-latest)"
+        return 0
+        ;;
+    esac
+    case "$label" in
+      world) tagged_world+=("$target") ;;
+      auth) tagged_auth+=("$target") ;;
+    esac
+  }
+
+  for target in "${targets_world[@]}"; do
+    tag_image "$source_world" "$target" world
+  done
+  for target in "${targets_auth[@]}"; do
+    tag_image "$source_auth" "$target" auth
+  done
 }
 
 stage_runtime(){
@@ -338,18 +365,22 @@ main(){
   show_step 3 5 "Syncing modules"
   sync_modules
 
+  local did_rebuild=0
   if modules_need_rebuild; then
     if [ "$SKIP_REBUILD" -eq 1 ]; then
       warn "Modules require rebuild, but --skip-rebuild was provided."
     else
       show_step 4 5 "Building realm with modules (this may take 15-45 minutes)"
       rebuild_source "$src_dir"
+      did_rebuild=1
     fi
   else
     info "No module rebuild required."
   fi
 
-  if [ "$resolved_profile" = "modules" ]; then
+  if [ "$did_rebuild" -eq 1 ]; then
+    tag_module_images
+  elif [ "$resolved_profile" = "modules" ]; then
     tag_module_images
   fi
 

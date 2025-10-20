@@ -19,6 +19,8 @@ validate_ip(){ [[ $1 =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; }
 validate_port(){ [[ $1 =~ ^[0-9]+$ ]] && [ $1 -ge 1 ] && [ $1 -le 65535 ]; }
 validate_number(){ [[ $1 =~ ^[0-9]+$ ]]; }
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 NON_INTERACTIVE=0
 
 ask(){
@@ -149,6 +151,23 @@ module_default(){
   fi
 }
 
+apply_module_preset(){
+  local preset_list="$1"
+  local IFS=','
+  for item in $preset_list; do
+    local mod="${item//[[:space:]]/}"
+    [ -z "$mod" ] && continue
+    if [ -n "${KNOWN_MODULE_LOOKUP[$mod]:-}" ]; then
+      eval "$mod=1"
+    else
+      say WARNING "Preset references unknown module $mod"
+    fi
+  done
+}
+
+DEFAULT_PRESET_SUGGESTED="suggested-modules"
+DEFAULT_PRESET_PLAYERBOTS="playerbots-suggested-modules"
+
 show_wow_header(){
   echo -e "\n${BLUE}    ⚔️  AZEROTHCORE DEPLOYMENT SYSTEM  ⚔️${NC}"
   echo -e "${BLUE}    ═══════════════════════════════════════${NC}"
@@ -177,6 +196,7 @@ main(){
   local CLI_BACKUP_HOURS=""
   local CLI_BACKUP_TIME=""
   local CLI_MODULE_MODE=""
+  local CLI_MODULE_PRESET=""
   local CLI_PLAYERBOT_ENABLED=""
   local CLI_PLAYERBOT_MAX=""
   local CLI_AUTO_REBUILD=0
@@ -215,6 +235,7 @@ Options:
   --backup-retention-hours N      Hourly backup retention (default 6)
   --backup-daily-time HH          Daily backup hour 00-23 (default 09)
   --module-mode MODE              suggested, playerbots, manual, or none
+  --module-config NAME            Use preset NAME from configurations/<NAME>.conf
   --enable-modules LIST           Comma-separated module list (MODULE_* or shorthand)
   --playerbot-enabled 0|1         Override PLAYERBOT_ENABLED flag
   --playerbot-max-bots N          Override PLAYERBOT_MAX_BOTS value
@@ -334,6 +355,13 @@ EOF
       --module-mode=*)
         CLI_MODULE_MODE="${1#*=}"; shift
         ;;
+      --module-config)
+        [[ $# -ge 2 ]] || { say ERROR "--module-config requires a value"; exit 1; }
+        CLI_MODULE_PRESET="$2"; shift 2
+        ;;
+      --module-config=*)
+        CLI_MODULE_PRESET="${1#*=}"; shift
+        ;;
       --enable-modules)
         [[ $# -ge 2 ]] || { say ERROR "--enable-modules requires a value"; exit 1; }
         CLI_ENABLE_MODULES_RAW+=("$2"); shift 2
@@ -412,11 +440,11 @@ EOF
   echo "1) 🏠 Local Development (127.0.0.1, local storage)"
   echo "2) 🌐 LAN Server (local network IP)"
   echo "3) ☁️  Public Server (domain or public IP)"
-  local DEPLOYMENT_TYPE_INPUT="${CLI_DEPLOYMENT_TYPE}"
-  local DEPLOYMENT_TYPE=""
-  if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$DEPLOYMENT_TYPE_INPUT" ]; then
-    DEPLOYMENT_TYPE_INPUT="local"
-  fi
+local DEPLOYMENT_TYPE_INPUT="${CLI_DEPLOYMENT_TYPE}"
+local DEPLOYMENT_TYPE=""
+if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$DEPLOYMENT_TYPE_INPUT" ]; then
+  DEPLOYMENT_TYPE_INPUT="local"
+fi
   while true; do
     if [ -z "$DEPLOYMENT_TYPE_INPUT" ]; then
       read -p "$(echo -e "${YELLOW}🔧 Select deployment type [1-3]: ${NC}")" DEPLOYMENT_TYPE_INPUT
@@ -446,6 +474,27 @@ EOF
   if [ -n "$CLI_DEPLOYMENT_TYPE" ] || [ "$NON_INTERACTIVE" = "1" ]; then
     say INFO "Deployment type set to ${DEPLOYMENT_TYPE}."
   fi
+
+  # Server config
+  say HEADER "SERVER CONFIGURATION"
+  local SERVER_ADDRESS=""
+  if [ -n "$CLI_SERVER_ADDRESS" ]; then
+    SERVER_ADDRESS="$CLI_SERVER_ADDRESS"
+  elif [ "$DEPLOYMENT_TYPE" = "local" ]; then
+    SERVER_ADDRESS=127.0.0.1
+  elif [ "$DEPLOYMENT_TYPE" = "lan" ]; then
+    local LAN_IP
+    LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk 'NR==1{print $7}')
+    SERVER_ADDRESS=$(ask "Enter server IP address" "${CLI_SERVER_ADDRESS:-${LAN_IP:-192.168.1.100}}" validate_ip)
+  else
+    SERVER_ADDRESS=$(ask "Enter server address (IP or domain)" "${CLI_SERVER_ADDRESS:-your-domain.com}" )
+  fi
+
+  local REALM_PORT AUTH_EXTERNAL_PORT SOAP_EXTERNAL_PORT MYSQL_EXTERNAL_PORT
+  REALM_PORT=$(ask "Enter client connection port" "${CLI_REALM_PORT:-8215}" validate_port)
+  AUTH_EXTERNAL_PORT=$(ask "Enter auth server port" "${CLI_AUTH_PORT:-3784}" validate_port)
+  SOAP_EXTERNAL_PORT=$(ask "Enter SOAP API port" "${CLI_SOAP_PORT:-7778}" validate_port)
+  MYSQL_EXTERNAL_PORT=$(ask "Enter MySQL external port" "${CLI_MYSQL_PORT:-64306}" validate_port)
 
   # Permission scheme
   say HEADER "PERMISSION SCHEME"
@@ -493,28 +542,6 @@ EOF
   if [ -n "$CLI_PERMISSION_SCHEME" ] || [ "$NON_INTERACTIVE" = "1" ]; then
     say INFO "Permission scheme set to ${PERMISSION_SCHEME_NAME:-$PERMISSION_SCHEME_INPUT}."
   fi
-
-  # Server config
-  say HEADER "SERVER CONFIGURATION"
-  local SERVER_ADDRESS=""
-  if [ -n "$CLI_SERVER_ADDRESS" ]; then
-    SERVER_ADDRESS="$CLI_SERVER_ADDRESS"
-  elif [ "$DEPLOYMENT_TYPE" = "local" ]; then
-    SERVER_ADDRESS=127.0.0.1
-  elif [ "$DEPLOYMENT_TYPE" = "lan" ]; then
-    local LAN_IP
-    LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk 'NR==1{print $7}')
-    SERVER_ADDRESS=$(ask "Enter server IP address" "${CLI_SERVER_ADDRESS:-${LAN_IP:-192.168.1.100}}" validate_ip)
-  else
-    SERVER_ADDRESS=$(ask "Enter server address (IP or domain)" "${CLI_SERVER_ADDRESS:-your-domain.com}" )
-  fi
-
-  local REALM_PORT AUTH_EXTERNAL_PORT SOAP_EXTERNAL_PORT MYSQL_EXTERNAL_PORT
-  REALM_PORT=$(ask "Enter client connection port" "${CLI_REALM_PORT:-8215}" validate_port)
-  AUTH_EXTERNAL_PORT=$(ask "Enter auth server port" "${CLI_AUTH_PORT:-3784}" validate_port)
-  SOAP_EXTERNAL_PORT=$(ask "Enter SOAP API port" "${CLI_SOAP_PORT:-7778}" validate_port)
-  MYSQL_EXTERNAL_PORT=$(ask "Enter MySQL external port" "${CLI_MYSQL_PORT:-64306}" validate_port)
-
   # DB config
   say HEADER "DATABASE CONFIGURATION"
   local MYSQL_ROOT_PASSWORD; MYSQL_ROOT_PASSWORD=$(ask "Enter MySQL root password" "${CLI_MYSQL_PASSWORD:-azerothcore123}")
@@ -553,6 +580,47 @@ EOF
   BACKUP_DAILY_TIME=$(ask "Daily backup hour (00-23, UTC)" "${CLI_BACKUP_TIME:-09}" validate_number)
 
   local MODE=""
+  local MODE_PRESET_NAME=""
+  declare -A MODULE_PRESET_CONFIGS=()
+  declare -a MODULE_PRESET_ORDER=()
+  local CONFIG_DIR="$SCRIPT_DIR/configurations"
+  if [ -d "$CONFIG_DIR" ]; then
+    while IFS= read -r preset_path; do
+      [ -n "$preset_path" ] || continue
+      local preset_name
+      preset_name="$(basename "$preset_path" .conf)"
+      local preset_value
+      preset_value="$(tr -d '\r' < "$preset_path" | tr '\n' ',' | sed -E 's/,+/,/g; s/^,//; s/,$//')"
+      MODULE_PRESET_CONFIGS["$preset_name"]="$preset_value"
+      MODULE_PRESET_ORDER+=("$preset_name")
+    done < <(find "$CONFIG_DIR" -maxdepth 1 -type f -name '*.conf' -print | sort)
+  fi
+
+  local missing_presets=0
+  for required_preset in "$DEFAULT_PRESET_SUGGESTED" "$DEFAULT_PRESET_PLAYERBOTS"; do
+    if [ -z "${MODULE_PRESET_CONFIGS[$required_preset]:-}" ]; then
+      say ERROR "Missing module preset configurations/${required_preset}.conf"
+      missing_presets=1
+    fi
+  done
+  if [ "$missing_presets" -eq 1 ]; then
+    exit 1
+  fi
+
+  if [ -n "$CLI_MODULE_PRESET" ]; then
+    if [ -n "${MODULE_PRESET_CONFIGS[$CLI_MODULE_PRESET]:-}" ]; then
+      MODE="preset"
+      MODE_PRESET_NAME="$CLI_MODULE_PRESET"
+    else
+      say ERROR "Unknown module preset: $CLI_MODULE_PRESET"
+      exit 1
+    fi
+  fi
+
+  if [ -n "$MODE" ] && [ "$MODE" != "preset" ]; then
+    MODE_PRESET_NAME=""
+  fi
+
   if [ -n "$CLI_MODULE_MODE" ]; then
     case "${CLI_MODULE_MODE,,}" in
       1|suggested) MODE=1 ;;
@@ -561,7 +629,13 @@ EOF
       4|none) MODE=4 ;;
       *) say ERROR "Invalid module mode: ${CLI_MODULE_MODE}"; exit 1 ;;
     esac
+    if [ "$MODE" = "1" ]; then
+      MODE_PRESET_NAME="$DEFAULT_PRESET_SUGGESTED"
+    elif [ "$MODE" = "2" ]; then
+      MODE_PRESET_NAME="$DEFAULT_PRESET_PLAYERBOTS"
+    fi
   fi
+
   if [ -z "$MODE" ] && [ ${#MODULE_ENABLE_SET[@]} -gt 0 ]; then
     MODE=3
   fi
@@ -573,26 +647,60 @@ EOF
     say ERROR "--enable-modules cannot be used together with module-mode=none."
     exit 1
   fi
+
+  local MODE_PRESET_NAME=""
+  if [ "$MODE" = "preset" ] && [ -n "$CLI_MODULE_PRESET" ]; then
+    MODE_PRESET_NAME="$CLI_MODULE_PRESET"
+  fi
+
   # Module config
   say HEADER "MODULE PRESET"
   echo "1) ⭐ Suggested Modules"
   echo "2) 🤖 Playerbots + Suggested modules"
   echo "3) ⚙️  Manual selection"
   echo "4) 🚫 No modules"
+
+  local menu_index=5
+  declare -A MENU_PRESET_INDEX=()
+  if [ ${#MODULE_PRESET_ORDER[@]} -gt 0 ]; then
+    for preset_name in "${MODULE_PRESET_ORDER[@]}"; do
+      if [ "$preset_name" = "$DEFAULT_PRESET_SUGGESTED" ] || [ "$preset_name" = "$DEFAULT_PRESET_PLAYERBOTS" ]; then
+        continue
+      fi
+      local pretty_name
+      pretty_name=$(echo "$preset_name" | tr '_-' ' ' | awk '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}}1')
+      echo "${menu_index}) 🧩 ${pretty_name} (configurations/${preset_name}.conf)"
+      MENU_PRESET_INDEX[$menu_index]="$preset_name"
+      menu_index=$((menu_index + 1))
+    done
+  fi
+  local max_option=$((menu_index - 1))
+
   if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$MODE" ]; then
     MODE=1
   fi
+
   if [ -z "$MODE" ]; then
     local MODE_SELECTION
     while true; do
-      read -p "$(echo -e "${YELLOW}🔧 Select module configuration [1-4]: ${NC}")" MODE_SELECTION
-      case "$MODE_SELECTION" in
-        1|2|3|4) MODE="$MODE_SELECTION"; break;;
-        *) say ERROR "Please select 1, 2, 3, or 4";;
-      esac
+      read -p "$(echo -e "${YELLOW}🔧 Select module configuration [1-${max_option}]: ${NC}")" MODE_SELECTION
+      if [[ "$MODE_SELECTION" =~ ^[0-9]+$ ]] && [ "$MODE_SELECTION" -ge 1 ] && [ "$MODE_SELECTION" -le "$max_option" ]; then
+        if [ -n "${MENU_PRESET_INDEX[$MODE_SELECTION]:-}" ]; then
+          MODE="preset"
+          MODE_PRESET_NAME="${MENU_PRESET_INDEX[$MODE_SELECTION]}"
+        else
+          MODE="$MODE_SELECTION"
+        fi
+        break
+      fi
+      say ERROR "Please select a number between 1 and ${max_option}"
     done
   else
-    say INFO "Module preset set to ${MODE}."
+    if [ "$MODE" = "preset" ]; then
+      say INFO "Module preset set to ${MODE_PRESET_NAME}."
+    else
+      say INFO "Module preset set to ${MODE}."
+    fi
   fi
 
   # Initialize toggles
@@ -604,6 +712,10 @@ EOF
         MODULE_INSTANCE_RESET=0 MODULE_LEVEL_GRANT=0 MODULE_ASSISTANT=0 MODULE_REAGENT_BANK=0 MODULE_BLACK_MARKET_AUCTION_HOUSE=0 MODULE_ARAC=0 \
         MODULE_CHALLENGE_MODES=0 MODULE_OLLAMA_CHAT=0 MODULE_SKELETON_MODULE=0 MODULE_BG_SLAVERYVALLEY=0 MODULE_ELUNA_TS=0 \
         MODULE_PLAYER_BOT_LEVEL_BRACKETS=0 MODULE_STATBOOSTER=0 MODULE_DUNGEON_RESPAWN=0 MODULE_AZEROTHSHARD=0 MODULE_WORGOBLIN=0
+  local DEFAULT_AUTH_IMAGE_PLAYERBOTS="uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot"
+  local DEFAULT_WORLD_IMAGE_PLAYERBOTS="uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot"
+  local AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_AUTH_IMAGE_PLAYERBOTS"
+  local AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_WORLD_IMAGE_PLAYERBOTS"
 
   local mod_var
   for mod_var in "${!MODULE_ENABLE_SET[@]}"; do
@@ -633,10 +745,13 @@ EOF
   local NEEDS_CXX_REBUILD=0
 
   if [ "$MODE" = "1" ]; then
-    MODULE_SOLO_LFG=1; MODULE_SOLOCRAFT=1; MODULE_AUTOBALANCE=1; MODULE_TRANSMOG=1; MODULE_NPC_BUFFER=1; MODULE_LEARN_SPELLS=1; MODULE_FIREWORKS=1
+    MODE_PRESET_NAME="$DEFAULT_PRESET_SUGGESTED"
+    apply_module_preset "${MODULE_PRESET_CONFIGS[$DEFAULT_PRESET_SUGGESTED]}"
   elif [ "$MODE" = "2" ]; then
-    MODULE_PLAYERBOTS=1; MODULE_SOLO_LFG=1; MODULE_SOLOCRAFT=1; MODULE_AUTOBALANCE=1; MODULE_TRANSMOG=1; MODULE_NPC_BUFFER=1; MODULE_LEARN_SPELLS=1; MODULE_FIREWORKS=1
+    MODE_PRESET_NAME="$DEFAULT_PRESET_PLAYERBOTS"
+    apply_module_preset "${MODULE_PRESET_CONFIGS[$DEFAULT_PRESET_PLAYERBOTS]}"
   elif [ "$MODE" = "3" ]; then
+    MODE_PRESET_NAME=""
     say INFO "Answer y/n for each module"
     for key in "${!DISABLED_MODULE_REASONS[@]}"; do
       say WARNING "${key#MODULE_}: ${DISABLED_MODULE_REASONS[$key]}"
@@ -664,30 +779,38 @@ EOF
     MODULE_REAGENT_BANK=$(ask_yn "Reagent Bank - Materials storage" "$(module_default MODULE_REAGENT_BANK)")
     MODULE_BLACK_MARKET_AUCTION_HOUSE=$(ask_yn "Black Market - MoP-style" "$(module_default MODULE_BLACK_MARKET_AUCTION_HOUSE)")
     # PvP
-    MODULE_1V1_ARENA=$(ask_yn "1v1 Arena" "$(module_default MODULE_1V1_ARENA)")
-    MODULE_PHASED_DUELS=$(ask_yn "Phased Duels" "$(module_default MODULE_PHASED_DUELS)")
-    MODULE_PVP_TITLES=$(ask_yn "PvP Titles" "$(module_default MODULE_PVP_TITLES)")
+    MODULE_1V1_ARENA=$(ask_yn "1v1 Arena - Solo arena queue system" "$(module_default MODULE_1V1_ARENA)")
+    MODULE_PHASED_DUELS=$(ask_yn "Phased Duels - Isolated duel instances" "$(module_default MODULE_PHASED_DUELS)")
+    MODULE_PVP_TITLES=$(ask_yn "PvP Titles - Classic honor rank titles" "$(module_default MODULE_PVP_TITLES)")
     MODULE_BG_SLAVERYVALLEY=$(ask_yn "Slavery Valley - Custom battleground" "$(module_default MODULE_BG_SLAVERYVALLEY)")
     # Progression
     MODULE_INDIVIDUAL_PROGRESSION=$(ask_yn "Individual Progression (Vanilla→TBC→WotLK)" "$(module_default MODULE_INDIVIDUAL_PROGRESSION)")
-    MODULE_DYNAMIC_XP=$(ask_yn "Dynamic XP" "$(module_default MODULE_DYNAMIC_XP)")
-    MODULE_ACCOUNT_ACHIEVEMENTS=$(ask_yn "Account Achievements" "$(module_default MODULE_ACCOUNT_ACHIEVEMENTS)")
+    MODULE_DYNAMIC_XP=$(ask_yn "Dynamic XP - Adaptive experience rates" "$(module_default MODULE_DYNAMIC_XP)")
+    MODULE_ACCOUNT_ACHIEVEMENTS=$(ask_yn "Account Achievements - Share progress across characters" "$(module_default MODULE_ACCOUNT_ACHIEVEMENTS)")
     MODULE_AZEROTHSHARD=$(ask_yn "AzerothShard - Blended custom features" "$(module_default MODULE_AZEROTHSHARD)")
     # Server Features
-    MODULE_BREAKING_NEWS=$(ask_yn "Breaking News" "$(module_default MODULE_BREAKING_NEWS)")
-    MODULE_BOSS_ANNOUNCER=$(ask_yn "Boss Announcer" "$(module_default MODULE_BOSS_ANNOUNCER)")
-    MODULE_AUTO_REVIVE=$(ask_yn "Auto Revive" "$(module_default MODULE_AUTO_REVIVE)")
+    MODULE_BREAKING_NEWS=$(ask_yn "Breaking News - Server announcement system" "$(module_default MODULE_BREAKING_NEWS)")
+    MODULE_BOSS_ANNOUNCER=$(ask_yn "Boss Announcer - Broadcast boss kills" "$(module_default MODULE_BOSS_ANNOUNCER)")
+    MODULE_AUTO_REVIVE=$(ask_yn "Auto Revive - Automatic resurrection system" "$(module_default MODULE_AUTO_REVIVE)")
     MODULE_ELUNA_TS=$(ask_yn "Eluna TS - TypeScript toolchain for Lua" "$(module_default MODULE_ELUNA_TS)")
     # Utility
-    MODULE_NPC_BEASTMASTER=$(ask_yn "NPC Beastmaster" "$(module_default MODULE_NPC_BEASTMASTER)")
-    MODULE_NPC_ENCHANTER=$(ask_yn "NPC Enchanter" "$(module_default MODULE_NPC_ENCHANTER)")
-    MODULE_RANDOM_ENCHANTS=$(ask_yn "Random Enchants" "$(module_default MODULE_RANDOM_ENCHANTS)")
-    MODULE_POCKET_PORTAL=$(ask_yn "Pocket Portal" "$(module_default MODULE_POCKET_PORTAL)")
-    MODULE_INSTANCE_RESET=$(ask_yn "Instance Reset" "$(module_default MODULE_INSTANCE_RESET)")
-    MODULE_TIME_IS_TIME=$(ask_yn "Time is Time" "$(module_default MODULE_TIME_IS_TIME)")
-    MODULE_GAIN_HONOR_GUARD=$(ask_yn "Gain Honor Guard" "$(module_default MODULE_GAIN_HONOR_GUARD)")
+    MODULE_NPC_BEASTMASTER=$(ask_yn "NPC Beastmaster - Rare pet vendor" "$(module_default MODULE_NPC_BEASTMASTER)")
+    MODULE_NPC_ENCHANTER=$(ask_yn "NPC Enchanter - Gear enchanting service" "$(module_default MODULE_NPC_ENCHANTER)")
+    MODULE_RANDOM_ENCHANTS=$(ask_yn "Random Enchants - Suffix property system" "$(module_default MODULE_RANDOM_ENCHANTS)")
+    MODULE_POCKET_PORTAL=$(ask_yn "Pocket Portal - Personal teleportation device" "$(module_default MODULE_POCKET_PORTAL)")
+    MODULE_INSTANCE_RESET=$(ask_yn "Instance Reset - Dungeon lockout management" "$(module_default MODULE_INSTANCE_RESET)")
+    MODULE_TIME_IS_TIME=$(ask_yn "Time is Time - Real-time clock system" "$(module_default MODULE_TIME_IS_TIME)")
+    MODULE_GAIN_HONOR_GUARD=$(ask_yn "Gain Honor Guard - Honor from guard kills" "$(module_default MODULE_GAIN_HONOR_GUARD)")
     MODULE_ARAC=$(ask_yn "All Races All Classes (requires client patch)" "$(module_default MODULE_ARAC)")
     MODULE_WORGOBLIN=$(ask_yn "Worgoblin - Worgen & Goblin races (client patch required)" "$(module_default MODULE_WORGOBLIN)")
+  elif [ "$MODE" = "preset" ]; then
+    local preset_modules="${MODULE_PRESET_CONFIGS[$MODE_PRESET_NAME]}"
+    if [ -n "$preset_modules" ]; then
+      apply_module_preset "$preset_modules"
+      say INFO "Applied preset '${MODE_PRESET_NAME}'."
+    else
+      say WARNING "Preset '${MODE_PRESET_NAME}' did not contain any module selections."
+    fi
   fi
 
   if [ -n "$CLI_PLAYERBOT_ENABLED" ]; then
@@ -720,6 +843,21 @@ EOF
     fi
   done
 
+  if [ "$MODULE_PLAYERBOTS" = "1" ]; then
+    AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_AUTH_IMAGE_PLAYERBOTS"
+    AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_WORLD_IMAGE_PLAYERBOTS"
+  fi
+
+  local SUMMARY_MODE_TEXT
+  case "$MODE" in
+    1) SUMMARY_MODE_TEXT="preset 1 (Suggested)" ;;
+    2) SUMMARY_MODE_TEXT="preset 2 (Playerbots + Suggested)" ;;
+    3) SUMMARY_MODE_TEXT="preset 3 (Manual)" ;;
+    4) SUMMARY_MODE_TEXT="preset 4 (No modules)" ;;
+    preset) SUMMARY_MODE_TEXT="preset (${MODE_PRESET_NAME})" ;;
+    *) SUMMARY_MODE_TEXT="$MODE" ;;
+  esac
+
   # Summary
   say HEADER "SUMMARY"
   printf "  %-18s %s\n" "Server Address:" "$SERVER_ADDRESS"
@@ -727,8 +865,26 @@ EOF
   printf "  %-18s %s\n" "Storage Path:" "$STORAGE_PATH"
   printf "  %-18s %s\n" "Container User:" "$CONTAINER_USER"
   printf "  %-18s Daily %s:00 UTC, keep %sd/%sh\n" "Backups:" "$BACKUP_DAILY_TIME" "$BACKUP_RETENTION_DAYS" "$BACKUP_RETENTION_HOURS"
-  printf "  %-18s preset %s (playerbots=%s solo_lfg=%s autobalance=%s transmog=%s npc_buffer=%s learn_spells=%s fireworks=%s)\n" \
-    "Modules:" "$MODE" "$MODULE_PLAYERBOTS" "$MODULE_SOLO_LFG" "$MODULE_AUTOBALANCE" "$MODULE_TRANSMOG" "$MODULE_NPC_BUFFER" "$MODULE_LEARN_SPELLS" "$MODULE_FIREWORKS"
+
+  printf "  %-18s %s\n" "Modules preset:" "$SUMMARY_MODE_TEXT"
+  printf "  %-18s %s\n" "Playerbot Max Bots:" "$PLAYERBOT_MAX_BOTS"
+  printf "  %-18s" "Enabled Modules:"
+  local first=1
+  for module_var in "${KNOWN_MODULE_VARS[@]}"; do
+    eval "value=\$$module_var"
+    if [ "$value" = "1" ]; then
+      if [ $first -eq 1 ]; then
+        printf " %s" "${module_var#MODULE_}"
+        first=0
+      else
+        printf ", %s" "${module_var#MODULE_}"
+      fi
+    fi
+  done
+  if [ $first -eq 1 ]; then
+    printf " none"
+  fi
+  printf "\n"
   if [ "$NEEDS_CXX_REBUILD" = "1" ]; then
     printf "  %-18s detected (source rebuild required)\n" "C++ modules:"
   fi
@@ -754,7 +910,14 @@ EOF
     fi
   fi
 
+  if [ "$RUN_REBUILD_NOW" = "1" ]; then
+    if ! ./scripts/rebuild-with-modules.sh --yes --skip-stop; then
+      say WARNING "Module rebuild failed; run ./scripts/rebuild-with-modules.sh manually."
+    fi
+  fi
+
   # Confirm write
+
   local ENV_OUT="$(dirname "$0")/.env"
   if [ -f "$ENV_OUT" ]; then
     say WARNING ".env already exists at $(realpath "$ENV_OUT" 2>/dev/null || echo "$ENV_OUT"). It will be overwritten."
@@ -803,8 +966,8 @@ AC_DB_IMPORT_IMAGE=acore/ac-wotlk-db-import:14.0.0-dev
 # Services (images)
 AC_AUTHSERVER_IMAGE=acore/ac-wotlk-authserver:14.0.0-dev
 AC_WORLDSERVER_IMAGE=acore/ac-wotlk-worldserver:14.0.0-dev
-AC_AUTHSERVER_IMAGE_PLAYERBOTS=uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot
-AC_WORLDSERVER_IMAGE_PLAYERBOTS=uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot
+AC_AUTHSERVER_IMAGE_PLAYERBOTS=${AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE}
+AC_WORLDSERVER_IMAGE_PLAYERBOTS=${AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE}
 
 # Client data images
 AC_CLIENT_DATA_IMAGE=acore/ac-wotlk-client-data:14.0.0-dev

@@ -91,46 +91,46 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 
 | Module | Description | Default Status |
 |--------|-------------|----------------|
-| **[mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg)** | Solo dungeon finder access | ✅ ENABLED |
-| **[mod-solocraft](https://github.com/azerothcore/mod-solocraft)** | Dynamic instance scaling for solo play | ✅ ENABLED |
-| **[mod-autobalance](https://github.com/azerothcore/mod-autobalance)** | Automatic raid/dungeon balancing | ✅ ENABLED |
-| **[mod-transmog](https://github.com/azerothcore/mod-transmog)** | Appearance customization system | ✅ ENABLED |
-| **[mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer)** | NPC buffing services | ✅ ENABLED |
-| **[mod-learn-spells](https://github.com/azerothcore/mod-learn-spells)** | Automatic spell learning | ✅ ENABLED |
-| **[mod-fireworks](https://github.com/azerothcore/mod-fireworks-on-level)** | Level-up celebrations | ✅ ENABLED |
-| **[mod-playerbots](https://github.com/mod-playerbots/mod-playerbots)** | AI companions for solo play | 🔧 OPTIONAL |
-| **[mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot)** | Streamlined loot collection | 🔧 OPTIONAL |
-| **[mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression)** | Personal advancement system | ❌ DISABLED* |
-| **[mod-ahbot](https://github.com/azerothcore/mod-ahbot)** | Auction house bot | ❌ DISABLED* |
-| **[mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp)** | Dynamic experience rates | 🔧 OPTIONAL |
-| **[mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena)** | Solo arena battles | 🔧 OPTIONAL |
-| **[mod-phased-duels](https://github.com/azerothcore/mod-phased-duels)** | Phased dueling system | 🔧 OPTIONAL |
-| **[mod-breaking-news](https://github.com/azerothcore/mod-breaking-news-override)** | Server announcement system | ❌ DISABLED* |
-| **[mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer)** | Boss kill announcements | 🔧 OPTIONAL |
-| **[mod-account-achievements](https://github.com/azerothcore/mod-account-achievements)** | Account-wide achievements | 🔧 OPTIONAL |
-| **[mod-auto-revive](https://github.com/azerothcore/mod-auto-revive)** | Automatic resurrection | 🔧 OPTIONAL |
-| **[mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard)** | Honor from guard kills | 🔧 OPTIONAL |
-| **[mod-arac](https://github.com/heyitsbench/mod-arac)** | All races/classes unlocked | 🔧 OPTIONAL |
-| **[mod-time-is-time](https://github.com/dunjeon/mod-TimeIsTime)** | Time manipulation | ❌ DISABLED* |
-| **[mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal)** | Portal convenience | ❌ DISABLED* |
-| **[mod-random-enchants](https://github.com/azerothcore/mod-random-enchants)** | Random item enchantments | 🔧 OPTIONAL |
-| **[mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles)** | PvP title system | 🔧 OPTIONAL |
-| **[mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster)** | Pet management NPC | ❌ DISABLED* |
-| **[mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter)** | Enchanting services NPC | ❌ DISABLED* |
-| **[mod-assistant](https://github.com/noisiver/mod-assistant)** | AI automation features | 🔧 OPTIONAL |
-| **[mod-reagent-bank](https://github.com/ZhengPeiRu21/mod-reagent-bank)** | Reagent storage system | 🔧 OPTIONAL |
-| **[mod-black-market](https://github.com/Youpeoples/Black-Market-Auction-House)** | Rare item auctions | 🔧 OPTIONAL |
-| **[mod-instance-reset](https://github.com/azerothcore/mod-instance-reset)** | Instance reset controls | ❌ DISABLED* |
-| **[mod-challenge-modes](https://github.com/ZhengPeiRu21/mod-challenge-modes)** | Timed dungeon challenge system | 🔧 OPTIONAL |
-| **[mod-ollama-chat](https://github.com/DustinHendrickson/mod-ollama-chat)** | Playerbot LLM chat bridge (requires Ollama) | ❌ DISABLED* |
-| **[mod-player-bot-level-brackets](https://github.com/DustinHendrickson/mod-player-bot-level-brackets)** | Balance playerbot populations across level brackets | 🔧 OPTIONAL |
-| **[mod-bg-slaveryvalley](https://github.com/Helias/mod-bg-slaveryvalley)** | Custom Slavery Valley battleground | ❌ DISABLED* |
-| **[mod-azerothshard](https://github.com/azerothcore/mod-azerothshard)** | AzerothShard quality-of-life bundle | 🔧 OPTIONAL |
-| **[mod-worgoblin](https://github.com/heyitsbench/mod-worgoblin)** | Worgen & Goblin playable races | ❌ DISABLED* |
-| **[StatBooster](https://github.com/AnchyDev/StatBooster)** | Random enchant stat upgrade system | 🔧 OPTIONAL |
-| **[DungeonRespawn](https://github.com/AnchyDev/DungeonRespawn)** | Return to dungeon entrance on death | 🔧 OPTIONAL |
-| **[skeleton-module](https://github.com/azerothcore/skeleton-module)** | Empty starter module template | 🔧 OPTIONAL |
-| **[eluna-ts](https://github.com/azerothcore/eluna-ts)** | TypeScript toolchain for Eluna Lua scripts | 🔧 OPTIONAL |
+| **[mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg)** | A solo-friendly queue that lets every player run dungeons without needing a premade group. | ✅ ENABLED |
+| **[mod-solocraft](https://github.com/azerothcore/mod-solocraft)** | Automatically scales dungeon and raid encounters so solo players or small teams can clear content. | ✅ ENABLED |
+| **[mod-autobalance](https://github.com/azerothcore/mod-autobalance)** | Adjusts creature health and damage in real time to keep fights tuned for the current party size. | ✅ ENABLED |
+| **[mod-transmog](https://github.com/azerothcore/mod-transmog)** | Adds a transmogrification vendor so players can restyle gear without changing stats. | ✅ ENABLED |
+| **[mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer)** | Provides a ready-to-use buff NPC who hands out class buffs, food, and utility spells. | ✅ ENABLED |
+| **[mod-learn-spells](https://github.com/azerothcore/mod-learn-spells)** | Teaches class spells automatically at the correct level to streamline leveling. | ✅ ENABLED |
+| **[mod-fireworks](https://github.com/azerothcore/mod-fireworks-on-level)** | Spawns celebratory fireworks whenever a player dings a new level. | ✅ ENABLED |
+| **[mod-playerbots](https://github.com/mod-playerbots/mod-playerbots)** | Adds scriptable playerbot characters that can form dungeon parties, raid, and PvP with humans. | 🔧 OPTIONAL |
+| **[mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot)** | Lets characters loot multiple corpses with one click for faster farming. | 🔧 OPTIONAL |
+| **[mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression)** | Tracks each character through Vanilla → TBC → WotLK progression, unlocking content sequentially. | ❌ DISABLED* |
+| **[mod-ahbot](https://github.com/azerothcore/mod-ahbot)** | Populates the auction house with configurable buying/selling behavior to keep markets active. | ❌ DISABLED* |
+| **[mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp)** | Tweaks XP gain based on population or custom rules to keep leveling flexible. | 🔧 OPTIONAL |
+| **[mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena)** | Creates a structured 1v1 ranked arena ladder for duel enthusiasts. | 🔧 OPTIONAL |
+| **[mod-phased-duels](https://github.com/azerothcore/mod-phased-duels)** | Moves duelers into their own phase to block interference and griefing. | 🔧 OPTIONAL |
+| **[mod-breaking-news](https://github.com/azerothcore/mod-breaking-news-override)** | Replaces the client breaking-news panel with server-managed announcements. | ❌ DISABLED* |
+| **[mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer)** | Broadcasts dramatic messages when raid bosses fall to your players. | 🔧 OPTIONAL |
+| **[mod-account-achievements](https://github.com/azerothcore/mod-account-achievements)** | Shares achievements across characters on the same account for persistent milestones. | 🔧 OPTIONAL |
+| **[mod-auto-revive](https://github.com/azerothcore/mod-auto-revive)** | Automatically resurrects characters on death—handy for casual PvE or testing realms. | 🔧 OPTIONAL |
+| **[mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard)** | Awards honor when players kill city guards, spicing up world PvP raids. | 🔧 OPTIONAL |
+| **[mod-arac](https://github.com/heyitsbench/mod-arac)** | Unlocks every race/class pairing so players can roll any combination they want (needs client patch). | 🔧 OPTIONAL |
+| **[mod-time-is-time](https://github.com/dunjeon/mod-TimeIsTime)** | Adds experimental time-twisting mechanics suited for custom events (requires extra tuning). | ❌ DISABLED* |
+| **[mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal)** | Gives players a portal gadget for quick travel to configured destinations. | ❌ DISABLED* |
+| **[mod-random-enchants](https://github.com/azerothcore/mod-random-enchants)** | Rolls randomised stat bonuses on loot to add Diablo-style gear chasing. | 🔧 OPTIONAL |
+| **[mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles)** | Restores classic honor titles with a configurable ranking ladder. | 🔧 OPTIONAL |
+| **[mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster)** | Adds an NPC who can teach, reset, and manage hunter pets for convenience. | ❌ DISABLED* |
+| **[mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter)** | Introduces an enchanting vendor who applies enchants directly for a fee. | ❌ DISABLED* |
+| **[mod-assistant](https://github.com/noisiver/mod-assistant)** | Spawns an all-purpose assistant NPC with heirlooms, professions, and convenience commands. | 🔧 OPTIONAL |
+| **[mod-reagent-bank](https://github.com/ZhengPeiRu21/mod-reagent-bank)** | Lets players stash crafting reagents with a dedicated banker NPC. | 🔧 OPTIONAL |
+| **[mod-black-market](https://github.com/Youpeoples/Black-Market-Auction-House)** | Backports the Mists-era Black Market Auction House via Eluna scripts. | 🔧 OPTIONAL |
+| **[mod-instance-reset](https://github.com/azerothcore/mod-instance-reset)** | Adds commands to reset instances quickly—useful for testing or events. | ❌ DISABLED* |
+| **[mod-challenge-modes](https://github.com/ZhengPeiRu21/mod-challenge-modes)** | Implements keystone-style timed runs with leaderboards and scaling modifiers. | 🔧 OPTIONAL |
+| **[mod-ollama-chat](https://github.com/DustinHendrickson/mod-ollama-chat)** | Connects playerbots to an Ollama LLM so they can chat with humans organically. | ❌ DISABLED* |
+| **[mod-player-bot-level-brackets](https://github.com/DustinHendrickson/mod-player-bot-level-brackets)** | Keeps bot levels spread evenly across configured brackets to match your player base. | 🔧 OPTIONAL |
+| **[mod-bg-slaveryvalley](https://github.com/Helias/mod-bg-slaveryvalley)** | Adds the Slavery Valley battleground complete with objectives and queue hooks. | ❌ DISABLED* |
+| **[mod-azerothshard](https://github.com/azerothcore/mod-azerothshard)** | Bundles AzerothShard tweaks: utility NPCs, scripted events, and gameplay improvements. | 🔧 OPTIONAL |
+| **[mod-worgoblin](https://github.com/heyitsbench/mod-worgoblin)** | Enables Worgen and Goblin characters, including necessary DB/DBC adjustments (client patch required). | ❌ DISABLED* |
+| **[StatBooster](https://github.com/AnchyDev/StatBooster)** | Lets players refine gear stats by rerolling random enchantments with special materials. | 🔧 OPTIONAL |
+| **[DungeonRespawn](https://github.com/AnchyDev/DungeonRespawn)** | Teleports dead players back to the dungeon entrance instead of a distant graveyard. | 🔧 OPTIONAL |
+| **[skeleton-module](https://github.com/azerothcore/skeleton-module)** | Provides a minimal AzerothCore module scaffold so you can build new features quickly. | 🔧 OPTIONAL |
+| **[eluna-ts](https://github.com/azerothcore/eluna-ts)** | Adds a TS-to-Lua workflow so Eluna scripts can be authored with modern tooling. | 🔧 OPTIONAL |
 
 *\* Disabled modules require additional configuration or have compatibility issues*
 
@@ -189,6 +189,49 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 - **Script Auto-loading** - Scripts automatically loaded from `storage/lua_scripts/`
 - **Development Tools** - Script reloading with `.reload eluna` command
 - **Volume Mounting** - Hot-reload development environment
+
+## 🚀 Deploying to a Remote Server
+
+Use this workflow to build locally, then push the same stack to a remote host:
+
+1. **Configure & Rebuild Locally**
+   ```bash
+   ./setup.sh
+   ./scripts/rebuild-with-modules.sh --yes
+   ```
+   (Answer “y” to the rebuild prompt in `setup.sh`, or run the rebuild manually.)
+
+2. **Migrate via SSH**
+   ```bash
+   ./scripts/migrate-stack.sh \
+     --host docker-server \
+     --project-dir /home/sam/src/acore-compose
+   ```
+   Adjust `--project-dir` (and `--identity`) to match your environment. The script copies the repo, `storage/`, and the `modules-latest` images to the remote machine.
+
+3. **Deploy Remotely**
+   ```bash
+   ssh docker-server '
+     cd /home/sam/src/acore-compose &&
+     ./deploy.sh --skip-rebuild --no-watch
+   '
+   ```
+   Because the `.env` now points the playerbot services at the `modules-latest` tags, the remote compose run uses the build you just migrated—no additional rebuild required.
+
+4. **Verify**
+   ```bash
+   ./status.sh --once
+   docker compose --profile services-playerbots logs --tail 100 ac-worldserver
+   ```
+
+### Module Presets
+- Drop comma-separated module lists into `configurations/*.conf` (for example `configurations/playerbot-modules.conf`).
+- `setup.sh` automatically adds these presets to the module menu and enables the listed modules when selected or when `--module-config <name>` is provided.
+- Built-in presets:
+  - `configurations/suggested-modules.conf` – default solo-friendly QoL stack.
+  - `configurations/playerbots-suggested-modules.conf` – suggested stack plus playerbots.
+- Custom example:
+  - `configurations/sam.conf` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
 
 ---
 
