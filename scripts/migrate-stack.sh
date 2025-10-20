@@ -101,6 +101,11 @@ echo "⋅ Loading images on remote"
 run_scp "$TARBALL" "$USER@$HOST:/tmp/acore-modules-images.tar"
 run_ssh "docker load < /tmp/acore-modules-images.tar && rm /tmp/acore-modules-images.tar"
 
+if [[ -f .env ]]; then
+  echo "⋅ Uploading .env"
+  run_scp .env "$USER@$HOST:$PROJECT_DIR/.env"
+fi
+
 echo "⋅ Remote prepares completed"
 echo "Run on the remote host to deploy:"
 echo "  cd $PROJECT_DIR && ./deploy.sh --skip-rebuild --no-watch"

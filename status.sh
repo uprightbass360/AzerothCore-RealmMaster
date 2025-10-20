@@ -147,12 +147,12 @@ print_service(){
     state_info="$(format_state "$status" "$health" "$started" "$exit_code")"
     colour="${state_info%%|*}"
     text="${state_info#*|}"
-    printf "%-20s %b%-30s%b %s\n" "$label" "$colour" "$text" "$NC" "$(short_image "$image")"
+    printf "%-20s %-15s %b%-30s%b %s\n" "$label" "$container" "$colour" "$text" "$NC" "$(short_image "$image")"
     if [ "$SHOW_LOGS" = true ]; then
       docker logs "$container" --tail "$LOG_LINES" 2>/dev/null | sed 's/^/    /' || printf "    (no logs available)\n"
     fi
   else
-    printf "%-20s %b%-30s%b %s\n" "$label" "$RED" "○ missing" "$NC" "-"
+    printf "%-20s %-15s %b%-30s%b %s\n" "$label" "$container" "$RED" "○ missing" "$NC" "-"
   fi
 }
 
@@ -263,8 +263,8 @@ show_realm_status_header(){
 render_snapshot(){
   show_realm_status_header
   printf "\nTIME %s  PROJECT %s\n\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$PROJECT_NAME"
-  printf "%-20s %-28s %s\n" "SERVICE" "STATE" "IMAGE"
-  printf "%-20s %-28s %s\n" "--------------------" "----------------------------" "------------------------------"
+  printf "%-20s %-15s %-28s %s\n" "SERVICE" "CONTAINER" "STATE" "IMAGE"
+  printf "%-20s %-15s %-28s %s\n" "--------------------" "---------------" "----------------------------" "------------------------------"
   print_service ac-mysql "MySQL"
   print_service ac-backup "Backup"
   print_service ac-db-init "DB Init"
