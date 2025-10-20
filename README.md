@@ -134,6 +134,48 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 
 *\* Disabled modules require additional configuration or have compatibility issues*
 
+### Module Summaries
+- **mod-solo-lfg** – Enables the Dungeon Finder for solo players so every character can queue without a full party.
+- **mod-solocraft** – Dynamically scales dungeon and raid encounters to match the current group size for flexible difficulty.
+- **mod-autobalance** – Automatically adjusts creature health and damage to keep combat balanced for any party composition.
+- **mod-transmog** – Adds the transmogrification system so players can change the appearance of their gear without losing stats.
+- **mod-npc-buffer** – Introduces a convenient buff vendor that can apply class buffs, raid consumables, and other services.
+- **mod-learn-spells** – Grants characters their class spells automatically at the appropriate levels to streamline leveling.
+- **mod-fireworks** – Celebrates each level up by launching fireworks around the player for a festive visual effect.
+- **mod-playerbots** – Spawns AI-controlled characters that can form parties, fill raids, and run battlegrounds alongside real players.
+- **mod-aoe-loot** – Allows players to loot all nearby corpses with a single click, speeding up farming runs.
+- **mod-individual-progression** – Tracks progression per character so content unlocks in a Vanilla → TBC → WotLK order.
+- **mod-ahbot** – Provides an automated auction house with configurable buying and selling behavior to keep markets stocked.
+- **mod-dynamic-xp** – Adjusts experience rates based on population or configured rules to keep leveling pace consistent.
+- **mod-1v1-arena** – Adds a dedicated duel-style arena ladder where players can queue for structured 1v1 battles.
+- **mod-phased-duels** – Moves duel participants into a phased area to prevent outside interference during the fight.
+- **mod-breaking-news** – Replaces the character select breaking news panel with custom announcements hosted by your server.
+- **mod-boss-announcer** – Broadcasts dramatic kill messages when raid bosses die to spotlight your community’s victories.
+- **mod-account-achievements** – Shares achievements across characters on the same account so progress feels persistent.
+- **mod-auto-revive** – Revives players automatically on death, ideal for testing realms or ultra-casual PvE environments.
+- **mod-gain-honor-guard** – Awards honor for killing enemy guards to encourage city raids and world PvP skirmishes.
+- **mod-arac** – Unlocks every race/class combination, letting players create any fantasy they can imagine (client patch required).
+- **mod-time-is-time** – Provides time-manipulation gameplay hooks for custom events or encounter scripting (requires tuning).
+- **mod-pocket-portal** – Gives players a personal portal device for fast travel to configured locations.
+- **mod-random-enchants** – Rolls random stat bonuses on loot to introduce an ARPG-style layer of gear hunting.
+- **mod-pvp-titles** – Restores classic PvP titles with configurable ranking so your battleground heroes stand out.
+- **mod-npc-beastmaster** – Adds a beastmaster NPC who sells, resets, and manages hunter pets for convenience.
+- **mod-npc-enchanter** – Offers enchanting services via an NPC who can apply chosen enchants for a fee.
+- **mod-assistant** – Spawns an all-in-one assistant NPC that handles heirlooms, glyphs, professions, and utility commands.
+- **mod-reagent-bank** – Creates a reagent banker NPC with extra storage tailored to crafters and raid prep.
+- **mod-black-market** – Backports the Mists of Pandaria Black Market Auction House with Lua-powered bidding and rotation.
+- **mod-instance-reset** – Adds commands and automation to reset instances on demand, useful for rapid testing.
+- **mod-challenge-modes** – Introduces timed keystone-style dungeon runs with leaderboards and escalating modifiers.
+- **mod-ollama-chat** – Connects playerbots to an Ollama LLM endpoint so they can converse with human players in natural language.
+- **mod-player-bot-level-brackets** – Keeps playerbot levels evenly distributed by moving bots between configured brackets.
+- **mod-bg-slaveryvalley** – Ports the custom Slavery Valley battleground complete with objectives and queue integration.
+- **mod-azerothshard** – Bundles numerous AzerothShard quality-of-life tweaks, NPCs, and scripted content in one module.
+- **mod-worgoblin** – Adds Worgen and Goblin as playable races, including start zones and necessary data patches.
+- **StatBooster** – Lets players reroll item stats using a random enchant system to chase perfect gear.
+- **DungeonRespawn** – Teleports dead players back to dungeon entrances instead of the nearest graveyard to cut down on downtime.
+- **skeleton-module** – Provides a minimal module template with build hooks and examples for rapidly prototyping your own features.
+- **eluna-ts** – Adds a TypeScript toolchain that transpiles to Eluna Lua scripts so you can author scripts with modern tooling.
+
 ### ✅ Automated Configuration
 - **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import
 - **Backup Management** - Automated hourly/daily backups with intelligent restoration
