@@ -322,12 +322,13 @@ Use this workflow to build locally, then push the same stack to a remote host:
 ```
 storage/
 ├── config/           # Server configuration files
-├── data/             # Game client data (maps, DBC files)
 ├── logs/             # Server log files
 ├── modules/          # Module source code and configs
 ├── mysql-data/       # Database files
 └── backups/          # Automated database backups
 ```
+
+`ac-client-data` keeps unpacked game assets in the `${CLIENT_DATA_VOLUME:-ac-client-data}` Docker volume so reads stay on the local host, while download archives are cached under `${CLIENT_DATA_CACHE_PATH:-./client-data-cache}` on fast local storage even when `${STORAGE_PATH}` points to remote or NFS storage.
 
 ---
 

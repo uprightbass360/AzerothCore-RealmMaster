@@ -178,8 +178,8 @@ services:
     container_name: ac-client-data
     user: "0:0"
     volumes:
-      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
-      - ${STORAGE_PATH:-./storage}/cache:/cache
+      - ac-client-data:/azerothcore/data
+      - ${CLIENT_DATA_CACHE_PATH:-./client-data-cache}:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
     environment:
@@ -213,8 +213,8 @@ services:
     container_name: ac-client-data
     user: "0:0"
     volumes:
-      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
-      - ${STORAGE_PATH:-./storage}/cache:/cache
+      - ac-client-data:/azerothcore/data
+      - ${CLIENT_DATA_CACHE_PATH:-./client-data-cache}:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
     environment:
@@ -314,7 +314,7 @@ services:
       - "${WORLD_EXTERNAL_PORT:-8215}:${WORLD_PORT:-8085}"
       - "${SOAP_EXTERNAL_PORT:-7778}:${SOAP_PORT:-7878}"
     volumes:
-      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
+      - ac-client-data:/azerothcore/data
       - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH:-./storage}/logs:/azerothcore/logs
       - ${STORAGE_PATH:-./storage}/modules:/azerothcore/modules
@@ -437,7 +437,7 @@ services:
       - "${WORLD_EXTERNAL_PORT:-8215}:${WORLD_PORT:-8085}"
       - "${SOAP_EXTERNAL_PORT:-7778}:${SOAP_PORT:-7878}"
     volumes:
-      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
+      - ac-client-data:/azerothcore/data
       - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH:-./storage}/logs:/azerothcore/logs
       - ${STORAGE_PATH:-./storage}/modules:/azerothcore/modules
@@ -484,7 +484,7 @@ services:
       PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS:-40}"
       AC_LOG_LEVEL: "2"
     volumes:
-      - ${STORAGE_PATH:-./storage}/data:/azerothcore/data
+      - ac-client-data:/azerothcore/data
       - ${STORAGE_PATH:-./storage}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH:-./storage}/logs:/azerothcore/logs
       - ${STORAGE_PATH:-./storage}/modules:/azerothcore/modules
@@ -680,6 +680,11 @@ services:
       - no-new-privileges:true
     networks:
       - azerothcore
+
+volumes:
+  ac-client-data:
+    name: ${CLIENT_DATA_VOLUME:-ac-client-data}
+    driver: local
 
 networks:
   azerothcore:
