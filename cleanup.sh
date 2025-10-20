@@ -85,14 +85,37 @@ confirm() {
   [[ "$ans" =~ ^(yes|y|YES|Y)$ ]] || { print_status INFO "Cancelled"; exit 0; }
 }
 
+format_container_table() {
+  local containers
+  containers="$(docker compose -f "$COMPOSE_FILE" ps -a --format 'table {{.Name}}\t{{.Status}}\t{{.Service}}\t{{.Image}}' 2>/dev/null || echo "")"
+  if [ -n "$containers" ]; then
+    echo "$containers" | head -1
+    echo "$containers" | tail -n +2 | while IFS=$'\t' read -r name status service image; do
+      local short_image="${image##*/}"  # Remove registry prefix
+      short_image="${short_image%:*}"   # Remove tag
+      printf "%-20s %-25s %-15s %s\n" "$name" "$status" "$service" "$short_image"
+    done
+  else
+    echo "No containers found"
+  fi
+}
+
 show_resources() {
   print_status HEADER "CURRENT PROJECT RESOURCES"
-  echo -e "${BLUE}Containers:${NC}"
-  docker compose -f "$COMPOSE_FILE" ps -a || true
-  echo -e "${BLUE}Networks:${NC}"
-  docker network ls --format 'table {{.Name}}\t{{.Driver}}' | grep -E "(^|\s)$(grep -oE '^NETWORK_NAME=.+$' "$ENV_FILE" 2>/dev/null | cut -d= -f2 | tr -d '\r' || echo 'azerothcore')($|\s)" || true
-  echo -e "${BLUE}Volumes:${NC}"
-  docker volume ls --format 'table {{.Name}}\t{{.Driver}}' | grep -E 'ac_|acore|azerothcore' || true
+  echo -e "${BLUE}🐳 Containers:${NC}"
+  format_container_table
+  echo ""
+
+  local network_name
+  network_name="$(grep -oE '^NETWORK_NAME=.+$' "$ENV_FILE" 2>/dev/null | cut -d= -f2 | tr -d '\r' || echo 'azerothcore')"
+  echo -e "${BLUE}🌐 Networks:${NC}"
+  docker network ls --format 'table {{.Name}}\t{{.Driver}}\t{{.Scope}}' | head -1
+  docker network ls --format '{{.Name}}\t{{.Driver}}\t{{.Scope}}' | grep -E "(^|\s)${network_name}($|\s)" || echo "No project networks found"
+  echo ""
+
+  echo -e "${BLUE}💾 Volumes:${NC}"
+  docker volume ls --format 'table {{.Name}}\t{{.Driver}}' | head -1
+  docker volume ls --format '{{.Name}}\t{{.Driver}}' | grep -E 'ac_|acore|azerothcore' || echo "No project volumes found"
 }
 
 # Load env for STORAGE_PATH etc.
