@@ -19,7 +19,7 @@ database_list() {
   local dbs=("${DB_AUTH_NAME}" "${DB_WORLD_NAME}" "${DB_CHARACTERS_NAME}")
   if mysql -h"${MYSQL_HOST}" -P"${MYSQL_PORT}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -e "USE acore_playerbots;" >/dev/null 2>&1; then
     dbs+=("acore_playerbots")
-    log "Detected optional database: acore_playerbots (will be backed up)"
+    log "Detected optional database: acore_playerbots (will be backed up)" >&2
   fi
   printf '%s\n' "${dbs[@]}"
 }

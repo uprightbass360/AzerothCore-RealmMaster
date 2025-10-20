@@ -69,6 +69,10 @@ services:
       AC_CLOSE_IDLE_CONNECTIONS: "false"
       AC_UPDATES_ENABLE_DATABASES: "7"
       AC_UPDATES_AUTO_SETUP: "1"
+      AC_LOG_LEVEL: "1"
+      AC_LOGGER_ROOT_CONFIG: "1,Console"
+      AC_LOGGER_SERVER_CONFIG: "1,Console"
+      AC_APPENDER_CONSOLE_CONFIG: "1,2,0"
       CONTAINER_MYSQL: ${CONTAINER_MYSQL:-ac-mysql}
       MYSQL_PORT: ${MYSQL_PORT:-3306}
       MYSQL_USER: ${MYSQL_USER:-root}
@@ -666,7 +670,7 @@ services:
     ports:
       - "${KEIRA3_EXTERNAL_PORT:-4201}:8080"
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f http://localhost:8080/health || nc -z localhost 8080 || exit 1"]
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:8080/health >/dev/null 2>&1 || nc -z localhost 8080 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

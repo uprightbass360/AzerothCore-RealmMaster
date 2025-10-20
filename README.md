@@ -350,6 +350,23 @@ docker logs ac-authserver -f
 docker logs ac-modules --tail 50
 ```
 
+### Web Tools Access
+
+Once deployed, access the management tools in your browser:
+
+```bash
+# Database Management (phpMyAdmin)
+http://YOUR_SERVER_IP:8081
+
+# World Database Editor (Keira3)
+http://YOUR_SERVER_IP:4201
+
+# Replace YOUR_SERVER_IP with your actual server address
+# Example: http://192.168.1.100:4201
+```
+
+**Note**: Initial Keira3 startup may show database connection errors until the world database import completes. This is expected behavior.
+
 ### Module Management
 ```bash
 # Reconfigure modules via interactive setup
