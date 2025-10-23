@@ -86,9 +86,40 @@ else
     exit 1
   fi
 
-  # Step 1: Update configuration files
+  # Step 1: Create module configuration files
   echo ""
-  echo "🔧 Step 1: Updating configuration files..."
+  echo "🔧 Step 1: Creating module configuration files..."
+
+  # Create .conf files from .dist.conf templates for all modules
+  CONFIG_DIR="/azerothcore/config"
+  created_count=0
+
+  for file in "$CONFIG_DIR"/*.dist; do
+    if [ -f "$file" ]; then
+      conffile=$(echo "$file" | sed 's/.dist$//')
+      filename=$(basename "$conffile")
+
+      # Skip core config files (already handled)
+      case "$filename" in
+        authserver.conf|worldserver.conf|dbimport.conf)
+          continue
+          ;;
+      esac
+
+      # Create .conf file if it doesn't exist
+      if [ ! -f "$conffile" ]; then
+        echo "   📝 Creating $filename from $(basename "$file")"
+        cp "$file" "$conffile"
+        created_count=$((created_count + 1))
+      fi
+    fi
+  done
+
+  echo "   ✅ Created $created_count module configuration files"
+
+  # Step 2: Update configuration files
+  echo ""
+  echo "🔧 Step 2: Updating configuration files..."
 
   # Update DB connection lines and any necessary settings directly with sed
   sed -i "s|^LoginDatabaseInfo *=.*|LoginDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}\"|" /azerothcore/config/authserver.conf || true
@@ -102,9 +133,9 @@ else
 
   echo "✅ Configuration files updated"
 
-  # Step 2: Update realmlist table
+  # Step 3: Update realmlist table
   echo ""
-  echo "🌐 Step 2: Updating realmlist table..."
+  echo "🌐 Step 3: Updating realmlist table..."
   mysql -h "${MYSQL_HOST}" -u"${MYSQL_USER}" -p"${MYSQL_ROOT_PASSWORD}" --skip-ssl-verify "${DB_AUTH_NAME}" -e "
     UPDATE realmlist SET address='${SERVER_ADDRESS}', port=${REALM_PORT} WHERE id=1;
   " || echo "⚠️  Could not update realmlist table"
@@ -112,7 +143,7 @@ else
   echo "✅ Realmlist updated"
 
   echo ""
-  echo "ℹ️  Step 3: (Optional) Restart services to apply changes — handled externally"
+  echo "ℹ️  Step 4: (Optional) Restart services to apply changes — handled externally"
 
   # Create completion marker
   echo "$(date)" > /install-markers/post-install-completed
