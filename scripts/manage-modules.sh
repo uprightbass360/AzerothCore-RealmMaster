@@ -117,6 +117,12 @@ if [ "$MODULE_TIME_IS_TIME" != "1" ] && [ -d "mod-TimeIsTime" ]; then
   rm -rf mod-TimeIsTime
 fi
 
+if [ "$MODULE_POCKET_PORTAL" = "1" ]; then
+  echo '⚠️  mod-pocket-portal is temporarily disabled (requires C++20 <format>). Skipping until patched.'
+  echo '   Apply the std::format -> SendSystemMessage fix before re-enabling this module.'
+  MODULE_POCKET_PORTAL=0
+fi
+
 if [ "$MODULE_POCKET_PORTAL" != "1" ] && [ -d "mod-pocket-portal" ]; then
   echo 'Removing mod-pocket-portal (disabled)...'
   rm -rf mod-pocket-portal
@@ -224,13 +230,12 @@ echo 'Installing enabled modules...'
 # Install Playerbots if enabled
 if [ "$MODULE_PLAYERBOTS" = "1" ] && [ ! -d "mod-playerbots" ]; then
   echo '🤖 Installing mod-playerbots...'
-  echo '   📖 Project: https://github.com/liyunfan1223/mod-playerbots'
-  echo '   🚨 CRITICAL: REQUIRES Custom AzerothCore branch (liyunfan1223/azerothcore-wotlk/tree/Playerbot)'
+  echo '   📖 Project: https://github.com/uprightbass360/mod-playerbots'
+  echo '   🚨 CRITICAL: REQUIRES Custom AzerothCore branch (uprightbass360/azerothcore-wotlk-playerbots/tree/Playerbot)'
   echo '   🚨 INCOMPATIBLE with standard AzerothCore - module will not function properly'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
   echo '   📋 POST-INSTALL: Requires manual account/character configuration'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
-  git clone https://github.com/liyunfan1223/mod-playerbots.git mod-playerbots
+  git clone https://github.com/uprightbass360/mod-playerbots.git mod-playerbots
 fi
 
 # Install AOE Loot if enabled
@@ -239,7 +244,6 @@ if [ "$MODULE_AOE_LOOT" = "1" ] && [ ! -d "mod-aoe-loot" ]; then
   echo '   📖 Project: https://github.com/azerothcore/mod-aoe-loot'
   echo '   ℹ️  Allows looting multiple corpses with one action'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/azerothcore/mod-aoe-loot.git mod-aoe-loot
 fi
 
@@ -249,7 +253,6 @@ if [ "$MODULE_LEARN_SPELLS" = "1" ] && [ ! -d "mod-learn-spells" ]; then
   echo '   📖 Project: https://github.com/azerothcore/mod-learn-spells'
   echo '   ℹ️  Automatically teaches class spells on level up'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/azerothcore/mod-learn-spells.git mod-learn-spells
 fi
 
@@ -259,7 +262,6 @@ if [ "$MODULE_FIREWORKS" = "1" ] && [ ! -d "mod-fireworks-on-level" ]; then
   echo '   📖 Project: https://github.com/azerothcore/mod-fireworks-on-level'
   echo '   ℹ️  Displays fireworks when players level up'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/azerothcore/mod-fireworks-on-level.git mod-fireworks-on-level
 fi
 
@@ -271,7 +273,6 @@ if [ "$MODULE_INDIVIDUAL_PROGRESSION" = "1" ] && [ ! -d "mod-individual-progress
   echo '   ✅ AUTO-CONFIG: Automatically sets EnablePlayerSettings=1 and DBC.EnforceItemAttributes=0'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
   echo '   📁 Optional client files available in optional/ directory'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/ZhengPeiRu21/mod-individual-progression.git mod-individual-progression
 fi
 
@@ -298,7 +299,6 @@ if [ "$MODULE_TRANSMOG" = "1" ] && [ ! -d "mod-transmog" ]; then
   echo '   📖 Project: https://github.com/azerothcore/mod-transmog'
   echo '   ℹ️  Allows appearance customization of equipment'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/azerothcore/mod-transmog.git mod-transmog
 fi
 
@@ -319,7 +319,6 @@ if [ "$MODULE_SOLO_LFG" = "1" ] && [ ! -d "mod-solo-lfg" ]; then
   echo '   ℹ️  Allows dungeon finder for solo players and small groups'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
   echo '   💡 Pairs perfectly with mod-solocraft and mod-autobalance'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/azerothcore/mod-solo-lfg.git mod-solo-lfg
 fi
 
@@ -369,7 +368,6 @@ if [ "$MODULE_ELUNA" = "1" ] && [ ! -d "mod-eluna" ]; then
   echo '   📖 Project: https://github.com/azerothcore/mod-eluna'
   echo '   ℹ️  Lua scripting engine for custom server functionality'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/azerothcore/mod-eluna.git mod-eluna
 fi
 if [ "$MODULE_ARAC" = "1" ] && [ ! -d "mod-arac" ]; then
@@ -378,18 +376,12 @@ if [ "$MODULE_ARAC" = "1" ] && [ ! -d "mod-arac" ]; then
   echo '   ℹ️  All Races All Classes - Removes class restrictions'
   echo '   🚨 CRITICAL: Requires DBC file updates and client patch!'
   echo '   📋 POST-INSTALL: Apply Patch-A.MPQ to client WoW/Data/ directory'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/heyitsbench/mod-arac.git mod-arac
 fi
 
 if [ "$MODULE_TIME_IS_TIME" = "1" ] && [ ! -d "mod-TimeIsTime" ]; then
   echo 'Installing mod-TimeIsTime...'
   git clone https://github.com/dunjeon/mod-TimeIsTime.git mod-TimeIsTime
-fi
-
-if [ "$MODULE_POCKET_PORTAL" = "1" ] && [ ! -d "mod-pocket-portal" ]; then
-  echo 'Installing mod-pocket-portal...'
-  git clone https://github.com/azerothcore/mod-pocket-portal.git mod-pocket-portal
 fi
 
 if [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && [ ! -d "mod-random-enchants" ]; then
@@ -421,7 +413,6 @@ if [ "$MODULE_NPC_ENCHANTER" = "1" ] && [ ! -d "mod-npc-enchanter" ]; then
   echo '   📖 Project: https://github.com/azerothcore/mod-npc-enchanter'
   echo '   ℹ️  NPC that provides enchanting services'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/azerothcore/mod-npc-enchanter.git mod-npc-enchanter
 fi
 
@@ -439,7 +430,6 @@ if [ "$MODULE_ASSISTANT" = "1" ] && [ ! -d "mod-assistant" ]; then
   echo '   📖 Project: https://github.com/noisiver/mod-assistant'
   echo '   ℹ️  NPC (ID: 9000000) providing heirlooms, glyphs, gems, profession services'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/noisiver/mod-assistant.git mod-assistant
 fi
 if [ "$MODULE_REAGENT_BANK" = "1" ] && [ ! -d "mod-reagent-bank" ]; then
@@ -447,7 +437,6 @@ if [ "$MODULE_REAGENT_BANK" = "1" ] && [ ! -d "mod-reagent-bank" ]; then
   echo '   📖 Project: https://github.com/ZhengPeiRu21/mod-reagent-bank'
   echo '   ℹ️  Reagent banker NPC for storing crafting materials, frees bag space'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/ZhengPeiRu21/mod-reagent-bank.git mod-reagent-bank
 fi
 if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && [ ! -d "mod-black-market" ]; then
@@ -456,7 +445,6 @@ if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && [ ! -d "mod-black-market" ]
   echo '   ℹ️  MoP Black Market Auction House backported using Eluna Lua engine'
   echo '   ⚠️  SPECIAL MODULE: Uses Lua scripts, not C++ compilation'
   echo '   🔧 REQUIRES: mod-eluna must be enabled and functional'
-  echo '   🔬 STATUS: IN TESTING - Currently under verification'
   git clone https://github.com/Youpeoples/Black-Market-Auction-House.git mod-black-market
 
   # Special handling: Copy Lua scripts to lua_scripts directory
@@ -768,7 +756,6 @@ ENABLED_MODULES=""
 [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-gain-honor-guard"
 [ "$MODULE_ELUNA" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-eluna"
 [ "$MODULE_TIME_IS_TIME" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-time-is-time"
-[ "$MODULE_POCKET_PORTAL" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-pocket-portal"
 [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-random-enchants"
 [ "$MODULE_SOLOCRAFT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-solocraft"
 [ "$MODULE_PVP_TITLES" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-pvp-titles"

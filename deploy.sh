@@ -106,8 +106,15 @@ compose(){
 }
 
 ensure_source_repo(){
+  local module_playerbots
+  module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
+  local default_source="./source/azerothcore"
+  if [ "$module_playerbots" = "1" ]; then
+    default_source="./source/azerothcore-playerbots"
+  fi
+
   local src_path
-  src_path="$(read_env MODULES_REBUILD_SOURCE_PATH "./source/azerothcore")"
+  src_path="$(read_env MODULES_REBUILD_SOURCE_PATH "$default_source")"
   if [[ "$src_path" != /* ]]; then
     src_path="$ROOT_DIR/$src_path"
   fi
