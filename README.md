@@ -377,11 +377,14 @@ http://YOUR_SERVER_IP:4201
 ./deploy.sh --profile playerbots    # Playerbots branch
 ./deploy.sh --profile modules       # Custom modules build
 
-# Force source rebuild
-./scripts/rebuild-with-modules.sh --yes
+# Module staging and compilation
+./scripts/stage-modules.sh                    # Download and stage enabled modules
+./scripts/rebuild-with-modules.sh --yes       # Force source rebuild with modules
+./scripts/setup-source.sh                     # Initialize/update source repositories
 
-# Stage services without full deployment
-./scripts/stage-modules.sh
+# Module configuration management
+./scripts/copy-module-configs.sh              # Create module .conf files
+./scripts/manage-modules-sql.sh               # Execute module SQL scripts
 
 # Launch management tooling (phpMyAdmin + Keira3)
 ./scripts/deploy-tools.sh
@@ -407,6 +410,20 @@ docker exec -it ac-mysql mysql -u root -p
 ls -la storage/backups/
 ```
 
+### Container Management
+```bash
+# Start specific services
+./start-containers.sh                           # Start all configured containers
+
+# Stop services gracefully
+./stop-containers.sh                            # Stop all containers
+
+# Monitor service health
+./status.sh                                     # Check realm status
+./status.sh --watch                            # Watch services continuously
+./status.sh --once                             # Single status check
+```
+
 ### Deployment Verification
 ```bash
 # Quick health check
@@ -415,6 +432,187 @@ ls -la storage/backups/
 # Full deployment verification
 ./verify-deployment.sh
 ```
+
+---
+
+## 📜 Script Reference
+
+### Core Deployment Scripts
+
+#### `setup.sh` - Interactive Environment Configuration
+Interactive `.env` generator with module selection, server configuration, and deployment profiles.
+
+```bash
+./setup.sh                                      # Interactive configuration
+./setup.sh --module-config sam                 # Use predefined module preset
+./setup.sh --playerbot-max-bots 3000          # Set playerbot limits
+```
+
+#### `deploy.sh` - High-Level Deployment Orchestrator
+Module-aware deployment with automatic source builds and profile selection.
+
+```bash
+./deploy.sh                                     # Auto-deploy with optimal profile
+./deploy.sh --profile standard                 # Force standard AzerothCore
+./deploy.sh --profile playerbots               # Force playerbots branch
+./deploy.sh --profile modules                  # Force custom modules build
+./deploy.sh --skip-rebuild --no-watch         # Deploy without rebuild/logs
+./deploy.sh --keep-running                     # Deploy and exit (no log tailing)
+```
+
+#### `cleanup.sh` - Project Cleanup Utility
+Comprehensive cleanup with multiple destruction levels and safety checks.
+
+```bash
+./cleanup.sh                                   # Interactive cleanup
+./cleanup.sh --soft                           # Stop containers only
+./cleanup.sh --hard                           # Remove containers, networks, volumes
+./cleanup.sh --nuclear                        # Full cleanup including images
+./cleanup.sh --preserve-backups               # Retain backup data during cleanup
+./cleanup.sh --dry-run                        # Preview cleanup actions
+```
+
+### Container Lifecycle Management
+
+#### `start-containers.sh` - Service Startup
+Starts all configured containers using appropriate profiles.
+
+#### `stop-containers.sh` - Graceful Shutdown
+Stops all containers with proper cleanup and data protection.
+
+#### `status.sh` - Service Health Monitoring
+```bash
+./status.sh                                    # Single status check with summary
+./status.sh --watch                           # Continuous monitoring mode
+./status.sh --once                            # Script-friendly single check
+```
+
+### Database & Backup Management
+
+#### `backup-export.sh` - User Data Export
+Exports user accounts and character data for migration or backup purposes.
+
+```bash
+./backup-export.sh                            # Export to ExportBackup_<timestamp>/
+./backup-export.sh /path/to/backup/dir       # Export to specific directory
+```
+
+**Output Structure:**
+```
+ExportBackup_YYYYMMDD_HHMMSS/
+├── acore_auth.sql.gz         # User accounts
+├── acore_characters.sql.gz   # Character data
+└── manifest.json             # Backup metadata
+```
+
+#### `backup-import.sh` - User Data Import
+Restores user accounts and characters from backup while preserving world data.
+
+```bash
+./backup-import.sh                            # Import from ImportBackup/
+./backup-import.sh /path/to/backup           # Import from specific directory
+```
+
+**Required Files:**
+- `acore_auth.sql[.gz]` - User accounts (required)
+- `acore_characters.sql[.gz]` - Character data (required)
+- `acore_world.sql[.gz]` - World data (optional)
+
+### Module Management Scripts
+
+#### `scripts/stage-modules.sh` - Module Staging
+Downloads and stages enabled modules for source integration.
+
+```bash
+./scripts/stage-modules.sh                    # Stage all enabled modules
+```
+
+#### `scripts/rebuild-with-modules.sh` - Source Compilation
+Rebuilds AzerothCore with enabled C++ modules compiled into the binaries.
+
+```bash
+./scripts/rebuild-with-modules.sh --yes       # Rebuild with confirmation bypass
+./scripts/rebuild-with-modules.sh --source ./custom/path  # Custom source path
+```
+
+#### `scripts/setup-source.sh` - Source Repository Setup
+Initializes or updates AzerothCore source repositories for compilation.
+
+```bash
+./scripts/setup-source.sh                     # Setup source for current configuration
+```
+
+#### `scripts/manage-modules.sh` - Module Management Container
+Internal script that manages module lifecycle within the ac-modules container.
+
+#### `scripts/manage-modules-sql.sh` - Module Database Integration
+Executes module-specific SQL scripts for database schema updates.
+
+#### `scripts/copy-module-configs.sh` - Configuration File Management
+Creates module `.conf` files from `.dist.conf` templates for active modules.
+
+```bash
+./scripts/copy-module-configs.sh              # Create missing module configs
+```
+
+### Post-Deployment Automation
+
+#### `scripts/auto-post-install.sh` - Post-Installation Configuration
+Automated post-deployment tasks including module configuration, service verification, and initial setup.
+
+```bash
+./scripts/auto-post-install.sh                # Run post-install tasks
+```
+
+**Automated Tasks:**
+1. Module configuration file creation
+2. Service health verification
+3. Database connectivity testing
+4. Initial realm configuration
+
+### Advanced Deployment Tools
+
+#### `scripts/migrate-stack.sh` - Remote Deployment Migration
+Migrates locally built images and configuration to remote hosts.
+
+```bash
+./scripts/migrate-stack.sh \
+  --host docker-server \
+  --user sam \
+  --project-dir /home/sam/acore-compose       # Migrate to remote host
+
+./scripts/migrate-stack.sh \
+  --host remote.example.com \
+  --identity ~/.ssh/deploy_key \
+  --skip-storage                              # Migrate without storage sync
+```
+
+#### `scripts/deploy-tools.sh` - Management Tools Deployment
+Deploys web-based management tools (phpMyAdmin, Keira3) independently.
+
+```bash
+./scripts/deploy-tools.sh                     # Deploy management tools only
+```
+
+#### `verify-deployment.sh` - Deployment Validation
+Comprehensive deployment verification with health checks and service validation.
+
+```bash
+./verify-deployment.sh                        # Full deployment verification
+./verify-deployment.sh --skip-deploy         # Verify existing deployment
+./verify-deployment.sh --quick               # Quick health check only
+```
+
+### Backup System Scripts
+
+#### `scripts/backup-scheduler.sh` - Automated Backup Service
+Runs inside the backup container to provide scheduled database backups.
+
+**Features:**
+- Hourly backups (retained for 6 hours)
+- Daily backups (retained for 3 days)
+- Automatic cleanup based on retention policies
+- Database detection (includes playerbots if present)
 
 ---
 
