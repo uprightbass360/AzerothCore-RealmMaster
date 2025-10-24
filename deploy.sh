@@ -16,6 +16,7 @@ WATCH_LOGS=1
 KEEP_RUNNING=0
 SKIP_REBUILD=0
 WORLD_LOG_SINCE=""
+ASSUME_YES=0
 
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
@@ -49,6 +50,7 @@ Options:
   --no-watch                               Do not tail worldserver logs after staging
   --keep-running                           Do not pre-stop runtime stack before rebuild
   --skip-rebuild                           Skip source rebuild even if modules require it
+  --yes, -y                                Auto-confirm the deployment prompt
   -h, --help                               Show this help
 
 This command automates the module workflow (sync modules, rebuild source if needed,
@@ -62,6 +64,7 @@ while [[ $# -gt 0 ]]; do
     --no-watch) WATCH_LOGS=0; shift;;
     --keep-running) KEEP_RUNNING=1; shift;;
     --skip-rebuild) SKIP_REBUILD=1; shift;;
+    --yes|-y) ASSUME_YES=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
   esac
@@ -355,6 +358,22 @@ wait_for_worldserver_ready(){
 }
 
 main(){
+  if [ "$ASSUME_YES" -ne 1 ]; then
+    if [ -t 0 ]; then
+      read -r -p "Proceed with AzerothCore deployment? [y/N]: " reply
+      reply="${reply:-n}"
+    else
+      warn "No --yes flag provided and standard input is not interactive; aborting deployment."
+      exit 1
+    fi
+    case "$reply" in
+      [Yy]*) info "Deployment confirmed."; ;;
+      *) err "Deployment cancelled."; exit 1 ;;
+    esac
+  else
+    info "Auto-confirming deployment (--yes supplied)."
+  fi
+
   show_deployment_header
 
   local src_dir
