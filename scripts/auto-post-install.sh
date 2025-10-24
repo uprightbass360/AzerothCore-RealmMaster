@@ -48,9 +48,8 @@ if [ -f "/install-markers/post-install-completed" ]; then
   echo "✅ Post-install configuration already completed"
   echo "ℹ️  Marker file found: /install-markers/post-install-completed"
   echo "🔄 To re-run post-install configuration, delete the marker file and restart this container"
-  echo ""
-  echo "🏃 Keeping container alive for manual operations..."
-  tail -f /dev/null
+  echo "🏁 Nothing else to do; exiting."
+  exit 0
 else
   echo "🆕 New installation detected - running post-install configuration..."
   echo ""
@@ -155,6 +154,6 @@ else
   echo -e "${GREEN}⚔️ Your realm has been blessed and configured! ⚔️${NC}"
   echo -e "${GREEN}🏰 All post-installation rituals completed${NC}"
   echo -e "${GREEN}🗡️ Your realm awaits brave adventurers!${NC}"
-  echo ""
-  tail -f /dev/null
+  echo "🏁 Post-install tasks finished; exiting."
+  exit 0
 fi
