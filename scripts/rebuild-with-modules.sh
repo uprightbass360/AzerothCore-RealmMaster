@@ -41,6 +41,16 @@ read_env(){
   echo "$value"
 }
 
+default_source_path(){
+  local module_playerbots
+  module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
+  if [ "$module_playerbots" = "1" ]; then
+    echo "./source/azerothcore-playerbots"
+  else
+    echo "./source/azerothcore"
+  fi
+}
+
 confirm(){
   local prompt="$1" default="$2" reply
   if [ "$ASSUME_YES" = "1" ]; then
@@ -82,23 +92,38 @@ fi
 
 STORAGE_PATH="$(read_env STORAGE_PATH "./storage")"
 if [[ "$STORAGE_PATH" != /* ]]; then
-  STORAGE_PATH="$PROJECT_DIR/$STORAGE_PATH"
+  STORAGE_PATH="$PROJECT_DIR/${STORAGE_PATH#./}"
 fi
 MODULES_DIR="$STORAGE_PATH/modules"
 SENTINEL_FILE="$MODULES_DIR/.requires_rebuild"
 
+STORAGE_PATH_ABS="$STORAGE_PATH"
+
 REBUILD_SOURCE_PATH="$SOURCE_OVERRIDE"
+default_path="$(default_source_path)"
 if [ -z "$REBUILD_SOURCE_PATH" ]; then
-  REBUILD_SOURCE_PATH="$(read_env MODULES_REBUILD_SOURCE_PATH "./source/azerothcore")"
+  REBUILD_SOURCE_PATH="$(read_env MODULES_REBUILD_SOURCE_PATH "$default_path")"
 fi
 
 if [ -z "$REBUILD_SOURCE_PATH" ]; then
-  REBUILD_SOURCE_PATH="./source/azerothcore"
+  REBUILD_SOURCE_PATH="$default_path"
 fi
 
 if [[ "$REBUILD_SOURCE_PATH" != /* ]]; then
-  REBUILD_SOURCE_PATH="$(realpath "$REBUILD_SOURCE_PATH" 2>/dev/null || echo "$REBUILD_SOURCE_PATH")"
+  REBUILD_SOURCE_PATH="$PROJECT_DIR/${REBUILD_SOURCE_PATH#./}"
 fi
+
+if [[ "$default_path" != /* ]]; then
+  default_path_abs="$PROJECT_DIR/${default_path#./}"
+else
+  default_path_abs="$default_path"
+fi
+if [[ "$REBUILD_SOURCE_PATH" == "$STORAGE_PATH_ABS"* ]]; then
+  echo "⚠️  Source path $REBUILD_SOURCE_PATH is inside shared storage ($STORAGE_PATH_ABS). Using local workspace $default_path_abs instead."
+  REBUILD_SOURCE_PATH="$default_path_abs"
+fi
+
+REBUILD_SOURCE_PATH="$(realpath "$REBUILD_SOURCE_PATH" 2>/dev/null || echo "$REBUILD_SOURCE_PATH")"
 
 SOURCE_COMPOSE="$REBUILD_SOURCE_PATH/docker-compose.yml"
 if [ ! -f "$SOURCE_COMPOSE" ]; then

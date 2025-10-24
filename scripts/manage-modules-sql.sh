@@ -228,8 +228,9 @@ execute_module_sql_scripts() {
     execute_module_sql "mod-TimeIsTime" "Time Is Time"
   fi
 
-  if [ "$MODULE_POCKET_PORTAL" = "1" ] && [ -d "mod-pocket-portal" ]; then
-    execute_module_sql "mod-pocket-portal" "Pocket Portal"
+  if [ "$MODULE_POCKET_PORTAL" = "1" ]; then
+    echo '⚠️  Skipping mod-pocket-portal SQL: module disabled until C++20 patch is applied.'
+    MODULE_POCKET_PORTAL=0
   fi
 
   if [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && [ -d "mod-random-enchants" ]; then

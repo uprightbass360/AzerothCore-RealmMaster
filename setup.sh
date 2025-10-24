@@ -904,14 +904,39 @@ fi
     fi
     if [ "$RUN_REBUILD_NOW" = "1" ] || [ "$AUTO_REBUILD_ON_DEPLOY" = "1" ]; then
       if [ -z "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
-        MODULES_REBUILD_SOURCE_PATH_VALUE="./source/azerothcore"
+        if [ "$MODULE_PLAYERBOTS" = "1" ]; then
+          MODULES_REBUILD_SOURCE_PATH_VALUE="./source/azerothcore-playerbots"
+        else
+          MODULES_REBUILD_SOURCE_PATH_VALUE="./source/azerothcore"
+        fi
         say INFO "Using default source path: ${MODULES_REBUILD_SOURCE_PATH_VALUE}"
       fi
     fi
   fi
 
+  local default_source_rel="./source/azerothcore"
+  if [ "$MODULE_PLAYERBOTS" = "1" ]; then
+    default_source_rel="./source/azerothcore-playerbots"
+  fi
+
+  if [ -n "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
+    local storage_abs="$STORAGE_PATH"
+    if [[ "$storage_abs" != /* ]]; then
+      storage_abs="$(pwd)/${storage_abs#./}"
+    fi
+    local candidate_path="$MODULES_REBUILD_SOURCE_PATH_VALUE"
+    if [[ "$candidate_path" != /* ]]; then
+      candidate_path="$(pwd)/${candidate_path#./}"
+    fi
+    if [[ "$candidate_path" == "$storage_abs"* ]]; then
+      say WARNING "MODULES_REBUILD_SOURCE_PATH is inside shared storage (${candidate_path}). Using local workspace ${default_source_rel} instead."
+      MODULES_REBUILD_SOURCE_PATH_VALUE="$default_source_rel"
+    fi
+  fi
+
   if [ "$RUN_REBUILD_NOW" = "1" ]; then
-    local rebuild_source_path="${MODULES_REBUILD_SOURCE_PATH_VALUE:-./source/azerothcore}"
+    local default_source_path="$default_source_rel"
+    local rebuild_source_path="${MODULES_REBUILD_SOURCE_PATH_VALUE:-$default_source_path}"
     if [ ! -f "$rebuild_source_path/docker-compose.yml" ]; then
       say INFO "Preparing source repository via scripts/setup-source.sh"
       if ! ./scripts/setup-source.sh >/dev/null 2>&1; then
@@ -945,7 +970,7 @@ fi
   fi
 
   if [ -z "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
-    MODULES_REBUILD_SOURCE_PATH_VALUE="./source/azerothcore"
+    MODULES_REBUILD_SOURCE_PATH_VALUE="$default_source_rel"
   fi
 
   DB_PLAYERBOTS_NAME=${DB_PLAYERBOTS_NAME:-acore_playerbots}

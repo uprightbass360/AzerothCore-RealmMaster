@@ -9,24 +9,53 @@ if [ -f .env ]; then
     source .env
 fi
 
-# Default values
-SOURCE_PATH="${MODULES_REBUILD_SOURCE_PATH:-./source/azerothcore}"
+# Remember project root for path normalization
+PROJECT_ROOT="$(pwd)"
 
-# Convert to absolute path if relative
-if [[ "$SOURCE_PATH" != /* ]]; then
-    SOURCE_PATH="$(pwd)/$SOURCE_PATH"
-fi
+# Default values
 MODULE_PLAYERBOTS="${MODULE_PLAYERBOTS:-0}"
+DEFAULT_STANDARD_PATH="./source/azerothcore"
+DEFAULT_PLAYERBOTS_PATH="./source/azerothcore-playerbots"
+
+SOURCE_PATH_DEFAULT="$DEFAULT_STANDARD_PATH"
+if [ "$MODULE_PLAYERBOTS" = "1" ]; then
+    SOURCE_PATH_DEFAULT="$DEFAULT_PLAYERBOTS_PATH"
+fi
+SOURCE_PATH="${MODULES_REBUILD_SOURCE_PATH:-$SOURCE_PATH_DEFAULT}"
+
+STORAGE_PATH_VALUE="${STORAGE_PATH:-./storage}"
+if [[ "$STORAGE_PATH_VALUE" != /* ]]; then
+    STORAGE_PATH_ABS="$PROJECT_ROOT/${STORAGE_PATH_VALUE#./}"
+else
+    STORAGE_PATH_ABS="$STORAGE_PATH_VALUE"
+fi
+
+DEFAULT_SOURCE_ABS="$PROJECT_ROOT/${SOURCE_PATH_DEFAULT#./}"
+
+# Convert to absolute path if relative and ensure we stay local
+if [[ "$SOURCE_PATH" != /* ]]; then
+    SOURCE_PATH="$PROJECT_ROOT/${SOURCE_PATH#./}"
+fi
+if [[ "$SOURCE_PATH" == "$STORAGE_PATH_ABS"* ]]; then
+    echo "⚠️  Source path $SOURCE_PATH is inside shared storage ($STORAGE_PATH_ABS). Using local workspace $DEFAULT_SOURCE_ABS instead."
+    SOURCE_PATH="$DEFAULT_SOURCE_ABS"
+    MODULES_REBUILD_SOURCE_PATH="$SOURCE_PATH_DEFAULT"
+fi
+
+ACORE_REPO_STANDARD="${ACORE_REPO_STANDARD:-https://github.com/azerothcore/azerothcore-wotlk.git}"
+ACORE_BRANCH_STANDARD="${ACORE_BRANCH_STANDARD:-master}"
+ACORE_REPO_PLAYERBOTS="${ACORE_REPO_PLAYERBOTS:-https://github.com/uprightbass360/azerothcore-wotlk-playerbots.git}"
+ACORE_BRANCH_PLAYERBOTS="${ACORE_BRANCH_PLAYERBOTS:-Playerbot}"
 
 # Repository and branch selection based on playerbots mode
 if [ "$MODULE_PLAYERBOTS" = "1" ]; then
-    REPO_URL="https://github.com/liyunfan1223/azerothcore-wotlk.git"
-    BRANCH="Playerbot"
-    echo "📌 Playerbots mode: Using liyunfan1223 fork, Playerbot branch"
+    REPO_URL="$ACORE_REPO_PLAYERBOTS"
+    BRANCH="$ACORE_BRANCH_PLAYERBOTS"
+    echo "📌 Playerbots mode: Using $REPO_URL, branch $BRANCH"
 else
-    REPO_URL="https://github.com/azerothcore/azerothcore-wotlk.git"
-    BRANCH="master"
-    echo "📌 Standard mode: Using official AzerothCore, master branch"
+    REPO_URL="$ACORE_REPO_STANDARD"
+    BRANCH="$ACORE_BRANCH_STANDARD"
+    echo "📌 Standard mode: Using $REPO_URL, branch $BRANCH"
 fi
 
 echo "📍 Repository: $REPO_URL"
