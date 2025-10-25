@@ -9,7 +9,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSE_FILE="$ROOT_DIR/compose.yml"
+COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_PATH="$ROOT_DIR/.env"
 TARGET_PROFILE=""
 WATCH_LOGS=1
@@ -111,9 +111,13 @@ compose(){
 ensure_source_repo(){
   local module_playerbots
   module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
-  local default_source="./source/azerothcore"
+  local local_root
+  local_root="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
+  local_root="${local_root%/}"
+  [ -z "$local_root" ] && local_root="."
+  local default_source="${local_root}/source/azerothcore"
   if [ "$module_playerbots" = "1" ]; then
-    default_source="./source/azerothcore-playerbots"
+    default_source="${local_root}/source/azerothcore-playerbots"
   fi
 
   local src_path

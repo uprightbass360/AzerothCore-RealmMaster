@@ -92,6 +92,62 @@ normalize_module_name(){
 
 declare -A MODULE_ENABLE_SET=()
 
+declare -a COMPOSE_CMD=()
+
+resolve_compose_command(){
+  if [ ${#COMPOSE_CMD[@]} -gt 0 ]; then
+    return 0
+  fi
+  if command -v docker >/dev/null 2>&1; then
+    if docker compose version >/dev/null 2>&1; then
+      COMPOSE_CMD=(docker compose)
+      return 0
+    fi
+  fi
+  if command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE_CMD=(docker-compose)
+    return 0
+  fi
+  COMPOSE_CMD=()
+  return 1
+}
+
+modules_directory_has_content(){
+  local dir="$1"
+  [ -d "$dir" ] || return 1
+  local first_entry
+  first_entry="$(find "$dir" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
+  [ -n "$first_entry" ]
+}
+
+ensure_modules_staged(){
+  local storage_abs="$1" needs_cxx="$2" run_now="$3"
+  if [ "$needs_cxx" != "1" ] || [ "$run_now" != "1" ]; then
+    return 0
+  fi
+
+  local modules_dir="${storage_abs}/modules"
+  local config_dir="${storage_abs}/config"
+  mkdir -p "$modules_dir" "$config_dir"
+
+  if modules_directory_has_content "$modules_dir"; then
+    return 0
+  fi
+
+  if ! resolve_compose_command; then
+    say WARNING "Docker Compose not detected; skipping automatic module staging."
+    return 1
+  fi
+
+  say INFO "Staging module repositories via ${COMPOSE_CMD[*]} run --rm --no-deps ac-modules"
+  if ! "${COMPOSE_CMD[@]}" --profile modules run --rm --no-deps ac-modules; then
+    say WARNING "Module staging failed; repositories may be incomplete."
+    return 1
+  fi
+
+  return 0
+}
+
 KNOWN_MODULE_VARS=(
   MODULE_PLAYERBOTS
   MODULE_AOE_LOOT
@@ -168,11 +224,36 @@ apply_module_preset(){
 DEFAULT_PRESET_SUGGESTED="suggested-modules"
 DEFAULT_PRESET_PLAYERBOTS="playerbots-suggested-modules"
 
-show_wow_header(){
-  echo -e "\n${BLUE}    ⚔️  AZEROTHCORE DEPLOYMENT SYSTEM  ⚔️${NC}"
-  echo -e "${BLUE}    ═══════════════════════════════════════${NC}"
-  echo -e "${BLUE}         🏰 Build Your Own WoW Server 🏰${NC}\n"
+show_wow_header() {
+    clear
+    echo -e "${RED}"
+    cat <<'EOF'
+                                                                                                                                                            
+       db          888888888888   88888888888   88888888ba      ,ad8888ba,   888888888888   88        88    ,ad8888ba,    ,ad8888ba,    88888888ba   88888888888  
+      d88b                  ,88   88            88      "8b    d8"'    `"8b       88        88        88   d8"'    `"8b  d8"'    `"8b   88      "8b  88           
+     d8'`8b               ,88"    88            88      ,8P   d8'        `8b      88        88        88  d8'           d8'        `8b  88      ,8P  88           
+    d8'  `8b            ,88"      88aaaaa       88aaaaaa8P'   88          88      88        88aaaaaaaa88  88            88          88  88aaaaaa8P'  88aaaaa      
+   d8YaaaaY8b         ,88"        88"""""       88""""88'     88          88      88        88""""""""88  88            88          88  88""""88'    88"""""      
+  d8""""""""8b      ,88"          88            88    `8b     Y8,        ,8P      88        88        88  Y8,           Y8,        ,8P  88    `8b    88           
+ d8'        `8b    88"            88            88     `8b     Y8a.    .a8P       88        88        88   Y8a.    .a8P  Y8a.    .a8P   88     `8b   88           
+d8'          `8b   888888888888   88888888888   88      `8b     `"Y8888Y"'        88        88        88    `"Y8888Y"'    `"Y8888Y"'    88      `8b  88888888888  
+       ___             ___             ___             ___             ___              ___             ___             ___             ___             ___       
+    .'`~  ``.       .'`~  ``.       .'`~  ``.       .'`~  ``.       .'`~  ``.        .'`~  ``.       .'`~  ``.       .'`~  ``.       .'`~  ``.       .'`~  ``.    
+    )`_  ._ (       )`_  ._ (       )`_  ._ (       )`_  ._ (       )`_  ._ (        )`_  ._ (       )`_  ._ (       )`_  ._ (       )`_  ._ (       )`_  ._ (    
+    |(_/^\_)|       |(_/^\_)|       |(_/^\_)|       |(_/^\_)|       |(_/^\_)|        |(_/^\_)|       |(_/^\_)|       |(_/^\_)|       |(_/^\_)|       |(_/^\_)|    
+    `-.`''.-'       `-.`''.-'       `-.`''.-'       `-.`''.-'       `-.`''.-'        `-.`''.-'       `-.`''.-'       `-.`''.-'       `-.`''.-'       `-.`''.-'    
+       """             """             """             """             """              """             """             """             """             """       
+                                                                                                                                                                  
+ .')'=.'_`.='(`. .')'=.'_`.='(`. .')'=.'_`.='(`. .')'=.'_`.='(`. .')'=.'_`.='(`.  .')'=.'_`.='(`. .')'=.'_`.='(`. .')'=.'_`.='(`. .')'=.'_`.='(`. .')'=.'_`.='(`. 
+ :| -.._H_,.- |: :| -.._H_,.- |: :| -.._H_,.- |: :| -.._H_,.- |: :| -.._H_,.- |:  :| -.._H_,.- |: :| -.._H_,.- |: :| -.._H_,.- |: :| -.._H_,.- |: :| -.._H_,.- |: 
+ |: -.__H__.- :| |: -.__H__.- :| |: -.__H__.- :| |: -.__H__.- :| |: -.__H__.- :|  |: -.__H__.- :| |: -.__H__.- :| |: -.__H__.- :| |: -.__H__.- :| |: -.__H__.- :| 
+ <'  `--V--'  `> <'  `--V--'  `> <'  `--V--'  `> <'  `--V--'  `> <'  `--V--'  `>  <'  `--V--'  `> <'  `--V--'  `> <'  `--V--'  `> <'  `--V--'  `> <'  `--V--'  `> 
+
+art: littlebitspace@https://littlebitspace.com/
+EOF
+    echo -e "${NC}"
 }
+
 
 show_realm_configured(){
   echo -e "\n${GREEN}⚔️ Your realm configuration has been forged! ⚔️${NC}"
@@ -437,9 +518,9 @@ EOF
 
   # Deployment type
   say HEADER "DEPLOYMENT TYPE"
-  echo "1) 🏠 Local Development (127.0.0.1, local storage)"
-  echo "2) 🌐 LAN Server (local network IP)"
-  echo "3) ☁️  Public Server (domain or public IP)"
+  echo "1) 🏠 Local Development (127.0.0.1)"
+  echo "2) 🌐 LAN Server (local network IP) (autodetect)"
+  echo "3) ☁️ Public Server (domain or public IP) (manual)"
 local DEPLOYMENT_TYPE_INPUT="${CLI_DEPLOYMENT_TYPE}"
 local DEPLOYMENT_TYPE=""
 if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$DEPLOYMENT_TYPE_INPUT" ]; then
@@ -498,9 +579,9 @@ fi
 
   # Permission scheme
   say HEADER "PERMISSION SCHEME"
-  echo "1) 🏠 Local Dev (0:0)"
-  echo "2) 🗂️  NFS Server (1001:1000)"
-  echo "3) ⚙️  Custom"
+  echo "1) 🏠 Local Root (0:0)"
+  echo "2) 🗂️ User (1001:1000)"
+  echo "3) ⚙️ Custom"
   local PERMISSION_SCHEME_INPUT="${CLI_PERMISSION_SCHEME}"
   local PERMISSION_SCHEME_NAME=""
   local CONTAINER_USER
@@ -889,6 +970,17 @@ fi
     printf "  %-18s detected (source rebuild required)\n" "C++ modules:"
   fi
 
+  local LOCAL_STORAGE_ROOT="${STORAGE_PATH_LOCAL:-./local-storage}"
+  LOCAL_STORAGE_ROOT="${LOCAL_STORAGE_ROOT%/}"
+  [ -z "$LOCAL_STORAGE_ROOT" ] && LOCAL_STORAGE_ROOT="."
+  STORAGE_PATH_LOCAL="$LOCAL_STORAGE_ROOT"
+
+  export STORAGE_PATH STORAGE_PATH_LOCAL
+  local module_export_var
+  for module_export_var in "${KNOWN_MODULE_VARS[@]}"; do
+    export "$module_export_var"
+  done
+
   if [ "$NEEDS_CXX_REBUILD" = "1" ]; then
     echo ""
     say WARNING "These modules require compiling AzerothCore from source."
@@ -905,18 +997,18 @@ fi
     if [ "$RUN_REBUILD_NOW" = "1" ] || [ "$AUTO_REBUILD_ON_DEPLOY" = "1" ]; then
       if [ -z "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
         if [ "$MODULE_PLAYERBOTS" = "1" ]; then
-          MODULES_REBUILD_SOURCE_PATH_VALUE="./source/azerothcore-playerbots"
+          MODULES_REBUILD_SOURCE_PATH_VALUE="${LOCAL_STORAGE_ROOT}/source/azerothcore-playerbots"
         else
-          MODULES_REBUILD_SOURCE_PATH_VALUE="./source/azerothcore"
+          MODULES_REBUILD_SOURCE_PATH_VALUE="${LOCAL_STORAGE_ROOT}/source/azerothcore"
         fi
         say INFO "Using default source path: ${MODULES_REBUILD_SOURCE_PATH_VALUE}"
       fi
     fi
   fi
 
-  local default_source_rel="./source/azerothcore"
+  local default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore"
   if [ "$MODULE_PLAYERBOTS" = "1" ]; then
-    default_source_rel="./source/azerothcore-playerbots"
+    default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore-playerbots"
   fi
 
   if [ -n "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
@@ -934,11 +1026,15 @@ fi
     fi
   fi
 
+  # Module staging will be handled directly in the rebuild section below
+
   if [ "$RUN_REBUILD_NOW" = "1" ]; then
     local default_source_path="$default_source_rel"
     local rebuild_source_path="${MODULES_REBUILD_SOURCE_PATH_VALUE:-$default_source_path}"
+    MODULES_REBUILD_SOURCE_PATH_VALUE="$rebuild_source_path"
+    export MODULES_REBUILD_SOURCE_PATH="$MODULES_REBUILD_SOURCE_PATH_VALUE"
     if [ ! -f "$rebuild_source_path/docker-compose.yml" ]; then
-      say INFO "Preparing source repository via scripts/setup-source.sh"
+      say INFO "Preparing source repository via scripts/setup-source.sh (git clone/fetch can take a few minutes)"
       if ! ./scripts/setup-source.sh >/dev/null 2>&1; then
         say WARNING "Source setup encountered issues; running interactively."
         if ! ./scripts/setup-source.sh; then
@@ -946,6 +1042,33 @@ fi
           RUN_REBUILD_NOW=0
         fi
       fi
+    fi
+
+    # Stage modules to local source directory before compilation
+    if [ "$NEEDS_CXX_REBUILD" = "1" ]; then
+      say INFO "Staging module repositories to local source directory..."
+      local local_modules_dir="${rebuild_source_path}/modules"
+      mkdir -p "$local_modules_dir"
+
+      # Export module variables for the script
+      local module_export_var
+      for module_export_var in "${KNOWN_MODULE_VARS[@]}"; do
+        export "$module_export_var"
+      done
+
+      # Set git config for module script
+      git config --global user.name "${GIT_USERNAME:-ac-compose}" 2>/dev/null || true
+      git config --global user.email "${GIT_EMAIL:-noreply@azerothcore.org}" 2>/dev/null || true
+
+      # Run module staging script in local modules directory
+      # Set environment variable to indicate we're running locally
+      export MODULES_LOCAL_RUN=1
+      if (cd "$local_modules_dir" && bash "$SCRIPT_DIR/scripts/manage-modules.sh"); then
+        say SUCCESS "Module repositories staged to $local_modules_dir"
+      else
+        say WARNING "Module staging encountered issues, but continuing with rebuild"
+      fi
+      unset MODULES_LOCAL_RUN
     fi
   fi
 
@@ -974,6 +1097,11 @@ fi
   fi
 
   DB_PLAYERBOTS_NAME=${DB_PLAYERBOTS_NAME:-acore_playerbots}
+  local CLIENT_DATA_CACHE_PATH_VALUE="${LOCAL_STORAGE_ROOT}/client-data-cache"
+  HOST_ZONEINFO_PATH=${HOST_ZONEINFO_PATH:-/usr/share/zoneinfo}
+  MYSQL_INNODB_REDO_LOG_CAPACITY=${MYSQL_INNODB_REDO_LOG_CAPACITY:-512M}
+  MYSQL_RUNTIME_TMPFS_SIZE=${MYSQL_RUNTIME_TMPFS_SIZE:-8G}
+  CLIENT_DATA_VOLUME=${CLIENT_DATA_VOLUME:-ac-client-data}
 
   cat > "$ENV_OUT" <<EOF
 # Generated by ac-compose/setup.sh
@@ -981,6 +1109,8 @@ fi
 COMPOSE_PROJECT_NAME=ac-compose
 
 STORAGE_PATH=$STORAGE_PATH
+STORAGE_PATH_LOCAL=$LOCAL_STORAGE_ROOT
+HOST_ZONEINFO_PATH=$HOST_ZONEINFO_PATH
 TZ=UTC
 
 # Database
@@ -996,6 +1126,8 @@ MYSQL_COLLATION=utf8mb4_unicode_ci
 MYSQL_MAX_CONNECTIONS=1000
 MYSQL_INNODB_BUFFER_POOL_SIZE=256M
 MYSQL_INNODB_LOG_FILE_SIZE=64M
+MYSQL_INNODB_REDO_LOG_CAPACITY=$MYSQL_INNODB_REDO_LOG_CAPACITY
+MYSQL_RUNTIME_TMPFS_SIZE=$MYSQL_RUNTIME_TMPFS_SIZE
 DB_AUTH_NAME=acore_auth
 DB_WORLD_NAME=acore_world
 DB_CHARACTERS_NAME=acore_characters
@@ -1011,6 +1143,8 @@ AC_WORLDSERVER_IMAGE_PLAYERBOTS=${AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE}
 # Client data images
 AC_CLIENT_DATA_IMAGE=acore/ac-wotlk-client-data:14.0.0-dev
 AC_CLIENT_DATA_IMAGE_PLAYERBOTS=uprightbass360/azerothcore-wotlk-playerbots:client-data-Playerbot
+CLIENT_DATA_CACHE_PATH=$CLIENT_DATA_CACHE_PATH_VALUE
+CLIENT_DATA_VOLUME=$CLIENT_DATA_VOLUME
 
 # Ports
 AUTH_EXTERNAL_PORT=$AUTH_EXTERNAL_PORT

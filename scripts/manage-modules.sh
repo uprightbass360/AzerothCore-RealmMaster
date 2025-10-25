@@ -8,15 +8,13 @@ git config --global user.email "${GIT_EMAIL:-noreply@azerothcore.org}"
 # PAT not needed for public repositories
 
 echo 'Initializing module management...'
-cd /modules
+if [ "$MODULES_LOCAL_RUN" != "1" ]; then
+  cd /modules
+fi
 
 echo 'Cleaning up disabled modules...'
 
-# Remove modules if disabled
-if [ "$MODULE_PLAYERBOTS" != "1" ] && [ -d "mod-playerbots" ]; then
-  echo 'Removing mod-playerbots (disabled)...'
-  rm -rf mod-playerbots
-fi
+# Playerbots are integrated into the source - no separate module to remove
 
 if [ "$MODULE_AOE_LOOT" != "1" ] && [ -d "mod-aoe-loot" ]; then
   echo 'Removing mod-aoe-loot (disabled)...'
@@ -227,15 +225,14 @@ fi
 
 echo 'Installing enabled modules...'
 
-# Install Playerbots if enabled
-if [ "$MODULE_PLAYERBOTS" = "1" ] && [ ! -d "mod-playerbots" ]; then
-  echo '🤖 Installing mod-playerbots...'
-  echo '   📖 Project: https://github.com/uprightbass360/mod-playerbots'
-  echo '   🚨 CRITICAL: REQUIRES Custom AzerothCore branch (uprightbass360/azerothcore-wotlk-playerbots/tree/Playerbot)'
-  echo '   🚨 INCOMPATIBLE with standard AzerothCore - module will not function properly'
-  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
+# Playerbots handling - integrated into custom AzerothCore branch
+if [ "$MODULE_PLAYERBOTS" = "1" ]; then
+  echo '🤖 Playerbots module enabled...'
+  echo '   📖 Playerbots are integrated into the uprightbass360/azerothcore-wotlk-playerbots source'
+  echo '   ℹ️  No separate module repository needed - functionality built into core'
+  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with playerbots source'
   echo '   📋 POST-INSTALL: Requires manual account/character configuration'
-  git clone https://github.com/uprightbass360/mod-playerbots.git mod-playerbots
+  # No git clone needed - playerbots are integrated into the source tree
 fi
 
 # Install AOE Loot if enabled
@@ -707,7 +704,11 @@ fi
 # Module state tracking and rebuild logic
 echo 'Checking for module changes that require rebuild...'
 
-MODULES_STATE_FILE="/modules/.modules_state"
+if [ "$MODULES_LOCAL_RUN" = "1" ]; then
+  MODULES_STATE_FILE="./.modules_state"
+else
+  MODULES_STATE_FILE="/modules/.modules_state"
+fi
 CURRENT_STATE=""
 REBUILD_REQUIRED=0
 
@@ -804,7 +805,11 @@ fi
 
 echo 'Module management complete.'
 
-REBUILD_SENTINEL="/modules/.requires_rebuild"
+if [ "$MODULES_LOCAL_RUN" = "1" ]; then
+  REBUILD_SENTINEL="./.requires_rebuild"
+else
+  REBUILD_SENTINEL="/modules/.requires_rebuild"
+fi
 if [ "$SQL_EXECUTION_FAILED" = "1" ]; then
   echo "⚠️  SQL execution encountered issues; review logs above."
 fi

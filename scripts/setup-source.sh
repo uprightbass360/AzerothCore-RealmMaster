@@ -1,6 +1,6 @@
 #!/bin/bash
 # ac-compose source repository setup
-set -e
+set -euo pipefail
 
 echo '🔧 Setting up AzerothCore source repository...'
 
@@ -14,8 +14,9 @@ PROJECT_ROOT="$(pwd)"
 
 # Default values
 MODULE_PLAYERBOTS="${MODULE_PLAYERBOTS:-0}"
-DEFAULT_STANDARD_PATH="./source/azerothcore"
-DEFAULT_PLAYERBOTS_PATH="./source/azerothcore-playerbots"
+LOCAL_STORAGE_ROOT="${STORAGE_PATH_LOCAL:-./local-storage}"
+DEFAULT_STANDARD_PATH="${LOCAL_STORAGE_ROOT%/}/source/azerothcore"
+DEFAULT_PLAYERBOTS_PATH="${LOCAL_STORAGE_ROOT%/}/source/azerothcore-playerbots"
 
 SOURCE_PATH_DEFAULT="$DEFAULT_STANDARD_PATH"
 if [ "$MODULE_PLAYERBOTS" = "1" ]; then
@@ -30,7 +31,11 @@ else
     STORAGE_PATH_ABS="$STORAGE_PATH_VALUE"
 fi
 
-DEFAULT_SOURCE_ABS="$PROJECT_ROOT/${SOURCE_PATH_DEFAULT#./}"
+if [[ "$SOURCE_PATH_DEFAULT" != /* ]]; then
+    DEFAULT_SOURCE_ABS="$PROJECT_ROOT/${SOURCE_PATH_DEFAULT#./}"
+else
+    DEFAULT_SOURCE_ABS="$SOURCE_PATH_DEFAULT"
+fi
 
 # Convert to absolute path if relative and ensure we stay local
 if [[ "$SOURCE_PATH" != /* ]]; then
@@ -62,36 +67,38 @@ echo "📍 Repository: $REPO_URL"
 echo "🌿 Branch: $BRANCH"
 echo "📂 Source path: $SOURCE_PATH"
 
-# Create source directory if it doesn't exist
+# Ensure destination directories exist
+echo "📂 Preparing local workspace at $(dirname "$SOURCE_PATH")"
 mkdir -p "$(dirname "$SOURCE_PATH")"
 
 # Clone or update repository
 if [ -d "$SOURCE_PATH/.git" ]; then
-    echo "📂 Existing repository found, updating..."
-    cd "$SOURCE_PATH"
+  echo "📂 Existing repository found, updating..."
+  cd "$SOURCE_PATH"
 
-    # Check if we're on the correct repository
-    CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
-    if [ "$CURRENT_REMOTE" != "$REPO_URL" ]; then
-        echo "🔄 Repository URL changed, re-cloning..."
-        cd ..
-        rm -rf "$(basename "$SOURCE_PATH")"
-        git clone "$REPO_URL" "$(basename "$SOURCE_PATH")"
-        cd "$(basename "$SOURCE_PATH")"
-    fi
-
-    # Fetch latest changes
-    git fetch origin
-
-    # Switch to target branch
+  # Check if we're on the correct repository
+  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+  if [ "$CURRENT_REMOTE" != "$REPO_URL" ]; then
+    echo "🔄 Repository URL changed, re-cloning..."
+    cd ..
+    rm -rf "$(basename "$SOURCE_PATH")"
+    echo "⏳ Cloning $REPO_URL (branch $BRANCH) into $(basename "$SOURCE_PATH")"
+    git clone -b "$BRANCH" "$REPO_URL" "$(basename "$SOURCE_PATH")"
+    cd "$(basename "$SOURCE_PATH")"
+  else
+    echo "🔄 Fetching latest changes from origin..."
+    git fetch origin --progress
+    echo "🔀 Switching to branch $BRANCH..."
     git checkout "$BRANCH"
-    git pull origin "$BRANCH"
-
+    echo "⬇️  Pulling latest commits..."
+    git pull --ff-only origin "$BRANCH"
     echo "✅ Repository updated to latest $BRANCH"
+  fi
 else
-    echo "📥 Cloning repository..."
-    git clone -b "$BRANCH" "$REPO_URL" "$SOURCE_PATH"
-    echo "✅ Repository cloned successfully"
+  echo "📥 Cloning repository..."
+  echo "⏳ Cloning $REPO_URL (branch $BRANCH) into $SOURCE_PATH"
+  git clone -b "$BRANCH" "$REPO_URL" "$SOURCE_PATH"
+  echo "✅ Repository cloned successfully"
 fi
 
 cd "$SOURCE_PATH"

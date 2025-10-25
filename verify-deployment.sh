@@ -2,7 +2,7 @@
 # Project: ac-compose
 set -e
 
-# Simple profile-aware deploy + health check for profiles-verify/compose.yml
+# Simple profile-aware deploy + health check for profiles-verify/docker-compose.yml
 
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info(){ echo -e "${BLUE}ℹ️  $*${NC}"; }
@@ -10,7 +10,7 @@ ok(){ echo -e "${GREEN}✅ $*${NC}"; }
 warn(){ echo -e "${YELLOW}⚠️  $*${NC}"; }
 err(){ echo -e "${RED}❌ $*${NC}"; }
 
-COMPOSE_FILE="$(dirname "$0")/compose.yml"
+COMPOSE_FILE="$(dirname "$0")/docker-compose.yml"
 ENV_FILE=""
 PROFILES=(db services-standard client-data modules tools)
 SKIP_DEPLOY=false

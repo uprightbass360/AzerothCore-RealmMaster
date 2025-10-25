@@ -237,7 +237,7 @@ Use this workflow to build locally, then push the same stack to a remote host:
      --user sam \
      --project-dir /home/sam/src/acore-compose
    ```
-   (Exports rebuilt images to `images/acore-modules-images.tar`, including both `acore/...:modules-latest` and `uprightbass360/...:Playerbot` tags, then syncs `storage/` unless `--skip-storage` is provided.)
+   (Exports rebuilt images to `local-storage/images/acore-modules-images.tar`, including both `acore/...:modules-latest` and `uprightbass360/...:Playerbot` tags, then syncs `storage/` unless `--skip-storage` is provided.)
 3. **Deploy on Remote Host**
    ```bash
    ssh docker-server '
@@ -328,7 +328,7 @@ storage/
 └── backups/          # Automated database backups
 ```
 
-`ac-client-data` keeps unpacked game assets in the `${CLIENT_DATA_VOLUME:-ac-client-data}` Docker volume so reads stay on the local host, while download archives are cached under `${CLIENT_DATA_CACHE_PATH:-./client-data-cache}` on fast local storage even when `${STORAGE_PATH}` points to remote or NFS storage.
+`ac-client-data` keeps unpacked game assets in the `${CLIENT_DATA_VOLUME:-ac-client-data}` Docker volume so reads stay on the local host, while download archives are cached under `${CLIENT_DATA_CACHE_PATH}` on fast local storage even when `${STORAGE_PATH}` points to remote or NFS storage.
 
 ---
 
@@ -712,7 +712,7 @@ docker logs ac-db-import
 docker logs ac-modules | grep -A20 -B5 "rebuild"
 
 # Verify source path exists
-ls -la ./source/azerothcore/
+ls -la "${STORAGE_PATH_LOCAL:-./local-storage}/source/azerothcore/"
 
 # Force source setup
 ./scripts/setup-source.sh

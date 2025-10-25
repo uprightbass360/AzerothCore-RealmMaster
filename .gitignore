@@ -7,6 +7,7 @@ source/*
 local-data-tools/
 storage/
 source/
+local-storage/
 .claude/
 images/
 node_modules/
@@ -14,4 +15,3 @@ node_modules/
 .env
 package-lock.json
 package.json
-

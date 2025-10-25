@@ -15,7 +15,7 @@ Options:
   --port PORT           SSH port (default: 22)
   --identity PATH       SSH private key (passed to scp/ssh)
   --project-dir DIR     Remote project directory (default: ~/acore-compose)
-  --tarball PATH        Output path for the image tar (default: ./images/acore-modules-images.tar)
+  --tarball PATH        Output path for the image tar (default: ./local-storage/images/acore-modules-images.tar)
   --storage PATH        Remote storage directory (default: <project-dir>/storage)
   --skip-storage        Do not sync the storage directory
   --help                Show this help
@@ -54,7 +54,10 @@ fi
 
 PROJECT_DIR="${PROJECT_DIR:-/home/${USER}/acore-compose}"
 REMOTE_STORAGE="${REMOTE_STORAGE:-${PROJECT_DIR}/storage}"
-TARBALL="${TARBALL:-$(pwd)/images/acore-modules-images.tar}"
+LOCAL_STORAGE_ROOT="${STORAGE_PATH_LOCAL:-./local-storage}"
+LOCAL_STORAGE_ROOT="${LOCAL_STORAGE_ROOT%/}"
+[ -z "$LOCAL_STORAGE_ROOT" ] && LOCAL_STORAGE_ROOT="."
+TARBALL="${TARBALL:-${LOCAL_STORAGE_ROOT}/images/acore-modules-images.tar}"
 
 SCP_OPTS=(-P "$PORT")
 SSH_OPTS=(-p "$PORT")

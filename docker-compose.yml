@@ -183,7 +183,7 @@ services:
     user: "0:0"
     volumes:
       - ac-client-data:/azerothcore/data
-      - ${CLIENT_DATA_CACHE_PATH:-./client-data-cache}:/cache
+      - ${CLIENT_DATA_CACHE_PATH:-${STORAGE_PATH_LOCAL:-./local-storage}/client-data-cache}:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
     environment:
@@ -218,7 +218,7 @@ services:
     user: "0:0"
     volumes:
       - ac-client-data:/azerothcore/data
-      - ${CLIENT_DATA_CACHE_PATH:-./client-data-cache}:/cache
+      - ${CLIENT_DATA_CACHE_PATH:-${STORAGE_PATH_LOCAL:-./local-storage}/client-data-cache}:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
     environment:

@@ -36,6 +36,9 @@ read_env(){
     value="$(grep -E "^${key}=" "$env_path" | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
   fi
   if [ -z "$value" ]; then
+    value="${!key:-}"
+  fi
+  if [ -z "$value" ]; then
     value="$default"
   fi
   echo "$value"
@@ -44,10 +47,16 @@ read_env(){
 default_source_path(){
   local module_playerbots
   module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
+  local local_root
+  local_root="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
+  local_root="${local_root%/}"
+  if [[ -z "$local_root" ]]; then
+    local_root="."
+  fi
   if [ "$module_playerbots" = "1" ]; then
-    echo "./source/azerothcore-playerbots"
+    echo "${local_root}/source/azerothcore-playerbots"
   else
-    echo "./source/azerothcore"
+    echo "${local_root}/source/azerothcore"
   fi
 }
 
@@ -124,6 +133,20 @@ if [[ "$REBUILD_SOURCE_PATH" == "$STORAGE_PATH_ABS"* ]]; then
 fi
 
 REBUILD_SOURCE_PATH="$(realpath "$REBUILD_SOURCE_PATH" 2>/dev/null || echo "$REBUILD_SOURCE_PATH")"
+
+# Check for modules in source directory first, then fall back to shared storage
+LOCAL_MODULES_DIR="$REBUILD_SOURCE_PATH/modules"
+SHARED_MODULES_DIR="$STORAGE_PATH/modules"
+
+if [ -d "$LOCAL_MODULES_DIR" ]; then
+  echo "🔧 Using modules from source directory: $LOCAL_MODULES_DIR"
+  MODULES_DIR="$LOCAL_MODULES_DIR"
+  SENTINEL_FILE="$LOCAL_MODULES_DIR/.requires_rebuild"
+else
+  echo "🔧 Using modules from shared storage: $SHARED_MODULES_DIR"
+  MODULES_DIR="$SHARED_MODULES_DIR"
+  SENTINEL_FILE="$SHARED_MODULES_DIR/.requires_rebuild"
+fi
 
 SOURCE_COMPOSE="$REBUILD_SOURCE_PATH/docker-compose.yml"
 if [ ! -f "$SOURCE_COMPOSE" ]; then

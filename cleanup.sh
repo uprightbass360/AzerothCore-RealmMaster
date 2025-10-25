@@ -11,7 +11,7 @@ set -e
 # Resolve project dir and compose
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${SCRIPT_DIR}"
-COMPOSE_FILE="${PROJECT_DIR}/compose.yml"
+COMPOSE_FILE="${PROJECT_DIR}/docker-compose.yml"
 ENV_FILE="${PROJECT_DIR}/.env"
 
 # Colors
@@ -120,10 +120,12 @@ show_resources() {
 
 # Load env for STORAGE_PATH etc.
 STORAGE_PATH_DEFAULT="${PROJECT_DIR}/storage"
+STORAGE_PATH_LOCAL_DEFAULT="${PROJECT_DIR}/local-storage"
 if [ -f "$ENV_FILE" ]; then
   set -a; source "$ENV_FILE"; set +a
 fi
 STORAGE_PATH="${STORAGE_PATH:-$STORAGE_PATH_DEFAULT}"
+STORAGE_PATH_LOCAL="${STORAGE_PATH_LOCAL:-$STORAGE_PATH_LOCAL_DEFAULT}"
 PROJECT_NAME="${COMPOSE_PROJECT_NAME:-ac-compose}"
 
 remove_storage_dir(){
@@ -211,13 +213,15 @@ nuclear_cleanup() {
     if [ -d "${STORAGE_PATH}/backups" ]; then
       execute_command "Staging backups" "mkdir -p '${TMP_PRESERVE}' && cp -a '${STORAGE_PATH}/backups' '${TMP_PRESERVE}/'"
     fi
-    execute_command "Removing storage" "remove_storage_dir '${STORAGE_PATH}'"
+    execute_command "Removing main storage" "remove_storage_dir '${STORAGE_PATH}'"
+    execute_command "Removing local storage" "remove_storage_dir '${STORAGE_PATH_LOCAL}'"
     if [ -d "${TMP_PRESERVE}/backups" ]; then
       execute_command "Restoring backups" "mkdir -p '${STORAGE_PATH}' && mv '${TMP_PRESERVE}/backups' '${STORAGE_PATH}/backups' && rm -rf '${TMP_PRESERVE}'"
       print_status SUCCESS "Backups preserved at ${STORAGE_PATH}/backups"
     fi
   else
-    execute_command "Removing storage and local backups" "remove_storage_dir '${STORAGE_PATH}'; remove_storage_dir '${PROJECT_DIR}/backups'"
+    execute_command "Removing main storage and backups" "remove_storage_dir '${STORAGE_PATH}'; remove_storage_dir '${PROJECT_DIR}/backups'"
+    execute_command "Removing local storage" "remove_storage_dir '${STORAGE_PATH_LOCAL}'"
   fi
 
   # Optional system prune for project context
