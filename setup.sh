@@ -26,18 +26,19 @@ get_template_value() {
 
   # Extract value, handling variable expansion syntax like ${VAR:-default}
   local value
-  value=$(grep "^${key}=" "$template_file" | head -1 | cut -d'=' -f2- | sed 's/^"\(.*\)"$/\1/')
+  local raw_line
+  raw_line=$(grep "^${key}=" "$template_file" | head -1)
+  if [ -z "$raw_line" ]; then
+    echo "ERROR: Required key '$key' not found in .env.template" >&2
+    exit 1
+  fi
+  value="${raw_line#*=}"
+  value=$(echo "$value" | sed 's/^"\(.*\)"$/\1/')
 
   # Handle ${VAR:-default} syntax by extracting the default value
   if [[ "$value" =~ ^\$\{[^}]*:-([^}]*)\}$ ]]; then
     value="${BASH_REMATCH[1]}"
   fi
-
-  if [ -z "$value" ]; then
-    echo "ERROR: Required key '$key' not found in .env.template" >&2
-    exit 1
-  fi
-
   echo "$value"
 }
 
