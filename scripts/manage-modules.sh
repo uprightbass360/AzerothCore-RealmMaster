@@ -523,6 +523,14 @@ if [ "$MODULE_STATBOOSTER" = "1" ] && [ ! -d "StatBooster" ]; then
   git clone https://github.com/AnchyDev/StatBooster.git StatBooster
 fi
 
+if [ "$MODULE_DUNGEON_RESPAWN" = "1" ]; then
+  echo '⚠️  DungeonRespawn is temporarily disabled (compilation incompatibility). Skipping until patched.'
+  echo '   📖 Project: https://github.com/AnchyDev/DungeonRespawn'
+  echo '   ❌ Issue: OnBeforeTeleport function incorrectly marked as override'
+  echo '   🔧 Apply compilation fix before re-enabling this module.'
+  MODULE_DUNGEON_RESPAWN=0
+fi
+
 if [ "$MODULE_DUNGEON_RESPAWN" = "1" ] && [ ! -d "DungeonRespawn" ]; then
   echo '🚪 Installing DungeonRespawn...'
   echo '   📖 Project: https://github.com/AnchyDev/DungeonRespawn'
@@ -785,19 +793,23 @@ if [ -n "$ENABLED_MODULES" ]; then
   done
 
   if [ "$REBUILD_REQUIRED" = "1" ]; then
-    echo ""
-    echo "🚨 REBUILD REQUIRED 🚨"
-    echo "Module configuration has changed. To integrate C++ modules into AzerothCore:"
-    echo ""
-    echo "1. Stop current services:"
-    echo "   docker compose down"
-    echo ""
-    echo "2. Build with source-based compilation (external process)"
-    echo "   ./scripts/rebuild-with-modules.sh (if available)"
-    echo ""
-    echo "📋 NOTE: Source-based build will compile AzerothCore with all enabled modules"
-    echo "⏱️  Expected build time: 15-45 minutes depending on system performance"
-    echo ""
+    if [ "$RUN_REBUILD_NOW" = "0" ]; then
+      echo ""
+      echo "🚨 REBUILD REQUIRED 🚨"
+      echo "Module configuration has changed. To integrate C++ modules into AzerothCore:"
+      echo ""
+      echo "1. Stop current services:"
+      echo "   docker compose down"
+      echo ""
+      echo "2. Build with source-based compilation (external process)"
+      echo "   ./scripts/rebuild-with-modules.sh (if available)"
+      echo ""
+      echo "📋 NOTE: Source-based build will compile AzerothCore with all enabled modules"
+      echo "⏱️  Expected build time: 15-45 minutes depending on system performance"
+      echo ""
+    else
+      echo "✅ Ready to compile modules"
+    fi
   fi
 else
   echo "✅ No C++ modules enabled - pre-built containers can be used"
