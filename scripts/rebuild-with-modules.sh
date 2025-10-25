@@ -45,15 +45,15 @@ read_env(){
 }
 
 default_source_path(){
-  local module_playerbots
-  module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
+  local require_playerbot
+  require_playerbot="$(modules_require_playerbot_source)"
   local local_root
   local_root="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   local_root="${local_root%/}"
   if [[ -z "$local_root" ]]; then
     local_root="."
   fi
-  if [ "$module_playerbots" = "1" ]; then
+  if [ "$require_playerbot" = "1" ]; then
     echo "${local_root}/source/azerothcore-playerbots"
   else
     echo "${local_root}/source/azerothcore"
@@ -83,6 +83,31 @@ confirm(){
 ASSUME_YES=0
 SOURCE_OVERRIDE=""
 SKIP_STOP=0
+
+COMPILE_MODULE_KEYS=(
+  MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
+  MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS
+  MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD
+  MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER
+  MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK
+  MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN
+  MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN
+)
+
+modules_require_playerbot_source(){
+  if [ "$(read_env MODULE_PLAYERBOTS "0")" = "1" ]; then
+    echo 1
+    return
+  fi
+  local key
+  for key in "${COMPILE_MODULE_KEYS[@]}"; do
+    if [ "$(read_env "$key" "0")" = "1" ]; then
+      echo 1
+      return
+    fi
+  done
+  echo 0
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -246,13 +271,41 @@ echo "🚀 Building AzerothCore with modules..."
 docker compose build --no-cache
 
 echo "🔖 Tagging modules-latest images"
-docker tag acore/ac-wotlk-worldserver:master acore/ac-wotlk-worldserver:modules-latest
-docker tag acore/ac-wotlk-authserver:master acore/ac-wotlk-authserver:modules-latest
 
-if [ "$(read_env MODULE_PLAYERBOTS "0")" = "1" ]; then
-  echo "🔁 Tagging playerbot images uprightbass360/azerothcore-wotlk-playerbots:*"
-  docker tag acore/ac-wotlk-worldserver:modules-latest uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot
-  docker tag acore/ac-wotlk-authserver:modules-latest uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot
+# Get image names and tags from .env.template
+TEMPLATE_FILE="$PROJECT_DIR/.env.template"
+get_template_value() {
+  local key="$1"
+  local fallback="$2"
+  if [ -f "$TEMPLATE_FILE" ]; then
+    local value
+    value=$(grep "^${key}=" "$TEMPLATE_FILE" | head -1 | cut -d'=' -f2- | sed 's/^"\(.*\)"$/\1/')
+    if [[ "$value" =~ ^\$\{[^}]*:-([^}]*)\}$ ]]; then
+      value="${BASH_REMATCH[1]}"
+    fi
+    [ -n "$value" ] && echo "$value" || echo "$fallback"
+  else
+    echo "$fallback"
+  fi
+}
+
+TARGET_AUTHSERVER_IMAGE="$(read_env AC_AUTHSERVER_IMAGE_MODULES "$(get_template_value "AC_AUTHSERVER_IMAGE_MODULES")")"
+TARGET_WORLDSERVER_IMAGE="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(get_template_value "AC_WORLDSERVER_IMAGE_MODULES")")"
+
+PLAYERBOTS_AUTHSERVER_IMAGE="$(read_env AC_AUTHSERVER_IMAGE_PLAYERBOTS "$(get_template_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS")")"
+PLAYERBOTS_WORLDSERVER_IMAGE="$(read_env AC_WORLDSERVER_IMAGE_PLAYERBOTS "$(get_template_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS")")"
+
+echo "🔁 Tagging modules images from playerbot build artifacts"
+if docker image inspect "$PLAYERBOTS_AUTHSERVER_IMAGE" >/dev/null 2>&1; then
+  docker tag "$PLAYERBOTS_AUTHSERVER_IMAGE" "$TARGET_AUTHSERVER_IMAGE"
+else
+  echo "⚠️  Warning: $PLAYERBOTS_AUTHSERVER_IMAGE not found, skipping authserver tag"
+fi
+
+if docker image inspect "$PLAYERBOTS_WORLDSERVER_IMAGE" >/dev/null 2>&1; then
+  docker tag "$PLAYERBOTS_WORLDSERVER_IMAGE" "$TARGET_WORLDSERVER_IMAGE"
+else
+  echo "⚠️  Warning: $PLAYERBOTS_WORLDSERVER_IMAGE not found, skipping worldserver tag"
 fi
 
 show_rebuild_step 5 5 "Cleaning up build containers"

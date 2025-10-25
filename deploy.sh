@@ -18,6 +18,16 @@ SKIP_REBUILD=0
 WORLD_LOG_SINCE=""
 ASSUME_YES=0
 
+COMPILE_MODULE_VARS=(
+  MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
+  MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS
+  MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD
+  MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER
+  MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK
+  MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN
+  MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN
+)
+
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
 ok(){ printf '%b\n' "${GREEN}✅ $*${NC}"; }
@@ -50,11 +60,18 @@ Options:
   --no-watch                               Do not tail worldserver logs after staging
   --keep-running                           Do not pre-stop runtime stack before rebuild
   --skip-rebuild                           Skip source rebuild even if modules require it
-  --yes, -y                                Auto-confirm the deployment prompt
+  --yes, -y                                Auto-confirm deployment and rebuild prompts
   -h, --help                               Show this help
 
-This command automates the module workflow (sync modules, rebuild source if needed,
-stage the correct compose profile, and optionally watch worldserver logs).
+This command automates the module workflow: sync modules, rebuild source if needed,
+stage the correct compose profile, and optionally watch worldserver logs.
+
+Rebuild Detection:
+The script automatically detects when a module rebuild is required by checking:
+• Module changes (sentinel file .requires_rebuild)
+• C++ modules enabled but modules-latest Docker images missing
+
+Set AUTO_REBUILD_ON_DEPLOY=1 in .env to skip rebuild prompts and auto-rebuild.
 EOF
 }
 
@@ -109,14 +126,16 @@ compose(){
 }
 
 ensure_source_repo(){
-  local module_playerbots
-  module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
+  local use_playerbot_source=0
+  if requires_playerbot_source; then
+    use_playerbot_source=1
+  fi
   local local_root
   local_root="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   local_root="${local_root%/}"
   [ -z "$local_root" ] && local_root="."
   local default_source="${local_root}/source/azerothcore"
-  if [ "$module_playerbots" = "1" ]; then
+  if [ "$use_playerbot_source" = "1" ]; then
     default_source="${local_root}/source/azerothcore-playerbots"
   fi
 
@@ -163,6 +182,114 @@ modules_need_rebuild(){
   [[ -f "$sentinel" ]]
 }
 
+check_auto_rebuild_setting(){
+  local auto_rebuild
+  auto_rebuild="$(read_env AUTO_REBUILD_ON_DEPLOY "0")"
+  [[ "$auto_rebuild" = "1" ]]
+}
+
+detect_rebuild_reasons(){
+  local reasons=()
+
+  # Check sentinel file
+  if modules_need_rebuild; then
+    reasons+=("Module changes detected (sentinel file present)")
+  fi
+
+  # Check if any C++ modules are enabled but modules-latest images don't exist
+  local any_cxx_modules=0
+  local var
+  for var in "${COMPILE_MODULE_VARS[@]}"; do
+    if [ "$(read_env "$var" "0")" = "1" ]; then
+      any_cxx_modules=1
+      break
+    fi
+  done
+
+  if [ "$any_cxx_modules" = "1" ]; then
+    local authserver_modules_image
+    local worldserver_modules_image
+    authserver_modules_image="$(read_env AC_AUTHSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:authserver-modules-latest")"
+    worldserver_modules_image="$(read_env AC_WORLDSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest")"
+
+    if ! docker image inspect "$authserver_modules_image" >/dev/null 2>&1; then
+      reasons+=("C++ modules enabled but authserver modules image $authserver_modules_image is missing")
+    fi
+    if ! docker image inspect "$worldserver_modules_image" >/dev/null 2>&1; then
+      reasons+=("C++ modules enabled but worldserver modules image $worldserver_modules_image is missing")
+    fi
+  fi
+
+  printf '%s\n' "${reasons[@]}"
+}
+
+requires_playerbot_source(){
+  if [ "$(read_env MODULE_PLAYERBOTS "0")" = "1" ]; then
+    return 0
+  fi
+  local var
+  for var in "${COMPILE_MODULE_VARS[@]}"; do
+    if [ "$(read_env "$var" "0")" = "1" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+confirm_rebuild(){
+  local reasons=("$@")
+
+  if [ ${#reasons[@]} -eq 0 ]; then
+    return 1  # No rebuild needed
+  fi
+
+  echo
+  warn "Module rebuild appears to be required:"
+  local reason
+  for reason in "${reasons[@]}"; do
+    warn "  • $reason"
+  done
+  echo
+
+  # Check auto-rebuild setting
+  if check_auto_rebuild_setting; then
+    info "AUTO_REBUILD_ON_DEPLOY is enabled; proceeding with automatic rebuild."
+    return 0
+  fi
+
+  # Skip prompt if --yes flag is provided
+  if [ "$ASSUME_YES" -eq 1 ]; then
+    info "Auto-confirming rebuild (--yes supplied)."
+    return 0
+  fi
+
+  # Interactive prompt
+  info "This will rebuild AzerothCore from source with your enabled modules."
+  warn "⏱️  This process typically takes 15-45 minutes depending on your system."
+  echo
+  if [ -t 0 ]; then
+    local reply
+    read -r -p "Proceed with module rebuild? [y/N]: " reply
+    reply="${reply:-n}"
+    case "$reply" in
+      [Yy]*)
+        info "Rebuild confirmed."
+        return 0
+        ;;
+      *)
+        warn "Rebuild declined. You can:"
+        warn "  • Run with --skip-rebuild to deploy without rebuilding"
+        warn "  • Set AUTO_REBUILD_ON_DEPLOY=1 in .env for automatic rebuilds"
+        warn "  • Run './scripts/rebuild-with-modules.sh' manually later"
+        return 1
+        ;;
+    esac
+  else
+    warn "Standard input is not interactive; use --yes to auto-confirm or --skip-rebuild to skip."
+    return 1
+  fi
+}
+
 determine_profile(){
   if [ -n "$TARGET_PROFILE" ]; then
     echo "$TARGET_PROFILE"
@@ -178,49 +305,8 @@ determine_profile(){
     return
   fi
 
-  local compile_vars=(
-    MODULE_AOE_LOOT
-    MODULE_LEARN_SPELLS
-    MODULE_FIREWORKS
-    MODULE_INDIVIDUAL_PROGRESSION
-    MODULE_AHBOT
-    MODULE_AUTOBALANCE
-    MODULE_TRANSMOG
-    MODULE_NPC_BUFFER
-    MODULE_DYNAMIC_XP
-    MODULE_SOLO_LFG
-    MODULE_1V1_ARENA
-    MODULE_PHASED_DUELS
-    MODULE_BREAKING_NEWS
-    MODULE_BOSS_ANNOUNCER
-    MODULE_ACCOUNT_ACHIEVEMENTS
-    MODULE_AUTO_REVIVE
-    MODULE_GAIN_HONOR_GUARD
-    MODULE_TIME_IS_TIME
-    MODULE_POCKET_PORTAL
-    MODULE_RANDOM_ENCHANTS
-    MODULE_SOLOCRAFT
-    MODULE_PVP_TITLES
-    MODULE_NPC_BEASTMASTER
-    MODULE_NPC_ENCHANTER
-    MODULE_INSTANCE_RESET
-    MODULE_LEVEL_GRANT
-    MODULE_ARAC
-    MODULE_ASSISTANT
-    MODULE_REAGENT_BANK
-    MODULE_CHALLENGE_MODES
-    MODULE_OLLAMA_CHAT
-    MODULE_PLAYER_BOT_LEVEL_BRACKETS
-    MODULE_STATBOOSTER
-    MODULE_DUNGEON_RESPAWN
-    MODULE_SKELETON_MODULE
-    MODULE_BG_SLAVERYVALLEY
-    MODULE_AZEROTHSHARD
-    MODULE_WORGOBLIN
-  )
-
   local var
-  for var in "${compile_vars[@]}"; do
+  for var in "${COMPILE_MODULE_VARS[@]}"; do
     if [ "$(read_env "$var" "0")" = "1" ]; then
       echo "modules"
       return
@@ -253,53 +339,29 @@ rebuild_source(){
 }
 
 tag_module_images(){
-  local source_world="acore/ac-wotlk-worldserver:master"
-  local source_auth="acore/ac-wotlk-authserver:master"
+  local source_auth
+  local source_world
+  local target_auth
+  local target_world
 
-  local targets_world=()
-  local targets_auth=()
+  source_auth="$(read_env AC_AUTHSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot")"
+  source_world="$(read_env AC_WORLDSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot")"
+  target_auth="$(read_env AC_AUTHSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:authserver-modules-latest")"
+  target_world="$(read_env AC_WORLDSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest")"
 
-  targets_world+=("$(read_env AC_WORLDSERVER_IMAGE_MODULES "acore/ac-wotlk-worldserver:modules-latest")")
-  targets_world+=("$(read_env AC_WORLDSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot")")
-  targets_auth+=("$(read_env AC_AUTHSERVER_IMAGE_MODULES "acore/ac-wotlk-authserver:modules-latest")")
-  targets_auth+=("$(read_env AC_AUTHSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot")")
+  if docker image inspect "$source_auth" >/dev/null 2>&1; then
+    docker tag "$source_auth" "$target_auth"
+    ok "Tagged $target_auth from $source_auth"
+  else
+    warn "Source authserver image $source_auth not found; skipping modules tag"
+  fi
 
-  local tagged_world=()
-  local tagged_auth=()
-
-  tag_image(){
-    local src="$1" target="$2" label="$3"
-    [[ -n "$target" ]] || return 0
-    case "$label" in
-      world) for image in "${tagged_world[@]}"; do [[ "$image" == "$target" ]] && return 0; done ;;
-      auth) for image in "${tagged_auth[@]}"; do [[ "$image" == "$target" ]] && return 0; done ;;
-    esac
-    case "$target" in
-      *modules-latest*)
-        if docker image inspect "$src" >/dev/null 2>&1; then
-          docker tag "$src" "$target"
-          ok "Tagged $target from $src ($label)"
-        else
-          warn "Source image $src not found; skipping tag for $label"
-        fi
-        ;;
-      *)
-        info "Skipping tag for $label image $target (non modules-latest)"
-        return 0
-        ;;
-    esac
-    case "$label" in
-      world) tagged_world+=("$target") ;;
-      auth) tagged_auth+=("$target") ;;
-    esac
-  }
-
-  for target in "${targets_world[@]}"; do
-    tag_image "$source_world" "$target" world
-  done
-  for target in "${targets_auth[@]}"; do
-    tag_image "$source_auth" "$target" auth
-  done
+  if docker image inspect "$source_world" >/dev/null 2>&1; then
+    docker tag "$source_world" "$target_world"
+    ok "Tagged $target_world from $source_world"
+  else
+    warn "Source worldserver image $source_world not found; skipping modules tag"
+  fi
 }
 
 stage_runtime(){
@@ -396,13 +458,26 @@ main(){
   sync_modules
 
   local did_rebuild=0
-  if modules_need_rebuild; then
+  local rebuild_reasons
+  readarray -t rebuild_reasons < <(detect_rebuild_reasons)
+
+  if [ ${#rebuild_reasons[@]} -gt 0 ]; then
     if [ "$SKIP_REBUILD" -eq 1 ]; then
-      warn "Modules require rebuild, but --skip-rebuild was provided."
+      warn "Modules require rebuild, but --skip-rebuild was provided:"
+      local reason
+      for reason in "${rebuild_reasons[@]}"; do
+        warn "  • $reason"
+      done
+      warn "Proceeding without rebuild; deployment may fail if modules-latest images are missing."
     else
-      show_step 4 5 "Building realm with modules (this may take 15-45 minutes)"
-      rebuild_source "$src_dir"
-      did_rebuild=1
+      if confirm_rebuild "${rebuild_reasons[@]}"; then
+        show_step 4 5 "Building realm with modules (this may take 15-45 minutes)"
+        rebuild_source "$src_dir"
+        did_rebuild=1
+      else
+        err "Rebuild required but declined. Use --skip-rebuild to force deployment without rebuild."
+        exit 1
+      fi
     fi
   else
     info "No module rebuild required."

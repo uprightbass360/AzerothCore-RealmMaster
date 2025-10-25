@@ -27,6 +27,8 @@ cd acore-compose
 ./deploy.sh
 ```
 
+> ℹ️ **Image Sources:** Vanilla/standard profiles run the upstream `acore/*` images. As soon as you enable playerbots or any C++ module, the toolchain switches to the `uprightbass360/azerothcore-wotlk-playerbots` fork, rebuilds it locally when needed, and produces fresh `uprightbass360/...:modules-latest` tags.
+
 **4. Create Admin Account**
 
 Once the worldserver is running:
@@ -81,7 +83,7 @@ set realmlist 203.0.113.100 8215
 ### ✅ Core Server Components
 - **AzerothCore 3.3.5a** - WotLK server application
 - **MySQL 8.0** - Database with intelligent initialization and restoration
-- **Smart Module System** - Automated module management and source builds
+- **Smart Module System** - Automated module management and source builds (compiles the uprightbass360 playerbot fork whenever modules need C++ changes)
 - **phpMyAdmin** - Web-based database administration
 - **Keira3** - Game content editor and developer tools
 
@@ -207,7 +209,7 @@ Use this workflow to build locally, then push the same stack to a remote host:
      --host docker-server \
      --project-dir /home/sam/src/acore-compose
    ```
-   Adjust `--project-dir` (and `--identity`) to match your environment. The script copies the repo, `storage/`, and the `modules-latest` images to the remote machine.
+   Adjust `--project-dir` (and `--identity`) to match your environment. The script copies the repo, `storage/`, and the `uprightbass360/...:modules-latest` images to the remote machine.
 
 3. **Deploy Remotely**
    ```bash
@@ -216,7 +218,7 @@ Use this workflow to build locally, then push the same stack to a remote host:
      ./deploy.sh --skip-rebuild --no-watch
    '
    ```
-   Because the `.env` now points the playerbot services at the `modules-latest` tags, the remote compose run uses the build you just migrated—no additional rebuild required.
+   Because the `.env` now points the modules profile at the `uprightbass360/...:modules-latest` tags, the remote compose run uses the build you just migrated—no additional rebuild required.
 
 4. **Verify**
    ```bash
@@ -237,7 +239,7 @@ Use this workflow to build locally, then push the same stack to a remote host:
      --user sam \
      --project-dir /home/sam/src/acore-compose
    ```
-   (Exports rebuilt images to `local-storage/images/acore-modules-images.tar`, including both `acore/...:modules-latest` and `uprightbass360/...:Playerbot` tags, then syncs `storage/` unless `--skip-storage` is provided.)
+   (Exports rebuilt images to `local-storage/images/acore-modules-images.tar`, bundling the `uprightbass360/...:modules-latest` and `uprightbass360/...:Playerbot` tags, then syncs `storage/` unless `--skip-storage` is provided.)
 3. **Deploy on Remote Host**
    ```bash
    ssh docker-server '
@@ -378,9 +380,9 @@ http://YOUR_SERVER_IP:4201
 ./deploy.sh --profile modules       # Custom modules build
 
 # Module staging and compilation
-./scripts/stage-modules.sh                    # Download and stage enabled modules
-./scripts/rebuild-with-modules.sh --yes       # Force source rebuild with modules
-./scripts/setup-source.sh                     # Initialize/update source repositories
+./scripts/stage-modules.sh                    # Download and stage enabled modules (preps upright playerbot builds)
+./scripts/rebuild-with-modules.sh --yes       # Rebuild uprightbass360/playerbot images with your modules
+./scripts/setup-source.sh                     # Initialize/update source repositories (auto-switches to playerbot fork for modules)
 
 # Module configuration management
 ./scripts/copy-module-configs.sh              # Create module .conf files

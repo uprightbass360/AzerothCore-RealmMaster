@@ -182,10 +182,11 @@ echo "🎯 Target profile: services-$TARGET_PROFILE"
 
 # Check if source rebuild is needed for modules profile
 REBUILD_NEEDED=0
+TARGET_WORLDSERVER_IMAGE_MODULES="$(read_env AC_WORLDSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest")"
 if [ "$TARGET_PROFILE" = "modules" ]; then
   # Check if source image exists
-  if ! docker image inspect "acore/ac-wotlk-worldserver:modules-latest" >/dev/null 2>&1; then
-    echo "📦 Custom worldserver image not found - rebuild needed"
+  if ! docker image inspect "$TARGET_WORLDSERVER_IMAGE_MODULES" >/dev/null 2>&1; then
+    echo "📦 Modules image $TARGET_WORLDSERVER_IMAGE_MODULES not found - rebuild needed"
     REBUILD_NEEDED=1
   elif [ -f "$SENTINEL_FILE" ]; then
     echo "🔄 Modules changed since last build - rebuild needed"

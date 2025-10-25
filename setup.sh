@@ -6,6 +6,147 @@ set -e
 # ==============================================
 # Mirrors options from scripts/setup-server.sh but targets ac-compose/.env
 
+# Get script directory for template reading
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ==============================================
+# Constants (auto-loaded from .env.template)
+# ==============================================
+
+# Function to read value from .env.template (required)
+get_template_value() {
+  local key="$1"
+  local template_file="$SCRIPT_DIR/.env.template"
+
+  if [ ! -f "$template_file" ]; then
+    echo "ERROR: .env.template file not found at $template_file" >&2
+    echo "This file is required for setup.sh to function properly." >&2
+    exit 1
+  fi
+
+  # Extract value, handling variable expansion syntax like ${VAR:-default}
+  local value
+  value=$(grep "^${key}=" "$template_file" | head -1 | cut -d'=' -f2- | sed 's/^"\(.*\)"$/\1/')
+
+  # Handle ${VAR:-default} syntax by extracting the default value
+  if [[ "$value" =~ ^\$\{[^}]*:-([^}]*)\}$ ]]; then
+    value="${BASH_REMATCH[1]}"
+  fi
+
+  if [ -z "$value" ]; then
+    echo "ERROR: Required key '$key' not found in .env.template" >&2
+    exit 1
+  fi
+
+  echo "$value"
+}
+
+# Load constants from .env.template (required)
+readonly DEFAULT_MYSQL_PASSWORD="$(get_template_value "MYSQL_ROOT_PASSWORD")"
+readonly DEFAULT_REALM_PORT="$(get_template_value "WORLD_EXTERNAL_PORT")"
+readonly DEFAULT_AUTH_PORT="$(get_template_value "AUTH_EXTERNAL_PORT")"
+readonly DEFAULT_SOAP_PORT="$(get_template_value "SOAP_EXTERNAL_PORT")"
+readonly DEFAULT_MYSQL_PORT="$(get_template_value "MYSQL_EXTERNAL_PORT")"
+readonly DEFAULT_PLAYERBOT_MAX="$(get_template_value "PLAYERBOT_MAX_BOTS")"
+readonly DEFAULT_LOCAL_STORAGE="$(get_template_value "STORAGE_PATH")"
+
+# Permission schemes (hardcoded as not in template)
+readonly PERMISSION_LOCAL_USER="0:0"
+readonly PERMISSION_NFS_USER="1001:1000"
+readonly DEFAULT_CUSTOM_UID="1000"
+readonly DEFAULT_CUSTOM_GID="1000"
+
+# Static values
+readonly DEFAULT_LOCAL_ADDRESS="127.0.0.1"
+readonly DEFAULT_FALLBACK_LAN_IP="192.168.1.100"
+readonly DEFAULT_DOMAIN_PLACEHOLDER="your-domain.com"
+readonly DEFAULT_BACKUP_DAYS="3"
+readonly DEFAULT_BACKUP_HOURS="6"
+readonly DEFAULT_BACKUP_TIME="09"
+readonly DEFAULT_NFS_STORAGE="/nfs/azerothcore"
+readonly DEFAULT_MOUNT_STORAGE="/mnt/azerothcore-data"
+
+# Docker images (from .env.template)
+readonly DEFAULT_MYSQL_IMAGE="$(get_template_value "MYSQL_IMAGE")"
+readonly DEFAULT_AC_DB_IMPORT_IMAGE="$(get_template_value "AC_DB_IMPORT_IMAGE")"
+readonly DEFAULT_AC_AUTHSERVER_IMAGE="$(get_template_value "AC_AUTHSERVER_IMAGE")"
+readonly DEFAULT_AC_WORLDSERVER_IMAGE="$(get_template_value "AC_WORLDSERVER_IMAGE")"
+readonly DEFAULT_AC_CLIENT_DATA_IMAGE="$(get_template_value "AC_CLIENT_DATA_IMAGE")"
+readonly DEFAULT_AUTH_IMAGE_PLAYERBOTS="$(get_template_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS")"
+readonly DEFAULT_WORLD_IMAGE_PLAYERBOTS="$(get_template_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS")"
+readonly DEFAULT_CLIENT_DATA_IMAGE_PLAYERBOTS="$(get_template_value "AC_CLIENT_DATA_IMAGE_PLAYERBOTS")"
+readonly DEFAULT_AUTH_IMAGE_MODULES="$(get_template_value "AC_AUTHSERVER_IMAGE_MODULES")"
+readonly DEFAULT_WORLD_IMAGE_MODULES="$(get_template_value "AC_WORLDSERVER_IMAGE_MODULES")"
+
+# Database names
+readonly DEFAULT_DB_AUTH_NAME="$(get_template_value "DB_AUTH_NAME")"
+readonly DEFAULT_DB_WORLD_NAME="$(get_template_value "DB_WORLD_NAME")"
+readonly DEFAULT_DB_CHARACTERS_NAME="$(get_template_value "DB_CHARACTERS_NAME")"
+readonly DEFAULT_DB_PLAYERBOTS_NAME="$(get_template_value "DB_PLAYERBOTS_NAME")"
+
+# Container names
+readonly DEFAULT_CONTAINER_MYSQL="$(get_template_value "CONTAINER_MYSQL")"
+readonly DEFAULT_COMPOSE_PROJECT_NAME="$(get_template_value "COMPOSE_PROJECT_NAME")"
+readonly DEFAULT_CLIENT_DATA_VOLUME="$(get_template_value "CLIENT_DATA_VOLUME")"
+
+# Version constants
+readonly DEFAULT_CLIENT_DATA_VERSION="$(get_template_value "CLIENT_DATA_VERSION")"
+
+# Network configuration
+readonly DEFAULT_NETWORK_NAME="$(get_template_value "NETWORK_NAME")"
+readonly DEFAULT_NETWORK_SUBNET="$(get_template_value "NETWORK_SUBNET")"
+readonly DEFAULT_NETWORK_GATEWAY="$(get_template_value "NETWORK_GATEWAY")"
+
+# MySQL configuration
+readonly DEFAULT_MYSQL_CHARACTER_SET="$(get_template_value "MYSQL_CHARACTER_SET")"
+readonly DEFAULT_MYSQL_COLLATION="$(get_template_value "MYSQL_COLLATION")"
+readonly DEFAULT_MYSQL_MAX_CONNECTIONS="$(get_template_value "MYSQL_MAX_CONNECTIONS")"
+readonly DEFAULT_MYSQL_INNODB_BUFFER_POOL_SIZE="$(get_template_value "MYSQL_INNODB_BUFFER_POOL_SIZE")"
+readonly DEFAULT_MYSQL_INNODB_LOG_FILE_SIZE="$(get_template_value "MYSQL_INNODB_LOG_FILE_SIZE")"
+readonly DEFAULT_MYSQL_INNODB_REDO_LOG_CAPACITY="$(get_template_value "MYSQL_INNODB_REDO_LOG_CAPACITY")"
+readonly DEFAULT_MYSQL_RUNTIME_TMPFS_SIZE="$(get_template_value "MYSQL_RUNTIME_TMPFS_SIZE")"
+
+# Paths
+readonly DEFAULT_HOST_ZONEINFO_PATH="$(get_template_value "HOST_ZONEINFO_PATH")"
+readonly DEFAULT_ELUNA_SCRIPT_PATH="$(get_template_value "AC_ELUNA_SCRIPT_PATH")"
+
+# Tool configuration
+readonly DEFAULT_PMA_EXTERNAL_PORT="$(get_template_value "PMA_EXTERNAL_PORT")"
+readonly DEFAULT_PMA_UPLOAD_LIMIT="$(get_template_value "PMA_UPLOAD_LIMIT")"
+readonly DEFAULT_PMA_MEMORY_LIMIT="$(get_template_value "PMA_MEMORY_LIMIT")"
+readonly DEFAULT_PMA_MAX_EXECUTION_TIME="$(get_template_value "PMA_MAX_EXECUTION_TIME")"
+readonly DEFAULT_KEIRA3_EXTERNAL_PORT="$(get_template_value "KEIRA3_EXTERNAL_PORT")"
+readonly DEFAULT_PMA_USER="$(get_template_value "PMA_USER")"
+readonly DEFAULT_PMA_ARBITRARY="$(get_template_value "PMA_ARBITRARY")"
+readonly DEFAULT_PMA_ABSOLUTE_URI="$(get_template_value "PMA_ABSOLUTE_URI")"
+
+# Module preset names (not in template)
+readonly DEFAULT_PRESET_SUGGESTED="suggested-modules"
+readonly DEFAULT_PRESET_PLAYERBOTS="playerbots-suggested-modules"
+
+# Internal ports
+readonly DEFAULT_AUTH_INTERNAL_PORT="$(get_template_value "AUTH_PORT")"
+readonly DEFAULT_WORLD_INTERNAL_PORT="$(get_template_value "WORLD_PORT")"
+readonly DEFAULT_SOAP_INTERNAL_PORT="$(get_template_value "SOAP_PORT")"
+readonly DEFAULT_MYSQL_INTERNAL_PORT="$(get_template_value "MYSQL_PORT")"
+
+# System configuration
+readonly DEFAULT_TZ="$(get_template_value "TZ")"
+readonly DEFAULT_MYSQL_ROOT_HOST="$(get_template_value "MYSQL_ROOT_HOST")"
+readonly DEFAULT_MYSQL_USER="$(get_template_value "MYSQL_USER")"
+
+# Eluna configuration
+readonly DEFAULT_ELUNA_ENABLED="$(get_template_value "AC_ELUNA_ENABLED")"
+readonly DEFAULT_ELUNA_TRACE_BACK="$(get_template_value "AC_ELUNA_TRACE_BACK")"
+readonly DEFAULT_ELUNA_AUTO_RELOAD="$(get_template_value "AC_ELUNA_AUTO_RELOAD")"
+readonly DEFAULT_ELUNA_BYTECODE_CACHE="$(get_template_value "AC_ELUNA_BYTECODE_CACHE")"
+readonly DEFAULT_ELUNA_AUTO_RELOAD_INTERVAL="$(get_template_value "AC_ELUNA_AUTO_RELOAD_INTERVAL")"
+readonly DEFAULT_ELUNA_REQUIRE_PATHS="$(get_template_value "AC_ELUNA_REQUIRE_PATHS")"
+readonly DEFAULT_ELUNA_REQUIRE_CPATHS="$(get_template_value "AC_ELUNA_REQUIRE_CPATHS")"
+
+# Route detection IP (not in template)
+readonly ROUTE_DETECTION_IP="1.1.1.1"
+
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; MAGENTA='\033[0;35m'; NC='\033[0m'
 say(){ local t=$1; shift; case "$t" in
   INFO) echo -e "${BLUE}ℹ️  $*${NC}";;
@@ -18,8 +159,6 @@ esac }
 validate_ip(){ [[ $1 =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; }
 validate_port(){ [[ $1 =~ ^[0-9]+$ ]] && [ $1 -ge 1 ] && [ $1 -le 65535 ]; }
 validate_number(){ [[ $1 =~ ^[0-9]+$ ]]; }
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 NON_INTERACTIVE=0
 
@@ -91,62 +230,6 @@ normalize_module_name(){
 }
 
 declare -A MODULE_ENABLE_SET=()
-
-declare -a COMPOSE_CMD=()
-
-resolve_compose_command(){
-  if [ ${#COMPOSE_CMD[@]} -gt 0 ]; then
-    return 0
-  fi
-  if command -v docker >/dev/null 2>&1; then
-    if docker compose version >/dev/null 2>&1; then
-      COMPOSE_CMD=(docker compose)
-      return 0
-    fi
-  fi
-  if command -v docker-compose >/dev/null 2>&1; then
-    COMPOSE_CMD=(docker-compose)
-    return 0
-  fi
-  COMPOSE_CMD=()
-  return 1
-}
-
-modules_directory_has_content(){
-  local dir="$1"
-  [ -d "$dir" ] || return 1
-  local first_entry
-  first_entry="$(find "$dir" -mindepth 1 -maxdepth 1 -type d -print -quit 2>/dev/null)"
-  [ -n "$first_entry" ]
-}
-
-ensure_modules_staged(){
-  local storage_abs="$1" needs_cxx="$2" run_now="$3"
-  if [ "$needs_cxx" != "1" ] || [ "$run_now" != "1" ]; then
-    return 0
-  fi
-
-  local modules_dir="${storage_abs}/modules"
-  local config_dir="${storage_abs}/config"
-  mkdir -p "$modules_dir" "$config_dir"
-
-  if modules_directory_has_content "$modules_dir"; then
-    return 0
-  fi
-
-  if ! resolve_compose_command; then
-    say WARNING "Docker Compose not detected; skipping automatic module staging."
-    return 1
-  fi
-
-  say INFO "Staging module repositories via ${COMPOSE_CMD[*]} run --rm --no-deps ac-modules"
-  if ! "${COMPOSE_CMD[@]}" --profile modules run --rm --no-deps ac-modules; then
-    say WARNING "Module staging failed; repositories may be incomplete."
-    return 1
-  fi
-
-  return 0
-}
 
 KNOWN_MODULE_VARS=(
   MODULE_PLAYERBOTS
@@ -221,11 +304,11 @@ apply_module_preset(){
   done
 }
 
-DEFAULT_PRESET_SUGGESTED="suggested-modules"
-DEFAULT_PRESET_PLAYERBOTS="playerbots-suggested-modules"
 
 show_wow_header() {
-    clear
+    if [ -t 1 ] && command -v clear >/dev/null 2>&1; then
+        clear >/dev/null 2>&1 || true
+    fi
     echo -e "${RED}"
     cat <<'EOF'
                                                                                                                                                             
@@ -562,20 +645,20 @@ fi
   if [ -n "$CLI_SERVER_ADDRESS" ]; then
     SERVER_ADDRESS="$CLI_SERVER_ADDRESS"
   elif [ "$DEPLOYMENT_TYPE" = "local" ]; then
-    SERVER_ADDRESS=127.0.0.1
+    SERVER_ADDRESS=$DEFAULT_LOCAL_ADDRESS
   elif [ "$DEPLOYMENT_TYPE" = "lan" ]; then
     local LAN_IP
-    LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | awk 'NR==1{print $7}')
-    SERVER_ADDRESS=$(ask "Enter server IP address" "${CLI_SERVER_ADDRESS:-${LAN_IP:-192.168.1.100}}" validate_ip)
+    LAN_IP=$(ip route get $ROUTE_DETECTION_IP 2>/dev/null | awk 'NR==1{print $7}')
+    SERVER_ADDRESS=$(ask "Enter server IP address" "${CLI_SERVER_ADDRESS:-${LAN_IP:-$DEFAULT_FALLBACK_LAN_IP}}" validate_ip)
   else
-    SERVER_ADDRESS=$(ask "Enter server address (IP or domain)" "${CLI_SERVER_ADDRESS:-your-domain.com}" )
+    SERVER_ADDRESS=$(ask "Enter server address (IP or domain)" "${CLI_SERVER_ADDRESS:-$DEFAULT_DOMAIN_PLACEHOLDER}" )
   fi
 
   local REALM_PORT AUTH_EXTERNAL_PORT SOAP_EXTERNAL_PORT MYSQL_EXTERNAL_PORT
-  REALM_PORT=$(ask "Enter client connection port" "${CLI_REALM_PORT:-8215}" validate_port)
-  AUTH_EXTERNAL_PORT=$(ask "Enter auth server port" "${CLI_AUTH_PORT:-3784}" validate_port)
-  SOAP_EXTERNAL_PORT=$(ask "Enter SOAP API port" "${CLI_SOAP_PORT:-7778}" validate_port)
-  MYSQL_EXTERNAL_PORT=$(ask "Enter MySQL external port" "${CLI_MYSQL_PORT:-64306}" validate_port)
+  REALM_PORT=$(ask "Enter client connection port" "${CLI_REALM_PORT:-$DEFAULT_REALM_PORT}" validate_port)
+  AUTH_EXTERNAL_PORT=$(ask "Enter auth server port" "${CLI_AUTH_PORT:-$DEFAULT_AUTH_PORT}" validate_port)
+  SOAP_EXTERNAL_PORT=$(ask "Enter SOAP API port" "${CLI_SOAP_PORT:-$DEFAULT_SOAP_PORT}" validate_port)
+  MYSQL_EXTERNAL_PORT=$(ask "Enter MySQL external port" "${CLI_MYSQL_PORT:-$DEFAULT_MYSQL_PORT}" validate_port)
 
   # Permission scheme
   say HEADER "PERMISSION SCHEME"
@@ -594,17 +677,17 @@ fi
     fi
     case "${PERMISSION_SCHEME_INPUT,,}" in
       1|local)
-        CONTAINER_USER="0:0"
+        CONTAINER_USER="$PERMISSION_LOCAL_USER"
         PERMISSION_SCHEME_NAME="local"
         ;;
       2|nfs)
-        CONTAINER_USER="1001:1000"
+        CONTAINER_USER="$PERMISSION_NFS_USER"
         PERMISSION_SCHEME_NAME="nfs"
         ;;
       3|custom)
         local uid gid
-        uid="${CLI_CUSTOM_UID:-$(ask "Enter PUID (user id)" 1000 validate_number)}"
-        gid="${CLI_CUSTOM_GID:-$(ask "Enter PGID (group id)" 1000 validate_number)}"
+        uid="${CLI_CUSTOM_UID:-$(ask "Enter PUID (user id)" $DEFAULT_CUSTOM_UID validate_number)}"
+        gid="${CLI_CUSTOM_GID:-$(ask "Enter PGID (group id)" $DEFAULT_CUSTOM_GID validate_number)}"
         CONTAINER_USER="${uid}:${gid}"
         PERMISSION_SCHEME_NAME="custom"
         ;;
@@ -625,7 +708,7 @@ fi
   fi
   # DB config
   say HEADER "DATABASE CONFIGURATION"
-  local MYSQL_ROOT_PASSWORD; MYSQL_ROOT_PASSWORD=$(ask "Enter MySQL root password" "${CLI_MYSQL_PASSWORD:-azerothcore123}")
+  local MYSQL_ROOT_PASSWORD; MYSQL_ROOT_PASSWORD=$(ask "Enter MySQL root password" "${CLI_MYSQL_PASSWORD:-$DEFAULT_MYSQL_PASSWORD}")
 
   # Storage
   say HEADER "STORAGE CONFIGURATION"
@@ -633,10 +716,10 @@ fi
   if [ -n "$CLI_STORAGE_PATH" ]; then
     STORAGE_PATH="$CLI_STORAGE_PATH"
   elif [ "$DEPLOYMENT_TYPE" = "local" ]; then
-    STORAGE_PATH=./storage
+    STORAGE_PATH=$DEFAULT_LOCAL_STORAGE
   else
     if [ "$NON_INTERACTIVE" = "1" ]; then
-      STORAGE_PATH=/mnt/azerothcore-data
+      STORAGE_PATH=$DEFAULT_MOUNT_STORAGE
     else
       echo "1) 💾 ./storage (local)"
       echo "2) 🌐 /nfs/azerothcore (NFS)"
@@ -644,9 +727,9 @@ fi
       while true; do
         read -p "$(echo -e "${YELLOW}🔧 Select storage option [1-3]: ${NC}")" s
         case "$s" in
-          1) STORAGE_PATH=./storage; break;;
-          2) STORAGE_PATH=/nfs/azerothcore; break;;
-          3) STORAGE_PATH=$(ask "Enter custom storage path" "/mnt/azerothcore-data"); break;;
+          1) STORAGE_PATH=$DEFAULT_LOCAL_STORAGE; break;;
+          2) STORAGE_PATH=$DEFAULT_NFS_STORAGE; break;;
+          3) STORAGE_PATH=$(ask "Enter custom storage path" "$DEFAULT_MOUNT_STORAGE"); break;;
           *) say ERROR "Please select 1, 2, or 3";;
         esac
       done
@@ -656,11 +739,11 @@ fi
   # Backup
   say HEADER "BACKUP CONFIGURATION"
   local BACKUP_RETENTION_DAYS BACKUP_RETENTION_HOURS BACKUP_DAILY_TIME
-  BACKUP_RETENTION_DAYS=$(ask "Daily backups retention (days)" "${CLI_BACKUP_DAYS:-3}" validate_number)
-  BACKUP_RETENTION_HOURS=$(ask "Hourly backups retention (hours)" "${CLI_BACKUP_HOURS:-6}" validate_number)
-  BACKUP_DAILY_TIME=$(ask "Daily backup hour (00-23, UTC)" "${CLI_BACKUP_TIME:-09}" validate_number)
+  BACKUP_RETENTION_DAYS=$(ask "Daily backups retention (days)" "${CLI_BACKUP_DAYS:-$DEFAULT_BACKUP_DAYS}" validate_number)
+  BACKUP_RETENTION_HOURS=$(ask "Hourly backups retention (hours)" "${CLI_BACKUP_HOURS:-$DEFAULT_BACKUP_HOURS}" validate_number)
+  BACKUP_DAILY_TIME=$(ask "Daily backup hour (00-23, UTC)" "${CLI_BACKUP_TIME:-$DEFAULT_BACKUP_TIME}" validate_number)
 
-  local MODE=""
+  local MODE_SELECTION=""
   local MODE_PRESET_NAME=""
   declare -A MODULE_PRESET_CONFIGS=()
   declare -a MODULE_PRESET_ORDER=()
@@ -690,7 +773,7 @@ fi
 
   if [ -n "$CLI_MODULE_PRESET" ]; then
     if [ -n "${MODULE_PRESET_CONFIGS[$CLI_MODULE_PRESET]:-}" ]; then
-      MODE="preset"
+      MODE_SELECTION="preset"
       MODE_PRESET_NAME="$CLI_MODULE_PRESET"
     else
       say ERROR "Unknown module preset: $CLI_MODULE_PRESET"
@@ -698,39 +781,38 @@ fi
     fi
   fi
 
-  if [ -n "$MODE" ] && [ "$MODE" != "preset" ]; then
+  if [ -n "$MODE_SELECTION" ] && [ "$MODE_SELECTION" != "preset" ]; then
     MODE_PRESET_NAME=""
   fi
 
   if [ -n "$CLI_MODULE_MODE" ]; then
     case "${CLI_MODULE_MODE,,}" in
-      1|suggested) MODE=1 ;;
-      2|playerbots) MODE=2 ;;
-      3|manual) MODE=3 ;;
-      4|none) MODE=4 ;;
+      1|suggested) MODE_SELECTION=1 ;;
+      2|playerbots) MODE_SELECTION=2 ;;
+      3|manual) MODE_SELECTION=3 ;;
+      4|none) MODE_SELECTION=4 ;;
       *) say ERROR "Invalid module mode: ${CLI_MODULE_MODE}"; exit 1 ;;
     esac
-    if [ "$MODE" = "1" ]; then
+    if [ "$MODE_SELECTION" = "1" ]; then
       MODE_PRESET_NAME="$DEFAULT_PRESET_SUGGESTED"
-    elif [ "$MODE" = "2" ]; then
+    elif [ "$MODE_SELECTION" = "2" ]; then
       MODE_PRESET_NAME="$DEFAULT_PRESET_PLAYERBOTS"
     fi
   fi
 
-  if [ -z "$MODE" ] && [ ${#MODULE_ENABLE_SET[@]} -gt 0 ]; then
-    MODE=3
+  if [ -z "$MODE_SELECTION" ] && [ ${#MODULE_ENABLE_SET[@]} -gt 0 ]; then
+    MODE_SELECTION=3
   fi
-  if [ ${#MODULE_ENABLE_SET[@]} -gt 0 ] && [ -n "$MODE" ] && [ "$MODE" != "3" ] && [ "$MODE" != "4" ]; then
+  if [ ${#MODULE_ENABLE_SET[@]} -gt 0 ] && [ -n "$MODE_SELECTION" ] && [ "$MODE_SELECTION" != "3" ] && [ "$MODE_SELECTION" != "4" ]; then
     say INFO "Switching module preset to manual to honor --enable-modules list."
-    MODE=3
+    MODE_SELECTION=3
   fi
-  if [ "$MODE" = "4" ] && [ ${#MODULE_ENABLE_SET[@]} -gt 0 ]; then
+  if [ "$MODE_SELECTION" = "4" ] && [ ${#MODULE_ENABLE_SET[@]} -gt 0 ]; then
     say ERROR "--enable-modules cannot be used together with module-mode=none."
     exit 1
   fi
 
-  local MODE_PRESET_NAME=""
-  if [ "$MODE" = "preset" ] && [ -n "$CLI_MODULE_PRESET" ]; then
+  if [ "$MODE_SELECTION" = "preset" ] && [ -n "$CLI_MODULE_PRESET" ]; then
     MODE_PRESET_NAME="$CLI_MODULE_PRESET"
   fi
 
@@ -757,30 +839,30 @@ fi
   fi
   local max_option=$((menu_index - 1))
 
-  if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$MODE" ]; then
-    MODE=1
+  if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$MODE_SELECTION" ]; then
+    MODE_SELECTION=1
   fi
 
-  if [ -z "$MODE" ]; then
-    local MODE_SELECTION
+  if [ -z "$MODE_SELECTION" ]; then
+    local selection_input
     while true; do
-      read -p "$(echo -e "${YELLOW}🔧 Select module configuration [1-${max_option}]: ${NC}")" MODE_SELECTION
-      if [[ "$MODE_SELECTION" =~ ^[0-9]+$ ]] && [ "$MODE_SELECTION" -ge 1 ] && [ "$MODE_SELECTION" -le "$max_option" ]; then
-        if [ -n "${MENU_PRESET_INDEX[$MODE_SELECTION]:-}" ]; then
-          MODE="preset"
-          MODE_PRESET_NAME="${MENU_PRESET_INDEX[$MODE_SELECTION]}"
+      read -p "$(echo -e "${YELLOW}🔧 Select module configuration [1-${max_option}]: ${NC}")" selection_input
+      if [[ "$selection_input" =~ ^[0-9]+$ ]] && [ "$selection_input" -ge 1 ] && [ "$selection_input" -le "$max_option" ]; then
+        if [ -n "${MENU_PRESET_INDEX[$selection_input]:-}" ]; then
+          MODE_SELECTION="preset"
+          MODE_PRESET_NAME="${MENU_PRESET_INDEX[$selection_input]}"
         else
-          MODE="$MODE_SELECTION"
+          MODE_SELECTION="$selection_input"
         fi
         break
       fi
       say ERROR "Please select a number between 1 and ${max_option}"
     done
   else
-    if [ "$MODE" = "preset" ]; then
+    if [ "$MODE_SELECTION" = "preset" ]; then
       say INFO "Module preset set to ${MODE_PRESET_NAME}."
     else
-      say INFO "Module preset set to ${MODE}."
+      say INFO "Module preset set to ${MODE_SELECTION}."
     fi
   fi
 
@@ -793,10 +875,10 @@ fi
         MODULE_INSTANCE_RESET=0 MODULE_LEVEL_GRANT=0 MODULE_ASSISTANT=0 MODULE_REAGENT_BANK=0 MODULE_BLACK_MARKET_AUCTION_HOUSE=0 MODULE_ARAC=0 \
         MODULE_CHALLENGE_MODES=0 MODULE_OLLAMA_CHAT=0 MODULE_SKELETON_MODULE=0 MODULE_BG_SLAVERYVALLEY=0 MODULE_ELUNA_TS=0 \
         MODULE_PLAYER_BOT_LEVEL_BRACKETS=0 MODULE_STATBOOSTER=0 MODULE_DUNGEON_RESPAWN=0 MODULE_AZEROTHSHARD=0 MODULE_WORGOBLIN=0
-  local DEFAULT_AUTH_IMAGE_PLAYERBOTS="uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot"
-  local DEFAULT_WORLD_IMAGE_PLAYERBOTS="uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot"
   local AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_AUTH_IMAGE_PLAYERBOTS"
   local AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_WORLD_IMAGE_PLAYERBOTS"
+  local AC_AUTHSERVER_IMAGE_MODULES_VALUE="$DEFAULT_AUTH_IMAGE_MODULES"
+  local AC_WORLDSERVER_IMAGE_MODULES_VALUE="$DEFAULT_WORLD_IMAGE_MODULES"
 
   local mod_var
   for mod_var in "${!MODULE_ENABLE_SET[@]}"; do
@@ -825,13 +907,16 @@ fi
   local RUN_REBUILD_NOW=$CLI_RUN_REBUILD
   local NEEDS_CXX_REBUILD=0
 
-  if [ "$MODE" = "1" ]; then
+  local module_mode_label=""
+  if [ "$MODE_SELECTION" = "1" ]; then
     MODE_PRESET_NAME="$DEFAULT_PRESET_SUGGESTED"
     apply_module_preset "${MODULE_PRESET_CONFIGS[$DEFAULT_PRESET_SUGGESTED]}"
-  elif [ "$MODE" = "2" ]; then
+    module_mode_label="preset 1 (Suggested)"
+  elif [ "$MODE_SELECTION" = "2" ]; then
     MODE_PRESET_NAME="$DEFAULT_PRESET_PLAYERBOTS"
     apply_module_preset "${MODULE_PRESET_CONFIGS[$DEFAULT_PRESET_PLAYERBOTS]}"
-  elif [ "$MODE" = "3" ]; then
+    module_mode_label="preset 2 (Playerbots + Suggested)"
+  elif [ "$MODE_SELECTION" = "3" ]; then
     MODE_PRESET_NAME=""
     say INFO "Answer y/n for each module"
     for key in "${!DISABLED_MODULE_REASONS[@]}"; do
@@ -884,7 +969,10 @@ fi
     MODULE_GAIN_HONOR_GUARD=$(ask_yn "Gain Honor Guard - Honor from guard kills" "$(module_default MODULE_GAIN_HONOR_GUARD)")
     MODULE_ARAC=$(ask_yn "All Races All Classes (requires client patch)" "$(module_default MODULE_ARAC)")
     MODULE_WORGOBLIN=$(ask_yn "Worgoblin - Worgen & Goblin races (client patch required)" "$(module_default MODULE_WORGOBLIN)")
-  elif [ "$MODE" = "preset" ]; then
+    module_mode_label="preset 3 (Manual)"
+  elif [ "$MODE_SELECTION" = "4" ]; then
+    module_mode_label="preset 4 (No modules)"
+  elif [ "$MODE_SELECTION" = "preset" ]; then
     local preset_modules="${MODULE_PRESET_CONFIGS[$MODE_PRESET_NAME]}"
     if [ -n "$preset_modules" ]; then
       apply_module_preset "$preset_modules"
@@ -892,6 +980,7 @@ fi
     else
       say WARNING "Preset '${MODE_PRESET_NAME}' did not contain any module selections."
     fi
+    module_mode_label="preset (${MODE_PRESET_NAME})"
   fi
 
   if [ -n "$CLI_PLAYERBOT_ENABLED" ]; then
@@ -913,7 +1002,7 @@ fi
     if [ -z "$CLI_PLAYERBOT_ENABLED" ]; then
       PLAYERBOT_ENABLED=1
     fi
-    PLAYERBOT_MAX_BOTS=$(ask "Maximum concurrent playerbots" "${CLI_PLAYERBOT_MAX:-40}" validate_number)
+    PLAYERBOT_MAX_BOTS=$(ask "Maximum concurrent playerbots" "${CLI_PLAYERBOT_MAX:-$DEFAULT_PLAYERBOT_MAX}" validate_number)
   fi
 
   for mod_var in MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_OLLAMA_CHAT MODULE_CHALLENGE_MODES MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN; do
@@ -924,20 +1013,17 @@ fi
     fi
   done
 
+  export NEEDS_CXX_REBUILD
+
   if [ "$MODULE_PLAYERBOTS" = "1" ]; then
     AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_AUTH_IMAGE_PLAYERBOTS"
     AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_WORLD_IMAGE_PLAYERBOTS"
   fi
 
-  local SUMMARY_MODE_TEXT
-  case "$MODE" in
-    1) SUMMARY_MODE_TEXT="preset 1 (Suggested)" ;;
-    2) SUMMARY_MODE_TEXT="preset 2 (Playerbots + Suggested)" ;;
-    3) SUMMARY_MODE_TEXT="preset 3 (Manual)" ;;
-    4) SUMMARY_MODE_TEXT="preset 4 (No modules)" ;;
-    preset) SUMMARY_MODE_TEXT="preset (${MODE_PRESET_NAME})" ;;
-    *) SUMMARY_MODE_TEXT="$MODE" ;;
-  esac
+  local SUMMARY_MODE_TEXT="$module_mode_label"
+  if [ -z "$SUMMARY_MODE_TEXT" ]; then
+    SUMMARY_MODE_TEXT="$MODE_SELECTION"
+  fi
 
   # Summary
   say HEADER "SUMMARY"
@@ -946,6 +1032,8 @@ fi
   printf "  %-18s %s\n" "Storage Path:" "$STORAGE_PATH"
   printf "  %-18s %s\n" "Container User:" "$CONTAINER_USER"
   printf "  %-18s Daily %s:00 UTC, keep %sd/%sh\n" "Backups:" "$BACKUP_DAILY_TIME" "$BACKUP_RETENTION_DAYS" "$BACKUP_RETENTION_HOURS"
+  printf "  %-18s %s\n" "Source checkout:" "$default_source_rel"
+  printf "  %-18s %s\n" "Modules images:" "$AC_AUTHSERVER_IMAGE_MODULES_VALUE | $AC_WORLDSERVER_IMAGE_MODULES_VALUE"
 
   printf "  %-18s %s\n" "Modules preset:" "$SUMMARY_MODE_TEXT"
   printf "  %-18s %s\n" "Playerbot Max Bots:" "$PLAYERBOT_MAX_BOTS"
@@ -1007,7 +1095,7 @@ fi
   fi
 
   local default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore"
-  if [ "$MODULE_PLAYERBOTS" = "1" ]; then
+  if [ "$NEEDS_CXX_REBUILD" = "1" ] || [ "$MODULE_PLAYERBOTS" = "1" ]; then
     default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore-playerbots"
   fi
 
@@ -1034,8 +1122,10 @@ fi
     MODULES_REBUILD_SOURCE_PATH_VALUE="$rebuild_source_path"
     export MODULES_REBUILD_SOURCE_PATH="$MODULES_REBUILD_SOURCE_PATH_VALUE"
     if [ ! -f "$rebuild_source_path/docker-compose.yml" ]; then
-      say INFO "Preparing source repository via scripts/setup-source.sh (git clone/fetch can take a few minutes)"
-      if ! ./scripts/setup-source.sh >/dev/null 2>&1; then
+      say INFO "Preparing source repository via scripts/setup-source.sh (progress will stream below)"
+      if ! ( set -o pipefail; ./scripts/setup-source.sh 2>&1 | while IFS= read -r line; do
+        say INFO "[setup-source] $line"
+      done ); then
         say WARNING "Source setup encountered issues; running interactively."
         if ! ./scripts/setup-source.sh; then
           say WARNING "Source setup failed; skipping automatic rebuild."
@@ -1056,9 +1146,19 @@ fi
         export "$module_export_var"
       done
 
-      # Set git config for module script
-      git config --global user.name "${GIT_USERNAME:-ac-compose}" 2>/dev/null || true
-      git config --global user.email "${GIT_EMAIL:-noreply@azerothcore.org}" 2>/dev/null || true
+      # Prepare isolated git config for the module script so we do not mutate user-level settings
+      local prev_git_config_global="${GIT_CONFIG_GLOBAL:-}"
+      local git_temp_config=""
+      if command -v mktemp >/dev/null 2>&1; then
+        if ! git_temp_config="$(mktemp)"; then
+          git_temp_config=""
+        fi
+      fi
+      if [ -z "$git_temp_config" ]; then
+        git_temp_config="$local_modules_dir/.gitconfig.tmp"
+        : > "$git_temp_config"
+      fi
+      export GIT_CONFIG_GLOBAL="$git_temp_config"
 
       # Run module staging script in local modules directory
       # Set environment variable to indicate we're running locally
@@ -1069,12 +1169,15 @@ fi
         say WARNING "Module staging encountered issues, but continuing with rebuild"
       fi
       unset MODULES_LOCAL_RUN
-    fi
-  fi
 
-  if [ "$RUN_REBUILD_NOW" = "1" ]; then
-    if ! ./scripts/rebuild-with-modules.sh --yes --skip-stop; then
-      say WARNING "Module rebuild failed; run ./scripts/rebuild-with-modules.sh manually."
+      if [ -n "$git_temp_config" ]; then
+        rm -f "$git_temp_config"
+      fi
+      if [ -n "$prev_git_config_global" ]; then
+        export GIT_CONFIG_GLOBAL="$prev_git_config_global"
+      else
+        unset GIT_CONFIG_GLOBAL
+      fi
     fi
   fi
 
@@ -1096,63 +1199,65 @@ fi
     MODULES_REBUILD_SOURCE_PATH_VALUE="$default_source_rel"
   fi
 
-  DB_PLAYERBOTS_NAME=${DB_PLAYERBOTS_NAME:-acore_playerbots}
+  DB_PLAYERBOTS_NAME=${DB_PLAYERBOTS_NAME:-$DEFAULT_DB_PLAYERBOTS_NAME}
   local CLIENT_DATA_CACHE_PATH_VALUE="${LOCAL_STORAGE_ROOT}/client-data-cache"
-  HOST_ZONEINFO_PATH=${HOST_ZONEINFO_PATH:-/usr/share/zoneinfo}
-  MYSQL_INNODB_REDO_LOG_CAPACITY=${MYSQL_INNODB_REDO_LOG_CAPACITY:-512M}
-  MYSQL_RUNTIME_TMPFS_SIZE=${MYSQL_RUNTIME_TMPFS_SIZE:-8G}
-  CLIENT_DATA_VOLUME=${CLIENT_DATA_VOLUME:-ac-client-data}
+  HOST_ZONEINFO_PATH=${HOST_ZONEINFO_PATH:-$DEFAULT_HOST_ZONEINFO_PATH}
+  MYSQL_INNODB_REDO_LOG_CAPACITY=${MYSQL_INNODB_REDO_LOG_CAPACITY:-$DEFAULT_MYSQL_INNODB_REDO_LOG_CAPACITY}
+  MYSQL_RUNTIME_TMPFS_SIZE=${MYSQL_RUNTIME_TMPFS_SIZE:-$DEFAULT_MYSQL_RUNTIME_TMPFS_SIZE}
+  CLIENT_DATA_VOLUME=${CLIENT_DATA_VOLUME:-$DEFAULT_CLIENT_DATA_VOLUME}
 
   cat > "$ENV_OUT" <<EOF
 # Generated by ac-compose/setup.sh
 
-COMPOSE_PROJECT_NAME=ac-compose
+COMPOSE_PROJECT_NAME=$DEFAULT_COMPOSE_PROJECT_NAME
 
 STORAGE_PATH=$STORAGE_PATH
 STORAGE_PATH_LOCAL=$LOCAL_STORAGE_ROOT
-HOST_ZONEINFO_PATH=$HOST_ZONEINFO_PATH
-TZ=UTC
+HOST_ZONEINFO_PATH=${HOST_ZONEINFO_PATH:-$DEFAULT_HOST_ZONEINFO_PATH}
+TZ=$DEFAULT_TZ
 
 # Database
-MYSQL_IMAGE=mysql:8.0
-CONTAINER_MYSQL=ac-mysql
+MYSQL_IMAGE=$DEFAULT_MYSQL_IMAGE
+CONTAINER_MYSQL=$DEFAULT_CONTAINER_MYSQL
 MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
-MYSQL_ROOT_HOST=%
-MYSQL_USER=root
-MYSQL_PORT=3306
+MYSQL_ROOT_HOST=$DEFAULT_MYSQL_ROOT_HOST
+MYSQL_USER=$DEFAULT_MYSQL_USER
+MYSQL_PORT=$DEFAULT_MYSQL_INTERNAL_PORT
 MYSQL_EXTERNAL_PORT=$MYSQL_EXTERNAL_PORT
-MYSQL_CHARACTER_SET=utf8mb4
-MYSQL_COLLATION=utf8mb4_unicode_ci
-MYSQL_MAX_CONNECTIONS=1000
-MYSQL_INNODB_BUFFER_POOL_SIZE=256M
-MYSQL_INNODB_LOG_FILE_SIZE=64M
-MYSQL_INNODB_REDO_LOG_CAPACITY=$MYSQL_INNODB_REDO_LOG_CAPACITY
-MYSQL_RUNTIME_TMPFS_SIZE=$MYSQL_RUNTIME_TMPFS_SIZE
-DB_AUTH_NAME=acore_auth
-DB_WORLD_NAME=acore_world
-DB_CHARACTERS_NAME=acore_characters
-DB_PLAYERBOTS_NAME=$DB_PLAYERBOTS_NAME
-AC_DB_IMPORT_IMAGE=acore/ac-wotlk-db-import:14.0.0-dev
+MYSQL_CHARACTER_SET=$DEFAULT_MYSQL_CHARACTER_SET
+MYSQL_COLLATION=$DEFAULT_MYSQL_COLLATION
+MYSQL_MAX_CONNECTIONS=$DEFAULT_MYSQL_MAX_CONNECTIONS
+MYSQL_INNODB_BUFFER_POOL_SIZE=$DEFAULT_MYSQL_INNODB_BUFFER_POOL_SIZE
+MYSQL_INNODB_LOG_FILE_SIZE=$DEFAULT_MYSQL_INNODB_LOG_FILE_SIZE
+MYSQL_INNODB_REDO_LOG_CAPACITY=${MYSQL_INNODB_REDO_LOG_CAPACITY:-$DEFAULT_MYSQL_INNODB_REDO_LOG_CAPACITY}
+MYSQL_RUNTIME_TMPFS_SIZE=${MYSQL_RUNTIME_TMPFS_SIZE:-$DEFAULT_MYSQL_RUNTIME_TMPFS_SIZE}
+DB_AUTH_NAME=$DEFAULT_DB_AUTH_NAME
+DB_WORLD_NAME=$DEFAULT_DB_WORLD_NAME
+DB_CHARACTERS_NAME=$DEFAULT_DB_CHARACTERS_NAME
+DB_PLAYERBOTS_NAME=${DB_PLAYERBOTS_NAME:-$DEFAULT_DB_PLAYERBOTS_NAME}
+AC_DB_IMPORT_IMAGE=$DEFAULT_AC_DB_IMPORT_IMAGE
 
 # Services (images)
-AC_AUTHSERVER_IMAGE=acore/ac-wotlk-authserver:14.0.0-dev
-AC_WORLDSERVER_IMAGE=acore/ac-wotlk-worldserver:14.0.0-dev
+AC_AUTHSERVER_IMAGE=$DEFAULT_AC_AUTHSERVER_IMAGE
+AC_WORLDSERVER_IMAGE=$DEFAULT_AC_WORLDSERVER_IMAGE
 AC_AUTHSERVER_IMAGE_PLAYERBOTS=${AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE}
 AC_WORLDSERVER_IMAGE_PLAYERBOTS=${AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE}
+AC_AUTHSERVER_IMAGE_MODULES=${AC_AUTHSERVER_IMAGE_MODULES_VALUE}
+AC_WORLDSERVER_IMAGE_MODULES=${AC_WORLDSERVER_IMAGE_MODULES_VALUE}
 
 # Client data images
-AC_CLIENT_DATA_IMAGE=acore/ac-wotlk-client-data:14.0.0-dev
-AC_CLIENT_DATA_IMAGE_PLAYERBOTS=uprightbass360/azerothcore-wotlk-playerbots:client-data-Playerbot
+AC_CLIENT_DATA_IMAGE=$DEFAULT_AC_CLIENT_DATA_IMAGE
+AC_CLIENT_DATA_IMAGE_PLAYERBOTS=$DEFAULT_CLIENT_DATA_IMAGE_PLAYERBOTS
 CLIENT_DATA_CACHE_PATH=$CLIENT_DATA_CACHE_PATH_VALUE
-CLIENT_DATA_VOLUME=$CLIENT_DATA_VOLUME
+CLIENT_DATA_VOLUME=${CLIENT_DATA_VOLUME:-$DEFAULT_CLIENT_DATA_VOLUME}
 
 # Ports
 AUTH_EXTERNAL_PORT=$AUTH_EXTERNAL_PORT
-AUTH_PORT=3724
+AUTH_PORT=$DEFAULT_AUTH_INTERNAL_PORT
 WORLD_EXTERNAL_PORT=$REALM_PORT
-WORLD_PORT=8085
+WORLD_PORT=$DEFAULT_WORLD_INTERNAL_PORT
 SOAP_EXTERNAL_PORT=$SOAP_EXTERNAL_PORT
-SOAP_PORT=7878
+SOAP_PORT=$DEFAULT_SOAP_INTERNAL_PORT
 
 # Realm
 SERVER_ADDRESS=$SERVER_ADDRESS
@@ -1210,7 +1315,7 @@ MODULE_REAGENT_BANK=$MODULE_REAGENT_BANK
 MODULE_BLACK_MARKET_AUCTION_HOUSE=$MODULE_BLACK_MARKET_AUCTION_HOUSE
 
 # Client data
-CLIENT_DATA_VERSION=${CLIENT_DATA_VERSION:-v16}
+CLIENT_DATA_VERSION=${CLIENT_DATA_VERSION:-$DEFAULT_CLIENT_DATA_VERSION}
 
 # Playerbot runtime
 PLAYERBOT_ENABLED=$PLAYERBOT_ENABLED
@@ -1221,33 +1326,33 @@ AUTO_REBUILD_ON_DEPLOY=$AUTO_REBUILD_ON_DEPLOY
 MODULES_REBUILD_SOURCE_PATH=$MODULES_REBUILD_SOURCE_PATH_VALUE
 
 # Eluna
-AC_ELUNA_ENABLED=1
-AC_ELUNA_TRACE_BACK=1
-AC_ELUNA_AUTO_RELOAD=1
-AC_ELUNA_BYTECODE_CACHE=1
-AC_ELUNA_SCRIPT_PATH=lua_scripts
-AC_ELUNA_REQUIRE_PATHS=
-AC_ELUNA_REQUIRE_CPATHS=
-AC_ELUNA_AUTO_RELOAD_INTERVAL=1
+AC_ELUNA_ENABLED=$DEFAULT_ELUNA_ENABLED
+AC_ELUNA_TRACE_BACK=$DEFAULT_ELUNA_TRACE_BACK
+AC_ELUNA_AUTO_RELOAD=$DEFAULT_ELUNA_AUTO_RELOAD
+AC_ELUNA_BYTECODE_CACHE=$DEFAULT_ELUNA_BYTECODE_CACHE
+AC_ELUNA_SCRIPT_PATH=$DEFAULT_ELUNA_SCRIPT_PATH
+AC_ELUNA_REQUIRE_PATHS=$DEFAULT_ELUNA_REQUIRE_PATHS
+AC_ELUNA_REQUIRE_CPATHS=$DEFAULT_ELUNA_REQUIRE_CPATHS
+AC_ELUNA_AUTO_RELOAD_INTERVAL=$DEFAULT_ELUNA_AUTO_RELOAD_INTERVAL
 
 # Tools
-PMA_HOST=ac-mysql
-PMA_PORT=3306
-PMA_USER=root
-PMA_EXTERNAL_PORT=8081
-PMA_ARBITRARY=1
-PMA_ABSOLUTE_URI=
-PMA_UPLOAD_LIMIT=300M
-PMA_MEMORY_LIMIT=512M
-PMA_MAX_EXECUTION_TIME=600
-KEIRA3_EXTERNAL_PORT=4201
-KEIRA_DATABASE_HOST=ac-mysql
-KEIRA_DATABASE_PORT=3306
+PMA_HOST=$DEFAULT_CONTAINER_MYSQL
+PMA_PORT=$DEFAULT_MYSQL_INTERNAL_PORT
+PMA_USER=$DEFAULT_PMA_USER
+PMA_EXTERNAL_PORT=$DEFAULT_PMA_EXTERNAL_PORT
+PMA_ARBITRARY=$DEFAULT_PMA_ARBITRARY
+PMA_ABSOLUTE_URI=$DEFAULT_PMA_ABSOLUTE_URI
+PMA_UPLOAD_LIMIT=$DEFAULT_PMA_UPLOAD_LIMIT
+PMA_MEMORY_LIMIT=$DEFAULT_PMA_MEMORY_LIMIT
+PMA_MAX_EXECUTION_TIME=$DEFAULT_PMA_MAX_EXECUTION_TIME
+KEIRA3_EXTERNAL_PORT=$DEFAULT_KEIRA3_EXTERNAL_PORT
+KEIRA_DATABASE_HOST=$DEFAULT_CONTAINER_MYSQL
+KEIRA_DATABASE_PORT=$DEFAULT_MYSQL_INTERNAL_PORT
 
 # Networking
-NETWORK_NAME=azerothcore
-NETWORK_SUBNET=172.20.0.0/16
-NETWORK_GATEWAY=172.20.0.1
+NETWORK_NAME=$DEFAULT_NETWORK_NAME
+NETWORK_SUBNET=$DEFAULT_NETWORK_SUBNET
+NETWORK_GATEWAY=$DEFAULT_NETWORK_GATEWAY
 EOF
 
   say SUCCESS ".env written to $ENV_OUT"
@@ -1257,7 +1362,9 @@ EOF
     echo ""
     say HEADER "MODULE REBUILD"
     if [ -n "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
-      if ./scripts/rebuild-with-modules.sh --yes --source "$MODULES_REBUILD_SOURCE_PATH_VALUE"; then
+      local rebuild_args=(--yes --skip-stop)
+      rebuild_args+=(--source "$MODULES_REBUILD_SOURCE_PATH_VALUE")
+      if ./scripts/rebuild-with-modules.sh "${rebuild_args[@]}"; then
         say SUCCESS "Module rebuild completed"
       else
         say WARNING "Module rebuild failed; run ./scripts/rebuild-with-modules.sh manually once issues are resolved."
