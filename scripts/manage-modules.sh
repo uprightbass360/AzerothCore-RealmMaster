@@ -822,14 +822,24 @@ if [ "$MODULES_LOCAL_RUN" = "1" ]; then
 else
   REBUILD_SENTINEL="/modules/.requires_rebuild"
 fi
+HOST_REBUILD_SENTINEL="${MODULES_HOST_DIR:-}"
+if [ -n "$HOST_REBUILD_SENTINEL" ]; then
+  HOST_REBUILD_SENTINEL="${HOST_REBUILD_SENTINEL%/}/.requires_rebuild"
+fi
 if [ "$SQL_EXECUTION_FAILED" = "1" ]; then
   echo "⚠️  SQL execution encountered issues; review logs above."
 fi
 
 if [ "$REBUILD_REQUIRED" = "1" ] && [ -n "$ENABLED_MODULES" ]; then
   echo "$ENABLED_MODULES" > "$REBUILD_SENTINEL"
+  if [ -n "$HOST_REBUILD_SENTINEL" ]; then
+    echo "$ENABLED_MODULES" > "$HOST_REBUILD_SENTINEL" 2>/dev/null || true
+  fi
 else
   rm -f "$REBUILD_SENTINEL" 2>/dev/null || true
+  if [ -n "$HOST_REBUILD_SENTINEL" ]; then
+    rm -f "$HOST_REBUILD_SENTINEL" 2>/dev/null || true
+  fi
 fi
 
 # Optional: keep container alive for inspection in CI/debug contexts

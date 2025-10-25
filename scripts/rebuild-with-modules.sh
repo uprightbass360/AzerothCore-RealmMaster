@@ -314,23 +314,35 @@ docker compose down --remove-orphans >/dev/null 2>&1 || true
 
 popd >/dev/null
 
-if [ -n "$SENTINEL_FILE" ]; then
-  if ! rm -f "$SENTINEL_FILE" 2>/dev/null; then
-    if [ -f "$SENTINEL_FILE" ] && command -v docker >/dev/null 2>&1; then
-      DB_IMPORT_IMAGE="$(read_env AC_DB_IMPORT_IMAGE "acore/ac-wotlk-db-import:14.0.0-dev")"
-      if docker image inspect "$DB_IMPORT_IMAGE" >/dev/null 2>&1; then
-        docker run --rm \
-          --entrypoint /bin/sh \
-          --user 0:0 \
-          -v "$MODULES_DIR":/modules \
-          "$DB_IMPORT_IMAGE" \
-          -c 'rm -f /modules/.requires_rebuild' >/dev/null 2>&1 || true
-      fi
+remove_sentinel(){
+  local sentinel_path="$1"
+  [ -n "$sentinel_path" ] || return 0
+  [ -f "$sentinel_path" ] || return 0
+  if rm -f "$sentinel_path" 2>/dev/null; then
+    return 0
+  fi
+  if command -v docker >/dev/null 2>&1; then
+    local db_image
+    db_image="$(read_env AC_DB_IMPORT_IMAGE "acore/ac-wotlk-db-import:14.0.0-dev")"
+    if docker image inspect "$db_image" >/dev/null 2>&1; then
+      local mount_dir
+      mount_dir="$(dirname "$sentinel_path")"
+      docker run --rm \
+        --entrypoint /bin/sh \
+        --user 0:0 \
+        -v "$mount_dir":/modules \
+        "$db_image" \
+        -c 'rm -f /modules/.requires_rebuild' >/dev/null 2>&1 || true
     fi
   fi
-  if [ -f "$SENTINEL_FILE" ]; then
-    echo "⚠️  Unable to remove rebuild sentinel at $SENTINEL_FILE. Remove manually if rebuild detection persists."
+  if [ -f "$sentinel_path" ]; then
+    echo "⚠️  Unable to remove rebuild sentinel at $sentinel_path. Remove manually if rebuild detection persists."
   fi
+}
+
+remove_sentinel "$SENTINEL_FILE"
+if [ -n "$SHARED_MODULES_DIR" ]; then
+  remove_sentinel "$SHARED_MODULES_DIR/.requires_rebuild"
 fi
 
 echo ""

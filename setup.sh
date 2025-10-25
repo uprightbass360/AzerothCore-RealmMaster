@@ -1146,6 +1146,9 @@ fi
         export "$module_export_var"
       done
 
+      local host_modules_dir="${storage_abs}/modules"
+      export MODULES_HOST_DIR="$host_modules_dir"
+
       # Prepare isolated git config for the module script so we do not mutate user-level settings
       local prev_git_config_global="${GIT_CONFIG_GLOBAL:-}"
       local git_temp_config=""
@@ -1165,10 +1168,17 @@ fi
       export MODULES_LOCAL_RUN=1
       if (cd "$local_modules_dir" && bash "$SCRIPT_DIR/scripts/manage-modules.sh"); then
         say SUCCESS "Module repositories staged to $local_modules_dir"
+        if [ -n "$host_modules_dir" ]; then
+          mkdir -p "$host_modules_dir"
+          if [ -f "$local_modules_dir/.modules_state" ]; then
+            cp "$local_modules_dir/.modules_state" "$host_modules_dir/.modules_state" 2>/dev/null || true
+          fi
+        fi
       else
         say WARNING "Module staging encountered issues, but continuing with rebuild"
       fi
       unset MODULES_LOCAL_RUN
+      unset MODULES_HOST_DIR
 
       if [ -n "$git_temp_config" ]; then
         rm -f "$git_temp_config"
