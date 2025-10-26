@@ -61,6 +61,9 @@ Options:
   --keep-running                           Do not pre-stop runtime stack before rebuild
   --skip-rebuild                           Skip source rebuild even if modules require it
   --yes, -y                                Auto-confirm deployment and rebuild prompts
+  --watch-logs                             Tail worldserver logs even if --no-watch was set earlier
+  --log-tail LINES                         Override WORLD_LOG_TAIL (number of log lines to show)
+  --once                                   Run status checks once (alias for --no-watch)
   -h, --help                               Show this help
 
 This command automates the module workflow: sync modules, rebuild source if needed,

@@ -225,14 +225,20 @@ fi
 
 echo 'Installing enabled modules...'
 
-# Playerbots handling - integrated into custom AzerothCore branch
-if [ "$MODULE_PLAYERBOTS" = "1" ]; then
-  echo '🤖 Playerbots module enabled...'
-  echo '   📖 Playerbots are integrated into the uprightbass360/azerothcore-wotlk-playerbots source'
-  echo '   ℹ️  No separate module repository needed - functionality built into core'
-  echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with playerbots source'
+# Playerbots handling - integrated into uprightbass360 AzerothCore fork
+if [ "$MODULE_PLAYERBOTS" = "1" ] && [ ! -d "mod-playerbots" ]; then
+  echo '🤖 Installing mod-playerbots module (required for uprightbass360 images)...'
+  echo '   📖 Project: https://github.com/mod-playerbots/mod-playerbots'
+  echo '   ℹ️  Core C++ functionality built into uprightbass360/azerothcore-wotlk-playerbots images'
+  echo '   🗄️  Installing SQL schemas, configurations, and database structure'
+  echo '   🔧 Module provides: DBC tables, bot names, AI configs, travel nodes, etc.'
   echo '   📋 POST-INSTALL: Requires manual account/character configuration'
-  # No git clone needed - playerbots are integrated into the source tree
+
+  # Clone the official mod-playerbots module for SQL and configuration files
+  git clone https://github.com/mod-playerbots/mod-playerbots.git mod-playerbots
+
+  echo '   ✅ mod-playerbots module installed successfully'
+  echo '   📊 Module contains SQL for 3 databases: world, characters, playerbots'
 fi
 
 # Install AOE Loot if enabled
@@ -723,6 +729,7 @@ REBUILD_REQUIRED=0
 # Create current module state hash
 for module_var in MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN MODULE_ELUNA_TS; do
   eval "value=\$$module_var"
+  value="${value:-0}"
   CURRENT_STATE="$CURRENT_STATE$module_var=$value|"
 done
 

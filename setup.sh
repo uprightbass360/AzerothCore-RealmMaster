@@ -407,6 +407,7 @@ Options:
   --auto-rebuild-on-deploy        Enable automatic rebuild during deploys
   --run-rebuild-now               Trigger module rebuild after setup completes
   --modules-rebuild-source PATH   Source checkout used for module rebuilds
+  --deploy-after                  Run ./deploy.sh automatically after setup completes
   --force                         Overwrite existing .env without prompting
 EOF
         exit 0
@@ -565,6 +566,10 @@ EOF
         ;;
       --force)
         FORCE_OVERWRITE=1
+        shift
+        ;;
+      --deploy-after)
+        CLI_DEPLOY_AFTER=1
         shift
         ;;
       *)
@@ -1125,7 +1130,7 @@ fi
     if [ ! -f "$rebuild_source_path/docker-compose.yml" ]; then
       say INFO "Preparing source repository via scripts/setup-source.sh (progress will stream below)"
       if ! ( set -o pipefail; ./scripts/setup-source.sh 2>&1 | while IFS= read -r line; do
-        say INFO "[setup-source] $line"
+        say INFO "[setup-source]" "$line"
       done ); then
         say WARNING "Source setup encountered issues; running interactively."
         if ! ./scripts/setup-source.sh; then
@@ -1167,10 +1172,14 @@ fi
       # Run module staging script in local modules directory
       # Set environment variable to indicate we're running locally
       export MODULES_LOCAL_RUN=1
+      if [ -n "$host_modules_dir" ]; then
+        mkdir -p "$host_modules_dir"
+        rm -f "$host_modules_dir/.modules_state" "$host_modules_dir/.requires_rebuild" 2>/dev/null || true
+      fi
+
       if (cd "$local_modules_dir" && bash "$SCRIPT_DIR/scripts/manage-modules.sh"); then
         say SUCCESS "Module repositories staged to $local_modules_dir"
         if [ -n "$host_modules_dir" ]; then
-          mkdir -p "$host_modules_dir"
           if [ -f "$local_modules_dir/.modules_state" ]; then
             cp "$local_modules_dir/.modules_state" "$host_modules_dir/.modules_state" 2>/dev/null || true
           fi
@@ -1366,6 +1375,32 @@ NETWORK_SUBNET=$DEFAULT_NETWORK_SUBNET
 NETWORK_GATEWAY=$DEFAULT_NETWORK_GATEWAY
 EOF
 
+  local storage_abs_path="$STORAGE_PATH"
+  if [[ "$storage_abs_path" != /* ]]; then
+    storage_abs_path="$(pwd)/${storage_abs_path#./}"
+  fi
+  local host_modules_dir="${storage_abs_path}/modules"
+  mkdir -p "$host_modules_dir"
+
+  local -a MODULE_STATE_VARS=(
+    MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION
+    MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG
+    MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS
+    MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL
+    MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER
+    MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK
+    MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS
+    MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD
+    MODULE_WORGOBLIN MODULE_ELUNA_TS
+  )
+  local module_state_string=""
+  for module_state_var in "${MODULE_STATE_VARS[@]}"; do
+    local module_value="${!module_state_var:-0}"
+    module_state_string+="${module_state_var}=${module_value}|"
+  done
+  printf '%s' "$module_state_string" > "${host_modules_dir}/.modules_state"
+  rm -f "${host_modules_dir}/.requires_rebuild" 2>/dev/null || true
+
   say SUCCESS ".env written to $ENV_OUT"
   show_realm_configured
 
@@ -1387,11 +1422,22 @@ EOF
 
   say INFO "Ready to bring your realm online:"
   if [ "$MODULE_PLAYERBOTS" = "1" ]; then
-    echo "  🚀 Quick deploy: ./deploy.sh"
-    echo "  🔧 Manual: docker compose --profile db --profile services-playerbots --profile client-data-bots --profile modules up -d"
+    printf '  🚀 Quick deploy: ./deploy.sh\n'
+    printf '  🔧 Manual: docker compose --profile db --profile services-playerbots --profile client-data-bots --profile modules up -d\n'
   else
-    echo "  🚀 Quick deploy: ./deploy.sh"
-    echo "  🔧 Manual: docker compose --profile db --profile services-standard --profile client-data --profile modules up -d"
+    printf '  🚀 Quick deploy: ./deploy.sh\n'
+    printf '  🔧 Manual: docker compose --profile db --profile services-standard --profile client-data --profile modules up -d\n'
+  fi
+
+  if [ "${CLI_DEPLOY_AFTER:-0}" = "1" ]; then
+    local deploy_args=(bash "./deploy.sh" --yes)
+    if [ "$MODULE_PLAYERBOTS" != "1" ]; then
+      deploy_args+=(--profile standard)
+    fi
+    say INFO "Launching deploy after setup (--deploy-after enabled)"
+    if ! "${deploy_args[@]}"; then
+      say WARNING "Automatic deploy failed; please run ./deploy.sh manually."
+    fi
   fi
 }
 

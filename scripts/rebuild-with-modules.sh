@@ -175,8 +175,12 @@ fi
 
 SOURCE_COMPOSE="$REBUILD_SOURCE_PATH/docker-compose.yml"
 if [ ! -f "$SOURCE_COMPOSE" ]; then
-  echo "❌ Source docker-compose.yml not found at $SOURCE_COMPOSE"
-  exit 1
+  if [ -f "$REBUILD_SOURCE_PATH/apps/docker/docker-compose.yml" ]; then
+    SOURCE_COMPOSE="$REBUILD_SOURCE_PATH/apps/docker/docker-compose.yml"
+  else
+    echo "❌ Source docker-compose.yml not found at $REBUILD_SOURCE_PATH (checked $SOURCE_COMPOSE and apps/docker/docker-compose.yml)"
+    exit 1
+  fi
 fi
 
 declare -A MODULE_REPO_MAP=(
