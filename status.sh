@@ -40,25 +40,22 @@ command -v docker >/dev/null 2>&1 || { echo "Docker CLI not found" >&2; exit 1; 
 docker info >/dev/null 2>&1 || { echo "Docker daemon unavailable" >&2; exit 1; }
 
 read_env(){
-  local key="$1" default="$2" value
+  local key="$1" value=""
   if [ -f "$ENV_FILE" ]; then
     value="$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
-  fi
-  if [ -z "$value" ]; then
-    value="$default"
   fi
   echo "$value"
 }
 
-PROJECT_NAME="$(read_env COMPOSE_PROJECT_NAME ac-compose)"
-NETWORK_NAME="$(read_env NETWORK_NAME azerothcore)"
-AUTH_PORT="$(read_env AUTH_EXTERNAL_PORT 3784)"
-WORLD_PORT="$(read_env WORLD_EXTERNAL_PORT 8215)"
-SOAP_PORT="$(read_env SOAP_EXTERNAL_PORT 7778)"
-MYSQL_PORT="$(read_env MYSQL_EXTERNAL_PORT 64306)"
-PMA_PORT="$(read_env PMA_EXTERNAL_PORT 8081)"
-KEIRA_PORT="$(read_env KEIRA3_EXTERNAL_PORT 4201)"
-ELUNA_ENABLED="$(read_env AC_ELUNA_ENABLED 1)"
+PROJECT_NAME="$(read_env COMPOSE_PROJECT_NAME)"
+NETWORK_NAME="$(read_env NETWORK_NAME)"
+AUTH_PORT="$(read_env AUTH_EXTERNAL_PORT)"
+WORLD_PORT="$(read_env WORLD_EXTERNAL_PORT)"
+SOAP_PORT="$(read_env SOAP_EXTERNAL_PORT)"
+MYSQL_PORT="$(read_env MYSQL_EXTERNAL_PORT)"
+PMA_PORT="$(read_env PMA_EXTERNAL_PORT)"
+KEIRA_PORT="$(read_env KEIRA3_EXTERNAL_PORT)"
+ELUNA_ENABLED="$(read_env AC_ELUNA_ENABLED)"
 
 container_exists(){
   docker ps -a --format '{{.Names}}' | grep -qx "$1"
@@ -66,6 +63,15 @@ container_exists(){
 
 container_running(){
   docker ps --format '{{.Names}}' | grep -qx "$1"
+}
+
+is_one_shot(){
+  case "$1" in
+    ac-db-import|ac-db-init|ac-modules|ac-post-install|ac-client-data|ac-client-data-playerbots)
+      return 0;;
+    *)
+      return 1;;
+  esac
 }
 
 format_state(){
@@ -144,7 +150,17 @@ print_service(){
     exit_code="$(docker inspect --format='{{.State.ExitCode}}' "$container" 2>/dev/null || echo "?")"
     image="$(docker inspect --format='{{.Config.Image}}' "$container" 2>/dev/null || echo "-")"
     local state_info colour text
-    state_info="$(format_state "$status" "$health" "$started" "$exit_code")"
+    if [ "$status" = "exited" ] && is_one_shot "$container"; then
+      local finished
+      finished="$(docker inspect --format='{{.State.FinishedAt}}' "$container" 2>/dev/null | cut -c12-19 2>/dev/null || echo "--:--:--")"
+      if [ "$exit_code" = "0" ]; then
+        state_info="${GREEN}|○ completed (at $finished)"
+      else
+        state_info="${RED}|○ failed (code $exit_code)"
+      fi
+    else
+      state_info="$(format_state "$status" "$health" "$started" "$exit_code")"
+    fi
     colour="${state_info%%|*}"
     text="${state_info#*|}"
     printf "%-20s %-15s %b%-30s%b %s\n" "$label" "$container" "$colour" "$text" "$NC" "$(short_image "$image")"
@@ -184,7 +200,7 @@ module_summary(){
   if container_running "ac-worldserver"; then
     local playerbot="disabled"
     local module_playerbots
-    module_playerbots="$(read_env MODULE_PLAYERBOTS 0)"
+    module_playerbots="$(read_env MODULE_PLAYERBOTS)"
     if [ "$module_playerbots" = "1" ]; then
       playerbot="enabled"
       if docker inspect --format='{{.State.Status}}' ac-worldserver 2>/dev/null | grep -q "running"; then
@@ -204,9 +220,14 @@ user_stats(){
   fi
 
   local mysql_pw db_auth db_characters
-  mysql_pw="$(read_env MYSQL_ROOT_PASSWORD azerothcore123)"
-  db_auth="$(read_env DB_AUTH_NAME acore_auth)"
-  db_characters="$(read_env DB_CHARACTERS_NAME acore_characters)"
+  mysql_pw="$(read_env MYSQL_ROOT_PASSWORD)"
+  db_auth="$(read_env DB_AUTH_NAME)"
+  db_characters="$(read_env DB_CHARACTERS_NAME)"
+
+  if [ -z "$mysql_pw" ] || [ -z "$db_auth" ] || [ -z "$db_characters" ]; then
+    printf "USERS: %sMissing MySQL configuration in .env%s\n" "$YELLOW" "$NC"
+    return
+  fi
 
   local exec_mysql
   exec_mysql(){
@@ -239,6 +260,10 @@ ports_summary(){
   for i in "${!names[@]}"; do
     local svc="${names[$i]}"
     local port="${ports[$i]}"
+    if [ -z "$port" ]; then
+      printf "  %-10s %-6s %b○%b not set\n" "$svc" "--" "$YELLOW" "$NC"
+      continue
+    fi
     if timeout 1 bash -c "</dev/tcp/127.0.0.1/${port}" >/dev/null 2>&1; then
       printf "  %-10s %-6s %b●%b reachable\n" "$svc" "$port" "$GREEN" "$NC"
     else
@@ -248,6 +273,10 @@ ports_summary(){
 }
 
 network_summary(){
+  if [ -z "$NETWORK_NAME" ]; then
+    echo "DOCKER NET: not set"
+    return
+  fi
   if docker network ls --format '{{.Name}}' | grep -qx "$NETWORK_NAME"; then
     echo "DOCKER NET: $NETWORK_NAME"
   else
