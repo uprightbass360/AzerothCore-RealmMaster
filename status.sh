@@ -42,7 +42,7 @@ docker info >/dev/null 2>&1 || { echo "Docker daemon unavailable" >&2; exit 1; }
 read_env(){
   local key="$1" value=""
   if [ -f "$ENV_FILE" ]; then
-    value="$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
+    value="$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r' | sed 's/[[:space:]]*#.*//' | sed 's/[[:space:]]*$//')"
   fi
   echo "$value"
 }
@@ -172,7 +172,7 @@ print_service(){
   fi
 }
 
-module_summary(){
+module_summary_list(){
   if [ ! -f "$ENV_FILE" ]; then
     echo "MODULES: (env not found)"
     return
@@ -180,23 +180,17 @@ module_summary(){
   local module_vars
   module_vars="$(grep -E '^MODULE_[A-Z_]+=1' "$ENV_FILE" 2>/dev/null | cut -d'=' -f1)"
   if [ -n "$module_vars" ]; then
-    local arr=()
+    echo "MODULES:"
     while IFS= read -r mod; do
       [ -z "$mod" ] && continue
       local pretty="${mod#MODULE_}"
-      pretty="$(echo "$pretty" | tr '[:upper:]' '[:lower:]' | tr '_' ' ')"
-      arr+=("$pretty")
+      pretty="$(echo "$pretty" | tr '[:upper:]' '[:lower:]' | tr '_' ' ' | sed 's/\b\w/\U&/g')"
+      printf "  • %s\n" "$pretty"
     done <<< "$module_vars"
-    local joined=""
-    for item in "${arr[@]}"; do
-      joined+="$item, "
-    done
-    joined="${joined%, }"
-    echo "MODULES: $joined"
   else
     echo "MODULES: none"
   fi
-
+  echo ""
   if container_running "ac-worldserver"; then
     local playerbot="disabled"
     local module_playerbots
@@ -209,7 +203,7 @@ module_summary(){
     fi
     local eluna="disabled"
     [ "$ELUNA_ENABLED" = "1" ] && eluna="running"
-    echo "RUNTIME: playerbots $playerbot | eluna $eluna"
+    # echo "RUNTIME: playerbots $playerbot | eluna $eluna"
   fi
 }
 
@@ -290,8 +284,9 @@ show_realm_status_header(){
 }
 
 render_snapshot(){
-  show_realm_status_header
-  printf "\nTIME %s  PROJECT %s\n\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$PROJECT_NAME"
+  #show_realm_status_header
+  printf "TIME %s  PROJECT %s\n\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$PROJECT_NAME"
+  user_stats
   printf "%-20s %-15s %-28s %s\n" "SERVICE" "CONTAINER" "STATE" "IMAGE"
   printf "%-20s %-15s %-28s %s\n" "--------------------" "---------------" "----------------------------" "------------------------------"
   print_service ac-mysql "MySQL"
@@ -306,10 +301,10 @@ render_snapshot(){
   print_service ac-phpmyadmin "phpMyAdmin"
   print_service ac-keira3 "Keira3"
   echo ""
-  module_summary
-  user_stats
+  module_summary_list
   echo ""
   echo "$(ports_summary)"
+  echo ""
   echo "$(network_summary)"
 }
 

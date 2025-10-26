@@ -2,9 +2,9 @@
 # Export auth and character databases to ExportBackup_<timestamp>/
 set -euo pipefail
 
-MYSQL_PW="${MYSQL_ROOT_PASSWORD:-azerothcore123}"
-DB_AUTH="${DB_AUTH_NAME:-acore_auth}"
-DB_CHAR="${DB_CHARACTERS_NAME:-acore_characters}"
+MYSQL_PW="${MYSQL_ROOT_PASSWORD}"
+DB_AUTH="${DB_AUTH_NAME}"
+DB_CHAR="${DB_CHARACTERS_NAME}"
 
 usage(){
   cat <<EOF

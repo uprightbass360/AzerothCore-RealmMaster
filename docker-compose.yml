@@ -21,7 +21,7 @@ services:
       - "${MYSQL_EXTERNAL_PORT}:${MYSQL_PORT}"
     volumes:
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
-      - ${HOST_BACKUP_PATH}:/backups
+      - ${BACKUP_PATH}:/backups
       - ${HOST_ZONEINFO_PATH}:/usr/share/zoneinfo:ro
     tmpfs:
       - /var/lib/mysql-runtime:size=${MYSQL_RUNTIME_TMPFS_SIZE}
@@ -99,7 +99,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
-      - ${HOST_BACKUP_PATH}:/backups
+      - ${BACKUP_PATH}:/backups
     networks:
       - azerothcore
     environment:
@@ -154,7 +154,7 @@ services:
       DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
       TZ: ${TZ}
     volumes:
-      - ${HOST_BACKUP_PATH}:/backups
+      - ${BACKUP_PATH}:/backups
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
     command:
@@ -575,6 +575,16 @@ services:
       - MODULE_ASSISTANT=${MODULE_ASSISTANT}
       - MODULE_REAGENT_BANK=${MODULE_REAGENT_BANK}
       - MODULE_BLACK_MARKET_AUCTION_HOUSE=${MODULE_BLACK_MARKET_AUCTION_HOUSE}
+      - MODULE_CHALLENGE_MODES=${MODULE_CHALLENGE_MODES}
+      - MODULE_OLLAMA_CHAT=${MODULE_OLLAMA_CHAT}
+      - MODULE_PLAYER_BOT_LEVEL_BRACKETS=${MODULE_PLAYER_BOT_LEVEL_BRACKETS}
+      - MODULE_STATBOOSTER=${MODULE_STATBOOSTER}
+      - MODULE_DUNGEON_RESPAWN=${MODULE_DUNGEON_RESPAWN}
+      - MODULE_SKELETON_MODULE=${MODULE_SKELETON_MODULE}
+      - MODULE_BG_SLAVERYVALLEY=${MODULE_BG_SLAVERYVALLEY}
+      - MODULE_AZEROTHSHARD=${MODULE_AZEROTHSHARD}
+      - MODULE_WORGOBLIN=${MODULE_WORGOBLIN}
+      - MODULE_ELUNA_TS=${MODULE_ELUNA_TS}
       - CONTAINER_MYSQL=${CONTAINER_MYSQL}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - DB_AUTH_NAME=${DB_AUTH_NAME}

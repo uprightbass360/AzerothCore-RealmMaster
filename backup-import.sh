@@ -3,10 +3,10 @@
 set -euo pipefail
 
 BACKUP_DIR="${1:-ImportBackup}"
-MYSQL_PW="${MYSQL_ROOT_PASSWORD:-azerothcore123}"
-DB_AUTH="${DB_AUTH_NAME:-acore_auth}"
-DB_CHAR="${DB_CHARACTERS_NAME:-acore_characters}"
-DB_WORLD="${DB_WORLD_NAME:-acore_world}"
+MYSQL_PW="${MYSQL_ROOT_PASSWORD}"
+DB_AUTH="${DB_AUTH_NAME}"
+DB_CHAR="${DB_CHARACTERS_NAME}"
+DB_WORLD="${DB_WORLD_NAME}"
 
 COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
