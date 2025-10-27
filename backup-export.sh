@@ -28,27 +28,26 @@ case "${1:-}" in
   -h|--help) usage; exit 0;;
 esac
 
-MYSQL_PW="$2"
-DB_AUTH="$3"
-DB_CHAR="$4"
-
-# Check if required parameters are provided
-if [[ -z "$MYSQL_PW" ]]; then
-  echo "Error: MySQL password required as second argument." >&2
+# Check if required parameters are provided (minimum 3: password, auth_db, char_db)
+if [[ $# -lt 3 ]]; then
+  echo "Error: Required parameters missing. Usage: ./backup-export.sh [output_dir] <mysql_password> <auth_db> <characters_db>" >&2
   exit 1
 fi
 
-if [[ -z "$DB_AUTH" ]]; then
-  echo "Error: Auth database name required as third argument." >&2
-  exit 1
+# Handle both cases: with and without output_dir parameter
+if [[ $# -eq 3 ]]; then
+  # No output_dir provided, use default
+  DEST_PARENT="."
+  MYSQL_PW="$1"
+  DB_AUTH="$2"
+  DB_CHAR="$3"
+elif [[ $# -ge 4 ]]; then
+  # output_dir provided
+  DEST_PARENT="$1"
+  MYSQL_PW="$2"
+  DB_AUTH="$3"
+  DB_CHAR="$4"
 fi
-
-if [[ -z "$DB_CHAR" ]]; then
-  echo "Error: Characters database name required as fourth argument." >&2
-  exit 1
-fi
-
-DEST_PARENT="${1:-.}"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 DEST_DIR="${DEST_PARENT%/}/ExportBackup_${TIMESTAMP}"
 mkdir -p "$DEST_DIR"

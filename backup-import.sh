@@ -43,31 +43,27 @@ case "${1:-}" in
   -h|--help) usage; exit 0;;
 esac
 
-BACKUP_DIR="${1:-ImportBackup}"
-MYSQL_PW="$2"
-DB_AUTH="$3"
-DB_CHAR="$4"
-DB_WORLD="$5"
-
-# Check if required parameters are provided
-if [[ -z "$MYSQL_PW" ]]; then
-  err "MySQL password required as second argument."
+# Check if required parameters are provided (minimum 4: password, auth_db, char_db, world_db)
+if [[ $# -lt 4 ]]; then
+  err "Required parameters missing. Usage: ./backup-import.sh [backup_dir] <mysql_password> <auth_db> <characters_db> <world_db>"
   exit 1
 fi
 
-if [[ -z "$DB_AUTH" ]]; then
-  err "Auth database name required as third argument."
-  exit 1
-fi
-
-if [[ -z "$DB_CHAR" ]]; then
-  err "Characters database name required as fourth argument."
-  exit 1
-fi
-
-if [[ -z "$DB_WORLD" ]]; then
-  err "World database name required as fifth argument."
-  exit 1
+# Handle both cases: with and without backup_dir parameter
+if [[ $# -eq 4 ]]; then
+  # No backup_dir provided, use default
+  BACKUP_DIR="ImportBackup"
+  MYSQL_PW="$1"
+  DB_AUTH="$2"
+  DB_CHAR="$3"
+  DB_WORLD="$4"
+elif [[ $# -ge 5 ]]; then
+  # backup_dir provided
+  BACKUP_DIR="$1"
+  MYSQL_PW="$2"
+  DB_AUTH="$3"
+  DB_CHAR="$4"
+  DB_WORLD="$5"
 fi
 
 require_file(){
