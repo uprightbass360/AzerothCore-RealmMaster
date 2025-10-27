@@ -147,6 +147,8 @@ ensure_source_repo(){
   if [[ "$src_path" != /* ]]; then
     src_path="$ROOT_DIR/$src_path"
   fi
+  # Normalize path to remove ./ and resolve to absolute path
+  src_path="$(cd "$ROOT_DIR" && realpath -m "$src_path" 2>/dev/null || echo "$src_path")"
   if [ -d "$src_path/.git" ]; then
     echo "$src_path"
     return
