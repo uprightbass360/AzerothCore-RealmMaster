@@ -1489,6 +1489,25 @@ EOF
       rebuild_args+=(--source "$MODULES_REBUILD_SOURCE_PATH_VALUE")
       if ./scripts/rebuild-with-modules.sh "${rebuild_args[@]}"; then
         say SUCCESS "Module rebuild completed"
+
+        # Tag the built images as modules-latest so deploy.sh doesn't require another rebuild
+        if [ "$NEEDS_CXX_REBUILD" = "1" ] || [ "$MODULE_PLAYERBOTS" = "1" ]; then
+          say INFO "Tagging module images for deployment..."
+          local source_auth="$AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE"
+          local source_world="$AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE"
+          local target_auth="$AC_AUTHSERVER_IMAGE_MODULES_VALUE"
+          local target_world="$AC_WORLDSERVER_IMAGE_MODULES_VALUE"
+
+          if docker image inspect "$source_auth" >/dev/null 2>&1; then
+            docker tag "$source_auth" "$target_auth"
+            say SUCCESS "Tagged $target_auth from $source_auth"
+          fi
+
+          if docker image inspect "$source_world" >/dev/null 2>&1; then
+            docker tag "$source_world" "$target_world"
+            say SUCCESS "Tagged $target_world from $source_world"
+          fi
+        fi
       else
         say WARNING "Module rebuild failed; run ./scripts/rebuild-with-modules.sh manually once issues are resolved."
       fi

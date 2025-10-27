@@ -12,7 +12,14 @@ if [ -n "$REQUESTED_TAG" ]; then
   LATEST_URL="https://github.com/wowgaming/client-data/releases/download/${REQUESTED_TAG}/data.zip"
 else
   echo '📡 Fetching latest client data release info...'
-  RELEASE_INFO=$(wget -qO- https://api.github.com/repos/wowgaming/client-data/releases/latest 2>/dev/null)
+  if command -v curl >/dev/null 2>&1; then
+    RELEASE_INFO=$(curl -sL https://api.github.com/repos/wowgaming/client-data/releases/latest 2>/dev/null)
+  elif command -v wget >/dev/null 2>&1; then
+    RELEASE_INFO=$(wget -qO- https://api.github.com/repos/wowgaming/client-data/releases/latest 2>/dev/null)
+  else
+    echo '❌ No download tool available to fetch release info (need curl or wget)'
+    exit 1
+  fi
 
   if [ -n "$RELEASE_INFO" ]; then
     LATEST_URL=$(echo "$RELEASE_INFO" | grep '"browser_download_url":' | grep '\.zip' | cut -d'"' -f4 | head -1)
@@ -84,26 +91,62 @@ if [ ! -f "data.zip" ]; then
            --summary-interval=5 --download-result=hide \
            --console-log-level=warn --show-console-readout=false \
            --dir "$CACHE_DIR" -o "$(basename "$TMP_FILE")" "$LATEST_URL" || {
-      echo '⚠️ aria2c failed, falling back to wget...'
-      wget --progress=dot:giga -O "$TMP_FILE" "$LATEST_URL" 2>&1 | sed 's/^/📊 /' || {
-        echo '❌ wget failed, trying curl...'
+      echo '⚠️ aria2c failed, falling back to curl...'
+      if command -v curl >/dev/null 2>&1; then
         curl -L --progress-bar -o "$TMP_FILE" "$LATEST_URL" || {
+          echo '❌ curl failed, trying wget...'
+          if command -v wget >/dev/null 2>&1; then
+            wget --progress=dot:giga -O "$TMP_FILE" "$LATEST_URL" || {
+              echo '❌ All download methods failed'
+              rm -f "$TMP_FILE"
+              exit 1
+            }
+          else
+            echo '❌ wget not available, all download methods failed'
+            rm -f "$TMP_FILE"
+            exit 1
+          fi
+        }
+      elif command -v wget >/dev/null 2>&1; then
+        wget --progress=dot:giga -O "$TMP_FILE" "$LATEST_URL" || {
           echo '❌ All download methods failed'
           rm -f "$TMP_FILE"
           exit 1
         }
-      }
+      else
+        echo '❌ No fallback download method available'
+        rm -f "$TMP_FILE"
+        exit 1
+      fi
     }
   else
-    echo "📥 Using wget (aria2c not available)..."
-    wget --progress=dot:giga -O "$TMP_FILE" "$LATEST_URL" 2>&1 | sed 's/^/📊 /' || {
-      echo '❌ wget failed, trying curl...'
+    # Try curl first since it's more commonly available in minimal containers
+    if command -v curl >/dev/null 2>&1; then
+      echo "📥 Using curl (aria2c not available)..."
       curl -L --progress-bar -o "$TMP_FILE" "$LATEST_URL" || {
-        echo '❌ All download methods failed'
+        echo '❌ curl failed, trying wget...'
+        if command -v wget >/dev/null 2>&1; then
+          wget --progress=dot:giga -O "$TMP_FILE" "$LATEST_URL" 2>&1 | sed 's/^/📊 /' || {
+            echo '❌ All download methods failed'
+            rm -f "$TMP_FILE"
+            exit 1
+          }
+        else
+          echo '❌ wget not available, all download methods failed'
+          exit 1
+        fi
+      }
+    elif command -v wget >/dev/null 2>&1; then
+      echo "📥 Using wget (aria2c and curl not available)..."
+      wget --progress=dot:giga -O "$TMP_FILE" "$LATEST_URL" 2>&1 | sed 's/^/📊 /' || {
+        echo '❌ wget failed, no other download methods available'
         rm -f "$TMP_FILE"
         exit 1
       }
-    }
+    else
+      echo '❌ No download tool available (tried aria2c, curl, wget)'
+      exit 1
+    fi
   fi
 
   echo "🔍 Verifying download integrity..."
