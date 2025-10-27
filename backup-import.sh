@@ -2,6 +2,11 @@
 # Restore auth and character databases from ImportBackup/ and verify service health.
 set -euo pipefail
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Change to the script directory to ensure relative paths work correctly
+cd "$SCRIPT_DIR"
+
 COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[1;33m'
@@ -35,7 +40,11 @@ Steps performed:
   2. Back up current auth/character DBs to manual-backups/
   3. Import provided dumps
   4. Re-run module SQL to restore customizations
-  5. Restart services and show status summary
+  5. Restart services to reinitialize GUID generators
+  6. Show status summary
+
+Note: Service restart is required to ensure character GUID generators
+are properly updated after importing characters.
 EOF
 }
 
@@ -58,12 +67,17 @@ if [[ $# -eq 4 ]]; then
   DB_CHAR="$3"
   DB_WORLD="$4"
 elif [[ $# -ge 5 ]]; then
-  # backup_dir provided
+  # backup_dir provided - convert to absolute path if relative
   BACKUP_DIR="$1"
   MYSQL_PW="$2"
   DB_AUTH="$3"
   DB_CHAR="$4"
   DB_WORLD="$5"
+fi
+
+# Convert backup directory to absolute path if it's relative
+if [[ ! "$BACKUP_DIR" = /* ]]; then
+  BACKUP_DIR="$SCRIPT_DIR/$BACKUP_DIR"
 fi
 
 require_file(){
@@ -128,10 +142,23 @@ docker compose --profile db --profile modules run --rm \
   --entrypoint /bin/sh ac-modules \
   -c 'apk add --no-cache bash curl >/dev/null && bash /tmp/scripts/manage-modules.sh >/tmp/mm.log && cat /tmp/mm.log' || warn "Module SQL run exited with non-zero status"
 
-log "Restarting services"
-docker start ac-authserver ac-worldserver >/dev/null
+log "Restarting services to reinitialize GUID generators"
+docker restart ac-authserver ac-worldserver >/dev/null
 
-sleep 5
+log "Waiting for services to fully initialize..."
+sleep 10
+
+# Wait for services to be healthy
+for i in {1..30}; do
+  if docker exec ac-worldserver pgrep worldserver >/dev/null 2>&1 && docker exec ac-authserver pgrep authserver >/dev/null 2>&1; then
+    log "Services are running"
+    break
+  fi
+  if [ $i -eq 30 ]; then
+    warn "Services took longer than expected to start"
+  fi
+  sleep 2
+done
 
 count_rows(){
   docker exec ac-mysql mysql -uroot -p"$MYSQL_PW" -N -B -e "$1"
@@ -139,9 +166,14 @@ count_rows(){
 
 ACCOUNTS=$(count_rows "SELECT COUNT(*) FROM ${DB_AUTH}.account;")
 CHARS=$(count_rows "SELECT COUNT(*) FROM ${DB_CHAR}.characters;")
+MAX_GUID=$(count_rows "SELECT COALESCE(MAX(guid), 0) FROM ${DB_CHAR}.characters;")
 
 log "Accounts: $ACCOUNTS"
 log "Characters: $CHARS"
+if [ "$CHARS" -gt 0 ]; then
+  log "Highest character GUID: $MAX_GUID"
+  log "Next new character will receive GUID: $((MAX_GUID + 1))"
+fi
 
 ./status.sh --once || warn "status.sh reported issues; inspect manually."
 

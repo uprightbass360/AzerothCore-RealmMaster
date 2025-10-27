@@ -2,6 +2,11 @@
 # Export auth and character databases to ExportBackup_<timestamp>/
 set -euo pipefail
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Change to the script directory to ensure relative paths work correctly
+cd "$SCRIPT_DIR"
+
 usage(){
   cat <<EOF
 Usage: ./backup-export.sh [output_dir] <mysql_password> <auth_db> <characters_db>
@@ -36,7 +41,7 @@ fi
 
 # Handle both cases: with and without output_dir parameter
 if [[ $# -eq 3 ]]; then
-  # No output_dir provided, use default
+  # No output_dir provided, use current script directory
   DEST_PARENT="."
   MYSQL_PW="$1"
   DB_AUTH="$2"
@@ -48,6 +53,12 @@ elif [[ $# -ge 4 ]]; then
   DB_AUTH="$3"
   DB_CHAR="$4"
 fi
+
+# Convert output directory to absolute path if it's relative
+if [[ ! "$DEST_PARENT" = /* ]]; then
+  DEST_PARENT="$SCRIPT_DIR/$DEST_PARENT"
+fi
+
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 DEST_DIR="${DEST_PARENT%/}/ExportBackup_${TIMESTAMP}"
 mkdir -p "$DEST_DIR"
