@@ -209,7 +209,7 @@ module_summary_list(){
 
 user_stats(){
   if ! container_running "ac-mysql"; then
-    printf "USERS: %sDatabase offline%s\n" "$RED" "$NC"
+    echo -e "USERS: ${RED}Database offline${NC}"
     return
   fi
 
@@ -219,7 +219,7 @@ user_stats(){
   db_characters="$(read_env DB_CHARACTERS_NAME)"
 
   if [ -z "$mysql_pw" ] || [ -z "$db_auth" ] || [ -z "$db_characters" ]; then
-    printf "USERS: %sMissing MySQL configuration in .env%s\n" "$YELLOW" "$NC"
+    echo -e "USERS: ${YELLOW}Missing MySQL configuration in .env${NC}"
     return
   fi
 
