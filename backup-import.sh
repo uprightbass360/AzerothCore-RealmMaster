@@ -2,24 +2,28 @@
 # Restore auth and character databases from ImportBackup/ and verify service health.
 set -euo pipefail
 
-BACKUP_DIR="${1:-ImportBackup}"
-MYSQL_PW="${MYSQL_ROOT_PASSWORD}"
-DB_AUTH="${DB_AUTH_NAME}"
-DB_CHAR="${DB_CHARACTERS_NAME}"
-DB_WORLD="${DB_WORLD_NAME}"
-
 COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[1;33m'
 COLOR_RESET='\033[0m'
 
+log(){ printf '%b\n' "${COLOR_GREEN}$*${COLOR_RESET}"; }
+warn(){ printf '%b\n' "${COLOR_YELLOW}$*${COLOR_RESET}"; }
+err(){ printf '%b\n' "${COLOR_RED}$*${COLOR_RESET}"; }
+
 usage(){
   cat <<EOF
-Usage: ./backup-import.sh [backup_dir]
+Usage: ./backup-import.sh [backup_dir] <mysql_password> <auth_db> <characters_db> <world_db>
 
 Restores user accounts and characters from a backup folder.
 
-Default backup directory: ImportBackup/
+Arguments:
+  [backup_dir] Backup directory (default: ImportBackup/)
+  <mysql_password> MySQL root password (required)
+  <auth_db> Auth database name (required)
+  <characters_db> Characters database name (required)
+  <world_db> World database name (required)
+
 Required files:
   acore_auth.sql or acore_auth.sql.gz
   acore_characters.sql or acore_characters.sql.gz
@@ -39,9 +43,32 @@ case "${1:-}" in
   -h|--help) usage; exit 0;;
 esac
 
-log(){ printf '%b\n' "${COLOR_GREEN}$*${COLOR_RESET}"; }
-warn(){ printf '%b\n' "${COLOR_YELLOW}$*${COLOR_RESET}"; }
-err(){ printf '%b\n' "${COLOR_RED}$*${COLOR_RESET}"; }
+BACKUP_DIR="${1:-ImportBackup}"
+MYSQL_PW="$2"
+DB_AUTH="$3"
+DB_CHAR="$4"
+DB_WORLD="$5"
+
+# Check if required parameters are provided
+if [[ -z "$MYSQL_PW" ]]; then
+  err "MySQL password required as second argument."
+  exit 1
+fi
+
+if [[ -z "$DB_AUTH" ]]; then
+  err "Auth database name required as third argument."
+  exit 1
+fi
+
+if [[ -z "$DB_CHAR" ]]; then
+  err "Characters database name required as fourth argument."
+  exit 1
+fi
+
+if [[ -z "$DB_WORLD" ]]; then
+  err "World database name required as fifth argument."
+  exit 1
+fi
 
 require_file(){
   local file="$1"
