@@ -148,7 +148,14 @@ ensure_source_repo(){
     src_path="$ROOT_DIR/$src_path"
   fi
   # Normalize path to remove ./ and resolve to absolute path
-  src_path="$(cd "$ROOT_DIR" && realpath -m "$src_path" 2>/dev/null || echo "$src_path")"
+  # Use readlink -f if available, fall back to realpath, then manual normalization
+  if command -v readlink >/dev/null 2>&1 && [[ -e "$src_path" || -e "$(dirname "$src_path")" ]]; then
+    src_path="$(readlink -f "$src_path" 2>/dev/null || echo "$src_path")"
+  else
+    src_path="$(cd "$ROOT_DIR" && realpath -m "$src_path" 2>/dev/null || echo "$src_path")"
+  fi
+  # Final fallback: manual ./ removal if all else fails
+  src_path="${src_path//\/.\//\/}"
   if [ -d "$src_path/.git" ]; then
     echo "$src_path"
     return
