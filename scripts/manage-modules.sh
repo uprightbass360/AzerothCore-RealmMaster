@@ -825,7 +825,14 @@ fi
 echo 'Module management complete.'
 
 if [ "$MODULES_LOCAL_RUN" = "1" ]; then
-  REBUILD_SENTINEL="./.requires_rebuild"
+  # When running locally, use local-storage for build state tracking
+  local local_storage_path="${LOCAL_STORAGE_SENTINEL_PATH:-}"
+  if [ -n "$local_storage_path" ]; then
+    REBUILD_SENTINEL="$local_storage_path"
+  else
+    # Fallback to current directory if no path provided (legacy behavior)
+    REBUILD_SENTINEL="./.requires_rebuild"
+  fi
 else
   REBUILD_SENTINEL="/modules/.requires_rebuild"
 fi

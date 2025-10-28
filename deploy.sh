@@ -34,8 +34,8 @@ warn(){ printf '%b\n' "${YELLOW}⚠️  $*${NC}"; }
 err(){ printf '%b\n' "${RED}❌ $*${NC}"; }
 
 show_deployment_header(){
-  printf '\n%b\n' "${BLUE}⚔️  AZEROTHCORE REALM DEPLOYMENT  ⚔️${NC}"
-  printf '%b\n' "${BLUE}════════════════════════════════════════${NC}"
+  printf '\n%b\n' "${BLUE}⚔️  AZEROTHCORE REALM DEPLOYMENT ⚔️${NC}"
+  printf '%b\n' "${BLUE}═══════════════════════════════════════${NC}"
   printf '%b\n\n' "${BLUE}🏰 Bringing Your Realm Online 🏰${NC}"
 }
 
@@ -175,7 +175,7 @@ stop_runtime_stack(){
 # Deployment sentinel management
 mark_deployment_complete(){
   local storage_path
-  storage_path="$(read_env STORAGE_PATH "./storage")"
+  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
     storage_path="$ROOT_DIR/$storage_path"
   fi
@@ -186,7 +186,7 @@ mark_deployment_complete(){
 
 modules_need_rebuild(){
   local storage_path
-  storage_path="$(read_env STORAGE_PATH "./storage")"
+  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
     storage_path="$ROOT_DIR/$storage_path"
   fi
@@ -196,12 +196,15 @@ modules_need_rebuild(){
 
 # Build prompting logic
 prompt_build_if_needed(){
-  local build_reasons
-  readarray -t build_reasons < <(detect_build_needed)
+  local build_reasons_output
+  build_reasons_output=$(detect_build_needed)
 
-  if [ ${#build_reasons[@]} -eq 0 ]; then
+  if [ -z "$build_reasons_output" ]; then
     return 0  # No build needed
   fi
+
+  local build_reasons
+  readarray -t build_reasons <<< "$build_reasons_output"
 
   # Check if auto-rebuild is enabled
   local auto_rebuild

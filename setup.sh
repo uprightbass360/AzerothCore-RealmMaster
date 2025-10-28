@@ -1107,7 +1107,7 @@ fi
     fi
 
     # Set build sentinel to indicate rebuild is needed
-    local storage_abs="$STORAGE_PATH"
+    local storage_abs="$STORAGE_PATH_LOCAL"
     if [[ "$storage_abs" != /* ]]; then
       storage_abs="$(cd "$(dirname "$0")" && pwd)/$storage_abs"
     fi

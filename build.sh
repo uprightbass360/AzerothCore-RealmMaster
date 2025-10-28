@@ -207,7 +207,7 @@ ensure_source_repo(){
 # Build state detection (extracted from setup.sh and deploy.sh)
 modules_need_rebuild(){
   local storage_path
-  storage_path="$(read_env STORAGE_PATH "./storage")"
+  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
     storage_path="$ROOT_DIR/$storage_path"
   fi
@@ -375,6 +375,14 @@ stage_modules(){
 
   local host_modules_dir="${storage_path}/modules"
   export MODULES_HOST_DIR="$host_modules_dir"
+
+  # Set up local storage path for build sentinel tracking
+  local local_storage_path
+  local_storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
+  if [[ "$local_storage_path" != /* ]]; then
+    local_storage_path="$ROOT_DIR/$local_storage_path"
+  fi
+  export LOCAL_STORAGE_SENTINEL_PATH="$local_storage_path/modules/.requires_rebuild"
 
   # Prepare isolated git config for the module script
   local prev_git_config_global="${GIT_CONFIG_GLOBAL:-}"
@@ -556,7 +564,7 @@ main(){
 
   # Clear build sentinel after successful build
   local storage_path
-  storage_path="$(read_env STORAGE_PATH "./storage")"
+  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
     storage_path="$ROOT_DIR/$storage_path"
   fi
