@@ -189,15 +189,15 @@ ensure_source_repo(){
     exit 1
   fi
 
-  warn "AzerothCore source not found at $src_path; running setup-source.sh"
-  if ! (cd "$ROOT_DIR" && ./scripts/setup-source.sh); then
-    err "Failed to setup source repository"
+  warn "AzerothCore source not found at $src_path; running setup-source.sh" >&2
+  if ! (cd "$ROOT_DIR" && ./scripts/setup-source.sh) >&2; then
+    err "Failed to setup source repository" >&2
     exit 1
   fi
 
   # Verify the source was actually created
   if [ ! -d "$src_path/.git" ]; then
-    err "Source repository setup failed - no git directory at $src_path"
+    err "Source repository setup failed - no git directory at $src_path" >&2
     exit 1
   fi
 
