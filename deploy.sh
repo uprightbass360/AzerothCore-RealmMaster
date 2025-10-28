@@ -14,7 +14,6 @@ ENV_PATH="$ROOT_DIR/.env"
 TARGET_PROFILE=""
 WATCH_LOGS=1
 KEEP_RUNNING=0
-SKIP_REBUILD=0
 WORLD_LOG_SINCE=""
 ASSUME_YES=0
 
@@ -58,23 +57,20 @@ Usage: $(basename "$0") [options]
 Options:
   --profile {standard|playerbots|modules}  Force target profile (default: auto-detect)
   --no-watch                               Do not tail worldserver logs after staging
-  --keep-running                           Do not pre-stop runtime stack before rebuild
-  --skip-rebuild                           Skip source rebuild even if modules require it
-  --yes, -y                                Auto-confirm deployment and rebuild prompts
+  --keep-running                           Do not pre-stop runtime stack
+  --yes, -y                                Auto-confirm deployment prompts
   --watch-logs                             Tail worldserver logs even if --no-watch was set earlier
   --log-tail LINES                         Override WORLD_LOG_TAIL (number of log lines to show)
   --once                                   Run status checks once (alias for --no-watch)
   -h, --help                               Show this help
 
-This command automates the module workflow: sync modules, rebuild source if needed,
-stage the correct compose profile, and optionally watch worldserver logs.
+This command automates deployment: sync modules, stage the correct compose profile,
+and optionally watch worldserver logs.
 
-Rebuild Detection:
-The script automatically detects when a module rebuild is required by checking:
-• Module changes (sentinel file .requires_rebuild)
-• C++ modules enabled but modules-latest Docker images missing
-
-Set AUTO_REBUILD_ON_DEPLOY=1 in .env to skip rebuild prompts and auto-rebuild.
+Image Requirements:
+This script assumes Docker images are already built. If you have custom modules:
+• Run './build.sh' first to build custom images
+• Standard AzerothCore images will be pulled automatically
 EOF
 }
 
@@ -83,7 +79,6 @@ while [[ $# -gt 0 ]]; do
     --profile) TARGET_PROFILE="$2"; shift 2;;
     --no-watch) WATCH_LOGS=0; shift;;
     --keep-running) KEEP_RUNNING=1; shift;;
-    --skip-rebuild) SKIP_REBUILD=1; shift;;
     --yes|-y) ASSUME_YES=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
@@ -128,79 +123,8 @@ compose(){
   docker compose --project-name "$project_name" -f "$COMPOSE_FILE" "$@"
 }
 
-ensure_source_repo(){
-  local use_playerbot_source=0
-  if requires_playerbot_source; then
-    use_playerbot_source=1
-  fi
-  local local_root
-  local_root="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
-  local_root="${local_root%/}"
-  [ -z "$local_root" ] && local_root="."
-  local default_source="${local_root}/source/azerothcore"
-  if [ "$use_playerbot_source" = "1" ]; then
-    default_source="${local_root}/source/azerothcore-playerbots"
-  fi
-
-  local src_path
-  src_path="$(read_env MODULES_REBUILD_SOURCE_PATH "$default_source")"
-  if [[ "$src_path" != /* ]]; then
-    src_path="$ROOT_DIR/$src_path"
-  fi
-  # Normalize path to remove ./ and resolve to absolute path
-  # Use readlink -f if available, fall back to realpath, then manual normalization
-  if command -v readlink >/dev/null 2>&1 && [[ -e "$src_path" || -e "$(dirname "$src_path")" ]]; then
-    src_path="$(readlink -f "$src_path" 2>/dev/null || echo "$src_path")"
-  else
-    src_path="$(cd "$ROOT_DIR" && realpath -m "$src_path" 2>/dev/null || echo "$src_path")"
-  fi
-  # Final fallback: manual ./ removal if all else fails
-  src_path="${src_path//\/.\//\/}"
-  if [ -d "$src_path/.git" ]; then
-    echo "$src_path"
-    return
-  fi
-  warn "AzerothCore source not found at $src_path; running setup-source.sh"
-  (cd "$ROOT_DIR" && ./scripts/setup-source.sh)
-  echo "$src_path"
-}
-
-stop_runtime_stack(){
-  info "Stopping runtime stack to avoid container name conflicts"
-  compose \
-    --profile services-standard \
-    --profile services-playerbots \
-    --profile services-modules \
-    --profile db \
-    --profile client-data \
-    --profile client-data-bots \
-    --profile modules \
-    down 2>/dev/null || true
-}
-
-sync_modules(){
-  info "Synchronising modules (ac-modules)"
-  compose --profile db --profile modules up ac-modules
-  compose --profile db --profile modules down >/dev/null 2>&1 || true
-}
-
-modules_need_rebuild(){
-  local storage_path
-  storage_path="$(read_env STORAGE_PATH "./storage")"
-  if [[ "$storage_path" != /* ]]; then
-    storage_path="$ROOT_DIR/$storage_path"
-  fi
-  local sentinel="$storage_path/modules/.requires_rebuild"
-  [[ -f "$sentinel" ]]
-}
-
-check_auto_rebuild_setting(){
-  local auto_rebuild
-  auto_rebuild="$(read_env AUTO_REBUILD_ON_DEPLOY "0")"
-  [[ "$auto_rebuild" = "1" ]]
-}
-
-detect_rebuild_reasons(){
+# Build detection logic
+detect_build_needed(){
   local reasons=()
 
   # Check sentinel file
@@ -235,72 +159,98 @@ detect_rebuild_reasons(){
   printf '%s\n' "${reasons[@]}"
 }
 
-requires_playerbot_source(){
-  if [ "$(read_env MODULE_PLAYERBOTS "0")" = "1" ]; then
-    return 0
-  fi
-  local var
-  for var in "${COMPILE_MODULE_VARS[@]}"; do
-    if [ "$(read_env "$var" "0")" = "1" ]; then
-      return 0
-    fi
-  done
-  return 1
+stop_runtime_stack(){
+  info "Stopping runtime stack to avoid container name conflicts"
+  compose \
+    --profile services-standard \
+    --profile services-playerbots \
+    --profile services-modules \
+    --profile db \
+    --profile client-data \
+    --profile client-data-bots \
+    --profile modules \
+    down 2>/dev/null || true
 }
 
-confirm_rebuild(){
-  local reasons=("$@")
+# Deployment sentinel management
+mark_deployment_complete(){
+  local storage_path
+  storage_path="$(read_env STORAGE_PATH "./storage")"
+  if [[ "$storage_path" != /* ]]; then
+    storage_path="$ROOT_DIR/$storage_path"
+  fi
+  local sentinel="$storage_path/modules/.last_deployed"
+  mkdir -p "$(dirname "$sentinel")"
+  date > "$sentinel"
+}
 
-  if [ ${#reasons[@]} -eq 0 ]; then
-    return 1  # No rebuild needed
+modules_need_rebuild(){
+  local storage_path
+  storage_path="$(read_env STORAGE_PATH "./storage")"
+  if [[ "$storage_path" != /* ]]; then
+    storage_path="$ROOT_DIR/$storage_path"
+  fi
+  local sentinel="$storage_path/modules/.requires_rebuild"
+  [[ -f "$sentinel" ]]
+}
+
+# Build prompting logic
+prompt_build_if_needed(){
+  local build_reasons
+  readarray -t build_reasons < <(detect_build_needed)
+
+  if [ ${#build_reasons[@]} -eq 0 ]; then
+    return 0  # No build needed
   fi
 
+  # Check if auto-rebuild is enabled
+  local auto_rebuild
+  auto_rebuild="$(read_env AUTO_REBUILD_ON_DEPLOY "0")"
+  if [ "$auto_rebuild" = "1" ]; then
+    warn "Auto-rebuild enabled, running build process..."
+    if (cd "$ROOT_DIR" && ./build.sh --yes); then
+      ok "Build completed successfully"
+      return 0
+    else
+      err "Build failed"
+      return 1
+    fi
+  fi
+
+  # Interactive prompt
   echo
-  warn "Module rebuild appears to be required:"
+  warn "Build appears to be required:"
   local reason
-  for reason in "${reasons[@]}"; do
+  for reason in "${build_reasons[@]}"; do
     warn "  • $reason"
   done
   echo
 
-  # Check auto-rebuild setting
-  if check_auto_rebuild_setting; then
-    info "AUTO_REBUILD_ON_DEPLOY is enabled; proceeding with automatic rebuild."
-    return 0
-  fi
-
-  # Skip prompt if --yes flag is provided
-  if [ "$ASSUME_YES" -eq 1 ]; then
-    info "Auto-confirming rebuild (--yes supplied)."
-    return 0
-  fi
-
-  # Interactive prompt
-  info "This will rebuild AzerothCore from source with your enabled modules."
-  warn "⏱️  This process typically takes 15-45 minutes depending on your system."
-  echo
   if [ -t 0 ]; then
     local reply
-    read -r -p "Proceed with module rebuild? [y/N]: " reply
+    read -r -p "Run './build.sh' now? [y/N]: " reply
     reply="${reply:-n}"
     case "$reply" in
       [Yy]*)
-        info "Rebuild confirmed."
-        return 0
+        if (cd "$ROOT_DIR" && ./build.sh --yes); then
+          ok "Build completed successfully"
+          return 0
+        else
+          err "Build failed"
+          return 1
+        fi
         ;;
       *)
-        warn "Rebuild declined. You can:"
-        warn "  • Run with --skip-rebuild to deploy without rebuilding"
-        warn "  • Set AUTO_REBUILD_ON_DEPLOY=1 in .env for automatic rebuilds"
-        warn "  • Run './scripts/rebuild-with-modules.sh' manually later"
+        err "Build required but declined. Run './build.sh' manually before deploying."
         return 1
         ;;
     esac
   else
-    warn "Standard input is not interactive; use --yes to auto-confirm or --skip-rebuild to skip."
+    err "Build required but running non-interactively. Run './build.sh' first."
     return 1
   fi
 }
+
 
 determine_profile(){
   if [ -n "$TARGET_PROFILE" ]; then
@@ -328,53 +278,6 @@ determine_profile(){
   echo "standard"
 }
 
-rebuild_source(){
-  local src_dir="$1"
-  local compose_file="$src_dir/docker-compose.yml"
-  if [ ! -f "$compose_file" ]; then
-    warn "Source docker-compose.yml missing at $compose_file; running setup-source.sh"
-    (cd "$ROOT_DIR" && ./scripts/setup-source.sh)
-  fi
-  if [ ! -f "$compose_file" ]; then
-    err "Source docker-compose.yml missing at $compose_file"
-    return 1
-  fi
-  info "Rebuilding AzerothCore source with modules (this may take a while)"
-  docker compose -f "$compose_file" down --remove-orphans >/dev/null 2>&1 || true
-  if (cd "$ROOT_DIR" && ./scripts/rebuild-with-modules.sh --yes); then
-    ok "Source rebuild completed"
-  else
-    err "Source rebuild failed"
-    return 1
-  fi
-  docker compose -f "$compose_file" down --remove-orphans >/dev/null 2>&1 || true
-}
-
-tag_module_images(){
-  local source_auth
-  local source_world
-  local target_auth
-  local target_world
-
-  source_auth="$(read_env AC_AUTHSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot")"
-  source_world="$(read_env AC_WORLDSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot")"
-  target_auth="$(read_env AC_AUTHSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:authserver-modules-latest")"
-  target_world="$(read_env AC_WORLDSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest")"
-
-  if docker image inspect "$source_auth" >/dev/null 2>&1; then
-    docker tag "$source_auth" "$target_auth"
-    ok "Tagged $target_auth from $source_auth"
-  else
-    warn "Source authserver image $source_auth not found; skipping modules tag"
-  fi
-
-  if docker image inspect "$source_world" >/dev/null 2>&1; then
-    docker tag "$source_world" "$target_world"
-    ok "Tagged $target_world from $source_world"
-  else
-    warn "Source worldserver image $source_world not found; skipping modules tag"
-  fi
-}
 
 stage_runtime(){
   local args=(--yes)
@@ -401,7 +304,8 @@ tail_world_logs(){
 wait_for_worldserver_ready(){
   local timeout="${WORLD_READY_TIMEOUT:-180}" start
   start="$(date +%s)"
-  info "Waiting for worldserver to become healthy (timeout: ${timeout}s)"
+  info "Waiting for worldserver to become ready (timeout: ${timeout}s)"
+  info "First deployment may take 10-15 minutes while client-data is extracted"
   while true; do
     if ! docker ps --format '{{.Names}}' | grep -qx "ac-worldserver"; then
       info "Worldserver container is not running yet; retrying..."
@@ -422,13 +326,14 @@ wait_for_worldserver_ready(){
           fi
           ;;
         unhealthy)
-          warn "Worldserver healthcheck reports unhealthy; logs recommended"
-          return 1
+          info "Worldserver starting up - waiting for client-data to complete..."
+          info "This may take several minutes on first deployment while data files are extracted"
           ;;
       esac
     fi
     if [ $(( $(date +%s) - start )) -ge "$timeout" ]; then
-      warn "Timed out waiting for worldserver health"
+      info "Worldserver is still starting up after ${timeout}s. This is normal for first deployments."
+      info "Client-data extraction can take 10-15 minutes. Check progress with './status.sh' or container logs."
       return 1
     fi
     sleep 3
@@ -454,56 +359,26 @@ main(){
 
   show_deployment_header
 
-  local src_dir
   local resolved_profile
-  show_step 1 5 "Setting up source repository"
-  src_dir="$(ensure_source_repo)"
-
   resolved_profile="$(determine_profile)"
 
+  show_step 1 4 "Checking build requirements"
+  if ! prompt_build_if_needed; then
+    err "Build required but not completed. Deployment cancelled."
+    exit 1
+  fi
+
   if [ "$KEEP_RUNNING" -ne 1 ]; then
-    show_step 2 5 "Stopping runtime stack"
+    show_step 2 4 "Stopping runtime stack"
     stop_runtime_stack
   fi
 
-  show_step 3 5 "Syncing modules"
-  sync_modules
-
-  local did_rebuild=0
-  local rebuild_reasons
-  readarray -t rebuild_reasons < <(detect_rebuild_reasons)
-
-  if [ ${#rebuild_reasons[@]} -gt 0 ]; then
-    if [ "$SKIP_REBUILD" -eq 1 ]; then
-      warn "Modules require rebuild, but --skip-rebuild was provided:"
-      local reason
-      for reason in "${rebuild_reasons[@]}"; do
-        warn "  • $reason"
-      done
-      warn "Proceeding without rebuild; deployment may fail if modules-latest images are missing."
-    else
-      if confirm_rebuild "${rebuild_reasons[@]}"; then
-        show_step 4 5 "Building realm with modules (this may take 15-45 minutes)"
-        rebuild_source "$src_dir"
-        did_rebuild=1
-      else
-        err "Rebuild required but declined. Use --skip-rebuild to force deployment without rebuild."
-        exit 1
-      fi
-    fi
-  else
-    info "No module rebuild required."
-  fi
-
-  if [ "$did_rebuild" -eq 1 ]; then
-    tag_module_images
-  elif [ "$resolved_profile" = "modules" ]; then
-    tag_module_images
-  fi
-
-  show_step 5 5 "Bringing your realm online"
+  show_step 3 4 "Bringing your realm online"
   info "Pulling images and waiting for containers to become healthy; this may take a few minutes on first deploy."
   stage_runtime
+
+  show_step 4 4 "Finalizing deployment"
+  mark_deployment_complete
 
   show_realm_ready
 
@@ -512,7 +387,8 @@ main(){
       info "Watching your realm come to life (Ctrl+C to stop watching)"
       tail_world_logs
     else
-      warn "Skipping log tail; worldserver not healthy. Use './status.sh --once' or 'docker logs ac-worldserver'."
+      info "Worldserver still initializing. Client-data extraction may still be in progress."
+      info "Use './status.sh' to monitor progress or 'docker logs ac-worldserver' to view startup logs."
     fi
   else
     ok "Realm deployment completed. Use './status.sh' to monitor your realm."
