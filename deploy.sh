@@ -117,10 +117,24 @@ resolve_project_name(){
   echo "$sanitized"
 }
 
+filter_empty_lines(){
+  awk '
+    /^[[:space:]]*$/ {
+      empty_count++
+      if (empty_count <= 1) print
+    }
+    /[^[:space:]]/ {
+      empty_count = 0
+      print
+    }
+  '
+}
+
 compose(){
   local project_name
   project_name="$(resolve_project_name)"
-  docker compose --project-name "$project_name" -f "$COMPOSE_FILE" "$@"
+  # Add --quiet for less verbose output, filter excessive empty lines
+  docker compose --project-name "$project_name" -f "$COMPOSE_FILE" "$@" | filter_empty_lines
 }
 
 # Build detection logic
@@ -231,7 +245,7 @@ prompt_build_if_needed(){
 
   if [ -t 0 ]; then
     local reply
-    read -r -p "Run './build.sh' now? [y/N]: " reply
+    read -r -p "Run build now? [y/N]: " reply
     reply="${reply:-n}"
     case "$reply" in
       [Yy]*)
@@ -244,12 +258,12 @@ prompt_build_if_needed(){
         fi
         ;;
       *)
-        err "Build required but declined. Run './build.sh' manually before deploying."
+        err "Build required but declined. Run './build.sh' manually before deploying or re-run this script."
         return 1
         ;;
     esac
   else
-    err "Build required but running non-interactively. Run './build.sh' first."
+    err "Build required but running non-interactively. Run './build.sh'  manually before deploying or re-run this script."
     return 1
   fi
 }

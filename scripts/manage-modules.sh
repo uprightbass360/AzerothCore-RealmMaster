@@ -701,6 +701,8 @@ elif [ -f "/tmp/scripts/manage-modules-sql.sh" ]; then
   . /tmp/scripts/manage-modules-sql.sh
 else
   echo "⚠️  SQL helper not found, skipping module SQL execution"
+  echo "If you are seeing this during build this is normal"
+
 fi
 
 # Execute SQLs for enabled modules (via helper)
@@ -826,7 +828,7 @@ echo 'Module management complete.'
 
 if [ "$MODULES_LOCAL_RUN" = "1" ]; then
   # When running locally, use local-storage for build state tracking
-  local local_storage_path="${LOCAL_STORAGE_SENTINEL_PATH:-}"
+  local_storage_path="${LOCAL_STORAGE_SENTINEL_PATH:-}"
   if [ -n "$local_storage_path" ]; then
     REBUILD_SENTINEL="$local_storage_path"
   else
