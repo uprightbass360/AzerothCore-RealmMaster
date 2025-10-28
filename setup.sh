@@ -393,7 +393,6 @@ main(){
   local CLI_PLAYERBOT_ENABLED=""
   local CLI_PLAYERBOT_MAX=""
   local CLI_AUTO_REBUILD=0
-  local CLI_RUN_REBUILD=0
   local CLI_MODULES_SOURCE=""
   local FORCE_OVERWRITE=0
   local CLI_ENABLE_MODULES_RAW=()
@@ -433,7 +432,6 @@ Options:
   --playerbot-enabled 0|1         Override PLAYERBOT_ENABLED flag
   --playerbot-max-bots N          Override PLAYERBOT_MAX_BOTS value
   --auto-rebuild-on-deploy        Enable automatic rebuild during deploys
-  --run-rebuild-now               Trigger module rebuild after setup completes
   --modules-rebuild-source PATH   Source checkout used for module rebuilds
   --deploy-after                  Run ./deploy.sh automatically after setup completes
   --force                         Overwrite existing .env without prompting
@@ -579,10 +577,6 @@ EOF
         ;;
       --auto-rebuild-on-deploy)
         CLI_AUTO_REBUILD=1
-        shift
-        ;;
-      --run-rebuild-now)
-        CLI_RUN_REBUILD=1
         shift
         ;;
       --modules-rebuild-source)
@@ -938,7 +932,6 @@ fi
 
   local AUTO_REBUILD_ON_DEPLOY=$CLI_AUTO_REBUILD
   local MODULES_REBUILD_SOURCE_PATH_VALUE="${CLI_MODULES_SOURCE}"
-  local RUN_REBUILD_NOW=$CLI_RUN_REBUILD
   local NEEDS_CXX_REBUILD=0
 
   local module_mode_label=""
@@ -1106,26 +1099,22 @@ fi
   if [ "$NEEDS_CXX_REBUILD" = "1" ]; then
     echo ""
     say WARNING "These modules require compiling AzerothCore from source."
-    if [ "$CLI_RUN_REBUILD" = "1" ]; then
-      RUN_REBUILD_NOW=1
-    else
-      RUN_REBUILD_NOW=$(ask_yn "Run module rebuild immediately?" n)
-    fi
+    say INFO "Run './build.sh' to compile your custom modules before deployment."
     if [ "$CLI_AUTO_REBUILD" = "1" ]; then
       AUTO_REBUILD_ON_DEPLOY=1
     else
       AUTO_REBUILD_ON_DEPLOY=$(ask_yn "Enable automatic rebuild during future deploys?" "$( [ "$AUTO_REBUILD_ON_DEPLOY" = "1" ] && echo y || echo n )")
     fi
-    if [ "$RUN_REBUILD_NOW" = "1" ] || [ "$AUTO_REBUILD_ON_DEPLOY" = "1" ]; then
-      if [ -z "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
-        if [ "$MODULE_PLAYERBOTS" = "1" ]; then
-          MODULES_REBUILD_SOURCE_PATH_VALUE="${LOCAL_STORAGE_ROOT}/source/azerothcore-playerbots"
-        else
-          MODULES_REBUILD_SOURCE_PATH_VALUE="${LOCAL_STORAGE_ROOT}/source/azerothcore"
-        fi
-        say INFO "Using default source path: ${MODULES_REBUILD_SOURCE_PATH_VALUE}"
-      fi
+
+    # Set build sentinel to indicate rebuild is needed
+    local storage_abs="$STORAGE_PATH_LOCAL"
+    if [[ "$storage_abs" != /* ]]; then
+      storage_abs="$(cd "$(dirname "$0")" && pwd)/$storage_abs"
     fi
+    local sentinel="$storage_abs/modules/.requires_rebuild"
+    mkdir -p "$(dirname "$sentinel")"
+    touch "$sentinel"
+    say INFO "Build sentinel created at $sentinel"
   fi
 
   local default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore"
@@ -1150,84 +1139,6 @@ fi
 
   # Module staging will be handled directly in the rebuild section below
 
-  if [ "$RUN_REBUILD_NOW" = "1" ]; then
-    local default_source_path="$default_source_rel"
-    local rebuild_source_path="${MODULES_REBUILD_SOURCE_PATH_VALUE:-$default_source_path}"
-    MODULES_REBUILD_SOURCE_PATH_VALUE="$rebuild_source_path"
-    export MODULES_REBUILD_SOURCE_PATH="$MODULES_REBUILD_SOURCE_PATH_VALUE"
-    if [ ! -f "$rebuild_source_path/docker-compose.yml" ]; then
-      say INFO "Preparing source repository via scripts/setup-source.sh (progress will stream below)"
-      if ! ( set -o pipefail; ./scripts/setup-source.sh 2>&1 | while IFS= read -r line; do
-        say INFO "[setup-source]" "$line"
-      done ); then
-        say WARNING "Source setup encountered issues; running interactively."
-        if ! ./scripts/setup-source.sh; then
-          say WARNING "Source setup failed; skipping automatic rebuild."
-          RUN_REBUILD_NOW=0
-        fi
-      fi
-    fi
-
-    # Stage modules to local source directory before compilation
-    if [ "$NEEDS_CXX_REBUILD" = "1" ]; then
-      say INFO "Staging module repositories to local source directory..."
-      local local_modules_dir="${rebuild_source_path}/modules"
-      mkdir -p "$local_modules_dir"
-
-      # Export module variables for the script
-      local module_export_var
-      for module_export_var in "${KNOWN_MODULE_VARS[@]}"; do
-        export "$module_export_var"
-      done
-
-      local host_modules_dir="${storage_abs}/modules"
-      export MODULES_HOST_DIR="$host_modules_dir"
-
-      # Prepare isolated git config for the module script so we do not mutate user-level settings
-      local prev_git_config_global="${GIT_CONFIG_GLOBAL:-}"
-      local git_temp_config=""
-      if command -v mktemp >/dev/null 2>&1; then
-        if ! git_temp_config="$(mktemp)"; then
-          git_temp_config=""
-        fi
-      fi
-      if [ -z "$git_temp_config" ]; then
-        git_temp_config="$local_modules_dir/.gitconfig.tmp"
-        : > "$git_temp_config"
-      fi
-      export GIT_CONFIG_GLOBAL="$git_temp_config"
-
-      # Run module staging script in local modules directory
-      # Set environment variable to indicate we're running locally
-      export MODULES_LOCAL_RUN=1
-      if [ -n "$host_modules_dir" ]; then
-        mkdir -p "$host_modules_dir"
-        rm -f "$host_modules_dir/.modules_state" "$host_modules_dir/.requires_rebuild" 2>/dev/null || true
-      fi
-
-      if (cd "$local_modules_dir" && bash "$SCRIPT_DIR/scripts/manage-modules.sh"); then
-        say SUCCESS "Module repositories staged to $local_modules_dir"
-        if [ -n "$host_modules_dir" ]; then
-          if [ -f "$local_modules_dir/.modules_state" ]; then
-            cp "$local_modules_dir/.modules_state" "$host_modules_dir/.modules_state" 2>/dev/null || true
-          fi
-        fi
-      else
-        say WARNING "Module staging encountered issues, but continuing with rebuild"
-      fi
-      unset MODULES_LOCAL_RUN
-      unset MODULES_HOST_DIR
-
-      if [ -n "$git_temp_config" ]; then
-        rm -f "$git_temp_config"
-      fi
-      if [ -n "$prev_git_config_global" ]; then
-        export GIT_CONFIG_GLOBAL="$prev_git_config_global"
-      else
-        unset GIT_CONFIG_GLOBAL
-      fi
-    fi
-  fi
 
   # Confirm write
 
@@ -1481,48 +1392,13 @@ EOF
   say SUCCESS ".env written to $ENV_OUT"
   show_realm_configured
 
-  if [ "$RUN_REBUILD_NOW" = "1" ]; then
-    echo ""
-    say HEADER "MODULE REBUILD"
-    if [ -n "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
-      local rebuild_args=(--yes --skip-stop)
-      rebuild_args+=(--source "$MODULES_REBUILD_SOURCE_PATH_VALUE")
-      if ./scripts/rebuild-with-modules.sh "${rebuild_args[@]}"; then
-        say SUCCESS "Module rebuild completed"
-
-        # Tag the built images as modules-latest so deploy.sh doesn't require another rebuild
-        if [ "$NEEDS_CXX_REBUILD" = "1" ] || [ "$MODULE_PLAYERBOTS" = "1" ]; then
-          say INFO "Tagging module images for deployment..."
-          local source_auth="$AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE"
-          local source_world="$AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE"
-          local target_auth="$AC_AUTHSERVER_IMAGE_MODULES_VALUE"
-          local target_world="$AC_WORLDSERVER_IMAGE_MODULES_VALUE"
-
-          if docker image inspect "$source_auth" >/dev/null 2>&1; then
-            docker tag "$source_auth" "$target_auth"
-            say SUCCESS "Tagged $target_auth from $source_auth"
-          fi
-
-          if docker image inspect "$source_world" >/dev/null 2>&1; then
-            docker tag "$source_world" "$target_world"
-            say SUCCESS "Tagged $target_world from $source_world"
-          fi
-        fi
-      else
-        say WARNING "Module rebuild failed; run ./scripts/rebuild-with-modules.sh manually once issues are resolved."
-      fi
-    else
-      say WARNING "Rebuild path was not provided; skipping automatic rebuild."
-    fi
-  fi
 
   say INFO "Ready to bring your realm online:"
-  if [ "$MODULE_PLAYERBOTS" = "1" ]; then
-    printf '  🚀 Quick deploy: ./deploy.sh\n'
-    printf '  🔧 Manual: docker compose --profile db --profile services-playerbots --profile client-data-bots --profile modules up -d\n'
+  if [ "$NEEDS_CXX_REBUILD" = "1" ]; then
+    printf '  🔨 First, build custom modules: ./build.sh\n'
+    printf '  🚀 Then deploy your realm: ./deploy.sh\n'
   else
     printf '  🚀 Quick deploy: ./deploy.sh\n'
-    printf '  🔧 Manual: docker compose --profile db --profile services-standard --profile client-data --profile modules up -d\n'
   fi
 
   if [ "${CLI_DEPLOY_AFTER:-0}" = "1" ]; then

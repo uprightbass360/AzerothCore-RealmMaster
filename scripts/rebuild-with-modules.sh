@@ -128,8 +128,13 @@ STORAGE_PATH="$(read_env STORAGE_PATH "./storage")"
 if [[ "$STORAGE_PATH" != /* ]]; then
   STORAGE_PATH="$PROJECT_DIR/${STORAGE_PATH#./}"
 fi
+# Build sentinel is tracked in local storage
+LOCAL_STORAGE_PATH="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
+if [[ "$LOCAL_STORAGE_PATH" != /* ]]; then
+  LOCAL_STORAGE_PATH="$PROJECT_DIR/$LOCAL_STORAGE_PATH"
+fi
 MODULES_DIR="$STORAGE_PATH/modules"
-SENTINEL_FILE="$MODULES_DIR/.requires_rebuild"
+SENTINEL_FILE="$LOCAL_STORAGE_PATH/modules/.requires_rebuild"
 
 STORAGE_PATH_ABS="$STORAGE_PATH"
 
@@ -166,11 +171,11 @@ SHARED_MODULES_DIR="$STORAGE_PATH/modules"
 if [ -d "$LOCAL_MODULES_DIR" ]; then
   echo "🔧 Using modules from source directory: $LOCAL_MODULES_DIR"
   MODULES_DIR="$LOCAL_MODULES_DIR"
-  SENTINEL_FILE="$LOCAL_MODULES_DIR/.requires_rebuild"
+  # Build sentinel always stays in local storage for consistency
 else
   echo "🔧 Using modules from shared storage: $SHARED_MODULES_DIR"
   MODULES_DIR="$SHARED_MODULES_DIR"
-  SENTINEL_FILE="$SHARED_MODULES_DIR/.requires_rebuild"
+  # Build sentinel always stays in local storage for consistency
 fi
 
 SOURCE_COMPOSE="$REBUILD_SOURCE_PATH/docker-compose.yml"
