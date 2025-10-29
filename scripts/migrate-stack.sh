@@ -213,12 +213,37 @@ if [[ $SKIP_STORAGE -eq 0 ]]; then
   if [[ -d storage ]]; then
     echo "⋅ Syncing storage to remote"
     run_ssh "mkdir -p '$REMOTE_STORAGE'"
-    find storage -mindepth 1 -maxdepth 1 -print0 | xargs -0 -I{} scp "${SCP_OPTS[@]}" -r '{}' "$USER@$HOST:$REMOTE_STORAGE/"
+    while IFS= read -r -d '' entry; do
+      base_name="$(basename "$entry")"
+      if [[ "$base_name" = modules ]]; then
+        continue
+      fi
+      if [ -L "$entry" ]; then
+        target_path="$(readlink -f "$entry")"
+        run_scp "$target_path" "$USER@$HOST:$REMOTE_STORAGE/$base_name"
+      else
+        run_scp -r "$entry" "$USER@$HOST:$REMOTE_STORAGE/"
+      fi
+    done < <(find storage -mindepth 1 -maxdepth 1 -print0)
   else
     echo "⋅ Skipping storage sync (storage/ missing)"
   fi
 else
   echo "⋅ Skipping storage sync"
+fi
+
+if [[ $SKIP_STORAGE -eq 0 ]]; then
+  LOCAL_MODULES_DIR="${LOCAL_STORAGE_ROOT}/modules"
+  if [[ -d "$LOCAL_MODULES_DIR" ]]; then
+    echo "⋅ Syncing module staging to remote"
+    run_ssh "rm -rf '$REMOTE_STORAGE/modules' && mkdir -p '$REMOTE_STORAGE/modules'"
+    local modules_tar
+    modules_tar=$(mktemp)
+    tar -cf "$modules_tar" -C "$LOCAL_MODULES_DIR" .
+    run_scp "$modules_tar" "$USER@$HOST:/tmp/acore-modules.tar"
+    rm -f "$modules_tar"
+    run_ssh "tar -xf /tmp/acore-modules.tar -C '$REMOTE_STORAGE/modules' && rm /tmp/acore-modules.tar"
+  fi
 fi
 
 echo "⋅ Loading images on remote"

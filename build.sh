@@ -185,6 +185,17 @@ detect_rebuild_reasons(){
     reasons+=("Module changes detected (sentinel file present)")
   fi
 
+  # Check if source repository is freshly cloned (no previous build state)
+  local storage_path
+  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
+  if [[ "$storage_path" != /* ]]; then
+    storage_path="$ROOT_DIR/$storage_path"
+  fi
+  local last_deployed="$storage_path/modules/.last_deployed"
+  if [ ! -f "$last_deployed" ]; then
+    reasons+=("Fresh source repository setup - initial build required")
+  fi
+
   # Check if any C++ modules are enabled but modules-latest images don't exist
   local any_cxx_modules=0
   local var
@@ -209,7 +220,9 @@ detect_rebuild_reasons(){
     fi
   fi
 
-  printf '%s\n' "${reasons[@]}"
+  if [ ${#reasons[@]} -gt 0 ]; then
+    printf '%s\n' "${reasons[@]}"
+  fi
 }
 
 confirm_build(){
@@ -217,7 +230,17 @@ confirm_build(){
 
   if [ ${#reasons[@]} -eq 0 ] && [ "$FORCE_REBUILD" = "0" ]; then
     info "No build required - all images are up to date"
-    return 1  # No build needed
+    if [ "$ASSUME_YES" -ne 1 ] && [ -t 0 ]; then
+      local reply
+      read -r -p "Build anyway? [y/N]: " reply
+      reply="${reply:-n}"
+      case "$reply" in
+        [Yy]*) return 0 ;;  # Proceed with build
+        *) return 1 ;;      # Skip build
+      esac
+    else
+      return 1  # No build needed (non-interactive or --yes flag)
+    fi
   fi
 
   # Skip duplicate output if called from deploy.sh (reasons already shown)

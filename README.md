@@ -203,7 +203,7 @@ Use this workflow to build locally, then push the same stack to a remote host:
    ```
    (Answer “y” to the rebuild prompt in `setup.sh`, or run the rebuild manually.)
 
-2. **Package & Push for Remote Deploy**
+2. **Package & Push for Remote Deploy** *(also available via the interactive `./deploy.sh` prompt by choosing “Remote host”)*
    ```bash
    ./deploy.sh --yes \
      --remote-host docker-server \
@@ -233,7 +233,7 @@ ssh docker-server '
    ./setup.sh --module-config sam --playerbot-max-bots 3000
    ./scripts/rebuild-with-modules.sh --yes
    ```
-2. **Migrate Stack to Remote**
+2. **Migrate Stack to Remote** *(select “Remote host” when running `./deploy.sh` interactively, or call it non-interactively as shown below)*
    ```bash
    ./deploy.sh --yes \
      --remote-host docker-server \

@@ -24,6 +24,7 @@ REMOTE_PORT="22"
 REMOTE_IDENTITY=""
 REMOTE_PROJECT_DIR=""
 REMOTE_SKIP_STORAGE=0
+REMOTE_ARGS_PROVIDED=0
 
 COMPILE_MODULE_VARS=(
   MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
@@ -56,6 +57,141 @@ show_realm_ready(){
   printf '\n%b\n' "${GREEN}⚔️ The realm has been forged! ⚔️${NC}"
   printf '%b\n' "${GREEN}🏰 Adventurers may now enter your world${NC}"
   printf '%b\n\n' "${GREEN}🗡️ May your server bring epic adventures!${NC}"
+}
+
+show_remote_plan(){
+  local plan_host="${REMOTE_HOST:-<host>}"
+  local plan_user="${REMOTE_USER:-<user>}"
+  local plan_dir="${REMOTE_PROJECT_DIR:-~/acore-compose}"
+
+  printf '\n%b\n' "${BLUE}🧭 Remote Deployment Plan${NC}"
+  printf '%b\n' "${YELLOW}├─ Validate build status locally${NC}"
+  printf '%b\n' "${YELLOW}└─ Package & sync to ${plan_user}@${plan_host}:${plan_dir}${NC}"
+}
+
+maybe_select_deploy_target(){
+  if [ "$REMOTE_MODE" -eq 1 ]; then
+    return
+  fi
+  if [ "$ASSUME_YES" -eq 1 ] || [ ! -t 0 ]; then
+    return
+  fi
+  echo
+  echo "Select deployment target:"
+  echo "  1) Local host (current machine)"
+  echo "  2) Remote host (package for SSH deployment)"
+  local choice
+  read -rp "Choice [1]: " choice
+  case "${choice:-1}" in
+    2)
+      REMOTE_MODE=1
+      REMOTE_ARGS_PROVIDED=0
+      ;;
+    *)
+      ;;
+  esac
+}
+
+collect_remote_details(){
+  if [ "$REMOTE_MODE" -ne 1 ]; then
+    return
+  fi
+
+  local interactive=0
+  if [ -t 0 ] && [ "$ASSUME_YES" -ne 1 ]; then
+    interactive=1
+  fi
+
+  if [ -z "$REMOTE_HOST" ] && [ "$interactive" -eq 1 ]; then
+    while true; do
+      read -rp "Remote host (hostname or IP): " REMOTE_HOST
+      [ -n "$REMOTE_HOST" ] && break
+      echo "  Please enter a hostname or IP."
+    done
+  fi
+
+  if [ -z "$REMOTE_USER" ] && [ "$interactive" -eq 1 ]; then
+    local default_user="$USER"
+    read -rp "SSH username [${default_user}]: " REMOTE_USER
+    REMOTE_USER="${REMOTE_USER:-$default_user}"
+  fi
+  if [ -z "$REMOTE_USER" ] && [ -n "$USER" ]; then
+    REMOTE_USER="$USER"
+  fi
+
+  if [ -z "$REMOTE_PORT" ]; then
+    REMOTE_PORT="22"
+  fi
+  if [ "$interactive" -eq 1 ]; then
+    local port_input
+    read -rp "SSH port [${REMOTE_PORT}]: " port_input
+    REMOTE_PORT="${port_input:-$REMOTE_PORT}"
+  fi
+
+  if [ "$interactive" -eq 1 ]; then
+    local identity_input
+    local identity_prompt="SSH identity file (leave blank for default)"
+    if [ -n "$REMOTE_IDENTITY" ]; then
+      identity_prompt="${identity_prompt} [${REMOTE_IDENTITY}]"
+    fi
+    read -rp "${identity_prompt}: " identity_input
+    [ -n "$identity_input" ] && REMOTE_IDENTITY="$identity_input"
+  fi
+  if [ -n "$REMOTE_IDENTITY" ]; then
+    REMOTE_IDENTITY="${REMOTE_IDENTITY/#\~/$HOME}"
+  fi
+
+  if [ -z "$REMOTE_PROJECT_DIR" ]; then
+    REMOTE_PROJECT_DIR="~/acore-compose"
+  fi
+  if [ "$interactive" -eq 1 ]; then
+    local dir_input
+    read -rp "Remote project directory [${REMOTE_PROJECT_DIR}]: " dir_input
+    REMOTE_PROJECT_DIR="${dir_input:-$REMOTE_PROJECT_DIR}"
+  fi
+
+  if [ "$interactive" -eq 1 ] && [ "$REMOTE_ARGS_PROVIDED" -eq 0 ]; then
+    local sync_answer
+    read -rp "Sync storage directory to remote host? [Y/n]: " sync_answer
+    sync_answer="${sync_answer:-Y}"
+    case "${sync_answer,,}" in
+      n|no) REMOTE_SKIP_STORAGE=1 ;;
+      *) REMOTE_SKIP_STORAGE=0 ;;
+    esac
+  fi
+}
+
+validate_remote_configuration(){
+  if [ "$REMOTE_MODE" -ne 1 ]; then
+    return
+  fi
+  if [ -z "$REMOTE_HOST" ]; then
+    err "Remote deployment requires a hostname or IP."
+    exit 1
+  fi
+  if [ -z "$REMOTE_USER" ]; then
+    err "Remote deployment requires an SSH username."
+    exit 1
+  fi
+  REMOTE_PORT="${REMOTE_PORT:-22}"
+  if ! [[ "$REMOTE_PORT" =~ ^[0-9]+$ ]]; then
+    err "Invalid SSH port: $REMOTE_PORT"
+    exit 1
+  fi
+  if [ -n "$REMOTE_IDENTITY" ]; then
+    REMOTE_IDENTITY="${REMOTE_IDENTITY/#\~/$HOME}"
+    if [ ! -f "$REMOTE_IDENTITY" ]; then
+      err "Remote identity file not found: $REMOTE_IDENTITY"
+      exit 1
+    fi
+  fi
+  if [ -z "$REMOTE_PROJECT_DIR" ]; then
+    REMOTE_PROJECT_DIR="~/acore-compose"
+  fi
+  if [ ! -f "$ROOT_DIR/scripts/migrate-stack.sh" ]; then
+    err "Migration script not found: $ROOT_DIR/scripts/migrate-stack.sh"
+    exit 1
+  fi
 }
 
 usage(){
@@ -95,13 +231,13 @@ while [[ $# -gt 0 ]]; do
     --no-watch) WATCH_LOGS=0; shift;;
     --keep-running) KEEP_RUNNING=1; shift;;
     --yes|-y) ASSUME_YES=1; shift;;
-    --remote) REMOTE_MODE=1; shift;;
-    --remote-host) REMOTE_HOST="$2"; REMOTE_MODE=1; shift 2;;
-    --remote-user) REMOTE_USER="$2"; REMOTE_MODE=1; shift 2;;
-    --remote-port) REMOTE_PORT="$2"; REMOTE_MODE=1; shift 2;;
-    --remote-identity) REMOTE_IDENTITY="$2"; REMOTE_MODE=1; shift 2;;
-    --remote-project-dir) REMOTE_PROJECT_DIR="$2"; REMOTE_MODE=1; shift 2;;
-    --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; shift;;
+    --remote) REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --remote-host) REMOTE_HOST="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
+    --remote-user) REMOTE_USER="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
+    --remote-port) REMOTE_PORT="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
+    --remote-identity) REMOTE_IDENTITY="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
+    --remote-project-dir) REMOTE_PROJECT_DIR="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
+    --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
   esac
@@ -214,7 +350,9 @@ detect_build_needed(){
     fi
   fi
 
-  printf '%s\n' "${reasons[@]}"
+  if [ ${#reasons[@]} -gt 0 ]; then
+    printf '%s\n' "${reasons[@]}"
+  fi
 }
 
 stop_runtime_stack(){
@@ -453,8 +591,13 @@ main(){
 
   show_deployment_header
 
+  maybe_select_deploy_target
+  collect_remote_details
+  validate_remote_configuration
+
   if [ "$REMOTE_MODE" -eq 1 ]; then
     local remote_steps=2
+    show_remote_plan
     show_step 1 "$remote_steps" "Checking build requirements"
     if ! prompt_build_if_needed; then
       err "Build required but not completed. Remote deployment cancelled."
@@ -466,7 +609,7 @@ main(){
       ok "Remote deployment package prepared for $REMOTE_USER@$REMOTE_HOST."
       local remote_dir="${REMOTE_PROJECT_DIR:-~/acore-compose}"
       info "Run the following on the remote host to complete deployment:"
-      printf '  %bcd %s && ./deploy.sh --no-watch%b\n' "$YELLOW" "$remote_dir" "$NC"
+      printf '  %bcd %s && ./deploy.sh --yes --no-watch%b\n' "$YELLOW" "$remote_dir" "$NC"
       exit 0
     else
       err "Remote migration failed."

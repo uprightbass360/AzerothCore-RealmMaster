@@ -38,7 +38,11 @@ sync_local_staging(){
   fi
 
   echo "📦 Syncing local module staging from $src_modules to $dest_modules"
-  mkdir -p "$dest_modules"
+  if ! mkdir -p "$dest_modules" 2>/dev/null; then
+    echo "ℹ️  Destination storage path $dest_root not accessible (likely remote storage - skipping sync)."
+    echo "ℹ️  Module sync will be handled by the remote deployment."
+    return
+  fi
 
   if command -v rsync >/dev/null 2>&1; then
     rsync -a --delete "$src_modules"/ "$dest_modules"/
