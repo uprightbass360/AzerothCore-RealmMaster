@@ -58,6 +58,8 @@ services:
     depends_on:
       ac-mysql:
         condition: service_healthy
+      ac-storage-init:
+        condition: service_completed_successfully
     networks:
       - azerothcore
     volumes:
@@ -159,6 +161,7 @@ services:
       DB_WORLD_NAME: ${DB_WORLD_NAME}
       DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
       TZ: ${TZ}
+      CONTAINER_USER: ${CONTAINER_USER}
     volumes:
       - ${BACKUP_PATH}:/backups
       - ./scripts:/tmp/scripts:ro
@@ -175,6 +178,9 @@ services:
         else
           echo "No local scheduler provided"
         fi
+        # Fix permissions for any backup directories created
+        chown -R ${CONTAINER_USER} /backups 2>/dev/null || true
+        chmod -R 755 /backups 2>/dev/null || true
     restart: unless-stopped
     healthcheck:
       test:
@@ -196,6 +202,48 @@ services:
       - azerothcore
 
   # =====================
+  # Volume Initialization
+  # =====================
+  ac-volume-init:
+    profiles: ["client-data", "client-data-bots"]
+    image: ${ALPINE_IMAGE}
+    container_name: ac-volume-init
+    user: "0:0"
+    volumes:
+      - ac-client-data:/azerothcore/data
+      - client-data-cache:/cache
+    command:
+      - sh
+      - -c
+      - |
+        echo "🔧 Fixing Docker volume permissions..."
+        chown -R ${CONTAINER_USER} /azerothcore/data /cache
+        chmod -R 755 /azerothcore/data /cache
+        echo "✅ Docker volume permissions fixed"
+    restart: "no"
+
+  ac-storage-init:
+    profiles: ["db", "modules"]
+    image: ${ALPINE_IMAGE}
+    container_name: ac-storage-init
+    user: "0:0"
+    volumes:
+      - ${STORAGE_PATH}:/storage-root
+      - ${STORAGE_PATH_LOCAL}:/local-storage-root
+    command:
+      - sh
+      - -c
+      - |
+        echo "🔧 Initializing storage directories with proper permissions..."
+        mkdir -p /storage-root/config /storage-root/logs /storage-root/modules /storage-root/lua_scripts /storage-root/install-markers
+        mkdir -p /storage-root/backups /local-storage-root/mysql-data
+        # Fix ownership of root directories and all contents
+        chown -R ${CONTAINER_USER} /storage-root /local-storage-root
+        chmod -R 755 /storage-root /local-storage-root
+        echo "✅ Storage permissions initialized"
+    restart: "no"
+
+  # =====================
   # Client Data (client-data)
   # =====================
   ac-client-data-standard:
@@ -203,6 +251,9 @@ services:
     image: ${AC_CLIENT_DATA_IMAGE}
     container_name: ac-client-data
     user: "${CONTAINER_USER}"
+    depends_on:
+      ac-volume-init:
+        condition: service_completed_successfully
     volumes:
       - ac-client-data:/azerothcore/data
       - client-data-cache:/cache
@@ -231,6 +282,9 @@ services:
     image: ${AC_CLIENT_DATA_IMAGE_PLAYERBOTS}
     container_name: ac-client-data
     user: "${CONTAINER_USER}"
+    depends_on:
+      ac-volume-init:
+        condition: service_completed_successfully
     volumes:
       - ac-client-data:/azerothcore/data
       - client-data-cache:/cache
@@ -530,6 +584,8 @@ services:
         condition: service_completed_successfully
       ac-db-init:
         condition: service_completed_successfully
+      ac-storage-init:
+        condition: service_completed_successfully
     volumes:
       - ${STORAGE_PATH}/modules:/modules
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
@@ -603,7 +659,7 @@ services:
     profiles: ["modules"]
     image: ${ALPINE_IMAGE}
     container_name: ${CONTAINER_POST_INSTALL}
-    user: "${CONTAINER_USER}"
+    user: "0:0"
     volumes:
       - ${STORAGE_PATH}/config:/azerothcore/config
       - ${STORAGE_PATH}/install-markers:/install-markers
@@ -633,13 +689,20 @@ services:
         condition: service_completed_successfully
       ac-mysql:
         condition: service_healthy
+      ac-storage-init:
+        condition: service_completed_successfully
     command:
       - sh
       - -c
       - |
         apk add --no-cache bash curl docker-cli
+        chown -R ${CONTAINER_USER} /azerothcore/config /install-markers 2>/dev/null || true
+        chmod -R 755 /azerothcore/config /install-markers 2>/dev/null || true
         echo "📥 Running local auto-post-install script..."
         (chmod +x /tmp/scripts/auto-post-install.sh 2>/dev/null || true) && bash /tmp/scripts/auto-post-install.sh
+        # Fix permissions for all files created during post-install
+        chown -R ${CONTAINER_USER} /azerothcore/config /install-markers 2>/dev/null || true
+        chmod -R 755 /azerothcore/config /install-markers 2>/dev/null || true
     restart: "no"
     networks:
       - azerothcore
