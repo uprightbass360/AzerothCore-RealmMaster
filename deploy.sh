@@ -17,6 +17,14 @@ KEEP_RUNNING=0
 WORLD_LOG_SINCE=""
 ASSUME_YES=0
 
+REMOTE_MODE=0
+REMOTE_HOST=""
+REMOTE_USER=""
+REMOTE_PORT="22"
+REMOTE_IDENTITY=""
+REMOTE_PROJECT_DIR=""
+REMOTE_SKIP_STORAGE=0
+
 COMPILE_MODULE_VARS=(
   MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
   MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS
@@ -62,6 +70,13 @@ Options:
   --watch-logs                             Tail worldserver logs even if --no-watch was set earlier
   --log-tail LINES                         Override WORLD_LOG_TAIL (number of log lines to show)
   --once                                   Run status checks once (alias for --no-watch)
+  --remote                                 Package deployment artifacts for a remote host
+  --remote-host HOST                       Remote hostname or IP for migration
+  --remote-user USER                       SSH username for remote migration
+  --remote-port PORT                       SSH port for remote migration (default: 22)
+  --remote-identity PATH                   SSH private key for remote migration
+  --remote-project-dir DIR                 Remote project directory (default: ~/acore-compose)
+  --remote-skip-storage                    Skip syncing the storage directory during migration
   -h, --help                               Show this help
 
 This command automates deployment: sync modules, stage the correct compose profile,
@@ -80,6 +95,13 @@ while [[ $# -gt 0 ]]; do
     --no-watch) WATCH_LOGS=0; shift;;
     --keep-running) KEEP_RUNNING=1; shift;;
     --yes|-y) ASSUME_YES=1; shift;;
+    --remote) REMOTE_MODE=1; shift;;
+    --remote-host) REMOTE_HOST="$2"; REMOTE_MODE=1; shift 2;;
+    --remote-user) REMOTE_USER="$2"; REMOTE_MODE=1; shift 2;;
+    --remote-port) REMOTE_PORT="$2"; REMOTE_MODE=1; shift 2;;
+    --remote-identity) REMOTE_IDENTITY="$2"; REMOTE_MODE=1; shift 2;;
+    --remote-project-dir) REMOTE_PROJECT_DIR="$2"; REMOTE_MODE=1; shift 2;;
+    --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
   esac
@@ -90,6 +112,28 @@ require_cmd(){
 }
 
 require_cmd docker
+
+if [ "$REMOTE_MODE" -eq 1 ]; then
+  if [ -z "$REMOTE_HOST" ]; then
+    err "Remote deployment requires --remote-host to be specified"
+    exit 1
+  fi
+  if [ -z "$REMOTE_USER" ]; then
+    err "Remote deployment requires --remote-user to be specified"
+    exit 1
+  fi
+  if [ -n "$REMOTE_IDENTITY" ]; then
+    REMOTE_IDENTITY="${REMOTE_IDENTITY/#\~/$HOME}"
+    if [ ! -f "$REMOTE_IDENTITY" ]; then
+      err "Remote identity file not found: $REMOTE_IDENTITY"
+      exit 1
+    fi
+  fi
+  if [ ! -f "$ROOT_DIR/scripts/migrate-stack.sh" ]; then
+    err "Migration script not found: $ROOT_DIR/scripts/migrate-stack.sh"
+    exit 1
+  fi
+fi
 
 read_env(){
   local key="$1" default="${2:-}"
@@ -302,6 +346,32 @@ determine_profile(){
   echo "standard"
 }
 
+run_remote_migration(){
+  local args=(--host "$REMOTE_HOST" --user "$REMOTE_USER")
+
+  if [ -n "$REMOTE_PORT" ] && [ "$REMOTE_PORT" != "22" ]; then
+    args+=(--port "$REMOTE_PORT")
+  fi
+
+  if [ -n "$REMOTE_IDENTITY" ]; then
+    args+=(--identity "$REMOTE_IDENTITY")
+  fi
+
+  if [ -n "$REMOTE_PROJECT_DIR" ]; then
+    args+=(--project-dir "$REMOTE_PROJECT_DIR")
+  fi
+
+  if [ "$REMOTE_SKIP_STORAGE" -eq 1 ]; then
+    args+=(--skip-storage)
+  fi
+
+  if [ "$ASSUME_YES" -eq 1 ]; then
+    args+=(--yes)
+  fi
+
+  (cd "$ROOT_DIR" && ./scripts/migrate-stack.sh "${args[@]}")
+}
+
 
 stage_runtime(){
   local args=(--yes)
@@ -383,8 +453,26 @@ main(){
 
   show_deployment_header
 
-  local resolved_profile
-  resolved_profile="$(determine_profile)"
+  if [ "$REMOTE_MODE" -eq 1 ]; then
+    local remote_steps=2
+    show_step 1 "$remote_steps" "Checking build requirements"
+    if ! prompt_build_if_needed; then
+      err "Build required but not completed. Remote deployment cancelled."
+      exit 1
+    fi
+
+    show_step 2 "$remote_steps" "Migrating deployment to $REMOTE_HOST"
+    if run_remote_migration; then
+      ok "Remote deployment package prepared for $REMOTE_USER@$REMOTE_HOST."
+      local remote_dir="${REMOTE_PROJECT_DIR:-~/acore-compose}"
+      info "Run the following on the remote host to complete deployment:"
+      printf '  %bcd %s && ./deploy.sh --no-watch%b\n' "$YELLOW" "$remote_dir" "$NC"
+      exit 0
+    else
+      err "Remote migration failed."
+      exit 1
+    fi
+  fi
 
   show_step 1 4 "Checking build requirements"
   if ! prompt_build_if_needed; then

@@ -203,20 +203,21 @@ Use this workflow to build locally, then push the same stack to a remote host:
    ```
    (Answer “y” to the rebuild prompt in `setup.sh`, or run the rebuild manually.)
 
-2. **Migrate via SSH**
+2. **Package & Push for Remote Deploy**
    ```bash
-   ./scripts/migrate-stack.sh \
-     --host docker-server \
-     --project-dir /home/sam/src/acore-compose
+   ./deploy.sh --yes \
+     --remote-host docker-server \
+     --remote-user sam \
+     --remote-project-dir /home/sam/src/acore-compose
    ```
-   Adjust `--project-dir` (and `--identity`) to match your environment. The script copies the repo, `storage/`, and the `uprightbass360/...:modules-latest` images to the remote machine.
+   Add `--remote-identity ~/.ssh/id_ed25519` if you need a non-default SSH key, or `--remote-skip-storage` to avoid syncing the `storage/` directory.
 
 3. **Deploy Remotely**
    ```bash
-   ssh docker-server '
-     cd /home/sam/src/acore-compose &&
-     ./deploy.sh --skip-rebuild --no-watch
-   '
+ssh docker-server '
+  cd /home/sam/src/acore-compose &&
+  ./deploy.sh --yes --no-watch
+'
    ```
    Because the `.env` now points the modules profile at the `uprightbass360/...:modules-latest` tags, the remote compose run uses the build you just migrated—no additional rebuild required.
 
@@ -234,18 +235,18 @@ Use this workflow to build locally, then push the same stack to a remote host:
    ```
 2. **Migrate Stack to Remote**
    ```bash
-   ./scripts/migrate-stack.sh \
-     --host docker-server \
-     --user sam \
-     --project-dir /home/sam/src/acore-compose
+   ./deploy.sh --yes \
+     --remote-host docker-server \
+     --remote-user sam \
+     --remote-project-dir /home/sam/src/acore-compose
    ```
-   (Exports rebuilt images to `local-storage/images/acore-modules-images.tar`, bundling the `uprightbass360/...:modules-latest` and `uprightbass360/...:Playerbot` tags, then syncs `storage/` unless `--skip-storage` is provided.)
+   (Under the hood this wraps `scripts/migrate-stack.sh`, exporting module images to `local-storage/images/acore-modules-images.tar` and syncing `storage/` unless `--remote-skip-storage` is provided.)
 3. **Deploy on Remote Host**
    ```bash
-   ssh docker-server '
-     cd /home/sam/src/acore-compose &&
-     ./deploy.sh --skip-rebuild --no-watch
-   '
+ssh docker-server '
+  cd /home/sam/src/acore-compose &&
+  ./deploy.sh --yes --no-watch
+'
    ```
 4. **Verify Services**
    ```bash
@@ -576,6 +577,7 @@ Automated post-deployment tasks including module configuration, service verifica
 
 #### `scripts/migrate-stack.sh` - Remote Deployment Migration
 Migrates locally built images and configuration to remote hosts.
+You can call this directly, or use `./deploy.sh --remote-host <host> --remote-user <user>` which wraps the same workflow.
 
 ```bash
 ./scripts/migrate-stack.sh \

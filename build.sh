@@ -12,13 +12,6 @@ ASSUME_YES=0
 FORCE_REBUILD=0
 SKIP_SOURCE_SETUP=0
 CUSTOM_SOURCE_PATH=""
-MIGRATE_HOST=""
-MIGRATE_USER=""
-MIGRATE_PORT="22"
-MIGRATE_IDENTITY=""
-MIGRATE_PROJECT_DIR=""
-MIGRATE_SKIP_STORAGE=0
-
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
 ok(){ printf '%b\n' "${GREEN}✅ $*${NC}"; }
@@ -42,12 +35,6 @@ Options:
   --force                      Force rebuild even if no changes detected
   --source-path PATH           Custom source repository path
   --skip-source-setup          Skip automatic source repository setup
-  --migrate-host HOST          Migrate built images to remote host after build
-  --migrate-user USER          SSH username for remote migration
-  --migrate-port PORT          SSH port for remote migration (default: 22)
-  --migrate-identity PATH      SSH private key for remote migration
-  --migrate-project-dir DIR    Remote project directory (default: auto-detect)
-  --migrate-skip-storage       Skip storage sync during migration
   -h, --help                   Show this help
 
 This script handles:
@@ -56,15 +43,11 @@ This script handles:
 • AzerothCore compilation with enabled modules
 • Docker image building and tagging
 • Build state management
-• Optional remote migration
 
 Examples:
   ./build.sh                   Interactive build
   ./build.sh --yes             Auto-confirm build
   ./build.sh --force           Force rebuild regardless of state
-  ./build.sh --yes \\
-    --migrate-host prod-server \\
-    --migrate-user deploy      Build and migrate to remote server
 EOF
 }
 
@@ -74,12 +57,6 @@ while [[ $# -gt 0 ]]; do
     --force) FORCE_REBUILD=1; shift;;
     --source-path) CUSTOM_SOURCE_PATH="$2"; shift 2;;
     --skip-source-setup) SKIP_SOURCE_SETUP=1; shift;;
-    --migrate-host) MIGRATE_HOST="$2"; shift 2;;
-    --migrate-user) MIGRATE_USER="$2"; shift 2;;
-    --migrate-port) MIGRATE_PORT="$2"; shift 2;;
-    --migrate-identity) MIGRATE_IDENTITY="$2"; shift 2;;
-    --migrate-project-dir) MIGRATE_PROJECT_DIR="$2"; shift 2;;
-    --migrate-skip-storage) MIGRATE_SKIP_STORAGE=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
   esac
@@ -90,23 +67,6 @@ require_cmd(){
 }
 
 require_cmd docker
-
-# Validate migration parameters if any are provided
-if [ -n "$MIGRATE_HOST" ] || [ -n "$MIGRATE_USER" ]; then
-  if [ -z "$MIGRATE_HOST" ]; then
-    err "Migration requires --migrate-host to be specified"
-    exit 1
-  fi
-  if [ -z "$MIGRATE_USER" ]; then
-    err "Migration requires --migrate-user to be specified"
-    exit 1
-  fi
-  # Check that migrate-stack.sh exists
-  if [ ! -f "$ROOT_DIR/scripts/migrate-stack.sh" ]; then
-    err "Migration script not found: $ROOT_DIR/scripts/migrate-stack.sh"
-    exit 1
-  fi
-fi
 
 read_env(){
   local key="$1" default="${2:-}"
@@ -494,58 +454,10 @@ tag_module_images(){
   fi
 }
 
-run_migration(){
-  if [ -z "$MIGRATE_HOST" ] || [ -z "$MIGRATE_USER" ]; then
-    return 0  # No migration requested
-  fi
-
-  info "Starting remote migration to $MIGRATE_USER@$MIGRATE_HOST"
-
-  # Build migrate-stack.sh arguments
-  local migrate_args=(
-    --host "$MIGRATE_HOST"
-    --user "$MIGRATE_USER"
-  )
-
-  if [ "$MIGRATE_PORT" != "22" ]; then
-    migrate_args+=(--port "$MIGRATE_PORT")
-  fi
-
-  if [ -n "$MIGRATE_IDENTITY" ]; then
-    migrate_args+=(--identity "$MIGRATE_IDENTITY")
-  fi
-
-  if [ -n "$MIGRATE_PROJECT_DIR" ]; then
-    migrate_args+=(--project-dir "$MIGRATE_PROJECT_DIR")
-  fi
-
-  if [ "$MIGRATE_SKIP_STORAGE" = "1" ]; then
-    migrate_args+=(--skip-storage)
-  fi
-
-  if [ "$ASSUME_YES" = "1" ]; then
-    migrate_args+=(--yes)
-  fi
-
-  if (cd "$ROOT_DIR" && ./scripts/migrate-stack.sh "${migrate_args[@]}"); then
-    ok "Migration completed successfully"
-    echo
-    info "Remote deployment ready! Run on $MIGRATE_HOST:"
-    printf '  %bcd %s && ./deploy.sh --no-watch%b\n' "$YELLOW" "${MIGRATE_PROJECT_DIR:-~/acore-compose}" "$NC"
-  else
-    warn "Migration failed, but build completed successfully"
-    return 1
-  fi
-}
-
 show_build_complete(){
   printf '\n%b\n' "${GREEN}🔨 Build Complete! 🔨${NC}"
   printf '%b\n' "${GREEN}⚒️  Your custom AzerothCore images are ready${NC}"
-  if [ -n "$MIGRATE_HOST" ]; then
-    printf '%b\n\n' "${GREEN}🌐 Remote migration completed${NC}"
-  else
-    printf '%b\n\n' "${GREEN}🚀 Ready for deployment with ./deploy.sh${NC}"
-  fi
+  printf '%b\n\n' "${GREEN}🚀 Ready for deployment with ./deploy.sh${NC}"
 }
 
 main(){
@@ -554,10 +466,10 @@ main(){
   local src_dir
   local rebuild_reasons
 
-  info "Step 1/7: Setting up source repository"
+  info "Step 1/6: Setting up source repository"
   src_dir="$(ensure_source_repo)"
 
-  info "Step 2/7: Detecting build requirements"
+  info "Step 2/6: Detecting build requirements"
   readarray -t rebuild_reasons < <(detect_rebuild_reasons)
 
   if ! confirm_build "${rebuild_reasons[@]}"; then
@@ -565,16 +477,16 @@ main(){
     exit 0
   fi
 
-  info "Step 3/7: Syncing modules to container storage"
+  info "Step 3/6: Syncing modules to container storage"
   sync_modules
 
-  info "Step 4/7: Staging modules to source directory"
+  info "Step 4/6: Staging modules to source directory"
   stage_modules "$src_dir"
 
-  info "Step 5/7: Building AzerothCore with modules"
+  info "Step 5/6: Building AzerothCore with modules"
   execute_build "$src_dir"
 
-  info "Step 6/7: Tagging images for deployment"
+  info "Step 6/6: Tagging images for deployment"
   tag_module_images
 
   # Clear build sentinel after successful build
@@ -587,13 +499,6 @@ main(){
   fi
   local sentinel="$storage_path/modules/.requires_rebuild"
   rm -f "$sentinel" 2>/dev/null || true
-
-  # Run remote migration if requested
-  if [ -n "$MIGRATE_HOST" ]; then
-    echo
-    info "Step 7/7: Migrating images to remote host"
-    run_migration
-  fi
 
   show_build_complete
 }
