@@ -163,8 +163,8 @@ setup_remote_repository(){
     exit 1
   fi
 
-  # Create local-storage directory structure
-  run_ssh "mkdir -p '$PROJECT_DIR/local-storage/modules'"
+  # Create local-storage directory structure with proper ownership
+  run_ssh "mkdir -p '$PROJECT_DIR/local-storage/modules' && chown -R $USER: '$PROJECT_DIR/local-storage'"
 
   echo "   • Repository synchronized ✓"
 }

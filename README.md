@@ -326,7 +326,7 @@ storage/
 ├── config/           # Server configuration files
 ├── logs/             # Server log files
 ├── modules/          # Module source code and configs
-├── mysql-data/       # Database files
+├── mysql-data/       # Database files (now under ./local-storage)
 └── backups/          # Automated database backups
 ```
 
@@ -806,6 +806,12 @@ docker compose --profile db --profile services-standard \
 rm -f storage/modules/.requires_rebuild
 ./deploy.sh --profile modules
 ```
+
+---
+
+## 🧭 Ownership Hardening TODO
+
+- [ ] MySQL container: prototype running as `${CONTAINER_USER}` (or via Docker userns remap/custom entrypoint) so shared `${STORAGE_PATH}` data stays user-owned while preserving required init privileges.
 
 ---
 

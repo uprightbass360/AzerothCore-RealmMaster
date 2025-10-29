@@ -17,6 +17,37 @@ show_staging_step(){
   printf '%b\n' "${YELLOW}🔧 ${step}: ${message}...${NC}"
 }
 
+sync_local_staging(){
+  local src_root="$LOCAL_STORAGE_PATH"
+  local dest_root="$STORAGE_PATH"
+
+  if [ -z "$src_root" ] || [ -z "$dest_root" ]; then
+    return
+  fi
+
+  if [ "$src_root" = "$dest_root" ]; then
+    return
+  fi
+
+  local src_modules="${src_root}/modules"
+  local dest_modules="${dest_root}/modules"
+
+  if [ ! -d "$src_modules" ]; then
+    echo "ℹ️  No local module staging found at $src_modules (skipping sync)."
+    return
+  fi
+
+  echo "📦 Syncing local module staging from $src_modules to $dest_modules"
+  mkdir -p "$dest_modules"
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete "$src_modules"/ "$dest_modules"/
+  else
+    find "$dest_modules" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+    (cd "$src_modules" && tar cf - .) | (cd "$dest_modules" && tar xf -)
+  fi
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_DIR/.env"
@@ -220,6 +251,7 @@ fi
 
 # Stage the services
 show_staging_step "Service Orchestration" "Preparing realm services"
+sync_local_staging
 echo "🎬 Staging services with profile: services-$TARGET_PROFILE"
 echo "⏳ Pulling images and starting containers; this can take several minutes on first run."
 

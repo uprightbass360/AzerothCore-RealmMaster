@@ -1088,6 +1088,11 @@ fi
   local LOCAL_STORAGE_ROOT="${STORAGE_PATH_LOCAL:-./local-storage}"
   LOCAL_STORAGE_ROOT="${LOCAL_STORAGE_ROOT%/}"
   [ -z "$LOCAL_STORAGE_ROOT" ] && LOCAL_STORAGE_ROOT="."
+  local LOCAL_STORAGE_ROOT_ABS="$LOCAL_STORAGE_ROOT"
+  if [[ "$LOCAL_STORAGE_ROOT_ABS" != /* ]]; then
+    LOCAL_STORAGE_ROOT_ABS="$SCRIPT_DIR/${LOCAL_STORAGE_ROOT_ABS#./}"
+  fi
+  LOCAL_STORAGE_ROOT_ABS="${LOCAL_STORAGE_ROOT_ABS%/}"
   STORAGE_PATH_LOCAL="$LOCAL_STORAGE_ROOT"
 
   export STORAGE_PATH STORAGE_PATH_LOCAL
@@ -1107,11 +1112,7 @@ fi
     fi
 
     # Set build sentinel to indicate rebuild is needed
-    local storage_abs="$STORAGE_PATH_LOCAL"
-    if [[ "$storage_abs" != /* ]]; then
-      storage_abs="$(cd "$(dirname "$0")" && pwd)/$storage_abs"
-    fi
-    local sentinel="$storage_abs/modules/.requires_rebuild"
+    local sentinel="$LOCAL_STORAGE_ROOT_ABS/modules/.requires_rebuild"
     mkdir -p "$(dirname "$sentinel")"
     touch "$sentinel"
     say INFO "Build sentinel created at $sentinel"
@@ -1362,13 +1363,10 @@ ALPINE_IMAGE=$DEFAULT_ALPINE_IMAGE
 EOF
   } > "$ENV_OUT"
 
-  local storage_abs_path="${STORAGE_PATH:-$DEFAULT_LOCAL_STORAGE}"
-  if [[ "$storage_abs_path" != /* ]]; then
-    storage_abs_path="$(pwd)/${storage_abs_path#./}"
-  fi
-  storage_abs_path="${storage_abs_path%/}"
-  local host_modules_dir="${storage_abs_path}/modules"
-  mkdir -p "$host_modules_dir"
+  local staging_modules_dir="${LOCAL_STORAGE_ROOT_ABS}/modules"
+  mkdir -p "$staging_modules_dir"
+  local local_mysql_data_dir="${LOCAL_STORAGE_ROOT_ABS}/mysql-data"
+  mkdir -p "$local_mysql_data_dir"
 
   local -a MODULE_STATE_VARS=(
     MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION
@@ -1386,8 +1384,10 @@ EOF
     local module_value="${!module_state_var:-0}"
     module_state_string+="${module_state_var}=${module_value}|"
   done
-  printf '%s' "$module_state_string" > "${host_modules_dir}/.modules_state"
-  rm -f "${host_modules_dir}/.requires_rebuild" 2>/dev/null || true
+  printf '%s' "$module_state_string" > "${staging_modules_dir}/.modules_state"
+  if [ "$NEEDS_CXX_REBUILD" != "1" ]; then
+    rm -f "${staging_modules_dir}/.requires_rebuild" 2>/dev/null || true
+  fi
 
   say SUCCESS ".env written to $ENV_OUT"
   show_realm_configured

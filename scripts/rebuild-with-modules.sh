@@ -168,15 +168,15 @@ REBUILD_SOURCE_PATH="$(realpath "$REBUILD_SOURCE_PATH" 2>/dev/null || echo "$REB
 
 # Check for modules in source directory first, then fall back to shared storage
 LOCAL_MODULES_DIR="$REBUILD_SOURCE_PATH/modules"
-SHARED_MODULES_DIR="$STORAGE_PATH/modules"
+LOCAL_STAGING_MODULES_DIR="$LOCAL_STORAGE_PATH/modules"
 
 if [ -d "$LOCAL_MODULES_DIR" ]; then
   echo "🔧 Using modules from source directory: $LOCAL_MODULES_DIR"
   MODULES_DIR="$LOCAL_MODULES_DIR"
   # Build sentinel always stays in local storage for consistency
 else
-  echo "🔧 Using modules from shared storage: $SHARED_MODULES_DIR"
-  MODULES_DIR="$SHARED_MODULES_DIR"
+  echo "🔧 Using modules from local staging: $LOCAL_STAGING_MODULES_DIR"
+  MODULES_DIR="$LOCAL_STAGING_MODULES_DIR"
   # Build sentinel always stays in local storage for consistency
 fi
 
@@ -352,9 +352,6 @@ remove_sentinel(){
 }
 
 remove_sentinel "$SENTINEL_FILE"
-if [ -n "$SHARED_MODULES_DIR" ]; then
-  remove_sentinel "$SHARED_MODULES_DIR/.requires_rebuild"
-fi
 
 echo ""
 echo -e "${GREEN}⚔️ Module build forged successfully! ⚔️${NC}"

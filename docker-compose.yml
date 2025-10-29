@@ -7,6 +7,7 @@ services:
     profiles: ["db"]
     image: ${MYSQL_IMAGE}
     container_name: ${CONTAINER_MYSQL}
+    userns_mode: "keep-id"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_ROOT_HOST: '${MYSQL_ROOT_HOST}'
@@ -19,8 +20,11 @@ services:
       MYSQL_INNODB_LOG_FILE_SIZE: ${MYSQL_INNODB_LOG_FILE_SIZE}
     ports:
       - "${MYSQL_EXTERNAL_PORT}:${MYSQL_PORT}"
+    entrypoint:
+      - /usr/local/bin/mysql-entrypoint.sh
     volumes:
-      - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
+      - ./scripts/mysql-entrypoint.sh:/usr/local/bin/mysql-entrypoint.sh:ro
+      - ${STORAGE_PATH_LOCAL}/mysql-data:/var/lib/mysql-persistent
       - ${BACKUP_PATH}:/backups
       - ${HOST_ZONEINFO_PATH}:/usr/share/zoneinfo:ro
     tmpfs:
@@ -50,6 +54,7 @@ services:
     image: ${AC_DB_IMPORT_IMAGE}
     container_name: ${CONTAINER_DB_IMPORT}
     user: "0:0"
+    userns_mode: "keep-id"
     depends_on:
       ac-mysql:
         condition: service_healthy
@@ -58,7 +63,7 @@ services:
     volumes:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
-      - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
+      - ${STORAGE_PATH_LOCAL}/mysql-data:/var/lib/mysql-persistent
       - ./scripts/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
     environment:
       AC_DATA_DIR: "/azerothcore/data"
@@ -94,11 +99,12 @@ services:
     profiles: ["db"]
     image: ${MYSQL_IMAGE}
     container_name: ${CONTAINER_DB_INIT}
+    userns_mode: "keep-id"
     depends_on:
       ac-db-import:
         condition: service_completed_successfully
     volumes:
-      - ${STORAGE_PATH}/mysql-data:/var/lib/mysql-persistent
+      - ${STORAGE_PATH_LOCAL}/mysql-data:/var/lib/mysql-persistent
       - ${BACKUP_PATH}:/backups
     networks:
       - azerothcore
@@ -138,6 +144,7 @@ services:
     profiles: ["db"]
     image: ${MYSQL_IMAGE}
     container_name: ${CONTAINER_BACKUP}
+    userns_mode: "keep-id"
     depends_on:
       ac-db-import:
         condition: service_completed_successfully

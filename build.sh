@@ -313,16 +313,14 @@ confirm_build(){
 # Module staging logic (extracted from setup.sh)
 sync_modules(){
   local storage_path
-  storage_path="$(read_env STORAGE_PATH "./storage")"
+  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
+    storage_path="${storage_path#./}"
     storage_path="$ROOT_DIR/$storage_path"
   fi
 
-  info "Synchronising modules (ac-modules container)"
-  local project_name
-  project_name="$(resolve_project_name)"
-  docker compose --project-name "$project_name" -f "$ROOT_DIR/docker-compose.yml" --profile db --profile modules up ac-modules
-  docker compose --project-name "$project_name" -f "$ROOT_DIR/docker-compose.yml" --profile db --profile modules down >/dev/null 2>&1 || true
+  mkdir -p "$storage_path/modules"
+  info "Using local module staging at $storage_path/modules"
 }
 
 resolve_project_name(){
@@ -342,8 +340,9 @@ resolve_project_name(){
 stage_modules(){
   local src_path="$1"
   local storage_path
-  storage_path="$(read_env STORAGE_PATH "./storage")"
+  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
+    storage_path="${storage_path#./}"
     storage_path="$ROOT_DIR/$storage_path"
   fi
 
@@ -375,8 +374,8 @@ stage_modules(){
     export "$module_export_var"
   done
 
-  local host_modules_dir="${storage_path}/modules"
-  export MODULES_HOST_DIR="$host_modules_dir"
+  local staging_modules_dir="${storage_path}/modules"
+  export MODULES_HOST_DIR="$staging_modules_dir"
 
   # Set up local storage path for build sentinel tracking
   local local_storage_path
@@ -404,16 +403,28 @@ stage_modules(){
 
   # Run module staging script in local modules directory
   export MODULES_LOCAL_RUN=1
-  if [ -n "$host_modules_dir" ]; then
-    mkdir -p "$host_modules_dir"
-    rm -f "$host_modules_dir/.modules_state" "$host_modules_dir/.requires_rebuild" 2>/dev/null || true
+  if [ -n "$staging_modules_dir" ]; then
+    mkdir -p "$staging_modules_dir"
+    rm -f "$staging_modules_dir/.modules_state" "$staging_modules_dir/.requires_rebuild" 2>/dev/null || true
   fi
 
   if (cd "$local_modules_dir" && bash "$ROOT_DIR/scripts/manage-modules.sh"); then
     ok "Module repositories staged to $local_modules_dir"
-    if [ -n "$host_modules_dir" ]; then
+    if [ -n "$staging_modules_dir" ]; then
+      if command -v rsync >/dev/null 2>&1; then
+        rsync -a --delete \
+          --exclude '.modules_state' \
+          --exclude '.requires_rebuild' \
+          "$local_modules_dir"/ "$staging_modules_dir"/
+      else
+        find "$staging_modules_dir" -mindepth 1 -maxdepth 1 \
+          ! -name '.modules_state' \
+          ! -name '.requires_rebuild' \
+          -exec rm -rf {} + 2>/dev/null || true
+        (cd "$local_modules_dir" && tar cf - --exclude='.modules_state' --exclude='.requires_rebuild' .) | (cd "$staging_modules_dir" && tar xf -)
+      fi
       if [ -f "$local_modules_dir/.modules_state" ]; then
-        cp "$local_modules_dir/.modules_state" "$host_modules_dir/.modules_state" 2>/dev/null || true
+        cp "$local_modules_dir/.modules_state" "$staging_modules_dir/.modules_state" 2>/dev/null || true
       fi
     fi
   else
