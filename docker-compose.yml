@@ -53,7 +53,7 @@ services:
     profiles: ["db"]
     image: ${AC_DB_IMPORT_IMAGE}
     container_name: ${CONTAINER_DB_IMPORT}
-    user: "0:0"
+    user: "${CONTAINER_USER}"
     userns_mode: "keep-id"
     depends_on:
       ac-mysql:
@@ -90,7 +90,6 @@ services:
       - sh
       - -c
       - |
-        chown ${CONTAINER_USER} /azerothcore/env/dist/etc 2>/dev/null || true
         echo "📥 Using local database import script..."
         /tmp/db-import-conditional.sh
     restart: "no"
@@ -206,7 +205,7 @@ services:
     user: "${CONTAINER_USER}"
     volumes:
       - ac-client-data:/azerothcore/data
-      - ${CLIENT_DATA_CACHE_PATH}:/cache
+      - client-data-cache:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
     environment:
@@ -234,7 +233,7 @@ services:
     user: "${CONTAINER_USER}"
     volumes:
       - ac-client-data:/azerothcore/data
-      - ${CLIENT_DATA_CACHE_PATH}:/cache
+      - client-data-cache:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
     environment:
@@ -523,7 +522,7 @@ services:
     profiles: ["modules"]
     image: ${ALPINE_GIT_IMAGE}
     container_name: ${CONTAINER_MODULES}
-    user: "0:0"
+    user: "${CONTAINER_USER}"
     depends_on:
       ac-mysql:
         condition: service_healthy
@@ -600,7 +599,7 @@ services:
     profiles: ["modules"]
     image: ${ALPINE_IMAGE}
     container_name: ${CONTAINER_POST_INSTALL}
-    user: "0:0"
+    user: "${CONTAINER_USER}"
     volumes:
       - ${STORAGE_PATH}/config:/azerothcore/config
       - ${STORAGE_PATH}/install-markers:/install-markers
@@ -635,7 +634,6 @@ services:
       - -c
       - |
         apk add --no-cache bash curl docker-cli
-        chown ${CONTAINER_USER} /azerothcore/config /install-markers 2>/dev/null || true
         echo "📥 Running local auto-post-install script..."
         (chmod +x /tmp/scripts/auto-post-install.sh 2>/dev/null || true) && bash /tmp/scripts/auto-post-install.sh
     restart: "no"
@@ -707,6 +705,8 @@ services:
 volumes:
   ac-client-data:
     name: ${CLIENT_DATA_VOLUME}
+    driver: local
+  client-data-cache:
     driver: local
 
 networks:

@@ -237,7 +237,6 @@ if [[ $SKIP_STORAGE -eq 0 ]]; then
   if [[ -d "$LOCAL_MODULES_DIR" ]]; then
     echo "⋅ Syncing module staging to remote"
     run_ssh "rm -rf '$REMOTE_STORAGE/modules' && mkdir -p '$REMOTE_STORAGE/modules'"
-    local modules_tar
     modules_tar=$(mktemp)
     tar -cf "$modules_tar" -C "$LOCAL_MODULES_DIR" .
     run_scp "$modules_tar" "$USER@$HOST:/tmp/acore-modules.tar"

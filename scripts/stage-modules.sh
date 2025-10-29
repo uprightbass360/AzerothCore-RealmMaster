@@ -34,6 +34,15 @@ sync_local_staging(){
 
   if [ ! -d "$src_modules" ]; then
     echo "ℹ️  No local module staging found at $src_modules (skipping sync)."
+    # Check if modules exist in destination storage
+    if [ -d "$dest_modules" ] && [ -n "$(ls -A "$dest_modules" 2>/dev/null)" ]; then
+      local module_count
+      module_count=$(find "$dest_modules" -maxdepth 1 -type d | wc -l)
+      module_count=$((module_count - 1))  # Subtract 1 for the parent directory
+      if [ "$module_count" -gt 0 ]; then
+        echo "✅ Found $module_count modules in shared storage at $dest_modules"
+      fi
+    fi
     return
   fi
 
