@@ -100,6 +100,8 @@ handle_auto_rebuild(){
   local storage_path
   storage_path="$(read_env_value STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
+    # Remove leading ./ if present
+    storage_path="${storage_path#./}"
     storage_path="$(dirname "$COMPOSE_FILE")/$storage_path"
   fi
   local sentinel="$storage_path/modules/.requires_rebuild"

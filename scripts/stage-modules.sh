@@ -102,6 +102,8 @@ MODULES_DIR="$STORAGE_PATH/modules"
 # Build sentinel is in local storage, deployment modules are in shared storage
 LOCAL_STORAGE_PATH="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
 if [[ "$LOCAL_STORAGE_PATH" != /* ]]; then
+  # Remove leading ./ if present
+  LOCAL_STORAGE_PATH="${LOCAL_STORAGE_PATH#./}"
   LOCAL_STORAGE_PATH="$PROJECT_DIR/$LOCAL_STORAGE_PATH"
 fi
 SENTINEL_FILE="$LOCAL_STORAGE_PATH/modules/.requires_rebuild"

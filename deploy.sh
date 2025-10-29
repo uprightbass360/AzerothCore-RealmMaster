@@ -191,10 +191,15 @@ mark_deployment_complete(){
   local storage_path
   storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
+    # Remove leading ./ if present
+    storage_path="${storage_path#./}"
     storage_path="$ROOT_DIR/$storage_path"
   fi
   local sentinel="$storage_path/modules/.last_deployed"
-  mkdir -p "$(dirname "$sentinel")"
+  if ! mkdir -p "$(dirname "$sentinel")" 2>/dev/null; then
+    warn "Cannot create local-storage directory. Deployment tracking may not work properly."
+    return 0
+  fi
   date > "$sentinel"
 }
 
@@ -202,6 +207,8 @@ modules_need_rebuild(){
   local storage_path
   storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
+    # Remove leading ./ if present
+    storage_path="${storage_path#./}"
     storage_path="$ROOT_DIR/$storage_path"
   fi
   local sentinel="$storage_path/modules/.requires_rebuild"

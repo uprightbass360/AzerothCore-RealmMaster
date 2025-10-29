@@ -209,6 +209,8 @@ modules_need_rebuild(){
   local storage_path
   storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
+    # Remove leading ./ if present
+    storage_path="${storage_path#./}"
     storage_path="$ROOT_DIR/$storage_path"
   fi
   local sentinel="$storage_path/modules/.requires_rebuild"
@@ -380,6 +382,8 @@ stage_modules(){
   local local_storage_path
   local_storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$local_storage_path" != /* ]]; then
+    # Remove leading ./ if present
+    local_storage_path="${local_storage_path#./}"
     local_storage_path="$ROOT_DIR/$local_storage_path"
   fi
   export LOCAL_STORAGE_SENTINEL_PATH="$local_storage_path/modules/.requires_rebuild"
@@ -566,6 +570,8 @@ main(){
   local storage_path
   storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
   if [[ "$storage_path" != /* ]]; then
+    # Remove leading ./ if present
+    storage_path="${storage_path#./}"
     storage_path="$ROOT_DIR/$storage_path"
   fi
   local sentinel="$storage_path/modules/.requires_rebuild"
