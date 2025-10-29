@@ -520,9 +520,9 @@ services:
   # =====================
   ac-modules:
     profiles: ["modules"]
-    image: ${ALPINE_GIT_IMAGE}
+    image: ${ALPINE_IMAGE}
     container_name: ${CONTAINER_MODULES}
-    user: "${CONTAINER_USER}"
+    user: "0:0"
     depends_on:
       ac-mysql:
         condition: service_healthy
@@ -590,7 +590,11 @@ services:
     command:
       - -c
       - |
-        apk add --no-cache curl bash && (chmod +x /tmp/scripts/manage-modules.sh /tmp/scripts/manage-modules-sql.sh 2>/dev/null || true) && /tmp/scripts/manage-modules.sh
+        apk add --no-cache curl bash git
+        (chmod +x /tmp/scripts/manage-modules.sh /tmp/scripts/manage-modules-sql.sh 2>/dev/null || true) && /tmp/scripts/manage-modules.sh
+        # Fix permissions after module operations
+        chown -R ${CONTAINER_USER} /modules /azerothcore/env/dist/etc 2>/dev/null || true
+        chmod -R 755 /modules /azerothcore/env/dist/etc 2>/dev/null || true
     restart: "no"
     networks:
       - azerothcore
