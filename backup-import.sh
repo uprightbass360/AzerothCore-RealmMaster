@@ -434,14 +434,7 @@ for db in "${ACTIVE_DBS[@]}"; do
   restore "${DB_NAMES[$db]}" "${DUMP_PATHS[$db]}"
 done
 
-if db_selected characters || db_selected world; then
-  log "Reapplying module SQL patches"
-  docker compose --profile db --profile modules run --rm \
-    --entrypoint /bin/sh ac-modules \
-    -c 'apk add --no-cache bash curl >/dev/null && bash /tmp/scripts/manage-modules.sh >/tmp/mm.log && cat /tmp/mm.log' || warn "Module SQL run exited with non-zero status"
-else
-  warn "Skipping module SQL reapply (auth-only import)"
-fi
+log "Module SQL patches will be applied when services restart"
 
 log "Restarting services to reinitialize GUID generators"
 docker restart ac-authserver ac-worldserver >/dev/null
