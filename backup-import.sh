@@ -39,25 +39,28 @@ Usage: ./backup-import.sh [options]
 Restores selected ACore databases from a backup directory.
 
 Options:
-  -b, --backup-dir DIR      Backup directory (default: ImportBackup/)
+  -b, --backup-dir DIR      Backup directory (required)
   -p, --password PASS       MySQL root password
       --auth-db NAME        Auth database schema name
       --characters-db NAME  Characters database schema name
       --world-db NAME       World database schema name
-      --db LIST             Comma-separated list of databases to import; may be repeated
+      --db LIST             Comma-separated list of databases to import
       --skip LIST           Comma-separated list of databases to skip
       --all                 Import all supported databases
   -h, --help                Show this help and exit
 
 Supported database identifiers: auth, characters, world.
-By default the script restores auth and characters. Use --db/--skip to
-customize the selection.
+By default the script restores auth and characters databases.
 
-Legacy positional forms are still supported:
-  ./backup-import.sh <mysql_password> <auth_db> <characters_db> <world_db>
-  ./backup-import.sh <backup_dir> <mysql_password> <auth_db> <characters_db> <world_db>
+Examples:
+  # Restore from specific backup directory
+  ./backup-import.sh --backup-dir /path/to/backup --password azerothcore123 --auth-db acore_auth --characters-db acore_characters
 
-Legacy usage always imports the databases provided in the invocation.
+  # Restore all databases
+  ./backup-import.sh --backup-dir ./storage/backups/ExportBackup_20241029_120000 --password azerothcore123 --all --auth-db acore_auth --characters-db acore_characters --world-db acore_world
+
+  # Restore only world database
+  ./backup-import.sh --backup-dir ./backups/daily/latest --password azerothcore123 --db world --world-db acore_world
 EOF
 }
 
@@ -376,29 +379,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if ((${#POSITIONAL[@]} > 0)); then
-  case ${#POSITIONAL[@]} in
-    4)
-      MYSQL_PW="${POSITIONAL[0]}"
-      DB_NAMES[auth]="${POSITIONAL[1]}"
-      DB_NAMES[characters]="${POSITIONAL[2]}"
-      DB_NAMES[world]="${POSITIONAL[3]}"
-      INCLUDE_DBS=(auth characters world)
-      EXPLICIT_SELECTION=true
-      ;;
-    5)
-      BACKUP_DIR="${POSITIONAL[0]}"
-      BACKUP_PROVIDED=true
-      MYSQL_PW="${POSITIONAL[1]}"
-      DB_NAMES[auth]="${POSITIONAL[2]}"
-      DB_NAMES[characters]="${POSITIONAL[3]}"
-      DB_NAMES[world]="${POSITIONAL[4]}"
-      INCLUDE_DBS=(auth characters world)
-      EXPLICIT_SELECTION=true
-      ;;
-    *)
-      fatal "Unrecognized positional arguments. Run --help for usage."
-      ;;
-  esac
+  fatal "Positional arguments are not supported. Use named options instead."
 fi
 
 if $EXPLICIT_SELECTION; then
@@ -418,33 +399,7 @@ fi
 if $BACKUP_PROVIDED; then
   BACKUP_DIR="$(resolve_relative "$INVOCATION_DIR" "$BACKUP_DIR")"
 else
-  # Auto-discover backup directory from available options
-  BACKUP_SEARCH_PATHS=(
-    "$SCRIPT_DIR/ImportBackup"
-    "$SCRIPT_DIR/storage/backups"
-    "$SCRIPT_DIR/manual-backups"
-    "/backups"
-    "/var/lib/mysql-persistent"
-  )
-
-  BACKUP_DIR=""
-  for candidate in "${BACKUP_SEARCH_PATHS[@]}"; do
-    if [ -d "$candidate" ] && [ -n "$(ls -A "$candidate" 2>/dev/null)" ]; then
-      # Check if this directory contains backups
-      if [ -d "$candidate/daily" ] || [ -d "$candidate/hourly" ] || \
-         ls "$candidate"/*.sql.gz >/dev/null 2>&1 || ls "$candidate"/*.sql >/dev/null 2>&1 || \
-         ls "$candidate"/ExportBackup_* >/dev/null 2>&1 || ls "$candidate"/20[0-9][0-9][0-9][0-9][0-9][0-9]_* >/dev/null 2>&1; then
-        log "Auto-discovered backup directory: $candidate"
-        BACKUP_DIR="$candidate"
-        break
-      fi
-    fi
-  done
-
-  if [ -z "$BACKUP_DIR" ]; then
-    BACKUP_DIR="$SCRIPT_DIR/ImportBackup"
-    warn "No backup directory auto-discovered, using default: $BACKUP_DIR"
-  fi
+  fatal "Backup directory is required. Use --backup-dir DIR to specify."
 fi
 
 [[ -d "$BACKUP_DIR" ]] || fatal "Backup directory not found: $BACKUP_DIR"

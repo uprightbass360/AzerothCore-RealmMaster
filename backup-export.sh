@@ -23,12 +23,12 @@ EXPLICIT_SELECTION=false
 
 usage(){
   cat <<'EOF'
-Usage: ./backup-export.sh [options] [legacy positional args]
+Usage: ./backup-export.sh [options]
 
 Creates a timestamped backup of one or more ACore databases.
 
 Options:
-  -o, --output DIR          Destination directory (default: script directory)
+  -o, --output DIR          Destination directory (default: storage/backups)
   -p, --password PASS       MySQL root password
       --auth-db NAME        Auth database schema name
       --characters-db NAME  Characters database schema name
@@ -38,13 +38,17 @@ Options:
   -h, --help                Show this help and exit
 
 Supported database identifiers: auth, characters, world.
+By default exports auth and characters if database names are provided.
 
-Legacy positional forms are still supported:
-  ./backup-export.sh <mysql_password> <auth_db> <characters_db>
-  ./backup-export.sh <mysql_password> <auth_db> <characters_db> <world_db>
-  ./backup-export.sh <output_dir> <mysql_password> <auth_db> <characters_db> [world_db]
+Examples:
+  # Export all databases to default location
+  ./backup-export.sh --password azerothcore123 --auth-db acore_auth --characters-db acore_characters --world-db acore_world --all
 
-In legacy mode all provided databases are exported.
+  # Export specific databases to custom directory
+  ./backup-export.sh --output /path/to/backups --password azerothcore123 --db auth,characters --auth-db acore_auth --characters-db acore_characters
+
+  # Export only world database
+  ./backup-export.sh --password azerothcore123 --db world --world-db acore_world
 EOF
 }
 
@@ -180,37 +184,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if ((${#POSITIONAL[@]} > 0)); then
-  case ${#POSITIONAL[@]} in
-    3)
-      MYSQL_PW="${POSITIONAL[0]}"
-      DB_NAMES[auth]="${POSITIONAL[1]}"
-      DB_NAMES[characters]="${POSITIONAL[2]}"
-      INCLUDE_DBS=(auth characters)
-      EXPLICIT_SELECTION=true
-      ;;
-    4)
-      DEST_PARENT="${POSITIONAL[0]}"
-      DEST_PROVIDED=true
-      MYSQL_PW="${POSITIONAL[1]}"
-      DB_NAMES[auth]="${POSITIONAL[2]}"
-      DB_NAMES[characters]="${POSITIONAL[3]}"
-      INCLUDE_DBS=(auth characters)
-      EXPLICIT_SELECTION=true
-      ;;
-    5)
-      DEST_PARENT="${POSITIONAL[0]}"
-      DEST_PROVIDED=true
-      MYSQL_PW="${POSITIONAL[1]}"
-      DB_NAMES[auth]="${POSITIONAL[2]}"
-      DB_NAMES[characters]="${POSITIONAL[3]}"
-      DB_NAMES[world]="${POSITIONAL[4]}"
-      INCLUDE_DBS=(auth characters world)
-      EXPLICIT_SELECTION=true
-      ;;
-    *)
-      die "Unrecognized positional arguments. Run --help for usage."
-      ;;
-  esac
+  die "Positional arguments are not supported. Use named options instead."
 fi
 
 declare -a ACTIVE_DBS=()
