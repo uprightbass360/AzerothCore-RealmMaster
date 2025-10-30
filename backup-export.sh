@@ -1,85 +1,298 @@
 #!/bin/bash
-# Export auth and character databases to ExportBackup_<timestamp>/
+# Export one or more ACore databases to ExportBackup_<timestamp>/
 set -euo pipefail
 
-# Get the directory where this script is located
+INVOCATION_DIR="$PWD"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Change to the script directory to ensure relative paths work correctly
 cd "$SCRIPT_DIR"
 
+SUPPORTED_DBS=(auth characters world)
+declare -A SUPPORTED_SET=()
+for db in "${SUPPORTED_DBS[@]}"; do
+  SUPPORTED_SET["$db"]=1
+done
+
+declare -A DB_NAMES=([auth]="" [characters]="" [world]="")
+declare -a INCLUDE_DBS=()
+declare -a SKIP_DBS=()
+
+MYSQL_PW=""
+DEST_PARENT=""
+DEST_PROVIDED=false
+EXPLICIT_SELECTION=false
+
 usage(){
-  cat <<EOF
-Usage: ./backup-export.sh [output_dir] <mysql_password> <auth_db> <characters_db>
+  cat <<'EOF'
+Usage: ./backup-export.sh [options] [legacy positional args]
 
-Creates a timestamped backup of the auth and character databases.
+Creates a timestamped backup of one or more ACore databases.
 
-Arguments:
-  [output_dir] Output directory (default: .)
-  <mysql_password> MySQL root password (required)
-  <auth_db> Auth database name (required)
-  <characters_db> Characters database name (required)
+Options:
+  -o, --output DIR          Destination directory (default: script directory)
+  -p, --password PASS       MySQL root password
+      --auth-db NAME        Auth database schema name
+      --characters-db NAME  Characters database schema name
+      --world-db NAME       World database schema name
+      --db LIST             Comma-separated list of databases to export
+      --skip LIST           Comma-separated list of databases to skip
+  -h, --help                Show this help and exit
 
-Outputs:
-  ExportBackup_YYYYMMDD_HHMMSS/
-    acore_auth.sql.gz
-    acore_characters.sql.gz
-    manifest.json
+Supported database identifiers: auth, characters, world.
 
-Services stay online; backup uses mysqldump.
+Legacy positional forms are still supported:
+  ./backup-export.sh <mysql_password> <auth_db> <characters_db>
+  ./backup-export.sh <mysql_password> <auth_db> <characters_db> <world_db>
+  ./backup-export.sh <output_dir> <mysql_password> <auth_db> <characters_db> [world_db]
+
+In legacy mode all provided databases are exported.
 EOF
 }
 
-case "${1:-}" in
-  -h|--help) usage; exit 0;;
-esac
+err(){ printf 'Error: %s\n' "$*" >&2; }
+die(){ err "$1"; exit 1; }
 
-# Check if required parameters are provided (minimum 3: password, auth_db, char_db)
-if [[ $# -lt 3 ]]; then
-  echo "Error: Required parameters missing. Usage: ./backup-export.sh [output_dir] <mysql_password> <auth_db> <characters_db>" >&2
-  exit 1
+normalize_token(){
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]'
+}
+
+add_unique(){
+  local -n arr="$1"
+  local value="$2"
+  for existing in "${arr[@]:-}"; do
+    [[ "$existing" == "$value" ]] && return
+  done
+  arr+=("$value")
+}
+
+parse_db_list(){
+  local -n target="$1"
+  local value="$2"
+  IFS=',' read -ra parts <<<"$value"
+  for part in "${parts[@]}"; do
+    local token
+    token="$(normalize_token "$part")"
+    [[ -z "$token" ]] && continue
+    if [[ -z "${SUPPORTED_SET[$token]:-}" ]]; then
+      die "Unknown database identifier: $token (supported: ${SUPPORTED_DBS[*]})"
+    fi
+    add_unique target "$token"
+  done
+}
+
+remove_from_list(){
+  local -n arr="$1"
+  local value="$2"
+  local -a filtered=()
+  for item in "${arr[@]}"; do
+    [[ "$item" == "$value" ]] || filtered+=("$item")
+  done
+  arr=("${filtered[@]}")
+}
+
+resolve_relative(){
+  local base="$1" path="$2"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$base" "$path" <<'PY'
+import os, sys
+base, path = sys.argv[1:3]
+if not path:
+    print(os.path.abspath(base))
+elif os.path.isabs(path):
+    print(os.path.normpath(path))
+else:
+    print(os.path.normpath(os.path.join(base, path)))
+PY
+  else
+    die "python3 is required but was not found on PATH"
+  fi
+}
+
+json_string(){
+  if ! command -v python3 >/dev/null 2>&1; then
+    die "python3 is required but was not found on PATH"
+  fi
+  python3 - "$1" <<'PY'
+import json, sys
+print(json.dumps(sys.argv[1]))
+PY
+}
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -o|--output)
+      [[ $# -ge 2 ]] || die "--output requires a directory argument"
+      DEST_PARENT="$2"
+      DEST_PROVIDED=true
+      shift 2
+      ;;
+    -p|--password)
+      [[ $# -ge 2 ]] || die "--password requires a value"
+      MYSQL_PW="$2"
+      shift 2
+      ;;
+    --auth-db)
+      [[ $# -ge 2 ]] || die "--auth-db requires a value"
+      DB_NAMES[auth]="$2"
+      shift 2
+      ;;
+    --characters-db)
+      [[ $# -ge 2 ]] || die "--characters-db requires a value"
+      DB_NAMES[characters]="$2"
+      shift 2
+      ;;
+    --world-db)
+      [[ $# -ge 2 ]] || die "--world-db requires a value"
+      DB_NAMES[world]="$2"
+      shift 2
+      ;;
+    --db|--only)
+      [[ $# -ge 2 ]] || die "--db requires a value"
+      EXPLICIT_SELECTION=true
+      parse_db_list INCLUDE_DBS "$2"
+      shift 2
+      ;;
+    --skip)
+      [[ $# -ge 2 ]] || die "--skip requires a value"
+      parse_db_list SKIP_DBS "$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      while [[ $# -gt 0 ]]; do
+        POSITIONAL+=("$1")
+        shift
+      done
+      break
+      ;;
+    -*)
+      die "Unknown option: $1"
+      ;;
+    *)
+      POSITIONAL+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if ((${#POSITIONAL[@]} > 0)); then
+  case ${#POSITIONAL[@]} in
+    3)
+      MYSQL_PW="${POSITIONAL[0]}"
+      DB_NAMES[auth]="${POSITIONAL[1]}"
+      DB_NAMES[characters]="${POSITIONAL[2]}"
+      INCLUDE_DBS=(auth characters)
+      EXPLICIT_SELECTION=true
+      ;;
+    4)
+      DEST_PARENT="${POSITIONAL[0]}"
+      DEST_PROVIDED=true
+      MYSQL_PW="${POSITIONAL[1]}"
+      DB_NAMES[auth]="${POSITIONAL[2]}"
+      DB_NAMES[characters]="${POSITIONAL[3]}"
+      INCLUDE_DBS=(auth characters)
+      EXPLICIT_SELECTION=true
+      ;;
+    5)
+      DEST_PARENT="${POSITIONAL[0]}"
+      DEST_PROVIDED=true
+      MYSQL_PW="${POSITIONAL[1]}"
+      DB_NAMES[auth]="${POSITIONAL[2]}"
+      DB_NAMES[characters]="${POSITIONAL[3]}"
+      DB_NAMES[world]="${POSITIONAL[4]}"
+      INCLUDE_DBS=(auth characters world)
+      EXPLICIT_SELECTION=true
+      ;;
+    *)
+      die "Unrecognized positional arguments. Run --help for usage."
+      ;;
+  esac
 fi
 
-# Handle both cases: with and without output_dir parameter
-if [[ $# -eq 3 ]]; then
-  # No output_dir provided, use current script directory
-  DEST_PARENT="."
-  MYSQL_PW="$1"
-  DB_AUTH="$2"
-  DB_CHAR="$3"
-elif [[ $# -ge 4 ]]; then
-  # output_dir provided
-  DEST_PARENT="$1"
-  MYSQL_PW="$2"
-  DB_AUTH="$3"
-  DB_CHAR="$4"
+declare -a ACTIVE_DBS=()
+if $EXPLICIT_SELECTION; then
+  ACTIVE_DBS=("${INCLUDE_DBS[@]}")
+else
+  for db in "${SUPPORTED_DBS[@]}"; do
+    if [[ -n "${DB_NAMES[$db]}" ]]; then
+      add_unique ACTIVE_DBS "$db"
+    fi
+  done
+  if ((${#ACTIVE_DBS[@]} == 0)); then
+    ACTIVE_DBS=(auth characters)
+  fi
 fi
 
-# Convert output directory to absolute path if it's relative
-if [[ ! "$DEST_PARENT" = /* ]]; then
-  DEST_PARENT="$SCRIPT_DIR/$DEST_PARENT"
+for skip in "${SKIP_DBS[@]:-}"; do
+  remove_from_list ACTIVE_DBS "$skip"
+done
+
+if ((${#ACTIVE_DBS[@]} == 0)); then
+  die "No databases selected for export."
+fi
+
+[[ -n "$MYSQL_PW" ]] || die "MySQL password is required (use --password)."
+
+for db in "${ACTIVE_DBS[@]}"; do
+  case "$db" in
+    auth|characters|world) ;;
+    *) die "Unsupported database identifier requested: $db" ;;
+  esac
+  if [[ -z "${DB_NAMES[$db]}" ]]; then
+    die "Missing schema name for '$db'. Provide --${db}-db."
+  fi
+done
+
+if $DEST_PROVIDED; then
+  DEST_PARENT="$(resolve_relative "$INVOCATION_DIR" "$DEST_PARENT")"
+else
+  # Use storage/backups as default to align with existing backup structure
+  if [ -d "$SCRIPT_DIR/storage" ]; then
+    DEST_PARENT="$SCRIPT_DIR/storage/backups"
+    mkdir -p "$DEST_PARENT"
+  else
+    DEST_PARENT="$SCRIPT_DIR"
+  fi
 fi
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-DEST_DIR="${DEST_PARENT%/}/ExportBackup_${TIMESTAMP}"
+DEST_DIR="$(printf '%s/ExportBackup_%s' "$DEST_PARENT" "$TIMESTAMP")"
 mkdir -p "$DEST_DIR"
+generated_at="$(date --iso-8601=seconds)"
 
 dump_db(){
-  local db="$1" outfile="$2"
-  echo "Dumping $db -> $outfile"
-  docker exec ac-mysql mysqldump -uroot -p"$MYSQL_PW" "$db" | gzip > "$outfile"
+  local schema="$1" outfile="$2"
+  echo "Dumping ${schema} -> ${outfile}"
+  docker exec ac-mysql mysqldump -uroot -p"$MYSQL_PW" "$schema" | gzip > "$outfile"
 }
 
-dump_db "$DB_AUTH" "$DEST_DIR/acore_auth.sql.gz"
-dump_db "$DB_CHAR" "$DEST_DIR/acore_characters.sql.gz"
+for db in "${ACTIVE_DBS[@]}"; do
+  outfile="$DEST_DIR/acore_${db}.sql.gz"
+  dump_db "${DB_NAMES[$db]}" "$outfile"
+done
 
-cat > "$DEST_DIR/manifest.json" <<JSON
+first=1
 {
-  "generated_at": "$(date --iso-8601=seconds)",
-  "databases": {
-    "auth": "$DB_AUTH",
-    "characters": "$DB_CHAR"
-  }
-}
-JSON
+  printf '{\n'
+  printf '  "generated_at": %s,\n' "$(json_string "$generated_at")"
+  printf '  "databases": {\n'
+  for db in "${ACTIVE_DBS[@]}"; do
+    key_json="$(json_string "$db")"
+    value_json="$(json_string "${DB_NAMES[$db]}")"
+    if (( first )); then
+      first=0
+    else
+      printf ',\n'
+    fi
+    printf '    %s: %s' "$key_json" "$value_json"
+  done
+  printf '\n  }\n'
+  printf '}\n'
+} > "$DEST_DIR/manifest.json"
 
+echo "Exported databases: ${ACTIVE_DBS[*]}"
 echo "Backups saved under $DEST_DIR"

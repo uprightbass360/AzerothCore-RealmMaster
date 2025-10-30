@@ -87,7 +87,15 @@ echo "🔧 Starting database import process..."
 
 echo "🔍 Checking for backups to restore..."
 
-BACKUP_DIRS="/backups"
+# Define backup search paths in priority order
+BACKUP_SEARCH_PATHS=(
+  "/backups"
+  "/var/lib/mysql-persistent"
+  "$SCRIPT_DIR/../storage/backups"
+  "$SCRIPT_DIR/../manual-backups"
+  "$SCRIPT_DIR/../ImportBackup"
+)
+
 backup_path=""
 
 echo "🔍 Checking for legacy backup file..."
@@ -103,89 +111,180 @@ else
   echo "🔍 No legacy backup found"
 fi
 
-if [ -z "$backup_path" ] && [ -d "$BACKUP_DIRS" ]; then
-  echo "📁 Backup directory exists, checking for timestamped backups..."
-  if [ -n "$(ls -A "$BACKUP_DIRS" 2>/dev/null)" ]; then
-    if [ -d "$BACKUP_DIRS/daily" ]; then
-      echo "🔍 Checking for daily backups..."
-      latest_daily=$(ls -1t "$BACKUP_DIRS/daily" 2>/dev/null | head -n 1)
-      if [ -n "$latest_daily" ] && [ -d "$BACKUP_DIRS/daily/$latest_daily" ]; then
-        echo "📦 Latest daily backup found: $latest_daily"
-        for backup_file in "$BACKUP_DIRS/daily/$latest_daily"/*.sql.gz; do
-          if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
-            if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
-              echo "✅ Valid daily backup file: $(basename "$backup_file")"
-              backup_path="$BACKUP_DIRS/daily/$latest_daily"
-              break
+# Search through backup directories
+if [ -z "$backup_path" ]; then
+  for BACKUP_DIRS in "${BACKUP_SEARCH_PATHS[@]}"; do
+    if [ ! -d "$BACKUP_DIRS" ]; then
+      continue
+    fi
+
+    echo "📁 Checking backup directory: $BACKUP_DIRS"
+    if [ -n "$(ls -A "$BACKUP_DIRS" 2>/dev/null)" ]; then
+      # Check for daily backups first
+      if [ -d "$BACKUP_DIRS/daily" ]; then
+        echo "🔍 Checking for daily backups..."
+        latest_daily=$(ls -1t "$BACKUP_DIRS/daily" 2>/dev/null | head -n 1)
+        if [ -n "$latest_daily" ] && [ -d "$BACKUP_DIRS/daily/$latest_daily" ]; then
+          echo "📦 Latest daily backup found: $latest_daily"
+          for backup_file in "$BACKUP_DIRS/daily/$latest_daily"/*.sql.gz; do
+            if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
+              if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+                echo "✅ Valid daily backup file: $(basename "$backup_file")"
+                backup_path="$BACKUP_DIRS/daily/$latest_daily"
+                break 2
+              fi
+            fi
+          done
+        fi
+      fi
+
+      # Check for hourly backups
+      if [ -z "$backup_path" ] && [ -d "$BACKUP_DIRS/hourly" ]; then
+        echo "🔍 Checking for hourly backups..."
+        latest_hourly=$(ls -1t "$BACKUP_DIRS/hourly" 2>/dev/null | head -n 1)
+        if [ -n "$latest_hourly" ] && [ -d "$BACKUP_DIRS/hourly/$latest_hourly" ]; then
+          echo "📦 Latest hourly backup found: $latest_hourly"
+          for backup_file in "$BACKUP_DIRS/hourly/$latest_hourly"/*.sql.gz; do
+            if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
+              if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+                echo "✅ Valid hourly backup file: $(basename "$backup_file")"
+                backup_path="$BACKUP_DIRS/hourly/$latest_hourly"
+                break 2
+              fi
+            fi
+          done
+        fi
+      fi
+
+      # Check for timestamped backup directories (like ExportBackup_YYYYMMDD_HHMMSS)
+      if [ -z "$backup_path" ]; then
+        echo "🔍 Checking for timestamped backup directories..."
+        timestamped_backups=$(ls -1t "$BACKUP_DIRS" 2>/dev/null | grep -E '^(ExportBackup_)?[0-9]{8}_[0-9]{6}$' | head -n 1)
+        if [ -n "$timestamped_backups" ]; then
+          latest_timestamped="$timestamped_backups"
+          echo "📦 Found timestamped backup: $latest_timestamped"
+          if [ -d "$BACKUP_DIRS/$latest_timestamped" ]; then
+            if ls "$BACKUP_DIRS/$latest_timestamped"/*.sql.gz >/dev/null 2>&1; then
+              echo "🔍 Validating timestamped backup content..."
+              for backup_file in "$BACKUP_DIRS/$latest_timestamped"/*.sql.gz; do
+                if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
+                  if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+                    echo "✅ Valid timestamped backup found: $(basename "$backup_file")"
+                    backup_path="$BACKUP_DIRS/$latest_timestamped"
+                    break 2
+                  fi
+                fi
+              done
             fi
           fi
-        done
-      else
-        echo "📅 No daily backup directory found"
+        fi
       fi
-    else
-      echo "📅 No daily backup directory found"
-      echo "🔍 Checking for timestamped backup directories..."
-      timestamped_backups=$(ls -1t $BACKUP_DIRS 2>/dev/null | grep -E '^[0-9]{8}_[0-9]{6}$' | head -n 1)
-      if [ -n "$timestamped_backups" ]; then
-        latest_timestamped="$timestamped_backups"
-        echo "📦 Found timestamped backup: $latest_timestamped"
-        if [ -d "$BACKUP_DIRS/$latest_timestamped" ]; then
-          if ls "$BACKUP_DIRS/$latest_timestamped"/*.sql.gz >/dev/null 2>&1; then
-            echo "🔍 Validating timestamped backup content..."
-            for backup_file in "$BACKUP_DIRS/$latest_timestamped"/*.sql.gz; do
-              if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
-                if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
-                  echo "✅ Valid timestamped backup found: $(basename "$backup_file")"
-                  backup_path="$BACKUP_DIRS/$latest_timestamped"
-                  break
-                fi
-              fi
-            done
-          else
-            echo "⚠️  No .sql.gz files found in timestamped backup directory"
+
+      # Check for manual backups (*.sql files)
+      if [ -z "$backup_path" ]; then
+        echo "🔍 Checking for manual backup files..."
+        latest_manual=$(ls -1t "$BACKUP_DIRS"/*.sql 2>/dev/null | head -n 1)
+        if [ -n "$latest_manual" ] && [ -f "$latest_manual" ]; then
+          echo "📦 Found manual backup: $(basename "$latest_manual")"
+          if timeout 10 head -20 "$latest_manual" 2>/dev/null | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+            echo "✅ Valid manual backup file: $(basename "$latest_manual")"
+            backup_path="$latest_manual"
+            break
           fi
         fi
-      else
-        echo "📅 No timestamped backup directories found"
       fi
     fi
-  else
-    echo "📁 Backup directory is empty"
-  fi
-else
-  echo "📁 No backup directory found or legacy backup already selected"
+
+    # If we found a backup in this directory, stop searching
+    if [ -n "$backup_path" ]; then
+      break
+    fi
+  done
 fi
 
 echo "🔄 Final backup path result: '$backup_path'"
 if [ -n "$backup_path" ]; then
   echo "📦 Found backup: $(basename "$backup_path")"
-  if [ -d "$backup_path" ]; then
-    echo "🔄 Restoring from backup directory: $backup_path"
-    restore_success=true
-    for backup_file in "$backup_path"/*.sql.gz; do
-      if [ -f "$backup_file" ]; then
-        if timeout 300 zcat "$backup_file" | mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD}; then
-          echo "✅ Restored $(basename "$backup_file")"
-        else
-          echo "❌ Failed to restore $(basename "$backup_file")"; restore_success=false
-        fi
+
+  restore_backup() {
+    local backup_path="$1"
+    local restore_success=true
+
+    if [ -d "$backup_path" ]; then
+      echo "🔄 Restoring from backup directory: $backup_path"
+
+      # Check for manifest file to understand backup structure
+      if [ -f "$backup_path/manifest.json" ]; then
+        echo "📋 Found manifest file, checking backup contents..."
+        cat "$backup_path/manifest.json"
       fi
-    done
-    if [ "$restore_success" = true ]; then
-      echo "$(date): Backup successfully restored from $backup_path" > "$RESTORE_SUCCESS_MARKER"
-      exit 0
-    else
-      echo "$(date): Backup restoration failed - proceeding with fresh setup" > "$RESTORE_FAILED_MARKER"
+
+      # Restore compressed SQL files
+      if ls "$backup_path"/*.sql.gz >/dev/null 2>&1; then
+        for backup_file in "$backup_path"/*.sql.gz; do
+          if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
+            echo "🔄 Restoring $(basename "$backup_file")..."
+            if timeout 300 zcat "$backup_file" | mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD}; then
+              echo "✅ Restored $(basename "$backup_file")"
+            else
+              echo "❌ Failed to restore $(basename "$backup_file")"
+              restore_success=false
+            fi
+          fi
+        done
+      fi
+
+      # Also check for uncompressed SQL files
+      if ls "$backup_path"/*.sql >/dev/null 2>&1; then
+        for backup_file in "$backup_path"/*.sql; do
+          if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
+            echo "🔄 Restoring $(basename "$backup_file")..."
+            if timeout 300 mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} < "$backup_file"; then
+              echo "✅ Restored $(basename "$backup_file")"
+            else
+              echo "❌ Failed to restore $(basename "$backup_file")"
+              restore_success=false
+            fi
+          fi
+        done
+      fi
+
+    elif [ -f "$backup_path" ]; then
+      echo "🔄 Restoring from backup file: $backup_path"
+      case "$backup_path" in
+        *.gz)
+          if timeout 300 zcat "$backup_path" | mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD}; then
+            echo "✅ Restored compressed backup"
+          else
+            echo "❌ Failed to restore compressed backup"
+            restore_success=false
+          fi
+          ;;
+        *.sql)
+          if timeout 300 mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} < "$backup_path"; then
+            echo "✅ Restored SQL backup"
+          else
+            echo "❌ Failed to restore SQL backup"
+            restore_success=false
+          fi
+          ;;
+        *)
+          echo "⚠️  Unknown backup file format: $backup_path"
+          restore_success=false
+          ;;
+      esac
     fi
-  elif [ -f "$backup_path" ]; then
-    echo "🔄 Restoring from backup file: $backup_path"
-    if timeout 300 mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} < "$backup_path"; then
-      echo "$(date): Backup successfully restored from $backup_path" > "$RESTORE_SUCCESS_MARKER"
-      exit 0
-    else
-      echo "$(date): Backup restoration failed - proceeding with fresh setup" > "$RESTORE_FAILED_MARKER"
-    fi
+
+    return $([ "$restore_success" = true ] && echo 0 || echo 1)
+  }
+
+  if restore_backup "$backup_path"; then
+    echo "$(date): Backup successfully restored from $backup_path" > "$RESTORE_SUCCESS_MARKER"
+    echo "🎉 Backup restoration completed successfully!"
+    exit 0
+  else
+    echo "$(date): Backup restoration failed - proceeding with fresh setup" > "$RESTORE_FAILED_MARKER"
+    echo "⚠️  Backup restoration failed, will proceed with fresh database setup"
   fi
 else
   echo "ℹ️  No valid backups found - proceeding with fresh setup"
@@ -197,6 +296,7 @@ mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "
 CREATE DATABASE IF NOT EXISTS ${DB_AUTH_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS ${DB_WORLD_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS ${DB_CHARACTERS_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS acore_playerbots DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 SHOW DATABASES;" || { echo "❌ Failed to create databases"; exit 1; }
 echo "✅ Fresh databases created - proceeding with schema import"
 
