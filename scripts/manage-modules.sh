@@ -2,6 +2,9 @@
 # ac-compose
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 echo 'Setting up git user'
 git config --global user.name "${GIT_USERNAME:-ac-compose}"
 git config --global user.email "${GIT_EMAIL:-noreply@azerothcore.org}"
@@ -101,8 +104,12 @@ if [ "$MODULE_GAIN_HONOR_GUARD" != "1" ] && [ -d "mod-gain-honor-guard" ]; then
   rm -rf mod-gain-honor-guard
 fi
 
-if [ "$MODULE_ELUNA" != "1" ] && [ -d "mod-eluna" ]; then
-  echo 'Removing mod-eluna (disabled)...'
+if [ "$MODULE_ELUNA" != "1" ] && [ -d "mod-ale" ]; then
+  echo 'Removing mod-ale (disabled)...'
+  rm -rf mod-ale
+fi
+if [ "$MODULE_ELUNA" = "1" ] && [ -d "mod-eluna" ]; then
+  echo 'Removing legacy mod-eluna directory (superseded by mod-ale)...'
   rm -rf mod-eluna
 fi
 if [ "$MODULE_ARAC" != "1" ] && [ -d "mod-arac" ]; then
@@ -366,13 +373,27 @@ if [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && [ ! -d "mod-gain-honor-guard" ]; then
   git clone https://github.com/azerothcore/mod-gain-honor-guard.git mod-gain-honor-guard
 fi
 
-if [ "$MODULE_ELUNA" = "1" ] && [ ! -d "mod-eluna" ]; then
-  echo '🖥️ Installing mod-eluna...'
-  echo '   📖 Project: https://github.com/azerothcore/mod-eluna'
-  echo '   ℹ️  Lua scripting engine for custom server functionality'
+if [ "$MODULE_ELUNA" = "1" ] && [ ! -d "mod-ale" ]; then
+  echo '🖥️ Installing mod-ale (AzerothCore Lua Engine)...'
+  echo '   📖 Project: https://github.com/azerothcore/mod-ale'
+  echo '   ℹ️  Next-generation Lua scripting engine for AzerothCore'
   echo '   🔧 REBUILD REQUIRED: Container must be rebuilt with source-based compilation'
-  git clone https://github.com/azerothcore/mod-eluna.git mod-eluna
+  git clone https://github.com/azerothcore/mod-ale.git mod-ale
 fi
+
+if [ -d "mod-ale" ]; then
+  creature_methods_file="mod-ale/src/LuaEngine/methods/CreatureMethods.h"
+  if grep -q 'MoveWaypoint(creature->GetWaypointPath(), true);' "$creature_methods_file" 2>/dev/null; then
+    if sed -i 's/MoveWaypoint(creature->GetWaypointPath(), true);/MovePath(creature->GetWaypointPath(), true);/' "$creature_methods_file"; then
+      echo '   ✅ Applied mod-ale MovePath compatibility fix (upstream issue #336)'
+    else
+      echo '   ⚠️  Failed to adjust mod-ale MoveWaypoint call'
+    fi
+  else
+    echo '   ℹ️  mod-ale MovePath compatibility fix already present'
+  fi
+fi
+
 if [ "$MODULE_ARAC" = "1" ] && [ ! -d "mod-arac" ]; then
   echo '🌈 Installing mod-arac...'
   echo '   📖 Project: https://github.com/heyitsbench/mod-arac'
@@ -447,18 +468,31 @@ if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && [ ! -d "mod-black-market" ]
   echo '   📖 Project: https://github.com/Youpeoples/Black-Market-Auction-House'
   echo '   ℹ️  MoP Black Market Auction House backported using Eluna Lua engine'
   echo '   ⚠️  SPECIAL MODULE: Uses Lua scripts, not C++ compilation'
-  echo '   🔧 REQUIRES: mod-eluna must be enabled and functional'
+  echo '   🔧 REQUIRES: mod-ale must be enabled and functional'
   git clone https://github.com/Youpeoples/Black-Market-Auction-House.git mod-black-market
 
   # Special handling: Copy Lua scripts to lua_scripts directory
   if [ "$MODULE_ELUNA" = "1" ] && [ -d "mod-black-market/Server Files/lua_scripts" ]; then
-    echo '   🔧 Integrating Black Market Lua scripts with mod-eluna...'
-    mkdir -p /azerothcore/lua_scripts
-    cp -r mod-black-market/Server\ Files/lua_scripts/* /azerothcore/lua_scripts/ 2>/dev/null || true
-    echo '   ✅ Black Market Lua scripts copied to /azerothcore/lua_scripts directory'
-    ls -la /azerothcore/lua_scripts/ | grep -E "\.lua$" || echo "   ℹ️  No .lua files found after copy"
+    echo '   🔧 Integrating Black Market Lua scripts with mod-ale...'
+    if mkdir -p /azerothcore/lua_scripts 2>/dev/null; then
+      if cp -r "mod-black-market/Server Files/lua_scripts/." /azerothcore/lua_scripts/ 2>/dev/null; then
+        echo '   ✅ Black Market Lua scripts copied to /azerothcore/lua_scripts directory'
+        ls -la /azerothcore/lua_scripts/ | grep -E "\.lua$" || echo "   ℹ️  No .lua files found after copy"
+      else
+        echo '   ⚠️  WARNING: Failed to copy Lua scripts into /azerothcore/lua_scripts; continuing'
+      fi
+    elif [ -n "${MODULES_HOST_DIR:-}" ]; then
+      host_lua_dir="${MODULES_HOST_DIR%/}/lua_scripts"
+      if mkdir -p "$host_lua_dir" && cp -r "mod-black-market/Server Files/lua_scripts/." "$host_lua_dir/" 2>/dev/null; then
+        echo "   ✅ Black Market Lua scripts staged to $host_lua_dir"
+      else
+        echo "   ⚠️  WARNING: Unable to stage Lua scripts to $host_lua_dir; continuing"
+      fi
+    else
+      echo '   ⚠️  WARNING: No writable target for Lua scripts; continuing without copy'
+    fi
   else
-    echo '   ⚠️  WARNING: mod-eluna not enabled - Black Market will not function'
+    echo '   ⚠️  WARNING: mod-ale not enabled - Black Market will not function'
   fi
 fi
 
@@ -687,6 +721,20 @@ for module_dir in mod-*; do
   fi
 done
 
+# Populate module-specific configuration directory (/etc/modules)
+MODULES_CONF_DIR="/azerothcore/env/dist/etc/modules"
+mkdir -p "$MODULES_CONF_DIR"
+rm -f "$MODULES_CONF_DIR"/*.conf "$MODULES_CONF_DIR"/*.conf.dist 2>/dev/null || true
+for module_dir in mod-*; do
+  [ -d "$module_dir" ] || continue
+  while IFS= read -r conf_file; do
+    [ -n "$conf_file" ] || continue
+    base_name="$(basename "$conf_file")"
+    dest_name="${base_name%.dist}"
+    cp "$conf_file" "$MODULES_CONF_DIR/$dest_name"
+  done < <(find "$module_dir" -path "*/conf/*" -type f \( -name "*.conf" -o -name "*.conf.dist" \) 2>/dev/null)
+done
+
 if [ "$MODULE_AUTOBALANCE" = "1" ]; then
   if [ -f "/azerothcore/env/dist/etc/AutoBalance.conf.dist" ]; then
     sed -i 's/^AutoBalance\.LevelScaling\.EndGameBoost.*/AutoBalance.LevelScaling.EndGameBoost = false    # disabled pending proper implementation/' \
@@ -772,7 +820,7 @@ ENABLED_MODULES=""
 [ "$MODULE_ACCOUNT_ACHIEVEMENTS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-account-achievements"
 [ "$MODULE_AUTO_REVIVE" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-auto-revive"
 [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-gain-honor-guard"
-[ "$MODULE_ELUNA" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-eluna"
+[ "$MODULE_ELUNA" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-ale"
 [ "$MODULE_TIME_IS_TIME" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-time-is-time"
 [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-random-enchants"
 [ "$MODULE_SOLOCRAFT" = "1" ] && ENABLED_MODULES="$ENABLED_MODULES mod-solocraft"

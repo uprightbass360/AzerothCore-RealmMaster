@@ -144,131 +144,72 @@ execute_module_sql_scripts() {
     apk add --no-cache mariadb-client >/dev/null 2>&1 || echo "Warning: Could not install MariaDB client"
   }
 
-  # Execute SQL for enabled modules only
-  if [ "$MODULE_PLAYERBOTS" = "1" ] && [ -d "mod-playerbots" ]; then
-    execute_module_sql "mod-playerbots" "Playerbots"
-  fi
+  # Iterate modules from staging directory to catch new modules automatically
+  for module_dir in */; do
+    [[ -d "$module_dir" ]] || continue
+    [[ "$module_dir" == "." || "$module_dir" == ".." ]] && continue
+    module_dir="${module_dir%/}"
+    # Only process directories that follow mod-* convention or known module names
+    if [[ "$module_dir" != mod-* && "$module_dir" != StatBooster && "$module_dir" != DungeonRespawn && "$module_dir" != eluna-ts ]]; then
+      continue
+    fi
 
-  if [ "$MODULE_AOE_LOOT" = "1" ] && [ -d "mod-aoe-loot" ]; then
-    execute_module_sql "mod-aoe-loot" "AoE Loot"
-  fi
+    local enabled=0
+    case "$module_dir" in
+      mod-playerbots) enabled="$MODULE_PLAYERBOTS" ;;
+      mod-aoe-loot) enabled="$MODULE_AOE_LOOT" ;;
+      mod-learn-spells) enabled="$MODULE_LEARN_SPELLS" ;;
+      mod-fireworks-on-level) enabled="$MODULE_FIREWORKS" ;;
+      mod-individual-progression) enabled="$MODULE_INDIVIDUAL_PROGRESSION" ;;
+      mod-ahbot) enabled="$MODULE_AHBOT" ;;
+      mod-autobalance) enabled="$MODULE_AUTOBALANCE" ;;
+      mod-transmog) enabled="$MODULE_TRANSMOG" ;;
+      mod-npc-buffer) enabled="$MODULE_NPC_BUFFER" ;;
+      mod-dynamic-xp) enabled="$MODULE_DYNAMIC_XP" ;;
+      mod-solo-lfg) enabled="$MODULE_SOLO_LFG" ;;
+      mod-1v1-arena) enabled="$MODULE_1V1_ARENA" ;;
+      mod-phased-duels) enabled="$MODULE_PHASED_DUELS" ;;
+      mod-breaking-news-override) enabled="$MODULE_BREAKING_NEWS" ;;
+      mod-boss-announcer) enabled="$MODULE_BOSS_ANNOUNCER" ;;
+      mod-account-achievements) enabled="$MODULE_ACCOUNT_ACHIEVEMENTS" ;;
+      mod-auto-revive) enabled="$MODULE_AUTO_REVIVE" ;;
+      mod-gain-honor-guard) enabled="$MODULE_GAIN_HONOR_GUARD" ;;
+      mod-ale) enabled="$MODULE_ELUNA" ;;
+      mod-TimeIsTime) enabled="$MODULE_TIME_IS_TIME" ;;
+      mod-pocket-portal) enabled="$MODULE_POCKET_PORTAL" ;;
+      mod-random-enchants) enabled="$MODULE_RANDOM_ENCHANTS" ;;
+      mod-solocraft) enabled="$MODULE_SOLOCRAFT" ;;
+      mod-pvp-titles) enabled="$MODULE_PVP_TITLES" ;;
+      mod-npc-beastmaster) enabled="$MODULE_NPC_BEASTMASTER" ;;
+      mod-npc-enchanter) enabled="$MODULE_NPC_ENCHANTER" ;;
+      mod-instance-reset) enabled="$MODULE_INSTANCE_RESET" ;;
+      mod-quest-count-level) enabled="$MODULE_LEVEL_GRANT" ;;
+      mod-arac) enabled="$MODULE_ARAC" ;;
+      mod-assistant) enabled="$MODULE_ASSISTANT" ;;
+      mod-reagent-bank) enabled="$MODULE_REAGENT_BANK" ;;
+      mod-black-market) enabled="$MODULE_BLACK_MARKET_AUCTION_HOUSE" ;;
+      mod-challenge-modes) enabled="$MODULE_CHALLENGE_MODES" ;;
+      mod-ollama-chat) enabled="$MODULE_OLLAMA_CHAT" ;;
+      mod-player-bot-level-brackets) enabled="$MODULE_PLAYER_BOT_LEVEL_BRACKETS" ;;
+      StatBooster) enabled="$MODULE_STATBOOSTER" ;;
+      DungeonRespawn) enabled="$MODULE_DUNGEON_RESPAWN" ;;
+      skeleton-module) enabled="$MODULE_SKELETON_MODULE" ;;
+      mod-bg-slaveryvalley) enabled="$MODULE_BG_SLAVERYVALLEY" ;;
+      mod-azerothshard) enabled="$MODULE_AZEROTHSHARD" ;;
+      mod-worgoblin) enabled="$MODULE_WORGOBLIN" ;;
+      eluna-ts) enabled="$MODULE_ELUNA_TS" ;;
+      *) enabled=1 ;;  # Default to enabled for unknown module directories
+    esac
 
-  if [ "$MODULE_LEARN_SPELLS" = "1" ] && [ -d "mod-learn-spells" ]; then
-    execute_module_sql "mod-learn-spells" "Learn Spells"
-  fi
-
-  if [ "$MODULE_FIREWORKS" = "1" ] && [ -d "mod-fireworks-on-level" ]; then
-    execute_module_sql "mod-fireworks-on-level" "Fireworks"
-  fi
-
-  if [ "$MODULE_INDIVIDUAL_PROGRESSION" = "1" ] && [ -d "mod-individual-progression" ]; then
-    execute_module_sql "mod-individual-progression" "Individual Progression"
-  fi
-
-  if [ "$MODULE_AHBOT" = "1" ] && [ -d "mod-ahbot" ]; then
-    execute_module_sql "mod-ahbot" "AHBot"
-  fi
-
-  if [ "$MODULE_AUTOBALANCE" = "1" ] && [ -d "mod-autobalance" ]; then
-    execute_module_sql "mod-autobalance" "AutoBalance"
-  fi
-
-  if [ "$MODULE_TRANSMOG" = "1" ] && [ -d "mod-transmog" ]; then
-    execute_module_sql "mod-transmog" "Transmog"
-  fi
-
-  if [ "$MODULE_NPC_BUFFER" = "1" ] && [ -d "mod-npc-buffer" ]; then
-    execute_module_sql "mod-npc-buffer" "NPC Buffer"
-  fi
-
-  if [ "$MODULE_DYNAMIC_XP" = "1" ] && [ -d "mod-dynamic-xp" ]; then
-    execute_module_sql "mod-dynamic-xp" "Dynamic XP"
-  fi
-
-  if [ "$MODULE_SOLO_LFG" = "1" ] && [ -d "mod-solo-lfg" ]; then
-    execute_module_sql "mod-solo-lfg" "Solo LFG"
-  fi
-
-  if [ "$MODULE_1V1_ARENA" = "1" ] && [ -d "mod-1v1-arena" ]; then
-    execute_module_sql "mod-1v1-arena" "1v1 Arena"
-  fi
-
-  if [ "$MODULE_PHASED_DUELS" = "1" ] && [ -d "mod-phased-duels" ]; then
-    execute_module_sql "mod-phased-duels" "Phased Duels"
-  fi
-
-  if [ "$MODULE_BREAKING_NEWS" = "1" ] && [ -d "mod-breaking-news-override" ]; then
-    execute_module_sql "mod-breaking-news-override" "Breaking News"
-  fi
-
-  if [ "$MODULE_BOSS_ANNOUNCER" = "1" ] && [ -d "mod-boss-announcer" ]; then
-    execute_module_sql "mod-boss-announcer" "Boss Announcer"
-  fi
-
-  if [ "$MODULE_ACCOUNT_ACHIEVEMENTS" = "1" ] && [ -d "mod-account-achievements" ]; then
-    execute_module_sql "mod-account-achievements" "Account Achievements"
-  fi
-
-  if [ "$MODULE_AUTO_REVIVE" = "1" ] && [ -d "mod-auto-revive" ]; then
-    execute_module_sql "mod-auto-revive" "Auto Revive"
-  fi
-
-  if [ "$MODULE_GAIN_HONOR_GUARD" = "1" ] && [ -d "mod-gain-honor-guard" ]; then
-    execute_module_sql "mod-gain-honor-guard" "Gain Honor Guard"
-  fi
-
-  if [ "$MODULE_ELUNA" = "1" ] && [ -d "mod-eluna" ]; then
-    execute_module_sql "mod-eluna" "Eluna"
-  fi
-  if [ "$MODULE_ARAC" = "1" ] && [ -d "mod-arac" ]; then
-    execute_module_sql "mod-arac" "All Races All Classes"
-  fi
-
-  if [ "$MODULE_TIME_IS_TIME" = "1" ] && [ -d "mod-TimeIsTime" ]; then
-    execute_module_sql "mod-TimeIsTime" "Time Is Time"
-  fi
-
-  if [ "$MODULE_POCKET_PORTAL" = "1" ]; then
-    echo '⚠️  Skipping mod-pocket-portal SQL: module disabled until C++20 patch is applied.'
-    MODULE_POCKET_PORTAL=0
-  fi
-
-  if [ "$MODULE_RANDOM_ENCHANTS" = "1" ] && [ -d "mod-random-enchants" ]; then
-    execute_module_sql "mod-random-enchants" "Random Enchants"
-  fi
-
-  if [ "$MODULE_SOLOCRAFT" = "1" ] && [ -d "mod-solocraft" ]; then
-    execute_module_sql "mod-solocraft" "Solocraft"
-  fi
-
-  if [ "$MODULE_PVP_TITLES" = "1" ] && [ -d "mod-pvp-titles" ]; then
-    execute_module_sql "mod-pvp-titles" "PvP Titles"
-  fi
-
-  if [ "$MODULE_NPC_BEASTMASTER" = "1" ] && [ -d "mod-npc-beastmaster" ]; then
-    execute_module_sql "mod-npc-beastmaster" "NPC Beastmaster"
-  fi
-
-  if [ "$MODULE_NPC_ENCHANTER" = "1" ] && [ -d "mod-npc-enchanter" ]; then
-    execute_module_sql "mod-npc-enchanter" "NPC Enchanter"
-  fi
-
-  if [ "$MODULE_INSTANCE_RESET" = "1" ] && [ -d "mod-instance-reset" ]; then
-    execute_module_sql "mod-instance-reset" "Instance Reset"
-  fi
-
-  if [ "$MODULE_LEVEL_GRANT" = "1" ] && [ -d "mod-quest-count-level" ]; then
-    execute_module_sql "mod-quest-count-level" "Level Grant"
-  fi
-  if [ "$MODULE_ASSISTANT" = "1" ] && [ -d "mod-assistant" ]; then
-    execute_module_sql "mod-assistant" "Assistant"
-  fi
-  if [ "$MODULE_REAGENT_BANK" = "1" ] && [ -d "mod-reagent-bank" ]; then
-    execute_module_sql "mod-reagent-bank" "Reagent Bank"
-  fi
-  if [ "$MODULE_BLACK_MARKET_AUCTION_HOUSE" = "1" ] && [ -d "mod-black-market" ]; then
-    execute_module_sql "mod-black-market" "Black Market"
-  fi
+    if [ "${enabled:-0}" = "1" ]; then
+      # Skip modules explicitly disabled for SQL
+      if [ "$module_dir" = "mod-pocket-portal" ]; then
+        echo '⚠️  Skipping mod-pocket-portal SQL: module disabled until C++20 patch is applied.'
+        continue
+      fi
+      execute_module_sql "$module_dir" "$module_dir"
+    fi
+  done
 
   run_custom_sql_group world "${DB_WORLD_NAME}" "custom world SQL"
   run_custom_sql_group auth "${DB_AUTH_NAME}" "custom auth SQL"

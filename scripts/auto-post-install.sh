@@ -116,6 +116,21 @@ else
 
   echo "   ✅ Created $created_count module configuration files"
 
+  # Ensure module configuration files exist under modules directory
+  MODULES_DIR="$CONFIG_DIR/modules"
+  if [ -d "$MODULES_DIR" ]; then
+    echo ""
+    echo "   🔧 Creating module configs in modules/..."
+    for file in "$MODULES_DIR"/*.conf.dist; do
+      [ -f "$file" ] || continue
+      target="${file%.dist}"
+      if [ ! -f "$target" ]; then
+        echo "      📝 Creating $(basename "$target") from $(basename "$file")"
+        cp "$file" "$target"
+      fi
+    done
+  fi
+
   # Step 2: Update configuration files
   echo ""
   echo "🔧 Step 2: Updating configuration files..."
@@ -129,6 +144,24 @@ else
   update_playerbots_conf /azerothcore/config/playerbots.conf.dist
   update_playerbots_conf /azerothcore/config/modules/playerbots.conf
   update_playerbots_conf /azerothcore/config/modules/playerbots.conf.dist
+
+  ensure_config_key(){
+    local file="$1"
+    local key="$2"
+    local value="$3"
+    if [ ! -f "$file" ]; then
+      return
+    fi
+    if grep -qE "^[[:space:]]*${key}[[:space:]]*=" "$file"; then
+      return
+    fi
+    echo "   ➕ Adding ${key} to $(basename "$file")"
+    printf '\n%s = %s\n' "$key" "$value" >> "$file"
+  }
+
+  ensure_config_key /azerothcore/config/worldserver.conf "Account.Achievements.Excluded" "\"\""
+  ensure_config_key /azerothcore/config/worldserver.conf "Playerbots.Updates.EnableDatabases" "1"
+  ensure_config_key /azerothcore/config/worldserver.conf "PlayerbotsDatabaseInfo" "\"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_PLAYERBOTS_NAME}\""
 
   echo "✅ Configuration files updated"
 

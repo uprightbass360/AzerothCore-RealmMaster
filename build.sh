@@ -85,10 +85,10 @@ COMPILE_MODULE_VARS=(
   MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
   MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS
   MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD
-  MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER
+  MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER
   MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK
-  MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN
-  MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN
+  MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN
+  MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN MODULE_ELUNA_TS
 )
 
 requires_playerbot_source(){
@@ -354,7 +354,9 @@ stage_modules(){
 
   local module_export_var
   for module_export_var in "${module_vars[@]}"; do
-    export "$module_export_var"
+    local module_value
+    module_value="$(read_env "$module_export_var" "0")"
+    export "${module_export_var}=${module_value:-0}"
   done
 
   local staging_modules_dir="${storage_path}/modules"
@@ -391,27 +393,28 @@ stage_modules(){
     rm -f "$staging_modules_dir/.modules_state" "$staging_modules_dir/.requires_rebuild" 2>/dev/null || true
   fi
 
-  if (cd "$local_modules_dir" && bash "$ROOT_DIR/scripts/manage-modules.sh"); then
-    ok "Module repositories staged to $local_modules_dir"
-    if [ -n "$staging_modules_dir" ]; then
-      if command -v rsync >/dev/null 2>&1; then
-        rsync -a --delete \
-          --exclude '.modules_state' \
-          --exclude '.requires_rebuild' \
-          "$local_modules_dir"/ "$staging_modules_dir"/
-      else
-        find "$staging_modules_dir" -mindepth 1 -maxdepth 1 \
-          ! -name '.modules_state' \
-          ! -name '.requires_rebuild' \
-          -exec rm -rf {} + 2>/dev/null || true
-        (cd "$local_modules_dir" && tar cf - --exclude='.modules_state' --exclude='.requires_rebuild' .) | (cd "$staging_modules_dir" && tar xf -)
-      fi
-      if [ -f "$local_modules_dir/.modules_state" ]; then
-        cp "$local_modules_dir/.modules_state" "$staging_modules_dir/.modules_state" 2>/dev/null || true
-      fi
+  if ! (cd "$local_modules_dir" && bash "$ROOT_DIR/scripts/manage-modules.sh"); then
+    err "Module staging failed; aborting build"
+    return 1
+  fi
+
+  ok "Module repositories staged to $local_modules_dir"
+  if [ -n "$staging_modules_dir" ]; then
+    if command -v rsync >/dev/null 2>&1; then
+      rsync -a --delete \
+        --exclude '.modules_state' \
+        --exclude '.requires_rebuild' \
+        "$local_modules_dir"/ "$staging_modules_dir"/
+    else
+      find "$staging_modules_dir" -mindepth 1 -maxdepth 1 \
+        ! -name '.modules_state' \
+        ! -name '.requires_rebuild' \
+        -exec rm -rf {} + 2>/dev/null || true
+      (cd "$local_modules_dir" && tar cf - --exclude='.modules_state' --exclude='.requires_rebuild' .) | (cd "$staging_modules_dir" && tar xf -)
     fi
-  else
-    warn "Module staging encountered issues, but continuing with build"
+    if [ -f "$local_modules_dir/.modules_state" ]; then
+      cp "$local_modules_dir/.modules_state" "$staging_modules_dir/.modules_state" 2>/dev/null || true
+    fi
   fi
 
   # Cleanup
