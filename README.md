@@ -1,80 +1,32 @@
 # AzerothCore Docker/Compose Stack
 
-A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with 20+ enhanced modules, intelligent automation, and production-ready features.
+A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with 30+ enhanced modules and intelligent automation.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Docker** or **Podman** with Docker Compose
-- **4GB+ RAM** and **20GB+ storage**
+- **Docker** with Docker Compose
+- **16GB+ RAM** and **32GB+ storage**
 - **Linux/macOS/WSL2** (Windows with WSL2 recommended)
 
-### ⚡ Automated Setup (Recommended)
+### Three Simple Steps
 
-**1. Get the Code**
 ```bash
+# 1. Get the code
 git clone https://github.com/uprightbass360/acore-compose.git
 cd acore-compose
-```
 
-**2. Run Interactive Setup**
-```bash
+# 2. Configure your server
 ./setup.sh
+
+# 3. Build (if using modules/playerbots) and deploy
+./build.sh    # Optional - only if you enabled C++ modules or playerbots
+./deploy.sh   # Always required
 ```
 
-**3. Deploy Your Realm**
-```bash
-./deploy.sh
-```
+**First deployment takes 30-60 minutes** for database setup and client data download. Subsequent starts are much faster.
 
-> ℹ️ **Image Sources:** Vanilla/standard profiles run the upstream `acore/*` images. As soon as you enable playerbots or any C++ module, the toolchain compiles locally and retags the results to your compose project name (for example, `acore-compose:authserver-playerbots`, `acore-compose:worldserver-playerbots`, `acore-compose:db-import-playerbots`, `acore-compose:client-data-playerbots`, and `acore-compose:authserver-modules-latest`), keeping everything self-contained.
-
-**4. Create Admin Account**
-
-Once the worldserver is running:
-
-```bash
-# Attach to worldserver console
-docker attach ac-worldserver
-
-# In the worldserver console, create admin account:
-account create admin yourpassword
-account set gmlevel admin 3 -1
-server info
-
-# Detach from console without stopping: Ctrl+P, Ctrl+Q
-```
-
-**5. Configure Game Client**
-
-**Client Connection Instructions**:
-
-1. **Locate your WoW 3.3.5a client directory**
-2. **Edit `realmlist.wtf` file** (in your WoW client folder):
-   ```
-   set realmlist SERVER_ADDRESS
-   ```
-
-**Examples based on your server configuration**:
-```bash
-# Local development
-set realmlist 127.0.0.1
-
-# LAN server
-set realmlist 192.168.1.100
-
-# Public server with custom port
-set realmlist your-domain.com 8215
-# or for IP with custom port
-set realmlist 203.0.113.100 8215
-```
-
-**6. Access Your Realm**
-- **Game Server**: `your-server-ip:8215` (or port you configured)
-- **Database Admin**: http://localhost:8081 (phpMyAdmin)
-- **Game Content Editor**: http://localhost:4201 (Keira3)
-
-✅ **That's it!** Your realm is ready with all enabled modules installed and configured.
+See [Local Deployment](#-local-deployment) for detailed walkthrough.
 
 ---
 
@@ -91,50 +43,48 @@ set realmlist 203.0.113.100 8215
 
 All modules are automatically downloaded, configured, and SQL scripts executed when enabled:
 
-| Module | Description | Default Status |
-|--------|-------------|----------------|
-| **[mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg)** | A solo-friendly queue that lets every player run dungeons without needing a premade group. | ✅ ENABLED |
-| **[mod-solocraft](https://github.com/azerothcore/mod-solocraft)** | Automatically scales dungeon and raid encounters so solo players or small teams can clear content. | ✅ ENABLED |
-| **[mod-autobalance](https://github.com/azerothcore/mod-autobalance)** | Adjusts creature health and damage in real time to keep fights tuned for the current party size. | ✅ ENABLED |
-| **[mod-transmog](https://github.com/azerothcore/mod-transmog)** | Adds a transmogrification vendor so players can restyle gear without changing stats. | ✅ ENABLED |
-| **[mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer)** | Provides a ready-to-use buff NPC who hands out class buffs, food, and utility spells. | ✅ ENABLED |
-| **[mod-learn-spells](https://github.com/azerothcore/mod-learn-spells)** | Teaches class spells automatically at the correct level to streamline leveling. | ✅ ENABLED |
-| **[mod-fireworks](https://github.com/azerothcore/mod-fireworks-on-level)** | Spawns celebratory fireworks whenever a player dings a new level. | ✅ ENABLED |
-| **[mod-playerbots](https://github.com/mod-playerbots/mod-playerbots)** | Adds scriptable playerbot characters that can form dungeon parties, raid, and PvP with humans. | 🔧 OPTIONAL |
-| **[mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot)** | Lets characters loot multiple corpses with one click for faster farming. | 🔧 OPTIONAL |
-| **[mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression)** | Tracks each character through Vanilla → TBC → WotLK progression, unlocking content sequentially. | ❌ DISABLED* |
-| **[mod-ahbot](https://github.com/azerothcore/mod-ahbot)** | Populates the auction house with configurable buying/selling behavior to keep markets active. | ❌ DISABLED* |
-| **[mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp)** | Tweaks XP gain based on population or custom rules to keep leveling flexible. | 🔧 OPTIONAL |
-| **[mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena)** | Creates a structured 1v1 ranked arena ladder for duel enthusiasts. | 🔧 OPTIONAL |
-| **[mod-phased-duels](https://github.com/azerothcore/mod-phased-duels)** | Moves duelers into their own phase to block interference and griefing. | 🔧 OPTIONAL |
-| **[mod-breaking-news](https://github.com/azerothcore/mod-breaking-news-override)** | Replaces the client breaking-news panel with server-managed announcements. | ❌ DISABLED* |
-| **[mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer)** | Broadcasts dramatic messages when raid bosses fall to your players. | 🔧 OPTIONAL |
-| **[mod-account-achievements](https://github.com/azerothcore/mod-account-achievements)** | Shares achievements across characters on the same account for persistent milestones. | 🔧 OPTIONAL |
-| **[mod-auto-revive](https://github.com/azerothcore/mod-auto-revive)** | Automatically resurrects characters on death—handy for casual PvE or testing realms. | 🔧 OPTIONAL |
-| **[mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard)** | Awards honor when players kill city guards, spicing up world PvP raids. | 🔧 OPTIONAL |
-| **[mod-arac](https://github.com/heyitsbench/mod-arac)** | Unlocks every race/class pairing so players can roll any combination they want (needs client patch). | 🔧 OPTIONAL |
-| **[mod-time-is-time](https://github.com/dunjeon/mod-TimeIsTime)** | Adds experimental time-twisting mechanics suited for custom events (requires extra tuning). | ❌ DISABLED* |
-| **[mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal)** | Gives players a portal gadget for quick travel to configured destinations. | ❌ DISABLED* |
-| **[mod-random-enchants](https://github.com/azerothcore/mod-random-enchants)** | Rolls randomised stat bonuses on loot to add Diablo-style gear chasing. | 🔧 OPTIONAL |
-| **[mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles)** | Restores classic honor titles with a configurable ranking ladder. | 🔧 OPTIONAL |
-| **[mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster)** | Adds an NPC who can teach, reset, and manage hunter pets for convenience. | ❌ DISABLED* |
-| **[mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter)** | Introduces an enchanting vendor who applies enchants directly for a fee. | ❌ DISABLED* |
-| **[mod-assistant](https://github.com/noisiver/mod-assistant)** | Spawns an all-purpose assistant NPC with heirlooms, professions, and convenience commands. | 🔧 OPTIONAL |
-| **[mod-reagent-bank](https://github.com/ZhengPeiRu21/mod-reagent-bank)** | Lets players stash crafting reagents with a dedicated banker NPC. | 🔧 OPTIONAL |
-| **[mod-black-market](https://github.com/Youpeoples/Black-Market-Auction-House)** | Backports the Mists-era Black Market Auction House via Eluna scripts. | 🔧 OPTIONAL |
-| **[mod-instance-reset](https://github.com/azerothcore/mod-instance-reset)** | Adds commands to reset instances quickly—useful for testing or events. | ❌ DISABLED* |
-| **[mod-challenge-modes](https://github.com/ZhengPeiRu21/mod-challenge-modes)** | Implements keystone-style timed runs with leaderboards and scaling modifiers. | 🔧 OPTIONAL |
-| **[mod-ollama-chat](https://github.com/DustinHendrickson/mod-ollama-chat)** | Connects playerbots to an Ollama LLM so they can chat with humans organically. | ❌ DISABLED* |
-| **[mod-player-bot-level-brackets](https://github.com/DustinHendrickson/mod-player-bot-level-brackets)** | Keeps bot levels spread evenly across configured brackets to match your player base. | 🔧 OPTIONAL |
-| **[mod-bg-slaveryvalley](https://github.com/Helias/mod-bg-slaveryvalley)** | Adds the Slavery Valley battleground complete with objectives and queue hooks. | ❌ DISABLED* |
-| **[mod-azerothshard](https://github.com/azerothcore/mod-azerothshard)** | Bundles AzerothShard tweaks: utility NPCs, scripted events, and gameplay improvements. | 🔧 OPTIONAL |
-| **[mod-worgoblin](https://github.com/heyitsbench/mod-worgoblin)** | Enables Worgen and Goblin characters, including necessary DB/DBC adjustments (client patch required). | ❌ DISABLED* |
-| **[StatBooster](https://github.com/AnchyDev/StatBooster)** | Lets players refine gear stats by rerolling random enchantments with special materials. | 🔧 OPTIONAL |
-| **[DungeonRespawn](https://github.com/AnchyDev/DungeonRespawn)** | Teleports dead players back to the dungeon entrance instead of a distant graveyard. | 🔧 OPTIONAL |
-| **[skeleton-module](https://github.com/azerothcore/skeleton-module)** | Provides a minimal AzerothCore module scaffold so you can build new features quickly. | 🔧 OPTIONAL |
-| **[eluna-ts](https://github.com/azerothcore/eluna-ts)** | Adds a TS-to-Lua workflow so Eluna scripts can be authored with modern tooling. | 🔧 OPTIONAL |
-
-*\* Disabled modules require additional configuration or have compatibility issues*
+| Module | Description |
+|--------|-------------|
+| **[mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg)** | A solo-friendly queue that lets every player run dungeons without needing a premade group. |
+| **[mod-solocraft](https://github.com/azerothcore/mod-solocraft)** | Automatically scales dungeon and raid encounters so solo players or small teams can clear content. |
+| **[mod-autobalance](https://github.com/azerothcore/mod-autobalance)** | Adjusts creature health and damage in real time to keep fights tuned for the current party size. |
+| **[mod-transmog](https://github.com/azerothcore/mod-transmog)** | Adds a transmogrification vendor so players can restyle gear without changing stats. |
+| **[mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer)** | Provides a ready-to-use buff NPC who hands out class buffs, food, and utility spells. |
+| **[mod-learn-spells](https://github.com/azerothcore/mod-learn-spells)** | Teaches class spells automatically at the correct level to streamline leveling. |
+| **[mod-fireworks](https://github.com/azerothcore/mod-fireworks-on-level)** | Spawns celebratory fireworks whenever a player dings a new level. |
+| **[mod-playerbots](https://github.com/mod-playerbots/mod-playerbots)** | Adds scriptable playerbot characters that can form dungeon parties, raid, and PvP with humans. |
+| **[mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot)** | Lets characters loot multiple corpses with one click for faster farming. |
+| **[mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression)** | Tracks each character through Vanilla → TBC → WotLK progression, unlocking content sequentially. |
+| **[mod-ahbot](https://github.com/azerothcore/mod-ahbot)** | Populates the auction house with configurable buying/selling behavior to keep markets active. |
+| **[mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp)** | Tweaks XP gain based on population or custom rules to keep leveling flexible. |
+| **[mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena)** | Creates a structured 1v1 ranked arena ladder for duel enthusiasts. |
+| **[mod-phased-duels](https://github.com/azerothcore/mod-phased-duels)** | Moves duelers into their own phase to block interference and griefing. |
+| **[mod-breaking-news](https://github.com/azerothcore/mod-breaking-news-override)** | Replaces the client breaking-news panel with server-managed announcements. |
+| **[mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer)** | Broadcasts dramatic messages when raid bosses fall to your players. |
+| **[mod-account-achievements](https://github.com/azerothcore/mod-account-achievements)** | Shares achievements across characters on the same account for persistent milestones. |
+| **[mod-auto-revive](https://github.com/azerothcore/mod-auto-revive)** | Automatically resurrects characters on death—handy for casual PvE or testing realms. |
+| **[mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard)** | Awards honor when players kill city guards, spicing up world PvP raids. |
+| **[mod-arac](https://github.com/heyitsbench/mod-arac)** | Unlocks every race/class pairing so players can roll any combination they want (needs client patch). |
+| **[mod-time-is-time](https://github.com/dunjeon/mod-TimeIsTime)** | Adds experimental time-twisting mechanics suited for custom events (requires extra tuning). |
+| **[mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal)** | Gives players a portal gadget for quick travel to configured destinations. |
+| **[mod-random-enchants](https://github.com/azerothcore/mod-random-enchants)** | Rolls randomised stat bonuses on loot to add Diablo-style gear chasing. |
+| **[mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles)** | Restores classic honor titles with a configurable ranking ladder. |
+| **[mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster)** | Adds an NPC who can teach, reset, and manage hunter pets for convenience. |
+| **[mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter)** | Introduces an enchanting vendor who applies enchants directly for a fee. |
+| **[mod-assistant](https://github.com/noisiver/mod-assistant)** | Spawns an all-purpose assistant NPC with heirlooms, professions, and convenience commands. |
+| **[mod-reagent-bank](https://github.com/ZhengPeiRu21/mod-reagent-bank)** | Lets players stash crafting reagents with a dedicated banker NPC. |
+| **[mod-black-market](https://github.com/Youpeoples/Black-Market-Auction-House)** | Backports the Mists-era Black Market Auction House via Eluna scripts. |
+| **[mod-instance-reset](https://github.com/azerothcore/mod-instance-reset)** | Adds commands to reset instances quickly—useful for testing or events. |
+| **[mod-challenge-modes](https://github.com/ZhengPeiRu21/mod-challenge-modes)** | Implements keystone-style timed runs with leaderboards and scaling modifiers. |
+| **[mod-ollama-chat](https://github.com/DustinHendrickson/mod-ollama-chat)** | Connects playerbots to an Ollama LLM so they can chat with humans organically. |
+| **[mod-player-bot-level-brackets](https://github.com/DustinHendrickson/mod-player-bot-level-brackets)** | Keeps bot levels spread evenly across configured brackets to match your player base. |
+| **[mod-bg-slaveryvalley](https://github.com/Helias/mod-bg-slaveryvalley)** | Adds the Slavery Valley battleground complete with objectives and queue hooks. |
+| **[mod-azerothshard](https://github.com/azerothcore/mod-azerothshard)** | Bundles AzerothShard tweaks: utility NPCs, scripted events, and gameplay improvements. |
+| **[mod-worgoblin](https://github.com/heyitsbench/mod-worgoblin)** | Enables Worgen and Goblin characters, including necessary DB/DBC adjustments (client patch required). |
+| **[StatBooster](https://github.com/AnchyDev/StatBooster)** | Lets players refine gear stats by rerolling random enchantments with special materials. |
+| **[DungeonRespawn](https://github.com/AnchyDev/DungeonRespawn)** | Teleports dead players back to the dungeon entrance instead of a distant graveyard. |
+| **[skeleton-module](https://github.com/azerothcore/skeleton-module)** | Provides a minimal AzerothCore module scaffold so you can build new features quickly. |
+| **[eluna-ts](https://github.com/azerothcore/eluna-ts)** | Adds a TS-to-Lua workflow so Eluna scripts can be authored with modern tooling. |
 
 ### Module Summaries
 - **mod-solo-lfg** – Enables the Dungeon Finder for solo players so every character can queue without a full party.
@@ -192,67 +142,180 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 - **Development Tools** - Script reloading with `.reload eluna` command
 - **Volume Mounting** - Hot-reload development environment
 
-## 🚀 Deploying to a Remote Server
+---
 
-Use this workflow to build locally, then push the same stack to a remote host:
+## 🏗️ Local Deployment
 
-1. **Configure & Rebuild Locally**
-   ```bash
-   ./setup.sh
-   ./scripts/rebuild-with-modules.sh --yes
-   ```
-   (Answer “y” to the rebuild prompt in `setup.sh`, or run the rebuild manually.)
+Complete walkthrough for deploying on your local machine.
 
-2. **Package & Push for Remote Deploy** *(also available via the interactive `./deploy.sh` prompt by choosing “Remote host”)*
-   ```bash
-   ./deploy.sh --yes \
-     --remote-host docker-server \
-     --remote-user sam \
-     --remote-project-dir /home/sam/src/acore-compose
-   ```
-   Add `--remote-identity ~/.ssh/id_ed25519` if you need a non-default SSH key, or `--remote-skip-storage` to avoid syncing the `storage/` directory.
+### Step 1: Initial Setup
 
-3. **Deploy Remotely**
-   ```bash
-ssh docker-server '
-  cd /home/sam/src/acore-compose &&
-  ./deploy.sh --yes --no-watch
-'
-   ```
-   Because the `.env` now points the modules profile at your project-local tags (for example `acore-compose:authserver-modules-latest`), the remote compose run uses the build you just migrated—no additional rebuild required.
+**1.1 Clone the Repository**
+```bash
+git clone https://github.com/uprightbass360/acore-compose.git
+cd acore-compose
+```
 
-4. **Verify**
-   ```bash
-   ./status.sh --once
-   docker compose --profile services-playerbots logs --tail 100 ac-worldserver
-   ```
+**1.2 Run Interactive Setup**
+```bash
+./setup.sh
+```
 
-### Remote Deploy Workflow
-1. **Configure & Build Locally**
-   ```bash
-   ./setup.sh --module-config sam --playerbot-max-bots 3000
-   ./scripts/rebuild-with-modules.sh --yes
-   ```
-2. **Migrate Stack to Remote** *(select “Remote host” when running `./deploy.sh` interactively, or call it non-interactively as shown below)*
-   ```bash
-   ./deploy.sh --yes \
-     --remote-host docker-server \
-     --remote-user sam \
-     --remote-project-dir /home/sam/src/acore-compose
-   ```
-   (Under the hood this wraps `scripts/migrate-stack.sh`, exporting module images to `local-storage/images/acore-modules-images.tar` and syncing `storage/` unless `--remote-skip-storage` is provided.)
-3. **Deploy on Remote Host**
-   ```bash
-ssh docker-server '
-  cd /home/sam/src/acore-compose &&
-  ./deploy.sh --yes --no-watch
-'
-   ```
-4. **Verify Services**
-   ```bash
-   ./status.sh --once
-   docker compose --profile services-playerbots logs --tail 100 ac-worldserver
-   ```
+The setup wizard will guide you through:
+- **Server Configuration**: IP address, ports, timezone
+- **Module Selection**: Choose from 30+ available modules or use presets
+- **Storage Paths**: Configure NFS/local storage locations
+- **Playerbot Settings**: Max bots, account limits (if enabled)
+- **Backup Settings**: Retention policies for automated backups
+- **Permissions**: User/group IDs for file ownership
+
+**Setup Output:** Creates `.env` file with your configuration
+
+### Step 2: Build Images (if using C++ modules or playerbots)
+
+```bash
+./build.sh
+```
+
+**Skip this step if:**
+- You're using only Lua/data modules
+- You want vanilla AzerothCore without playerbots
+
+**Required when:**
+- Playerbots enabled (`MODULE_PLAYERBOTS=1`)
+- Any C++ module enabled (check `needs_build: true` in `config/modules.json`)
+
+**Build process:**
+1. Clones AzerothCore source to `local-storage/source/`
+2. Downloads and stages enabled modules
+3. Compiles server binaries with modules
+4. Creates Docker images tagged as `<project-name>:authserver-modules-latest`, etc.
+5. Takes 20-60 minutes depending on hardware
+
+### Step 3: Deploy Services
+
+```bash
+./deploy.sh
+```
+
+**Deployment flow:**
+1. Validates environment configuration
+2. Auto-selects Docker Compose profile:
+   - `services-standard` - Vanilla AzerothCore
+   - `services-playerbots` - Playerbot build
+   - `services-modules` - Custom C++ modules build
+3. Starts services in dependency order:
+   - Database layer (`ac-mysql`, `ac-db-init`, `ac-db-import`, `ac-backup`)
+   - Module management (`ac-modules`, `ac-post-install`)
+   - Client data (`ac-client-data`)
+   - Game servers (`ac-authserver`, `ac-worldserver`)
+4. Tails worldserver logs (Ctrl+C to detach safely)
+
+**First deployment takes longer** due to:
+- Database schema import (~5-10 minutes)
+- Client data download (~15GB, ~10-30 minutes)
+- Module SQL execution
+
+**Subsequent deployments** restore from backups and skip imports.
+
+### Step 4: Create Admin Account
+
+```bash
+# Attach to worldserver console
+docker attach ac-worldserver
+
+# Create admin account
+account create admin yourpassword
+account set gmlevel admin 3 -1
+
+# Detach: Ctrl+P, Ctrl+Q (NOT Ctrl+C - that stops the server!)
+```
+
+### Step 5: Connect Game Client
+
+Edit `realmlist.wtf` in your WoW 3.3.5a client folder:
+```
+set realmlist 127.0.0.1
+```
+
+For custom ports:
+```
+set realmlist 127.0.0.1 8215
+```
+
+### Step 6: Access Management Tools
+
+- **phpMyAdmin**: http://localhost:8081 - Database administration
+- **Keira3**: http://localhost:4201 - World database editor
+
+**Credentials:**
+- Username: `root`
+- Password: From `MYSQL_ROOT_PASSWORD` in `.env`
+
+---
+
+## 🚀 Remote Deployment
+
+Deploy your configured realm to a remote server while building images locally.
+
+### Remote Deployment Workflow
+
+**Step 1: Configure & Build Locally**
+```bash
+# Interactive configuration with module selection
+./setup.sh
+
+# Build custom images (if using C++ modules or playerbots)
+./build.sh --yes
+```
+
+**Step 2: Package & Transfer to Remote Host**
+
+You can deploy remotely in two ways:
+
+**Option A: Interactive (Recommended)**
+```bash
+./deploy.sh
+# When prompted, select "2) Remote host (package for SSH deployment)"
+# Follow prompts for hostname, username, and paths
+```
+
+**Option B: Non-Interactive**
+```bash
+./deploy.sh --yes \
+  --remote-host your-server.com \
+  --remote-user youruser \
+  --remote-project-dir /home/youruser/acore-compose
+```
+
+Optional flags:
+- `--remote-port 2222` - Custom SSH port
+- `--remote-identity ~/.ssh/custom_key` - Specific SSH key
+- `--remote-skip-storage` - Don't sync storage directory (fresh install on remote)
+
+**Step 3: Deploy on Remote Host**
+```bash
+ssh your-server.com
+cd /home/youruser/acore-compose
+./deploy.sh --yes --no-watch
+```
+
+The remote deployment uses the images you built locally (no rebuild needed).
+
+**Step 4: Verify Deployment**
+```bash
+./status.sh
+# Check service logs
+docker logs ac-worldserver -f
+```
+
+### What Gets Transferred
+
+The remote deployment process transfers:
+- ✅ Docker images (exported to `local-storage/images/`)
+- ✅ Project files (scripts, configs, docker-compose.yml, .env)
+- ✅ Storage directory (unless `--remote-skip-storage` is used)
+- ❌ Build artifacts (source code, compilation files stay local)
 
 ### Module Presets
 - Drop comma-separated module lists into `configurations/*.conf` (for example `configurations/playerbot-modules.conf`).
@@ -269,37 +332,83 @@ ssh docker-server '
 ## 🏗️ Architecture Overview
 
 ### Container Profiles
+
+```mermaid
+flowchart TB
+    subgraph init["🔧 Initialization"]
+        direction LR
+        volinit["ac-volume-init<br/>Docker Volume Permissions"]
+        storinit["ac-storage-init<br/>Storage Directory Permissions"]
+    end
+
+    subgraph database["💾 Database Layer"]
+        direction LR
+        mysql["ac-mysql<br/>MySQL 8.0<br/>:64306"]
+        dbinit["ac-db-init<br/>Database Creation"]
+        dbimport["ac-db-import<br/>Schema Import"]
+        backup["ac-backup<br/>Automated Backups"]
+    end
+
+    subgraph clientdata["📦 Client Data"]
+        client["ac-client-data<br/>WoW Assets (~15GB)"]
+    end
+
+    subgraph modmgmt["⚙️ Module Management"]
+        direction LR
+        modmgr["ac-modules<br/>Downloader & SQL"]
+        postinst["ac-post-install<br/>Configuration"]
+    end
+
+    subgraph services["🎮 Game Services"]
+        direction TB
+        subgraph standard["services-standard"]
+            direction LR
+            auth1["ac-authserver<br/>:3784"]
+            world1["ac-worldserver<br/>:8215, :7778"]
+        end
+        subgraph playerbots["services-playerbots"]
+            direction LR
+            auth2["ac-authserver-playerbots<br/>:3784"]
+            world2["ac-worldserver-playerbots<br/>:8215, :7778"]
+        end
+        subgraph mods["services-modules"]
+            direction LR
+            auth3["ac-authserver-modules<br/>:3784"]
+            world3["ac-worldserver-modules<br/>:8215, :7778"]
+        end
+    end
+
+    subgraph tools["🛠️ Management Tools"]
+        direction LR
+        pma["ac-phpmyadmin<br/>:8081"]
+        keira["ac-keira3<br/>:4201"]
+    end
+
+    init -.-> database
+    database -.-> modmgmt
+    database -.-> clientdata
+    modmgmt -.-> services
+    clientdata -.-> services
+    database -.-> tools
+
+    style init fill:#f5f5f5,stroke:#999,color:#000
+    style database fill:#e1ffe1,stroke:#4caf50,color:#000
+    style clientdata fill:#f0e1ff,stroke:#9c27b0,color:#000
+    style modmgmt fill:#ffe1e1,stroke:#f44336,color:#000
+    style services fill:#fff4e1,stroke:#ff9800,color:#000
+    style tools fill:#e1f5ff,stroke:#2196f3,color:#000
+    style standard fill:#fff9e1,color:#000
+    style playerbots fill:#fff9e1,color:#000
+    style mods fill:#fff9e1,color:#000
 ```
-┌─────────────────────────────────────────┐
-│               Tools Profile             │
-│  ┌─────────────┐  ┌─────────────┐      │
-│  │ phpMyAdmin  │  │   Keira3    │      │
-│  │   :8081     │  │   :4201     │      │
-│  └─────────────┘  └─────────────┘      │
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│            Services Profiles            │
-│  Standard | Playerbots | Modules        │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ │
-│  │   Auth   │ │  World   │ │  Client  │ │
-│  │  :3784   │ │  :8215   │ │   Data   │ │
-│  └──────────┘ └──────────┘ └──────────┘ │
-│  ┌─────────────────────────────────────┐ │
-│  │      Post-Install Config            │ │
-│  └─────────────────────────────────────┘ │
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│        Database & Module System         │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ │
-│  │  MySQL   │ │  Module  │ │ DB-Init  │ │
-│  │  :64306  │ │ Manager  │ │  Setup   │ │
-│  └──────────┘ └──────────┘ └──────────┘ │
-│  ┌──────────┐ ┌─────────────────────────┐ │
-│  │ DB-Import│ │      Backup System      │ │
-│  │  Schema  │ │    (Automated Tasks)    │ │
-│  └──────────┘ └─────────────────────────┘ │
-└─────────────────────────────────────────┘
-```
+
+**Profile Notes:**
+- **Initialization**: Auto-runs, no profile needed
+- **Database Layer**: `profile: db`
+- **Client Data**: `profile: client-data` or `client-data-bots`
+- **Module Management**: `profile: modules`
+- **Game Services**: ONE of `services-standard`, `services-playerbots`, or `services-modules`
+- **Management Tools**: `profile: tools`
 
 ### Service Inventory & Ports
 
@@ -322,16 +431,37 @@ ssh docker-server '
 | `ac-keira3` | Game content editor | `4201 → 8080` | `tools` |
 
 ### Storage Structure
+
+The project uses a dual-storage approach for optimal performance:
+
+**Primary Storage** (`STORAGE_PATH` - default: NFS mount or shared storage)
 ```
 storage/
-├── config/           # Server configuration files
+├── config/           # Server configuration files (.conf)
 ├── logs/             # Server log files
-├── modules/          # Module source code and configs
-├── mysql-data/       # Database files (now under ./local-storage)
+├── modules/          # Downloaded module source code
+├── lua_scripts/      # Eluna Lua scripts (auto-loaded)
+├── install-markers/  # Module installation state tracking
 └── backups/          # Automated database backups
+    ├── daily/        # Daily backups (retained per BACKUP_RETENTION_DAYS)
+    └── hourly/       # Hourly backups (retained per BACKUP_RETENTION_HOURS)
 ```
 
-`ac-client-data` keeps unpacked game assets in the `${CLIENT_DATA_VOLUME:-ac-client-data}` Docker volume so reads stay on the local host, while download archives are cached under `${CLIENT_DATA_CACHE_PATH}` on fast local storage even when `${STORAGE_PATH}` points to remote or NFS storage.
+**Local Storage** (`STORAGE_PATH_LOCAL` - default: `./local-storage`)
+```
+local-storage/
+├── mysql-data/           # MySQL persistent data (tmpfs runtime + persistent snapshot)
+├── client-data-cache/    # Downloaded WoW client data archives
+├── source/               # AzerothCore source repository (created during builds)
+│   └── azerothcore-playerbots/  # Playerbot fork (when playerbots enabled)
+└── images/               # Exported Docker images for remote deployment
+```
+
+**Docker Volumes**
+- `ac-client-data` - Unpacked game client data (DBC, maps, vmaps, mmaps)
+- `client-data-cache` - Temporary storage for client data downloads
+
+This separation ensures database and build artifacts stay on fast local storage while configuration, modules, and backups can be shared across hosts via NFS.
 
 ---
 
@@ -371,26 +501,30 @@ http://YOUR_SERVER_IP:4201
 **Note**: Initial Keira3 startup may show database connection errors until the world database import completes. This is expected behavior.
 
 ### Module Management
+
 ```bash
 # Reconfigure modules via interactive setup
 ./setup.sh
 
-# Deploy with specific profile
-./deploy.sh --profile standard      # Standard AzerothCore
-./deploy.sh --profile playerbots    # Playerbots branch
-./deploy.sh --profile modules       # Custom modules build
+# Build custom images with enabled modules
+./build.sh                          # Interactive build (prompts for confirmation)
+./build.sh --yes                    # Auto-confirm build
+./build.sh --force                  # Force rebuild regardless of state
 
-# Module staging and compilation
-./scripts/stage-modules.sh                    # Download and stage enabled modules (preps upright playerbot builds)
-./scripts/rebuild-with-modules.sh --yes       # Rebuild mod-playerbots images with your modules
-./scripts/setup-source.sh                     # Initialize/update source repositories (auto-switches to playerbot fork for modules)
+# Deploy with automatic profile selection
+./deploy.sh                         # Auto-detects and deploys correct profile
+./deploy.sh --profile standard      # Force standard AzerothCore
+./deploy.sh --profile playerbots    # Force playerbots branch
+./deploy.sh --profile modules       # Force custom modules build
 
-# Module configuration management
+# Lower-level module operations
+./scripts/stage-modules.sh                    # Download enabled modules
+./scripts/setup-source.sh                     # Initialize AzerothCore source
 ./scripts/copy-module-configs.sh              # Create module .conf files
 ./scripts/manage-modules-sql.sh               # Execute module SQL scripts
 
-# Launch management tooling (phpMyAdmin + Keira3)
-./scripts/deploy-tools.sh
+# Management tools
+./scripts/deploy-tools.sh                     # Launch phpMyAdmin + Keira3
 ```
 
 ### Database Operations
@@ -451,17 +585,56 @@ Interactive `.env` generator with module selection, server configuration, and de
 ./setup.sh --playerbot-max-bots 3000          # Set playerbot limits
 ```
 
-#### `deploy.sh` - High-Level Deployment Orchestrator
-Module-aware deployment with automatic source builds and profile selection.
+**Features:**
+- Server address and port configuration
+- Module selection with presets
+- Storage path configuration (NFS/local)
+- Playerbot configuration
+- Backup retention settings
+- User/group permission settings
+
+#### `build.sh` - Custom Image Builder
+Compiles AzerothCore with enabled C++ modules and creates deployment-ready Docker images.
 
 ```bash
-./deploy.sh                                     # Auto-deploy with optimal profile
+./build.sh                                      # Interactive build
+./build.sh --yes                               # Auto-confirm all prompts
+./build.sh --force                             # Force rebuild regardless of state
+./build.sh --source-path /custom/path         # Use custom source path
+./build.sh --skip-source-setup                # Skip source repo setup
+```
+
+**What it does:**
+- Clones/updates AzerothCore source repository
+- Stages enabled modules into source tree
+- Compiles server binaries with modules
+- Builds and tags Docker images (`<project>:authserver-modules-latest`, etc.)
+- Updates build state markers
+
+#### `deploy.sh` - Deployment Orchestrator
+Module-aware deployment with automatic profile selection and optional remote deployment.
+
+```bash
+./deploy.sh                                     # Interactive deployment
+./deploy.sh --yes                              # Auto-confirm deployment
 ./deploy.sh --profile standard                 # Force standard AzerothCore
 ./deploy.sh --profile playerbots               # Force playerbots branch
 ./deploy.sh --profile modules                  # Force custom modules build
-./deploy.sh --skip-rebuild --no-watch         # Deploy without rebuild/logs
-./deploy.sh --keep-running                     # Deploy and exit (no log tailing)
+./deploy.sh --no-watch                         # Don't tail worldserver logs
+./deploy.sh --keep-running                     # Deploy and exit immediately
+
+# Remote deployment
+./deploy.sh --remote-host server.com \
+            --remote-user username \
+            --remote-project-dir /path/to/project
 ```
+
+**Automated workflow:**
+1. Loads environment configuration
+2. Detects required profile based on enabled modules
+3. Triggers build if C++ modules or playerbots enabled
+4. Launches Docker Compose with appropriate profiles
+5. Optionally migrates stack to remote host
 
 #### `cleanup.sh` - Project Cleanup Utility
 Comprehensive cleanup with multiple destruction levels and safety checks.
@@ -530,13 +703,7 @@ Downloads and stages enabled modules for source integration.
 ./scripts/stage-modules.sh                    # Stage all enabled modules
 ```
 
-#### `scripts/rebuild-with-modules.sh` - Source Compilation
-Rebuilds AzerothCore with enabled C++ modules compiled into the binaries.
-
-```bash
-./scripts/rebuild-with-modules.sh --yes       # Rebuild with confirmation bypass
-./scripts/rebuild-with-modules.sh --source ./custom/path  # Custom source path
-```
+Called automatically by `build.sh`. Downloads enabled modules from GitHub and prepares them for compilation.
 
 #### `scripts/setup-source.sh` - Source Repository Setup
 Initializes or updates AzerothCore source repositories for compilation.
@@ -545,13 +712,29 @@ Initializes or updates AzerothCore source repositories for compilation.
 ./scripts/setup-source.sh                     # Setup source for current configuration
 ```
 
+Automatically clones the appropriate AzerothCore fork (main or playerbot) based on configuration.
+
 #### `scripts/manage-modules.sh` - Module Management Container
-Internal script that manages module lifecycle within the ac-modules container.
+Internal script that runs inside the `ac-modules` container to handle module lifecycle:
+- Downloads module source code
+- Executes module SQL scripts
+- Manages module configuration files
+- Tracks installation state
 
 #### `config/modules.json` & `scripts/modules.py`
-- Declarative manifest describing every supported module (repo, type, hooks, dependencies).
-- `scripts/modules.py` reads the manifest and `.env`, generating `modules.env`, rebuild metadata, and shell-ready module maps.
-- Build and deploy scripts source `modules.env`, while `manage-modules.sh` consumes the manifest at runtime—no more duplicated module lists.
+Central module registry and management system:
+- **`config/modules.json`** - Declarative manifest defining all 30+ supported modules with metadata:
+  - Repository URLs
+  - Module type (cpp, data, lua)
+  - Build requirements
+  - SQL scripts and config files
+  - Dependencies
+- **`scripts/modules.py`** - Python helper that reads the manifest and `.env` to:
+  - Generate `modules.env` with enabled module lists
+  - Determine if rebuild is required
+  - Provide module metadata to shell scripts
+
+This centralized approach eliminates duplicate module definitions across scripts.
 
 #### `scripts/manage-modules-sql.sh` - Module Database Integration
 Executes module-specific SQL scripts for database schema updates.
@@ -581,20 +764,29 @@ Automated post-deployment tasks including module configuration, service verifica
 ### Advanced Deployment Tools
 
 #### `scripts/migrate-stack.sh` - Remote Deployment Migration
-Migrates locally built images and configuration to remote hosts.
-You can call this directly, or use `./deploy.sh --remote-host <host> --remote-user <user>` which wraps the same workflow.
+Exports and transfers locally built images to remote hosts via SSH.
 
 ```bash
 ./scripts/migrate-stack.sh \
   --host docker-server \
   --user sam \
-  --project-dir /home/sam/acore-compose       # Migrate to remote host
+  --project-dir /home/sam/acore-compose
 
 ./scripts/migrate-stack.sh \
   --host remote.example.com \
+  --user deploy \
+  --port 2222 \
   --identity ~/.ssh/deploy_key \
-  --skip-storage                              # Migrate without storage sync
+  --skip-storage
 ```
+
+**What it does:**
+1. Exports module images to `local-storage/images/acore-modules-images.tar`
+2. Syncs project files (.env, docker-compose.yml, scripts) via rsync/scp
+3. Syncs storage directory (unless `--skip-storage`)
+4. Imports images on remote host
+
+**Note:** Typically called via `./deploy.sh --remote-host` rather than directly.
 
 #### `scripts/deploy-tools.sh` - Management Tools Deployment
 Deploys web-based management tools (phpMyAdmin, Keira3) independently.
@@ -622,6 +814,86 @@ Runs inside the backup container to provide scheduled database backups.
 - Daily backups (retained for 3 days)
 - Automatic cleanup based on retention policies
 - Database detection (includes playerbots if present)
+
+---
+
+---
+
+## 🔄 Common Workflows
+
+### Changing Module Configuration
+
+```bash
+# 1. Reconfigure modules
+./setup.sh
+
+# 2. Rebuild if you changed C++ modules
+./build.sh --yes
+
+# 3. Redeploy with new configuration
+./deploy.sh
+```
+
+### Updating to Latest Code
+
+```bash
+# Pull latest changes
+git pull origin main
+
+# Rebuild images (if using modules/playerbots)
+./build.sh --force
+
+# Restart services
+docker compose down
+./deploy.sh
+```
+
+### Managing Services
+
+```bash
+# Check service status
+./status.sh
+
+# View logs
+docker logs ac-worldserver -f
+docker logs ac-authserver -f
+docker logs ac-mysql -f
+
+# Restart specific service
+docker compose restart ac-worldserver
+
+# Stop all services
+./stop-containers.sh
+
+# Start services
+./start-containers.sh
+```
+
+### Database Management
+
+```bash
+# Backup user data
+./backup-export.sh
+
+# Restore user data
+./backup-import.sh /path/to/backup
+
+# Access database directly
+docker exec -it ac-mysql mysql -u root -p
+```
+
+### Cleaning Up
+
+```bash
+# Soft cleanup (stop containers only)
+./cleanup.sh --soft
+
+# Hard cleanup (remove containers and networks)
+./cleanup.sh --hard
+
+# Nuclear cleanup (everything including images and data)
+./cleanup.sh --nuclear --preserve-backups
+```
 
 ---
 
@@ -655,19 +927,35 @@ Some modules require additional manual configuration after deployment:
 
 ### Profile Selection
 
-The deployment system automatically selects profiles based on enabled modules:
+The deployment system uses Docker Compose profiles to manage different configurations:
 
-- **services-standard**: No special modules enabled
-- **services-playerbots**: `MODULE_PLAYERBOTS=1` enabled
-- **services-modules**: Any C++ modules enabled (requires source rebuild)
+| Profile | When Used | Image Source |
+|---------|-----------|--------------|
+| `services-standard` | No C++ modules, no playerbots | Upstream `acore/*` images |
+| `services-playerbots` | `MODULE_PLAYERBOTS=1` + no other C++ modules | Project-built `<name>:*-playerbots` |
+| `services-modules` | Any C++ module enabled (incl. playerbots + others) | Project-built `<name>:*-modules-latest` |
 
-### Custom Builds
+**Profile selection is automatic** - `deploy.sh` analyzes your `.env` and selects the appropriate profile.
 
-When C++ modules are enabled, the system automatically:
-1. Clones/updates AzerothCore source
-2. Syncs enabled modules into source tree
-3. Rebuilds server images with modules compiled in
-4. Tags custom images for deployment
+### Build System
+
+**When builds are required:**
+- Playerbots enabled (`MODULE_PLAYERBOTS=1`)
+- Any C++ module enabled (see `needs_build: true` in `config/modules.json`)
+
+**Build workflow (`./build.sh`):**
+1. Clones AzerothCore source to `local-storage/source/`
+   - Uses [mod-playerbots fork](https://github.com/mod-playerbots/azerothcore-wotlk) when playerbots enabled
+   - Uses [main AzerothCore](https://github.com/azerothcore/azerothcore-wotlk) otherwise
+2. Stages enabled C++ modules into `modules/` directory within source
+3. Compiles binaries using Dockerized build environment
+4. Creates and tags images:
+   - `<project>:authserver-playerbots` / `authserver-modules-latest`
+   - `<project>:worldserver-playerbots` / `worldserver-modules-latest`
+   - `<project>:client-data-playerbots` (playerbots only)
+   - `<project>:db-import-playerbots` (playerbots only)
+
+**Build time:** 20-60 minutes depending on hardware and module count
 
 ### MySQL Runtime Storage & Timezone Data
 
@@ -786,32 +1074,50 @@ ImportBackup/                     # Used by backup-import.sh
 
 ### Custom Environment Configuration
 ```bash
-# Generate environment with custom settings
-./setup.sh
+# Setup with specific module preset
+./setup.sh --module-config sam --playerbot-max-bots 3000
+
+# Build with custom source path
+./build.sh --source-path /path/to/custom/azerothcore --force
 
 # Deploy with specific options
 ./deploy.sh --profile modules --no-watch --keep-running
 ```
 
-### Source Management
+### Manual Source Management
 ```bash
-# Setup/update AzerothCore source
+# Initialize/update AzerothCore source repository
 ./scripts/setup-source.sh
 
-# Rebuild with modules (manual)
-./scripts/rebuild-with-modules.sh --yes --source ./custom/path
+# Stage modules into source tree (called by build.sh)
+./scripts/stage-modules.sh
+
+# Build images from prepared source
+./build.sh --skip-source-setup
 ```
 
-### Cleanup Operations
+### Manual Service Control
 ```bash
 # Stop all services
 docker compose --profile db --profile services-standard \
   --profile services-playerbots --profile services-modules \
   --profile client-data --profile modules --profile tools down
 
-# Clean rebuild (modules changed)
-rm -f storage/modules/.requires_rebuild
-./deploy.sh --profile modules
+# Start specific profile
+docker compose --profile db --profile services-playerbots --profile tools up -d
+
+# Restart after configuration changes
+docker compose restart ac-worldserver ac-authserver
+```
+
+### Force Rebuild
+```bash
+# Force complete rebuild (ignores build state markers)
+./build.sh --force
+
+# Clean build artifacts and rebuild
+rm -rf local-storage/source local-storage/images
+./build.sh
 ```
 
 ---
@@ -824,11 +1130,72 @@ rm -f storage/modules/.requires_rebuild
 
 ## 🎯 Next Steps After Installation
 
-1. **Test Client Connection** - Connect with WoW 3.3.5a client using configured realmlist
-2. **Create Characters** - Test account creation and character creation
-3. **Verify Modules** - Test enabled module functionality in-game
-4. **Configure Optional Features** - Enable additional modules as needed
-5. **Set Up Backups** - Configure automated backup retention policies
+### In-Game Setup
+
+1. **Create GM Account**
+   ```bash
+   docker attach ac-worldserver
+   account create <username> <password>
+   account set gmlevel <username> 3 -1
+   ```
+
+2. **Test Modules** - Verify enabled modules are working:
+   - Solo LFG: Queue for a dungeon solo
+   - Transmog: Use `.npc add 190010` to spawn transmog NPC
+   - Playerbots: Use `.bot add` command (if enabled)
+
+3. **Configure Realmlist** - Update server address in database:
+   ```sql
+   UPDATE acore_auth.realmlist
+   SET address = 'your-public-ip', port = 8215
+   WHERE id = 1;
+   ```
+
+### Server Administration
+
+1. **Set Up Monitoring**
+   ```bash
+   # Watch server status continuously
+   ./status.sh --watch
+
+   # Monitor logs
+   docker logs ac-worldserver -f
+   ```
+
+2. **Configure Backups**
+   - Review retention settings in `.env`:
+     - `BACKUP_RETENTION_DAYS=3`
+     - `BACKUP_RETENTION_HOURS=6`
+   - Test backup/restore:
+     ```bash
+     ./backup-export.sh
+     ./backup-import.sh /path/to/backup
+     ```
+
+3. **Customize Modules**
+   - Edit module configs in `storage/config/mod_*.conf`
+   - Restart worldserver: `docker compose restart ac-worldserver`
+
+4. **Add Lua Scripts**
+   - Place scripts in `storage/lua_scripts/`
+   - Auto-loaded on worldserver start
+   - Reload with `.reload eluna` in-game
+
+### Performance Tuning
+
+1. **Database Optimization**
+   - Adjust `MYSQL_INNODB_BUFFER_POOL_SIZE` in `.env`
+   - Increase `MYSQL_RUNTIME_TMPFS_SIZE` for larger datasets
+
+2. **Playerbot Scaling** (if enabled)
+   - Tune `PLAYERBOT_MAX_BOTS` in `.env`
+   - Monitor memory usage: `docker stats ac-worldserver`
+
+3. **Network Configuration**
+   - Open firewall ports:
+     - `3784` (authserver)
+     - `8215` (worldserver)
+   - Configure NAT/port forwarding for public access
 
 ---
 
@@ -841,6 +1208,6 @@ This project builds upon:
 ### Key Features
 - ✅ **Fully Automated Setup** - Interactive configuration and deployment
 - ✅ **Intelligent Module System** - Automatic source builds and profile selection
-- ✅ **Production Ready** - Health checks, backups, monitoring
-- ✅ **Cross-Platform** - Docker and Podman support
+- ✅ **Automated Backups** - Health checks, scheduled backups, and monitoring
+- ✅ **Docker-Based** - Containerized deployment for easy setup and portability
 - ✅ **Comprehensive Documentation** - Clear setup and troubleshooting guides
