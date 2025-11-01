@@ -548,6 +548,11 @@ Initializes or updates AzerothCore source repositories for compilation.
 #### `scripts/manage-modules.sh` - Module Management Container
 Internal script that manages module lifecycle within the ac-modules container.
 
+#### `config/modules.json` & `scripts/modules.py`
+- Declarative manifest describing every supported module (repo, type, hooks, dependencies).
+- `scripts/modules.py` reads the manifest and `.env`, generating `modules.env`, rebuild metadata, and shell-ready module maps.
+- Build and deploy scripts source `modules.env`, while `manage-modules.sh` consumes the manifest at runtime—no more duplicated module lists.
+
 #### `scripts/manage-modules-sql.sh` - Module Database Integration
 Executes module-specific SQL scripts for database schema updates.
 

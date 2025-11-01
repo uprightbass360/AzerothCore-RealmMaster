@@ -8,7 +8,7 @@ WHERE guid IN (
       AND c.deleteInfos_Account IS NULL
       AND c.name IN (
           SELECT p.name
-          FROM playerbots p
+          FROM `{{PLAYERBOTS_DB}}`.playerbots p
           WHERE p.bot = 1
       )
       AND EXISTS (

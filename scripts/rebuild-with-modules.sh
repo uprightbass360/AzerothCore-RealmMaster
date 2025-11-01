@@ -84,29 +84,50 @@ ASSUME_YES=0
 SOURCE_OVERRIDE=""
 SKIP_STOP=0
 
-COMPILE_MODULE_KEYS=(
-  MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
-  MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS
-  MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD
-  MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER
-  MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK
-  MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN
-  MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN MODULE_ELUNA_TS
-)
+MODULE_HELPER="$PROJECT_DIR/scripts/modules.py"
+MODULE_STATE_DIR=""
+declare -a MODULES_COMPILE_LIST=()
+
+resolve_local_storage_path(){
+  local path
+  path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
+  if [[ "$path" != /* ]]; then
+    path="${path#./}"
+    path="$PROJECT_DIR/$path"
+  fi
+  echo "${path%/}"
+}
+
+ensure_module_state(){
+  if [ -n "$MODULE_STATE_DIR" ]; then
+    return 0
+  fi
+  local storage_root
+  storage_root="$(resolve_local_storage_path)"
+  MODULE_STATE_DIR="${storage_root}/modules"
+  if ! python3 "$MODULE_HELPER" --env-path "$ENV_FILE" --manifest "$PROJECT_DIR/config/modules.json" generate --output-dir "$MODULE_STATE_DIR"; then
+    echo "❌ Module manifest validation failed. See details above."
+    exit 1
+  fi
+  if [ ! -f "$MODULE_STATE_DIR/modules.env" ]; then
+    echo "❌ modules.env not produced at $MODULE_STATE_DIR/modules.env"
+    exit 1
+  fi
+  # shellcheck disable=SC1090
+  source "$MODULE_STATE_DIR/modules.env"
+  IFS=' ' read -r -a MODULES_COMPILE_LIST <<< "${MODULES_COMPILE:-}"
+  if [ "${#MODULES_COMPILE_LIST[@]}" -eq 1 ] && [ -z "${MODULES_COMPILE_LIST[0]}" ]; then
+    MODULES_COMPILE_LIST=()
+  fi
+}
 
 modules_require_playerbot_source(){
-  if [ "$(read_env MODULE_PLAYERBOTS "0")" = "1" ]; then
+  ensure_module_state
+  if [ "${MODULES_REQUIRES_PLAYERBOT_SOURCE:-0}" = "1" ]; then
     echo 1
-    return
+  else
+    echo 0
   fi
-  local key
-  for key in "${COMPILE_MODULE_KEYS[@]}"; do
-    if [ "$(read_env "$key" "0")" = "1" ]; then
-      echo 1
-      return
-    fi
-  done
-  echo 0
 }
 
 while [[ $# -gt 0 ]]; do
@@ -121,6 +142,11 @@ done
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "❌ Docker CLI not found in PATH."
+  exit 1
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "❌ python3 not found in PATH."
   exit 1
 fi
 
@@ -191,65 +217,16 @@ if [ ! -f "$SOURCE_COMPOSE" ]; then
   fi
 fi
 
-declare -A MODULE_REPO_MAP=(
-  [MODULE_AOE_LOOT]=mod-aoe-loot
-  [MODULE_LEARN_SPELLS]=mod-learn-spells
-  [MODULE_FIREWORKS]=mod-fireworks-on-level
-  [MODULE_INDIVIDUAL_PROGRESSION]=mod-individual-progression
-  [MODULE_AHBOT]=mod-ahbot
-  [MODULE_AUTOBALANCE]=mod-autobalance
-  [MODULE_TRANSMOG]=mod-transmog
-  [MODULE_NPC_BUFFER]=mod-npc-buffer
-  [MODULE_DYNAMIC_XP]=mod-dynamic-xp
-  [MODULE_SOLO_LFG]=mod-solo-lfg
-  [MODULE_1V1_ARENA]=mod-1v1-arena
-  [MODULE_PHASED_DUELS]=mod-phased-duels
-  [MODULE_BREAKING_NEWS]=mod-breaking-news-override
-  [MODULE_BOSS_ANNOUNCER]=mod-boss-announcer
-  [MODULE_ACCOUNT_ACHIEVEMENTS]=mod-account-achievements
-  [MODULE_AUTO_REVIVE]=mod-auto-revive
-  [MODULE_GAIN_HONOR_GUARD]=mod-gain-honor-guard
-  [MODULE_ELUNA]=mod-ale
-  [MODULE_TIME_IS_TIME]=mod-TimeIsTime
-  [MODULE_POCKET_PORTAL]=mod-pocket-portal
-  [MODULE_RANDOM_ENCHANTS]=mod-random-enchants
-  [MODULE_SOLOCRAFT]=mod-solocraft
-  [MODULE_PVP_TITLES]=mod-pvp-titles
-  [MODULE_NPC_BEASTMASTER]=mod-npc-beastmaster
-  [MODULE_NPC_ENCHANTER]=mod-npc-enchanter
-  [MODULE_INSTANCE_RESET]=mod-instance-reset
-  [MODULE_LEVEL_GRANT]=mod-quest-count-level
-  [MODULE_ARAC]=mod-arac
-  [MODULE_ASSISTANT]=mod-assistant
-  [MODULE_REAGENT_BANK]=mod-reagent-bank
-  [MODULE_BLACK_MARKET_AUCTION_HOUSE]=mod-black-market
-  [MODULE_CHALLENGE_MODES]=mod-challenge-modes
-  [MODULE_OLLAMA_CHAT]=mod-ollama-chat
-  [MODULE_PLAYER_BOT_LEVEL_BRACKETS]=mod-player-bot-level-brackets
-  [MODULE_STATBOOSTER]=StatBooster
-  [MODULE_DUNGEON_RESPAWN]=DungeonRespawn
-  [MODULE_SKELETON_MODULE]=skeleton-module
-  [MODULE_BG_SLAVERYVALLEY]=mod-bg-slaveryvalley
-  [MODULE_AZEROTHSHARD]=mod-azerothshard
-  [MODULE_WORGOBLIN]=mod-worgoblin
-  [MODULE_ELUNA_TS]=eluna-ts
-)
+ensure_module_state
 
-compile_modules=()
-for key in "${!MODULE_REPO_MAP[@]}"; do
-  if [ "$(read_env "$key" "0")" = "1" ]; then
-    compile_modules+=("${MODULE_REPO_MAP[$key]}")
-  fi
-done
-
-if [ ${#compile_modules[@]} -eq 0 ]; then
+if [ ${#MODULES_COMPILE_LIST[@]} -eq 0 ]; then
   echo "✅ No C++ modules enabled that require a source rebuild."
   rm -f "$SENTINEL_FILE" 2>/dev/null || true
   exit 0
 fi
 
 echo "🔧 Modules requiring compilation:"
-for mod in "${compile_modules[@]}"; do
+for mod in "${MODULES_COMPILE_LIST[@]}"; do
   echo "   • $mod"
 done
 

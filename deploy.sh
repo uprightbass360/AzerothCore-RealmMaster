@@ -26,15 +26,9 @@ REMOTE_PROJECT_DIR=""
 REMOTE_SKIP_STORAGE=0
 REMOTE_ARGS_PROVIDED=0
 
-COMPILE_MODULE_VARS=(
-  MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
-  MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS
-  MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD
-  MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER
-  MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK
-  MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN
-  MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN
-)
+MODULE_HELPER="$ROOT_DIR/scripts/modules.py"
+MODULE_STATE_INITIALIZED=0
+declare -a MODULES_COMPILE_LIST=()
 
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
@@ -248,6 +242,7 @@ require_cmd(){
 }
 
 require_cmd docker
+require_cmd python3
 
 if [ "$REMOTE_MODE" -eq 1 ]; then
   if [ -z "$REMOTE_HOST" ]; then
@@ -281,6 +276,43 @@ read_env(){
     value="$default"
   fi
   echo "$value"
+}
+
+resolve_local_storage_path(){
+  local path
+  path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
+  if [[ "$path" != /* ]]; then
+    path="${path#./}"
+    path="$ROOT_DIR/$path"
+  fi
+  echo "${path%/}"
+}
+
+ensure_module_state(){
+  if [ "$MODULE_STATE_INITIALIZED" -eq 1 ]; then
+    return
+  fi
+
+  local storage_root
+  storage_root="$(resolve_local_storage_path)"
+  local output_dir="${storage_root}/modules"
+
+  if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/modules.json" generate --output-dir "$output_dir"; then
+    err "Module manifest validation failed. See errors above."
+  fi
+
+  if [ ! -f "$output_dir/modules.env" ]; then
+    err "modules.env not produced at $output_dir/modules.env"
+  fi
+
+  # shellcheck disable=SC1090
+  source "$output_dir/modules.env"
+  MODULE_STATE_INITIALIZED=1
+  MODULES_COMPILE_LIST=()
+  IFS=' ' read -r -a MODULES_COMPILE_LIST <<< "${MODULES_COMPILE:-}"
+  if [ "${#MODULES_COMPILE_LIST[@]}" -eq 1 ] && [ -z "${MODULES_COMPILE_LIST[0]}" ]; then
+    MODULES_COMPILE_LIST=()
+  fi
 }
 
 resolve_project_name(){
@@ -327,14 +359,12 @@ detect_build_needed(){
   fi
 
   # Check if any C++ modules are enabled but modules-latest images don't exist
+  ensure_module_state
+
   local any_cxx_modules=0
-  local var
-  for var in "${COMPILE_MODULE_VARS[@]}"; do
-    if [ "$(read_env "$var" "0")" = "1" ]; then
-      any_cxx_modules=1
-      break
-    fi
-  done
+  if [ "${#MODULES_COMPILE_LIST[@]}" -gt 0 ]; then
+    any_cxx_modules=1
+  fi
 
   if [ "$any_cxx_modules" = "1" ]; then
     local authserver_modules_image
@@ -473,13 +503,11 @@ determine_profile(){
     return
   fi
 
-  local var
-  for var in "${COMPILE_MODULE_VARS[@]}"; do
-    if [ "$(read_env "$var" "0")" = "1" ]; then
-      echo "modules"
-      return
-    fi
-  done
+  ensure_module_state
+  if [ "${#MODULES_COMPILE_LIST[@]}" -gt 0 ]; then
+    echo "modules"
+    return
+  fi
 
   echo "standard"
 }

@@ -97,6 +97,37 @@ read_env(){
   echo "$value"
 }
 
+canonical_path(){
+  local path="$1"
+  if command -v realpath >/dev/null 2>&1; then
+    realpath -m "$path"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 - "$path" <<'PY'
+import os, sys
+print(os.path.normpath(sys.argv[1]))
+PY
+  else
+    local normalized="$path"
+    # Strip leading "./" portions so relative paths are clean
+    while [[ "$normalized" == ./* ]]; do
+      normalized="${normalized:2}"
+    done
+    # Collapse any embedded "/./" segments that appear in absolute paths
+    while [[ "$normalized" == *"/./"* ]]; do
+      normalized="${normalized//\/\.\//\/}"
+    done
+    # Replace duplicate slashes with a single slash for readability
+    while [[ "$normalized" == *"//"* ]]; do
+      normalized="${normalized//\/\//\/}"
+    done
+    # Preserve absolute path prefix if original started with '/'
+    if [[ "$path" == /* && "$normalized" != /* ]]; then
+      normalized="/${normalized}"
+    fi
+    echo "$normalized"
+  fi
+}
+
 confirm(){
   local prompt="$1" default="$2" reply
   if [ "$ASSUME_YES" = "1" ]; then
@@ -141,15 +172,15 @@ STORAGE_PATH="$(read_env STORAGE_PATH "./storage")"
 if [[ "$STORAGE_PATH" != /* ]]; then
   STORAGE_PATH="$PROJECT_DIR/$STORAGE_PATH"
 fi
+STORAGE_PATH="$(canonical_path "$STORAGE_PATH")"
 MODULES_DIR="$STORAGE_PATH/modules"
 
 # Build sentinel is in local storage, deployment modules are in shared storage
 LOCAL_STORAGE_PATH="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
 if [[ "$LOCAL_STORAGE_PATH" != /* ]]; then
-  # Remove leading ./ if present
-  LOCAL_STORAGE_PATH="${LOCAL_STORAGE_PATH#./}"
   LOCAL_STORAGE_PATH="$PROJECT_DIR/$LOCAL_STORAGE_PATH"
 fi
+LOCAL_STORAGE_PATH="$(canonical_path "$LOCAL_STORAGE_PATH")"
 SENTINEL_FILE="$LOCAL_STORAGE_PATH/modules/.requires_rebuild"
 
 # Define module mappings (from rebuild-with-modules.sh)

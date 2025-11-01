@@ -67,6 +67,7 @@ require_cmd(){
 }
 
 require_cmd docker
+require_cmd python3
 
 read_env(){
   local key="$1" default="${2:-}"
@@ -80,28 +81,47 @@ read_env(){
   echo "$value"
 }
 
-# Module detection logic (extracted from deploy.sh)
-COMPILE_MODULE_VARS=(
-  MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
-  MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS
-  MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD
-  MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER
-  MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK
-  MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN
-  MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN MODULE_ELUNA_TS
-)
+MODULE_HELPER="$ROOT_DIR/scripts/modules.py"
+MODULE_STATE_INITIALIZED=0
+declare -a MODULES_COMPILE_LIST=()
+
+resolve_local_storage_path(){
+  local local_root
+  local_root="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
+  if [[ "$local_root" != /* ]]; then
+    local_root="${local_root#./}"
+    local_root="$ROOT_DIR/$local_root"
+  fi
+  echo "${local_root%/}"
+}
+
+generate_module_state(){
+  local storage_root
+  storage_root="$(resolve_local_storage_path)"
+  local output_dir="${storage_root}/modules"
+  if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/modules.json" generate --output-dir "$output_dir"; then
+    err "Module manifest validation failed. See errors above."
+    exit 1
+  fi
+  if [ ! -f "${output_dir}/modules.env" ]; then
+    err "modules.env not produced by helper at ${output_dir}/modules.env"
+    exit 1
+  fi
+  # shellcheck disable=SC1090
+  source "${output_dir}/modules.env"
+  MODULE_STATE_INITIALIZED=1
+  MODULES_COMPILE_LIST=()
+  IFS=' ' read -r -a MODULES_COMPILE_LIST <<< "${MODULES_COMPILE:-}"
+  if [ "${#MODULES_COMPILE_LIST[@]}" -eq 1 ] && [ -z "${MODULES_COMPILE_LIST[0]}" ]; then
+    MODULES_COMPILE_LIST=()
+  fi
+}
 
 requires_playerbot_source(){
-  if [ "$(read_env MODULE_PLAYERBOTS "0")" = "1" ]; then
-    return 0
+  if [ "$MODULE_STATE_INITIALIZED" -ne 1 ]; then
+    generate_module_state
   fi
-  local var
-  for var in "${COMPILE_MODULE_VARS[@]}"; do
-    if [ "$(read_env "$var" "0")" = "1" ]; then
-      return 0
-    fi
-  done
-  return 1
+  [ "${MODULES_REQUIRES_PLAYERBOT_SOURCE:-0}" = "1" ]
 }
 
 ensure_source_repo(){
@@ -197,14 +217,14 @@ detect_rebuild_reasons(){
   fi
 
   # Check if any C++ modules are enabled but modules-latest images don't exist
+  if [ "$MODULE_STATE_INITIALIZED" -ne 1 ]; then
+    generate_module_state
+  fi
+
   local any_cxx_modules=0
-  local var
-  for var in "${COMPILE_MODULE_VARS[@]}"; do
-    if [ "$(read_env "$var" "0")" = "1" ]; then
-      any_cxx_modules=1
-      break
-    fi
-  done
+  if [ "${#MODULES_COMPILE_LIST[@]}" -gt 0 ]; then
+    any_cxx_modules=1
+  fi
 
   if [ "$any_cxx_modules" = "1" ]; then
     local authserver_modules_image
@@ -296,11 +316,7 @@ confirm_build(){
 # Module staging logic (extracted from setup.sh)
 sync_modules(){
   local storage_path
-  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
-  if [[ "$storage_path" != /* ]]; then
-    storage_path="${storage_path#./}"
-    storage_path="$ROOT_DIR/$storage_path"
-  fi
+  storage_path="$(resolve_local_storage_path)"
 
   mkdir -p "$storage_path/modules"
   info "Using local module staging at $storage_path/modules"
@@ -323,10 +339,10 @@ resolve_project_name(){
 stage_modules(){
   local src_path="$1"
   local storage_path
-  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
-  if [[ "$storage_path" != /* ]]; then
-    storage_path="${storage_path#./}"
-    storage_path="$ROOT_DIR/$storage_path"
+  storage_path="$(resolve_local_storage_path)"
+
+  if [ -z "${MODULES_ENABLED:-}" ]; then
+    generate_module_state
   fi
 
   info "Staging modules to source directory: $src_path/modules"
@@ -340,27 +356,16 @@ stage_modules(){
   local local_modules_dir="${src_path}/modules"
   mkdir -p "$local_modules_dir"
 
-  # Export module variables for the script
-  local module_vars=(
-    MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
-    MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS
-    MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD
-    MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES
-    MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT
-    MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT
-    MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN MODULE_SKELETON_MODULE
-    MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN MODULE_ELUNA_TS
-  )
-
-  local module_export_var
-  for module_export_var in "${module_vars[@]}"; do
-    local module_value
-    module_value="$(read_env "$module_export_var" "0")"
-    export "${module_export_var}=${module_value:-0}"
-  done
-
   local staging_modules_dir="${storage_path}/modules"
   export MODULES_HOST_DIR="$staging_modules_dir"
+
+  local env_target_dir="$src_path/env/dist/etc"
+  mkdir -p "$env_target_dir"
+  export MODULES_ENV_TARGET_DIR="$env_target_dir"
+
+  local lua_target_dir="$src_path/lua_scripts"
+  mkdir -p "$lua_target_dir"
+  export MODULES_LUA_TARGET_DIR="$lua_target_dir"
 
   # Set up local storage path for build sentinel tracking
   local local_storage_path
@@ -388,6 +393,7 @@ stage_modules(){
 
   # Run module staging script in local modules directory
   export MODULES_LOCAL_RUN=1
+  export MODULES_SKIP_SQL=1
   if [ -n "$staging_modules_dir" ]; then
     mkdir -p "$staging_modules_dir"
     rm -f "$staging_modules_dir/.modules_state" "$staging_modules_dir/.requires_rebuild" 2>/dev/null || true
@@ -404,11 +410,19 @@ stage_modules(){
       rsync -a --delete \
         --exclude '.modules_state' \
         --exclude '.requires_rebuild' \
+        --exclude 'modules.env' \
+        --exclude 'modules-state.json' \
+        --exclude 'modules-compile.txt' \
+        --exclude 'modules-enabled.txt' \
         "$local_modules_dir"/ "$staging_modules_dir"/
     else
       find "$staging_modules_dir" -mindepth 1 -maxdepth 1 \
         ! -name '.modules_state' \
         ! -name '.requires_rebuild' \
+        ! -name 'modules.env' \
+        ! -name 'modules-state.json' \
+        ! -name 'modules-compile.txt' \
+        ! -name 'modules-enabled.txt' \
         -exec rm -rf {} + 2>/dev/null || true
       (cd "$local_modules_dir" && tar cf - --exclude='.modules_state' --exclude='.requires_rebuild' .) | (cd "$staging_modules_dir" && tar xf -)
     fi
@@ -420,6 +434,7 @@ stage_modules(){
   # Cleanup
   export GIT_CONFIG_GLOBAL="$prev_git_config_global"
   unset MODULES_LOCAL_RUN
+  unset MODULES_SKIP_SQL
   unset MODULES_HOST_DIR
   [ -n "$git_temp_config" ] && [ -f "$git_temp_config" ] && rm -f "$git_temp_config"
 }
@@ -491,6 +506,9 @@ main(){
 
   local src_dir
   local rebuild_reasons
+
+  info "Preparing module manifest metadata"
+  generate_module_state
 
   info "Step 1/6: Setting up source repository"
   src_dir="$(ensure_source_repo)"

@@ -12,7 +12,10 @@ local-storage/
 images/
 node_modules/
 .mcp*/
+scripts/__pycache__/
 .env
 package-lock.json
 package.json
 .modules_state
+.modules-meta
+todo.md
