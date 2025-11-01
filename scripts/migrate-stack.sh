@@ -5,6 +5,43 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+ENV_FILE="$PROJECT_ROOT/.env"
+
+read_env_value(){
+  local key="$1" default="$2" value="${!key:-}"
+  if [ -z "$value" ] && [ -f "$ENV_FILE" ]; then
+    value="$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
+  fi
+  if [ -z "$value" ]; then
+    value="$default"
+  fi
+  echo "$value"
+}
+
+resolve_project_name(){
+  local raw_name
+  raw_name="$(read_env_value COMPOSE_PROJECT_NAME "acore-compose")"
+  local sanitized
+  sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
+  sanitized="${sanitized// /-}"
+  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
+  if [[ -z "$sanitized" ]]; then
+    sanitized="acore-compose"
+  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
+    sanitized="ac${sanitized}"
+  fi
+  echo "$sanitized"
+}
+
+resolve_project_image(){
+  local tag="$1"
+  local project_name
+  project_name="$(resolve_project_name)"
+  echo "${project_name}:${tag}"
+}
+
 usage(){
   cat <<'EOF_HELP'
 Usage: $(basename "$0") --host HOST --user USER [options]
@@ -57,7 +94,10 @@ fi
 
 PROJECT_DIR="${PROJECT_DIR:-/home/${USER}/acore-compose}"
 REMOTE_STORAGE="${REMOTE_STORAGE:-${PROJECT_DIR}/storage}"
-LOCAL_STORAGE_ROOT="${STORAGE_PATH_LOCAL:-./local-storage}"
+LOCAL_STORAGE_ROOT="${STORAGE_PATH_LOCAL:-}"
+if [ -z "$LOCAL_STORAGE_ROOT" ]; then
+  LOCAL_STORAGE_ROOT="$(read_env_value STORAGE_PATH_LOCAL "./local-storage")"
+fi
 LOCAL_STORAGE_ROOT="${LOCAL_STORAGE_ROOT%/}"
 [ -z "$LOCAL_STORAGE_ROOT" ] && LOCAL_STORAGE_ROOT="."
 TARBALL="${TARBALL:-${LOCAL_STORAGE_ROOT}/images/acore-modules-images.tar}"
@@ -176,29 +216,24 @@ mkdir -p "$(dirname "$TARBALL")"
 # Check which images are available and collect them
 IMAGES_TO_SAVE=()
 
-# Check for custom module images (built by build.sh)
-if docker image inspect uprightbass360/azerothcore-wotlk-playerbots:authserver-modules-latest >/dev/null 2>&1; then
-  IMAGES_TO_SAVE+=(uprightbass360/azerothcore-wotlk-playerbots:authserver-modules-latest)
-fi
-if docker image inspect uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest >/dev/null 2>&1; then
-  IMAGES_TO_SAVE+=(uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest)
-fi
+project_auth_modules="$(resolve_project_image "authserver-modules-latest")"
+project_world_modules="$(resolve_project_image "worldserver-modules-latest")"
+project_auth_playerbots="$(resolve_project_image "authserver-playerbots")"
+project_world_playerbots="$(resolve_project_image "worldserver-playerbots")"
+project_db_import="$(resolve_project_image "db-import-playerbots")"
+project_client_data="$(resolve_project_image "client-data-playerbots")"
 
-# Check for pre-compiled playerbots images
-if docker image inspect uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot >/dev/null 2>&1; then
-  IMAGES_TO_SAVE+=(uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot)
-fi
-if docker image inspect uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot >/dev/null 2>&1; then
-  IMAGES_TO_SAVE+=(uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot)
-fi
-
-# Check for standard AzerothCore images (fallback)
-if docker image inspect acore/ac-wotlk-worldserver:modules-latest >/dev/null 2>&1; then
-  IMAGES_TO_SAVE+=(acore/ac-wotlk-worldserver:modules-latest)
-fi
-if docker image inspect acore/ac-wotlk-authserver:modules-latest >/dev/null 2>&1; then
-  IMAGES_TO_SAVE+=(acore/ac-wotlk-authserver:modules-latest)
-fi
+for image in \
+  "$project_auth_modules" \
+  "$project_world_modules" \
+  "$project_auth_playerbots" \
+  "$project_world_playerbots" \
+  "$project_db_import" \
+  "$project_client_data"; do
+  if docker image inspect "$image" >/dev/null 2>&1; then
+    IMAGES_TO_SAVE+=("$image")
+  fi
+done
 
 if [ ${#IMAGES_TO_SAVE[@]} -eq 0 ]; then
   echo "❌ No AzerothCore images found to migrate. Run './build.sh' first or pull standard images."

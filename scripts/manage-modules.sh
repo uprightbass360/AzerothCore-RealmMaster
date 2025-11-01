@@ -18,6 +18,27 @@ ok(){ printf '%b\n' "${GREEN}✅ $*${NC}"; }
 warn(){ printf '%b\n' "${YELLOW}⚠️  $*${NC}"; }
 err(){ printf '%b\n' "${RED}❌ $*${NC}"; exit 1; }
 
+read_env_value(){
+  local key="$1" default="${2:-}" value="${!key:-}"
+  if [ -n "$value" ]; then
+    echo "$value"
+    return
+  fi
+  if [ -f "$ENV_PATH" ]; then
+    value="$(grep -E "^${key}=" "$ENV_PATH" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
+    value="$(echo "$value" | sed 's/[[:space:]]*#.*//' | sed 's/[[:space:]]*$//')"
+    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+      value="${value:1:-1}"
+    elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+      value="${value:1:-1}"
+    fi
+  fi
+  if [ -z "${value:-}" ]; then
+    value="$default"
+  fi
+  printf '%s\n' "${value}"
+}
+
 ensure_python(){
   if ! command -v python3 >/dev/null 2>&1; then
     err "python3 is required but not installed in PATH"
@@ -193,11 +214,24 @@ update_playerbots_db_info(){
     return 0
   fi
 
-  local host="${CONTAINER_MYSQL:-${MYSQL_HOST:-127.0.0.1}}"
-  local port="${MYSQL_PORT:-3306}"
-  local user="${MYSQL_USER:-root}"
-  local pass="${MYSQL_ROOT_PASSWORD:-acore}"
-  local db="${DB_PLAYERBOTS_NAME:-acore_playerbots}"
+  local host
+  host="$(read_env_value CONTAINER_MYSQL)"
+  if [ -z "$host" ]; then
+    host="$(read_env_value MYSQL_HOST)"
+  fi
+  host="${host:-ac-mysql}"
+
+  local port
+  port="$(read_env_value MYSQL_PORT "3306")"
+
+  local user
+  user="$(read_env_value MYSQL_USER "root")"
+
+  local pass
+  pass="$(read_env_value MYSQL_ROOT_PASSWORD)"
+
+  local db
+  db="$(read_env_value DB_PLAYERBOTS_NAME "acore_playerbots")"
   local value="${host};${port};${user};${pass};${db}"
 
   if grep -qE '^[[:space:]]*PlayerbotsDatabaseInfo[[:space:]]*=' "$target"; then
@@ -394,6 +428,16 @@ track_module_state(){
     rm -f "$rebuild_sentinel" 2>/dev/null || true
     if [ -n "$host_rebuild_sentinel" ]; then
       rm -f "$host_rebuild_sentinel" 2>/dev/null || true
+    fi
+  fi
+
+  if [ "${MODULES_LOCAL_RUN:-0}" = "1" ]; then
+    local target_dir="${MODULES_HOST_DIR:-$(pwd)}"
+    local desired_user
+    desired_user="$(id -u):$(id -g)"
+    if [ -d "$target_dir" ]; then
+      chown -R "$desired_user" "$target_dir" >/dev/null 2>&1 || true
+      chmod -R ug+rwX "$target_dir" >/dev/null 2>&1 || true
     fi
   fi
 }

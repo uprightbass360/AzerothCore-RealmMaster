@@ -288,6 +288,28 @@ resolve_local_storage_path(){
   echo "${path%/}"
 }
 
+ensure_modules_dir_writable(){
+  local base_path="$1"
+  local modules_dir="${base_path%/}/modules"
+  if [ -d "$modules_dir" ] || mkdir -p "$modules_dir" 2>/dev/null; then
+    local uid gid
+    uid="$(id -u)"
+    gid="$(id -g)"
+    if ! chown -R "$uid":"$gid" "$modules_dir" 2>/dev/null; then
+      if command -v docker >/dev/null 2>&1; then
+        local helper_image
+        helper_image="$(read_env ALPINE_IMAGE "alpine:latest")"
+        docker run --rm \
+          -u 0:0 \
+          -v "$modules_dir":/modules \
+          "$helper_image" \
+          sh -c "chown -R ${uid}:${gid} /modules && chmod -R ug+rwX /modules" >/dev/null 2>&1 || true
+      fi
+    fi
+    chmod -R u+rwX "$modules_dir" 2>/dev/null || true
+  fi
+}
+
 ensure_module_state(){
   if [ "$MODULE_STATE_INITIALIZED" -eq 1 ]; then
     return
@@ -296,6 +318,7 @@ ensure_module_state(){
   local storage_root
   storage_root="$(resolve_local_storage_path)"
   local output_dir="${storage_root}/modules"
+  ensure_modules_dir_writable "$storage_root"
 
   if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/modules.json" generate --output-dir "$output_dir"; then
     err "Module manifest validation failed. See errors above."
@@ -327,6 +350,13 @@ resolve_project_name(){
     sanitized="ac${sanitized}"
   fi
   echo "$sanitized"
+}
+
+resolve_project_image(){
+  local tag="$1"
+  local project_name
+  project_name="$(resolve_project_name)"
+  echo "${project_name}:${tag}"
 }
 
 filter_empty_lines(){
@@ -369,8 +399,8 @@ detect_build_needed(){
   if [ "$any_cxx_modules" = "1" ]; then
     local authserver_modules_image
     local worldserver_modules_image
-    authserver_modules_image="$(read_env AC_AUTHSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:authserver-modules-latest")"
-    worldserver_modules_image="$(read_env AC_WORLDSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest")"
+    authserver_modules_image="$(read_env AC_AUTHSERVER_IMAGE_MODULES "$(resolve_project_image "authserver-modules-latest")")"
+    worldserver_modules_image="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(resolve_project_image "worldserver-modules-latest")")"
 
     if ! docker image inspect "$authserver_modules_image" >/dev/null 2>&1; then
       reasons+=("C++ modules enabled but authserver modules image $authserver_modules_image is missing")
@@ -412,7 +442,25 @@ mark_deployment_complete(){
     warn "Cannot create local-storage directory. Deployment tracking may not work properly."
     return 0
   fi
-  date > "$sentinel"
+  if ! date > "$sentinel" 2>/dev/null; then
+    local sentinel_dir
+    sentinel_dir="$(dirname "$sentinel")"
+    if command -v docker >/dev/null 2>&1; then
+      local helper_image
+      helper_image="$(read_env ALPINE_IMAGE "alpine:latest")"
+      local container_user
+      container_user="$(read_env CONTAINER_USER "$(id -u):$(id -g)")"
+      docker run --rm \
+        --user "$container_user" \
+        -v "$sentinel_dir":/sentinel \
+        "$helper_image" \
+        sh -c 'date > /sentinel/.last_deployed' >/dev/null 2>&1 || true
+    fi
+    if [ ! -f "$sentinel" ]; then
+      warn "Unable to update deployment marker at $sentinel (permission denied)."
+      return 0
+    fi
+  fi
 }
 
 modules_need_rebuild(){
@@ -444,6 +492,17 @@ prompt_build_if_needed(){
   auto_rebuild="$(read_env AUTO_REBUILD_ON_DEPLOY "0")"
   if [ "$auto_rebuild" = "1" ]; then
     warn "Auto-rebuild enabled, running build process..."
+    if (cd "$ROOT_DIR" && ./build.sh --yes); then
+      ok "Build completed successfully"
+      return 0
+    else
+      err "Build failed"
+      return 1
+    fi
+  fi
+
+  if [ "$ASSUME_YES" -eq 1 ]; then
+    warn "Build required; auto-confirming (--yes)"
     if (cd "$ROOT_DIR" && ./build.sh --yes); then
       ok "Build completed successfully"
       return 0

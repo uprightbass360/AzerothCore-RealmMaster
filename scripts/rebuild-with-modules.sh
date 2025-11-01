@@ -44,6 +44,80 @@ read_env(){
   echo "$value"
 }
 
+update_env_value(){
+  local key="$1" value="$2" env_file="$ENV_FILE"
+  [ -n "$env_file" ] || return 0
+  if [ ! -f "$env_file" ]; then
+    printf '%s=%s\n' "$key" "$value" >> "$env_file"
+    return 0
+  fi
+  if grep -q "^${key}=" "$env_file"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$env_file"
+  else
+    printf '\n%s=%s\n' "$key" "$value" >> "$env_file"
+  fi
+}
+
+find_image_with_suffix(){
+  local suffix="$1"
+  docker images --format '{{.Repository}}:{{.Tag}}' | grep -E ":${suffix}$" | head -n1
+}
+
+cleanup_legacy_tags(){
+  local suffix="$1" keep_tag="$2"
+  docker images --format '{{.Repository}}:{{.Tag}}' | grep -E ":${suffix}$" | while read -r tag; do
+    [ "$tag" = "$keep_tag" ] && continue
+    docker rmi "$tag" >/dev/null 2>&1 || true
+  done
+}
+
+ensure_project_image_tag(){
+  local suffix="$1" target="$2"
+  if [ -n "$target" ] && docker image inspect "$target" >/dev/null 2>&1; then
+    cleanup_legacy_tags "$suffix" "$target"
+    echo "$target"
+    return 0
+  fi
+  local source
+  source="$(find_image_with_suffix "$suffix")"
+  if [ -z "$source" ]; then
+    echo ""
+    return 1
+  fi
+  if docker tag "$source" "$target" >/dev/null 2>&1; then
+    if [ "$source" != "$target" ]; then
+      docker rmi "$source" >/dev/null 2>&1 || true
+    fi
+    cleanup_legacy_tags "$suffix" "$target"
+    echo "$target"
+    return 0
+  fi
+  echo ""
+  return 1
+}
+
+resolve_project_name(){
+  local raw_name
+  raw_name="$(read_env COMPOSE_PROJECT_NAME "acore-compose")"
+  local sanitized
+  sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
+  sanitized="${sanitized// /-}"
+  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
+  if [[ -z "$sanitized" ]]; then
+    sanitized="acore-compose"
+  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
+    sanitized="ac${sanitized}"
+  fi
+  echo "$sanitized"
+}
+
+resolve_project_image(){
+  local tag="$1"
+  local project_name
+  project_name="$(resolve_project_name)"
+  echo "${project_name}:${tag}"
+}
+
 default_source_path(){
   local require_playerbot
   require_playerbot="$(modules_require_playerbot_source)"
@@ -283,21 +357,67 @@ get_template_value() {
 
 TARGET_AUTHSERVER_IMAGE="$(read_env AC_AUTHSERVER_IMAGE_MODULES "$(get_template_value "AC_AUTHSERVER_IMAGE_MODULES")")"
 TARGET_WORLDSERVER_IMAGE="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(get_template_value "AC_WORLDSERVER_IMAGE_MODULES")")"
-
 PLAYERBOTS_AUTHSERVER_IMAGE="$(read_env AC_AUTHSERVER_IMAGE_PLAYERBOTS "$(get_template_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS")")"
 PLAYERBOTS_WORLDSERVER_IMAGE="$(read_env AC_WORLDSERVER_IMAGE_PLAYERBOTS "$(get_template_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS")")"
 
-echo "🔁 Tagging modules images from playerbot build artifacts"
-if docker image inspect "$PLAYERBOTS_AUTHSERVER_IMAGE" >/dev/null 2>&1; then
-  docker tag "$PLAYERBOTS_AUTHSERVER_IMAGE" "$TARGET_AUTHSERVER_IMAGE"
+[ -z "$TARGET_AUTHSERVER_IMAGE" ] && TARGET_AUTHSERVER_IMAGE="$(resolve_project_image "authserver-modules-latest")"
+[ -z "$TARGET_WORLDSERVER_IMAGE" ] && TARGET_WORLDSERVER_IMAGE="$(resolve_project_image "worldserver-modules-latest")"
+[ -z "$PLAYERBOTS_AUTHSERVER_IMAGE" ] && PLAYERBOTS_AUTHSERVER_IMAGE="$(resolve_project_image "authserver-playerbots")"
+[ -z "$PLAYERBOTS_WORLDSERVER_IMAGE" ] && PLAYERBOTS_WORLDSERVER_IMAGE="$(resolve_project_image "worldserver-playerbots")"
+
+PLAYERBOTS_AUTHSERVER_IMAGE="$(ensure_project_image_tag "authserver-Playerbot" "$(resolve_project_image "authserver-playerbots")")"
+if [ -z "$PLAYERBOTS_AUTHSERVER_IMAGE" ]; then
+  echo "⚠️  Warning: unable to ensure project tag for authserver playerbots image"
 else
-  echo "⚠️  Warning: $PLAYERBOTS_AUTHSERVER_IMAGE not found, skipping authserver tag"
+  update_env_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_AUTHSERVER_IMAGE"
 fi
 
-if docker image inspect "$PLAYERBOTS_WORLDSERVER_IMAGE" >/dev/null 2>&1; then
-  docker tag "$PLAYERBOTS_WORLDSERVER_IMAGE" "$TARGET_WORLDSERVER_IMAGE"
+PLAYERBOTS_WORLDSERVER_IMAGE="$(ensure_project_image_tag "worldserver-Playerbot" "$(resolve_project_image "worldserver-playerbots")")"
+if [ -z "$PLAYERBOTS_WORLDSERVER_IMAGE" ]; then
+  echo "⚠️  Warning: unable to ensure project tag for worldserver playerbots image"
 else
-  echo "⚠️  Warning: $PLAYERBOTS_WORLDSERVER_IMAGE not found, skipping worldserver tag"
+  update_env_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_WORLDSERVER_IMAGE"
+fi
+
+echo "🔁 Tagging modules images from playerbot build artifacts"
+if [ -n "$PLAYERBOTS_AUTHSERVER_IMAGE" ] && docker image inspect "$PLAYERBOTS_AUTHSERVER_IMAGE" >/dev/null 2>&1; then
+  if docker tag "$PLAYERBOTS_AUTHSERVER_IMAGE" "$TARGET_AUTHSERVER_IMAGE"; then
+    echo "✅ Tagged $TARGET_AUTHSERVER_IMAGE from $PLAYERBOTS_AUTHSERVER_IMAGE"
+    update_env_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_AUTHSERVER_IMAGE"
+    update_env_value "AC_AUTHSERVER_IMAGE_MODULES" "$TARGET_AUTHSERVER_IMAGE"
+  else
+    echo "⚠️  Failed to tag $TARGET_AUTHSERVER_IMAGE from $PLAYERBOTS_AUTHSERVER_IMAGE"
+  fi
+else
+  echo "⚠️  Warning: unable to locate project-tagged authserver playerbots image"
+fi
+
+if [ -n "$PLAYERBOTS_WORLDSERVER_IMAGE" ] && docker image inspect "$PLAYERBOTS_WORLDSERVER_IMAGE" >/dev/null 2>&1; then
+  if docker tag "$PLAYERBOTS_WORLDSERVER_IMAGE" "$TARGET_WORLDSERVER_IMAGE"; then
+    echo "✅ Tagged $TARGET_WORLDSERVER_IMAGE from $PLAYERBOTS_WORLDSERVER_IMAGE"
+    update_env_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_WORLDSERVER_IMAGE"
+    update_env_value "AC_WORLDSERVER_IMAGE_MODULES" "$TARGET_WORLDSERVER_IMAGE"
+  else
+    echo "⚠️  Failed to tag $TARGET_WORLDSERVER_IMAGE from $PLAYERBOTS_WORLDSERVER_IMAGE"
+  fi
+else
+  echo "⚠️  Warning: unable to locate project-tagged worldserver playerbots image"
+fi
+
+TARGET_DB_IMPORT_IMAGE="$(resolve_project_image "db-import-playerbots")"
+DB_IMPORT_IMAGE="$(ensure_project_image_tag "db-import-Playerbot" "$TARGET_DB_IMPORT_IMAGE")"
+if [ -n "$DB_IMPORT_IMAGE" ]; then
+  update_env_value "AC_DB_IMPORT_IMAGE" "$DB_IMPORT_IMAGE"
+else
+  echo "⚠️  Warning: unable to ensure project tag for db-import image"
+fi
+
+TARGET_CLIENT_DATA_IMAGE="$(resolve_project_image "client-data-playerbots")"
+CLIENT_DATA_IMAGE="$(ensure_project_image_tag "client-data-Playerbot" "$TARGET_CLIENT_DATA_IMAGE")"
+if [ -n "$CLIENT_DATA_IMAGE" ]; then
+  update_env_value "AC_CLIENT_DATA_IMAGE_PLAYERBOTS" "$CLIENT_DATA_IMAGE"
+else
+  echo "⚠️  Warning: unable to ensure project tag for client-data image"
 fi
 
 show_rebuild_step 5 5 "Cleaning up build containers"

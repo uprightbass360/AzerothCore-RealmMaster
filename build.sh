@@ -81,6 +81,20 @@ read_env(){
   echo "$value"
 }
 
+update_env_value(){
+  local key="$1" value="$2" env_file="$ENV_PATH"
+  [ -n "$env_file" ] || return 0
+  if [ ! -f "$env_file" ]; then
+    printf '%s=%s\n' "$key" "$value" >> "$env_file"
+    return 0
+  fi
+  if grep -q "^${key}=" "$env_file"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$env_file"
+  else
+    printf '\n%s=%s\n' "$key" "$value" >> "$env_file"
+  fi
+}
+
 MODULE_HELPER="$ROOT_DIR/scripts/modules.py"
 MODULE_STATE_INITIALIZED=0
 declare -a MODULES_COMPILE_LIST=()
@@ -99,6 +113,7 @@ generate_module_state(){
   local storage_root
   storage_root="$(resolve_local_storage_path)"
   local output_dir="${storage_root}/modules"
+  ensure_modules_dir_writable "$storage_root"
   if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/modules.json" generate --output-dir "$output_dir"; then
     err "Module manifest validation failed. See errors above."
     exit 1
@@ -229,8 +244,8 @@ detect_rebuild_reasons(){
   if [ "$any_cxx_modules" = "1" ]; then
     local authserver_modules_image
     local worldserver_modules_image
-    authserver_modules_image="$(read_env AC_AUTHSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:authserver-modules-latest")"
-    worldserver_modules_image="$(read_env AC_WORLDSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest")"
+    authserver_modules_image="$(read_env AC_AUTHSERVER_IMAGE_MODULES "$(resolve_project_image "authserver-modules-latest")")"
+    worldserver_modules_image="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(resolve_project_image "worldserver-modules-latest")")"
 
     if ! docker image inspect "$authserver_modules_image" >/dev/null 2>&1; then
       reasons+=("C++ modules enabled but authserver modules image $authserver_modules_image is missing")
@@ -336,6 +351,41 @@ resolve_project_name(){
   echo "$sanitized"
 }
 
+ensure_modules_dir_writable(){
+  local base_path="$1"
+  local modules_dir="${base_path%/}/modules"
+  ensure_host_writable "$modules_dir"
+}
+
+ensure_host_writable(){
+  local target="$1"
+  [ -n "$target" ] || return 0
+  if [ -d "$target" ] || mkdir -p "$target" 2>/dev/null; then
+    local uid gid
+    uid="$(id -u)"
+    gid="$(id -g)"
+    if ! chown -R "$uid":"$gid" "$target" 2>/dev/null; then
+      if command -v docker >/dev/null 2>&1; then
+        local helper_image
+        helper_image="$(read_env ALPINE_IMAGE "alpine:latest")"
+        docker run --rm \
+          -u 0:0 \
+          -v "$target":/workspace \
+          "$helper_image" \
+          sh -c "chown -R ${uid}:${gid} /workspace" >/dev/null 2>&1 || true
+      fi
+    fi
+    chmod -R u+rwX "$target" 2>/dev/null || true
+  fi
+}
+
+resolve_project_image(){
+  local tag="$1"
+  local project_name
+  project_name="$(resolve_project_name)"
+  echo "${project_name}:${tag}"
+}
+
 stage_modules(){
   local src_path="$1"
   local storage_path
@@ -355,17 +405,21 @@ stage_modules(){
 
   local local_modules_dir="${src_path}/modules"
   mkdir -p "$local_modules_dir"
+  ensure_host_writable "$local_modules_dir"
 
   local staging_modules_dir="${storage_path}/modules"
   export MODULES_HOST_DIR="$staging_modules_dir"
+  ensure_host_writable "$staging_modules_dir"
 
   local env_target_dir="$src_path/env/dist/etc"
   mkdir -p "$env_target_dir"
   export MODULES_ENV_TARGET_DIR="$env_target_dir"
+  ensure_host_writable "$env_target_dir"
 
   local lua_target_dir="$src_path/lua_scripts"
   mkdir -p "$lua_target_dir"
   export MODULES_LUA_TARGET_DIR="$lua_target_dir"
+  ensure_host_writable "$lua_target_dir"
 
   # Set up local storage path for build sentinel tracking
   local local_storage_path
@@ -475,21 +529,31 @@ tag_module_images(){
   local target_auth
   local target_world
 
-  source_auth="$(read_env AC_AUTHSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:authserver-Playerbot")"
-  source_world="$(read_env AC_WORLDSERVER_IMAGE_PLAYERBOTS "uprightbass360/azerothcore-wotlk-playerbots:worldserver-Playerbot")"
-  target_auth="$(read_env AC_AUTHSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:authserver-modules-latest")"
-  target_world="$(read_env AC_WORLDSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest")"
+  source_auth="$(read_env AC_AUTHSERVER_IMAGE_PLAYERBOTS "$(resolve_project_image "authserver-playerbots")")"
+  source_world="$(read_env AC_WORLDSERVER_IMAGE_PLAYERBOTS "$(resolve_project_image "worldserver-playerbots")")"
+  target_auth="$(read_env AC_AUTHSERVER_IMAGE_MODULES "$(resolve_project_image "authserver-modules-latest")")"
+  target_world="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(resolve_project_image "worldserver-modules-latest")")"
 
   if docker image inspect "$source_auth" >/dev/null 2>&1; then
-    docker tag "$source_auth" "$target_auth"
-    ok "Tagged $target_auth from $source_auth"
+    if docker tag "$source_auth" "$target_auth"; then
+      ok "Tagged $target_auth from $source_auth"
+      update_env_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS" "$source_auth"
+      update_env_value "AC_AUTHSERVER_IMAGE_MODULES" "$target_auth"
+    else
+      warn "Failed to tag $target_auth from $source_auth"
+    fi
   else
     warn "Source authserver image $source_auth not found; skipping modules tag"
   fi
 
   if docker image inspect "$source_world" >/dev/null 2>&1; then
-    docker tag "$source_world" "$target_world"
-    ok "Tagged $target_world from $source_world"
+    if docker tag "$source_world" "$target_world"; then
+      ok "Tagged $target_world from $source_world"
+      update_env_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS" "$source_world"
+      update_env_value "AC_WORLDSERVER_IMAGE_MODULES" "$target_world"
+    else
+      warn "Failed to tag $target_world from $source_world"
+    fi
   else
     warn "Source worldserver image $source_world not found; skipping modules tag"
   fi

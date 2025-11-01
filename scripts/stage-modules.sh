@@ -97,6 +97,28 @@ read_env(){
   echo "$value"
 }
 
+resolve_project_name(){
+  local raw_name
+  raw_name="$(read_env COMPOSE_PROJECT_NAME "acore-compose")"
+  local sanitized
+  sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
+  sanitized="${sanitized// /-}"
+  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
+  if [[ -z "$sanitized" ]]; then
+    sanitized="acore-compose"
+  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
+    sanitized="ac${sanitized}"
+  fi
+  echo "$sanitized"
+}
+
+resolve_project_image(){
+  local tag="$1"
+  local project_name
+  project_name="$(resolve_project_name)"
+  echo "${project_name}:${tag}"
+}
+
 canonical_path(){
   local path="$1"
   if command -v realpath >/dev/null 2>&1; then
@@ -265,7 +287,7 @@ echo "🎯 Target profile: services-$TARGET_PROFILE"
 
 # Check if source rebuild is needed for modules profile
 REBUILD_NEEDED=0
-TARGET_WORLDSERVER_IMAGE_MODULES="$(read_env AC_WORLDSERVER_IMAGE_MODULES "uprightbass360/azerothcore-wotlk-playerbots:worldserver-modules-latest")"
+TARGET_WORLDSERVER_IMAGE_MODULES="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(resolve_project_image "worldserver-modules-latest")")"
 if [ "$TARGET_PROFILE" = "modules" ]; then
   # Check if source image exists
   if ! docker image inspect "$TARGET_WORLDSERVER_IMAGE_MODULES" >/dev/null 2>&1; then

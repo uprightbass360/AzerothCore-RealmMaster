@@ -128,6 +128,22 @@ STORAGE_PATH="${STORAGE_PATH:-$STORAGE_PATH_DEFAULT}"
 STORAGE_PATH_LOCAL="${STORAGE_PATH_LOCAL:-$STORAGE_PATH_LOCAL_DEFAULT}"
 PROJECT_NAME="${COMPOSE_PROJECT_NAME:-ac-compose}"
 
+sanitize_project_name(){
+  local raw="$1"
+  local sanitized
+  sanitized="$(echo "$raw" | tr '[:upper:]' '[:lower:]')"
+  sanitized="${sanitized// /-}"
+  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
+  if [[ -z "$sanitized" ]]; then
+    sanitized="acore-compose"
+  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
+    sanitized="ac${sanitized}"
+  fi
+  echo "$sanitized"
+}
+
+PROJECT_IMAGE_PREFIX="$(sanitize_project_name "${COMPOSE_PROJECT_NAME:-acore-compose}")"
+
 remove_storage_dir(){
   local path="$1"
   if [ -d "$path" ]; then
@@ -203,7 +219,8 @@ nuclear_cleanup() {
 
   # Remove project images (server/tool images typical to this project)
   execute_command "Remove acore images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^acore/' | xargs -r docker rmi"
-  execute_command "Remove playerbots images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^uprightbass360/azerothcore-wotlk-playerbots' | xargs -r docker rmi"
+  execute_command "Remove local project images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^${PROJECT_IMAGE_PREFIX}:' | xargs -r docker rmi"
+  execute_command "Remove legacy playerbots images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^uprightbass360/azerothcore-wotlk-playerbots' | xargs -r docker rmi"
   execute_command "Remove tool images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'phpmyadmin|uprightbass360/keira3' | xargs -r docker rmi"
 
   # Storage cleanup (preserve backups if requested)

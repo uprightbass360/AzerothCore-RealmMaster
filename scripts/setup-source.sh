@@ -69,7 +69,7 @@ fi
 
 ACORE_REPO_STANDARD="${ACORE_REPO_STANDARD:-https://github.com/azerothcore/azerothcore-wotlk.git}"
 ACORE_BRANCH_STANDARD="${ACORE_BRANCH_STANDARD:-master}"
-ACORE_REPO_PLAYERBOTS="${ACORE_REPO_PLAYERBOTS:-https://github.com/uprightbass360/azerothcore-wotlk-playerbots.git}"
+ACORE_REPO_PLAYERBOTS="${ACORE_REPO_PLAYERBOTS:-https://github.com/mod-playerbots/azerothcore-wotlk.git}"
 ACORE_BRANCH_PLAYERBOTS="${ACORE_BRANCH_PLAYERBOTS:-Playerbot}"
 
 # Repository and branch selection based on playerbots mode

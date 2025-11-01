@@ -27,7 +27,7 @@ cd acore-compose
 ./deploy.sh
 ```
 
-> ℹ️ **Image Sources:** Vanilla/standard profiles run the upstream `acore/*` images. As soon as you enable playerbots or any C++ module, the toolchain switches to the `uprightbass360/azerothcore-wotlk-playerbots` fork, rebuilds it locally when needed, and produces fresh `uprightbass360/...:modules-latest` tags.
+> ℹ️ **Image Sources:** Vanilla/standard profiles run the upstream `acore/*` images. As soon as you enable playerbots or any C++ module, the toolchain compiles locally and retags the results to your compose project name (for example, `acore-compose:authserver-playerbots`, `acore-compose:worldserver-playerbots`, `acore-compose:db-import-playerbots`, `acore-compose:client-data-playerbots`, and `acore-compose:authserver-modules-latest`), keeping everything self-contained.
 
 **4. Create Admin Account**
 
@@ -83,7 +83,7 @@ set realmlist 203.0.113.100 8215
 ### ✅ Core Server Components
 - **AzerothCore 3.3.5a** - WotLK server application
 - **MySQL 8.0** - Database with intelligent initialization and restoration
-- **Smart Module System** - Automated module management and source builds (compiles the uprightbass360 playerbot fork whenever modules need C++ changes)
+- **Smart Module System** - Automated module management and source builds (compiles the [mod-playerbots fork](https://github.com/mod-playerbots/azerothcore-wotlk/tree/Playerbot) whenever modules need C++ changes)
 - **phpMyAdmin** - Web-based database administration
 - **Keira3** - Game content editor and developer tools
 
@@ -219,7 +219,7 @@ ssh docker-server '
   ./deploy.sh --yes --no-watch
 '
    ```
-   Because the `.env` now points the modules profile at the `uprightbass360/...:modules-latest` tags, the remote compose run uses the build you just migrated—no additional rebuild required.
+   Because the `.env` now points the modules profile at your project-local tags (for example `acore-compose:authserver-modules-latest`), the remote compose run uses the build you just migrated—no additional rebuild required.
 
 4. **Verify**
    ```bash
@@ -382,7 +382,7 @@ http://YOUR_SERVER_IP:4201
 
 # Module staging and compilation
 ./scripts/stage-modules.sh                    # Download and stage enabled modules (preps upright playerbot builds)
-./scripts/rebuild-with-modules.sh --yes       # Rebuild uprightbass360/playerbot images with your modules
+./scripts/rebuild-with-modules.sh --yes       # Rebuild mod-playerbots images with your modules
 ./scripts/setup-source.sh                     # Initialize/update source repositories (auto-switches to playerbot fork for modules)
 
 # Module configuration management
