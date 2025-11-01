@@ -114,20 +114,47 @@ run_post_install_hooks(){
   local key="$1"
   local dir="$2"
   local hooks_csv="${MODULE_POST_INSTALL[$key]:-}"
+
+  # Skip if no hooks defined
+  [ -n "$hooks_csv" ] || return 0
+
   IFS=',' read -r -a hooks <<< "$hooks_csv"
+  local hooks_dir="/tmp/scripts/hooks"
+
   for hook in "${hooks[@]}"; do
     [ -n "$hook" ] || continue
-    case "$hook" in
-      mod_ale_move_path_patch)
-        apply_mod_ale_patch "$dir"
-        ;;
-      black_market_copy_lua)
-        copy_black_market_lua "$dir"
-        ;;
-      *)
-        warn "Unknown post-install hook '$hook' for ${MODULE_NAME[$key]:-}"
-        ;;
-    esac
+
+    # Trim whitespace
+    hook="$(echo "$hook" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+
+    local hook_script="$hooks_dir/$hook"
+
+    if [ -x "$hook_script" ]; then
+      info "Running post-install hook: $hook"
+
+      # Set hook environment variables
+      export MODULE_KEY="$key"
+      export MODULE_DIR="$dir"
+      export MODULE_NAME="${MODULE_NAME[$key]:-$(basename "$dir")}"
+      export MODULES_ROOT="${MODULES_ROOT:-/modules}"
+      export LUA_SCRIPTS_TARGET="/azerothcore/lua_scripts"
+
+      # Execute the hook script
+      if "$hook_script"; then
+        ok "Hook '$hook' completed successfully"
+      else
+        local exit_code=$?
+        case $exit_code in
+          1) warn "Hook '$hook' completed with warnings" ;;
+          *) err "Hook '$hook' failed with exit code $exit_code" ;;
+        esac
+      fi
+
+      # Clean up environment
+      unset MODULE_KEY MODULE_DIR MODULE_NAME MODULES_ROOT LUA_SCRIPTS_TARGET
+    else
+      err "Hook script not found: $hook_script"
+    fi
   done
 }
 
@@ -161,52 +188,6 @@ install_enabled_modules(){
   done
 }
 
-apply_mod_ale_patch(){
-  local module_dir="$1"
-  local target_file="$module_dir/src/LuaEngine/methods/CreatureMethods.h"
-  if [ ! -f "$target_file" ]; then
-    warn "mod-ale file missing for MovePath patch ($target_file)"
-    return
-  fi
-  if grep -q 'MoveWaypoint(creature->GetWaypointPath(), true);' "$target_file"; then
-    if sed -i 's/MoveWaypoint(creature->GetWaypointPath(), true);/MovePath(creature->GetWaypointPath(), FORCED_MOVEMENT_RUN);/' "$target_file"; then
-      ok "Applied mod-ale MovePath compatibility fix"
-    else
-      warn "Failed to adjust mod-ale MovePath call"
-    fi
-  else
-    info "mod-ale MovePath compatibility fix already present"
-  fi
-}
-
-copy_black_market_lua(){
-  local module_dir="$1"
-  local source_dir="$module_dir/Server Files/lua_scripts"
-  if [ ! -d "$source_dir" ]; then
-    warn "Black Market Lua scripts not found at '$source_dir'"
-    return
-  fi
-  local target="${MODULES_LUA_TARGET_DIR:-}"
-  if [ -z "$target" ]; then
-    if [ "${MODULES_LOCAL_RUN:-0}" = "1" ]; then
-      target="${MODULES_ROOT}/lua_scripts"
-    else
-      target="/azerothcore/lua_scripts"
-    fi
-  fi
-  if mkdir -p "$target" 2>/dev/null && cp -r "$source_dir/." "$target/" 2>/dev/null; then
-    ok "Black Market Lua scripts copied to $target"
-    return
-  fi
-  if [ -n "${MODULES_HOST_DIR:-}" ]; then
-    target="${MODULES_HOST_DIR%/}/lua_scripts"
-    if mkdir -p "$target" 2>/dev/null && cp -r "$source_dir/." "$target/" 2>/dev/null; then
-      ok "Black Market Lua scripts staged to $target"
-      return
-    fi
-  fi
-  warn "Unable to copy Black Market Lua scripts to a writable location"
-}
 
 update_playerbots_db_info(){
   local target="$1"

@@ -224,7 +224,7 @@
       "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [
-        "mod_ale_move_path_patch"
+        "mod-ale-patches"
       ],
       "config_cleanup": [
         "mod_eluna.conf*"
@@ -383,7 +383,7 @@
         "MODULE_ELUNA"
       ],
       "post_install_hooks": [
-        "black_market_copy_lua"
+        "black-market-setup"
       ],
       "depends_on": [
         "MODULE_ELUNA"
@@ -489,6 +489,416 @@
         "MODULE_ELUNA"
       ],
       "post_install_hooks": [],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_AIO",
+      "name": "mod-aio",
+      "repo": "https://github.com/Rochet2/AIO.git",
+      "needs_build": true,
+      "type": "cpp",
+      "notes": "Azeroth Interface Override - enables client-server interface communication",
+      "post_install_hooks": [],
+      "depends_on": []
+    },
+    {
+      "key": "MODULE_ELUNA_SCRIPTS",
+      "name": "eluna-scripts",
+      "repo": "https://github.com/Isidorsson/Eluna-scripts.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_TRANSMOG_AIO",
+      "name": "azerothcore-transmog-3.3.5a",
+      "repo": "https://github.com/DanieltheDeveloper/azerothcore-transmog-3.3.5a.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_AIO"
+      ],
+      "post_install_hooks": [
+        "copy-aio-lua"
+      ],
+      "depends_on": [
+        "MODULE_AIO"
+      ]
+    },
+    {
+      "key": "MODULE_EVENT_SCRIPTS",
+      "name": "acore-eventscripts",
+      "repo": "https://github.com/55Honey/Acore_eventScripts.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_LEVEL_UP_REWARD",
+      "name": "acore-levelupreward",
+      "repo": "https://github.com/55Honey/Acore_LevelUpReward.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_ACCOUNTWIDE_SYSTEMS",
+      "name": "azerothcore-eluna-accountwide",
+      "repo": "https://github.com/Aldori15/azerothcore-eluna-accountwide.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_EXCHANGE_NPC",
+      "name": "acore-exchangenpc",
+      "repo": "https://github.com/55Honey/Acore_ExchangeNpc.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_RECRUIT_A_FRIEND",
+      "name": "acore-recruitafriend",
+      "repo": "https://github.com/55Honey/Acore_RecruitAFriend.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_PRESTIGE_DRAFT_MODE",
+      "name": "prestige-and-draft-mode",
+      "repo": "https://github.com/Youpeoples/Prestige-and-Draft-Mode.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_LUA_AH_BOT",
+      "name": "azerothcore-lua-ah-bot",
+      "repo": "https://github.com/mostlynick3/azerothcore-lua-ah-bot.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_HARDCORE_MODE",
+      "name": "lua-hardcoremode",
+      "repo": "https://github.com/HellionOP/Lua-HardcoreMode.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_NPCBOT_EXTENDED_COMMANDS",
+      "name": "npcbot-extended-commands",
+      "repo": "https://github.com/Day36512/Npcbot_Extended_Commands.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_MULTIVENDOR",
+      "name": "azerothcore-lua-multivendor",
+      "repo": "https://github.com/Shadowveil-WotLK/AzerothCore-lua-MultiVendor.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_TREASURE_CHEST_SYSTEM",
+      "name": "treasure-chest-system",
+      "repo": "https://github.com/zyggy123/Treasure-Chest-System.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_ACTIVE_CHAT",
+      "name": "activechat",
+      "repo": "https://github.com/Day36512/ActiveChat.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_ULTIMATE_FULL_LOOT_PVP",
+      "name": "ultimate-full-loot-pvp",
+      "repo": "https://github.com/Youpeoples/Ultimate-Full-Loot-Pvp.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_HORADRIC_CUBE",
+      "name": "horadric-cube-for-world-of-warcraft",
+      "repo": "https://github.com/TITIaio/Horadric-Cube-for-World-of-Warcraft.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_CARBON_COPY",
+      "name": "acore-carboncopy",
+      "repo": "https://github.com/55Honey/Acore_CarbonCopy.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_TEMP_ANNOUNCEMENTS",
+      "name": "acore-tempannouncements",
+      "repo": "https://github.com/55Honey/Acore_TempAnnouncements.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_ZONE_CHECK",
+      "name": "acore-zonecheck",
+      "repo": "https://github.com/55Honey/Acore_Zonecheck.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_AIO_BLACKJACK",
+      "name": "aio-blackjack",
+      "repo": "https://github.com/Manmadedrummer/AIO-Blackjack.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_AIO"
+      ],
+      "post_install_hooks": [
+        "copy-aio-lua"
+      ],
+      "depends_on": [
+        "MODULE_AIO"
+      ]
+    },
+    {
+      "key": "MODULE_SEND_AND_BIND",
+      "name": "acore-sendandbind",
+      "repo": "https://github.com/55Honey/Acore_SendAndBind.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_DYNAMIC_TRADER",
+      "name": "dynamic-trader",
+      "repo": "https://github.com/Day36512/Dynamic-Trader.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_LOTTERY_LUA",
+      "name": "lottery-lua",
+      "repo": "https://github.com/zyggy123/lottery-lua.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_DISCORD_NOTIFIER",
+      "name": "acore-discordnotifier",
+      "repo": "https://github.com/0xCiBeR/Acore_DiscordNotifier.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
+      "depends_on": [
+        "MODULE_ELUNA"
+      ]
+    },
+    {
+      "key": "MODULE_GLOBAL_MAIL_BANKING_AUCTIONS",
+      "name": "azerothcore-global-mail-banking-auctions",
+      "repo": "https://github.com/Aldori15/azerothcore-global-mail_banking_auctions.git",
+      "needs_build": false,
+      "type": "lua",
+      "requires": [
+        "MODULE_ELUNA"
+      ],
+      "post_install_hooks": [
+        "copy-standard-lua"
+      ],
       "depends_on": [
         "MODULE_ELUNA"
       ]

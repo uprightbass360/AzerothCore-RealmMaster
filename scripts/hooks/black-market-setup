@@ -1,0 +1,73 @@
+#!/bin/bash
+# Module-specific hook for Black Market Auction House setup
+set -e
+
+# Hook environment
+MODULE_KEY="${MODULE_KEY:-}"
+MODULE_DIR="${MODULE_DIR:-}"
+MODULE_NAME="${MODULE_NAME:-}"
+MODULES_ROOT="${MODULES_ROOT:-/modules}"
+LUA_SCRIPTS_TARGET="${LUA_SCRIPTS_TARGET:-/azerothcore/lua_scripts}"
+
+if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
+    echo "❌ black-market-setup: Invalid module directory: $MODULE_DIR"
+    exit 2
+fi
+
+echo "🏪 black-market-setup: Setting up Black Market for $MODULE_NAME"
+
+# Create target directory
+mkdir -p "$LUA_SCRIPTS_TARGET" 2>/dev/null || {
+    echo "⚠️  black-market-setup: Cannot create target directory $LUA_SCRIPTS_TARGET"
+    exit 1
+}
+
+copied_count=0
+
+# Copy Lua scripts from the specific Black Market location
+copy_black_market_lua() {
+    local source_dir="$MODULE_DIR/Server Files/lua_scripts"
+
+    if [ ! -d "$source_dir" ]; then
+        echo "   ⚠️  Black Market Lua scripts not found at '$source_dir'"
+        return 1
+    fi
+
+    echo "   📂 Found Black Market server scripts"
+
+    # Copy all .lua files
+    find "$source_dir" -name "*.lua" -type f | while read -r lua_file; do
+        local basename_file
+        basename_file="$(basename "$lua_file")"
+        if cp "$lua_file" "$LUA_SCRIPTS_TARGET/$basename_file" 2>/dev/null; then
+            echo "      ✅ Copied $basename_file"
+            copied_count=$((copied_count + 1))
+        else
+            echo "      ⚠️  Failed to copy $basename_file"
+        fi
+    done
+
+    return 0
+}
+
+# Identify client files (for information)
+check_client_files() {
+    local client_dir="$MODULE_DIR/Client Files"
+
+    if [ -d "$client_dir" ]; then
+        echo "   ℹ️  Client files detected at '$client_dir' (manual installation required)"
+        if [ -d "$client_dir/AddOns" ]; then
+            echo "      📁 AddOns directory found - install to WoW client"
+        fi
+    fi
+}
+
+# Execute setup steps
+if copy_black_market_lua; then
+    echo "   ✅ Black Market Lua scripts processed"
+fi
+
+check_client_files
+
+echo "   ✅ Black Market setup completed"
+exit 0
