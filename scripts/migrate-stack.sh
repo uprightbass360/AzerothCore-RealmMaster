@@ -10,9 +10,12 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_ROOT/.env"
 
 read_env_value(){
-  local key="$1" default="$2" value="${!key:-}"
-  if [ -z "$value" ] && [ -f "$ENV_FILE" ]; then
+  local key="$1" default="$2" value=""
+  if [ -f "$ENV_FILE" ]; then
     value="$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
+  fi
+  if [ -z "$value" ]; then
+    value="${!key:-}"
   fi
   if [ -z "$value" ]; then
     value="$default"
@@ -40,6 +43,31 @@ resolve_project_image(){
   local project_name
   project_name="$(resolve_project_name)"
   echo "${project_name}:${tag}"
+}
+
+ensure_host_writable(){
+  local path="$1"
+  [ -n "$path" ] || return 0
+  if [ ! -d "$path" ]; then
+    mkdir -p "$path" 2>/dev/null || true
+  fi
+  if [ -d "$path" ]; then
+    local uid gid
+    uid="$(id -u)"
+    gid="$(id -g)"
+    if ! chown -R "$uid":"$gid" "$path" 2>/dev/null; then
+      if command -v docker >/dev/null 2>&1; then
+        local helper_image
+        helper_image="$(read_env_value ALPINE_IMAGE "alpine:latest")"
+        docker run --rm \
+          -u 0:0 \
+          -v "$path":/workspace \
+          "$helper_image" \
+          sh -c "chown -R ${uid}:${gid} /workspace" >/dev/null 2>&1 || true
+      fi
+    fi
+    chmod -R u+rwX "$path" 2>/dev/null || true
+  fi
 }
 
 usage(){
@@ -100,7 +128,9 @@ if [ -z "$LOCAL_STORAGE_ROOT" ]; then
 fi
 LOCAL_STORAGE_ROOT="${LOCAL_STORAGE_ROOT%/}"
 [ -z "$LOCAL_STORAGE_ROOT" ] && LOCAL_STORAGE_ROOT="."
+ensure_host_writable "$LOCAL_STORAGE_ROOT"
 TARBALL="${TARBALL:-${LOCAL_STORAGE_ROOT}/images/acore-modules-images.tar}"
+ensure_host_writable "$(dirname "$TARBALL")"
 
 SCP_OPTS=(-P "$PORT")
 SSH_OPTS=(-p "$PORT")
@@ -212,7 +242,6 @@ setup_remote_repository(){
 validate_remote_environment
 
 echo "⋅ Exporting module images to $TARBALL"
-mkdir -p "$(dirname "$TARBALL")"
 # Check which images are available and collect them
 IMAGES_TO_SAVE=()
 
