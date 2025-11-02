@@ -16,11 +16,11 @@ fi
 
 echo "📜 copy-standard-lua: Processing $MODULE_NAME"
 
-# Create target directory
-mkdir -p "$LUA_SCRIPTS_TARGET" 2>/dev/null || {
-    echo "⚠️  copy-standard-lua: Cannot create target directory $LUA_SCRIPTS_TARGET"
-    exit 1
-}
+# Create target directory if possible
+if ! mkdir -p "$LUA_SCRIPTS_TARGET" 2>/dev/null; then
+    echo "ℹ️  copy-standard-lua: Target directory $LUA_SCRIPTS_TARGET not accessible (will be copied during container build)"
+    exit 0
+fi
 
 copied_count=0
 

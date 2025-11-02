@@ -1,0 +1,36 @@
+#!/bin/bash
+# Post-install hook to fix beastmaster SQL duplicate key issue
+set -e
+
+MODULE_DIR="${MODULE_DIR:-}"
+MODULE_NAME="${MODULE_NAME:-}"
+
+if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
+    echo "❌ fix-beastmaster-sql: Invalid module directory: $MODULE_DIR"
+    exit 2
+fi
+
+echo "🔧 fix-beastmaster-sql: Patching SQL file for $MODULE_NAME"
+
+SQL_FILE="$MODULE_DIR/data/sql/db-world/beastmaster_tames_inserts.sql"
+
+if [ ! -f "$SQL_FILE" ]; then
+    echo "   ℹ️  SQL file not found, skipping: $SQL_FILE"
+    exit 0
+fi
+
+# Check if already patched
+if grep -q "INSERT IGNORE INTO" "$SQL_FILE" 2>/dev/null; then
+    echo "   ✅ SQL file already patched"
+    exit 0
+fi
+
+# Apply patch to make SQL idempotent
+if sed -i 's/^INSERT INTO beastmaster_tames/INSERT IGNORE INTO beastmaster_tames/g' "$SQL_FILE"; then
+    echo "   ✅ Patched SQL file to use INSERT IGNORE"
+else
+    echo "   ⚠️  Failed to patch SQL file"
+    exit 1
+fi
+
+exit 0

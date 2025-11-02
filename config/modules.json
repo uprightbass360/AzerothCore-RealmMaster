@@ -301,7 +301,7 @@
       "repo": "https://github.com/azerothcore/mod-npc-beastmaster.git",
       "needs_build": true,
       "type": "cpp",
-      "post_install_hooks": [],
+      "post_install_hooks": ["fix-beastmaster-sql"],
       "config_cleanup": [
         "npc_beastmaster.conf*"
       ],
