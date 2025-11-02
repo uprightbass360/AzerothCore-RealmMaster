@@ -239,6 +239,39 @@ setup_remote_repository(){
   echo "   • Repository synchronized ✓"
 }
 
+cleanup_stale_docker_resources(){
+  echo "⋅ Cleaning up stale Docker resources on remote..."
+
+  # Get project name to target our containers/images specifically
+  local project_name
+  project_name="$(resolve_project_name)"
+
+  # Stop and remove old containers
+  echo "  • Removing old containers..."
+  run_ssh "docker ps -a --filter 'name=ac-' --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true"
+
+  # Remove old project images to force fresh load
+  echo "  • Removing old project images..."
+  local images_to_remove=(
+    "${project_name}:authserver-modules-latest"
+    "${project_name}:worldserver-modules-latest"
+    "${project_name}:authserver-playerbots"
+    "${project_name}:worldserver-playerbots"
+    "${project_name}:db-import-playerbots"
+    "${project_name}:client-data-playerbots"
+  )
+  for img in "${images_to_remove[@]}"; do
+    run_ssh "docker rmi '$img' 2>/dev/null || true"
+  done
+
+  # Prune dangling images and build cache
+  echo "  • Pruning dangling images and build cache..."
+  run_ssh "docker image prune -f >/dev/null 2>&1 || true"
+  run_ssh "docker builder prune -f >/dev/null 2>&1 || true"
+
+  echo "✅ Docker cleanup complete"
+}
+
 validate_remote_environment
 
 echo "⋅ Exporting module images to $TARBALL"
@@ -308,6 +341,9 @@ if [[ $SKIP_STORAGE -eq 0 ]]; then
     run_ssh "tar -xf /tmp/acore-modules.tar -C '$REMOTE_STORAGE/modules' && rm /tmp/acore-modules.tar"
   fi
 fi
+
+# Clean up stale Docker resources before loading new images
+cleanup_stale_docker_resources
 
 echo "⋅ Loading images on remote"
 run_scp "$TARBALL" "$USER@$HOST:/tmp/acore-modules-images.tar"
