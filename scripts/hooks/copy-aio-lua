@@ -1,0 +1,67 @@
+#!/bin/bash
+# Generic hook to copy AIO (Azeroth Interface Override) Lua scripts
+set -e
+
+# Hook environment
+MODULE_KEY="${MODULE_KEY:-}"
+MODULE_DIR="${MODULE_DIR:-}"
+MODULE_NAME="${MODULE_NAME:-}"
+MODULES_ROOT="${MODULES_ROOT:-/modules}"
+LUA_SCRIPTS_TARGET="${LUA_SCRIPTS_TARGET:-/azerothcore/lua_scripts}"
+
+if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
+    echo "❌ copy-aio-lua: Invalid module directory: $MODULE_DIR"
+    exit 2
+fi
+
+echo "📡 copy-aio-lua: Processing $MODULE_NAME (AIO module)"
+
+# Create target directory
+mkdir -p "$LUA_SCRIPTS_TARGET" 2>/dev/null || {
+    echo "⚠️  copy-aio-lua: Cannot create target directory $LUA_SCRIPTS_TARGET"
+    exit 1
+}
+
+copied_count=0
+
+# Function to copy files and count them
+copy_lua_files() {
+    local source_pattern="$1"
+    local label="$2"
+
+    if compgen -G "$source_pattern" > /dev/null 2>&1; then
+        echo "   📂 Found $label"
+        for lua_file in $source_pattern; do
+            if [ -f "$lua_file" ]; then
+                local basename_file
+                basename_file="$(basename "$lua_file")"
+                if cp "$lua_file" "$LUA_SCRIPTS_TARGET/$basename_file" 2>/dev/null; then
+                    echo "      ✅ Copied $basename_file"
+                    copied_count=$((copied_count + 1))
+                else
+                    echo "      ⚠️  Failed to copy $basename_file"
+                fi
+            fi
+        done
+    fi
+}
+
+# AIO-specific search patterns
+copy_lua_files "$MODULE_DIR/Server/*.lua" "Server/ directory (AIO pattern)"
+copy_lua_files "$MODULE_DIR/server/*.lua" "server/ directory (lowercase)"
+copy_lua_files "$MODULE_DIR/lua_scripts/*.lua" "lua_scripts/ directory"
+copy_lua_files "$MODULE_DIR/Server Files/lua_scripts/*.lua" "Server Files/lua_scripts/ directory"
+copy_lua_files "$MODULE_DIR/*.lua" "root level Lua files"
+
+# AIO modules may have client files too (for reference)
+if [ -d "$MODULE_DIR/Client" ] || [ -d "$MODULE_DIR/client" ]; then
+    echo "   ℹ️  Note: Client-side AIO files detected (not copied to server)"
+fi
+
+if [ $copied_count -eq 0 ]; then
+    echo "   ℹ️  No AIO Lua scripts found in standard locations"
+    exit 0
+fi
+
+echo "   ✅ Copied $copied_count AIO Lua script(s) to $LUA_SCRIPTS_TARGET"
+exit 0

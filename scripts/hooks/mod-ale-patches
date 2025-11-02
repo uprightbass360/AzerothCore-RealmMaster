@@ -1,0 +1,52 @@
+#!/bin/bash
+# Module-specific hook for mod-ale compatibility patches
+set -e
+
+# Hook environment
+MODULE_KEY="${MODULE_KEY:-}"
+MODULE_DIR="${MODULE_DIR:-}"
+MODULE_NAME="${MODULE_NAME:-}"
+
+if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
+    echo "❌ mod-ale-patches: Invalid module directory: $MODULE_DIR"
+    exit 2
+fi
+
+echo "🔧 mod-ale-patches: Applying compatibility fixes to $MODULE_NAME"
+
+# Apply MovePath compatibility patch
+apply_movepath_patch() {
+    local target_file="$MODULE_DIR/src/LuaEngine/methods/CreatureMethods.h"
+
+    if [ ! -f "$target_file" ]; then
+        echo "   ⚠️  MovePath patch target file missing: $target_file"
+        return 1
+    fi
+
+    if grep -q 'MoveWaypoint(creature->GetWaypointPath(), true);' "$target_file"; then
+        if sed -i 's/MoveWaypoint(creature->GetWaypointPath(), true);/MovePath(creature->GetWaypointPath(), FORCED_MOVEMENT_RUN);/' "$target_file"; then
+            echo "   ✅ Applied MovePath compatibility fix"
+            return 0
+        else
+            echo "   ❌ Failed to apply MovePath compatibility fix"
+            return 2
+        fi
+    else
+        echo "   ✅ MovePath compatibility fix already present"
+        return 0
+    fi
+}
+
+# Apply all patches
+patch_count=0
+if apply_movepath_patch; then
+    patch_count=$((patch_count + 1))
+fi
+
+if [ $patch_count -eq 0 ]; then
+    echo "   ℹ️  No patches needed or applied"
+    exit 0
+fi
+
+echo "   ✅ Applied $patch_count compatibility patch(es)"
+exit 0
