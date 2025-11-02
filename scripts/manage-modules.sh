@@ -119,7 +119,11 @@ run_post_install_hooks(){
   [ -n "$hooks_csv" ] || return 0
 
   IFS=',' read -r -a hooks <<< "$hooks_csv"
-  local hooks_dir="/tmp/scripts/hooks"
+  local -a hook_search_paths=(
+    "$SCRIPT_DIR/hooks"
+    "/tmp/scripts/hooks"
+    "/scripts/hooks"
+  )
 
   for hook in "${hooks[@]}"; do
     [ -n "$hook" ] || continue
@@ -127,9 +131,16 @@ run_post_install_hooks(){
     # Trim whitespace
     hook="$(echo "$hook" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
 
-    local hook_script="$hooks_dir/$hook"
+    local hook_script=""
+    local candidate
+    for candidate in "${hook_search_paths[@]}"; do
+      if [ -x "$candidate/$hook" ]; then
+        hook_script="$candidate/$hook"
+        break
+      fi
+    done
 
-    if [ -x "$hook_script" ]; then
+    if [ -n "$hook_script" ]; then
       info "Running post-install hook: $hook"
 
       # Set hook environment variables
@@ -153,7 +164,7 @@ run_post_install_hooks(){
       # Clean up environment
       unset MODULE_KEY MODULE_DIR MODULE_NAME MODULES_ROOT LUA_SCRIPTS_TARGET
     else
-      err "Hook script not found: $hook_script"
+      err "Hook script not found for ${hook} (searched: ${hook_search_paths[*]})"
     fi
   done
 }

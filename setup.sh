@@ -88,6 +88,11 @@ declare -A TEMPLATE_VALUE_MAP=(
   [DEFAULT_AC_AUTHSERVER_IMAGE]=AC_AUTHSERVER_IMAGE
   [DEFAULT_AC_WORLDSERVER_IMAGE]=AC_WORLDSERVER_IMAGE
   [DEFAULT_AC_CLIENT_DATA_IMAGE]=AC_CLIENT_DATA_IMAGE
+  [DEFAULT_DOCKER_IMAGE_TAG]=DOCKER_IMAGE_TAG
+  [DEFAULT_AUTHSERVER_IMAGE_BASE]=AC_AUTHSERVER_IMAGE_BASE
+  [DEFAULT_WORLDSERVER_IMAGE_BASE]=AC_WORLDSERVER_IMAGE_BASE
+  [DEFAULT_DB_IMPORT_IMAGE_BASE]=AC_DB_IMPORT_IMAGE_BASE
+  [DEFAULT_CLIENT_DATA_IMAGE_BASE]=AC_CLIENT_DATA_IMAGE_BASE
   [DEFAULT_AUTH_IMAGE_PLAYERBOTS]=AC_AUTHSERVER_IMAGE_PLAYERBOTS
   [DEFAULT_WORLD_IMAGE_PLAYERBOTS]=AC_WORLDSERVER_IMAGE_PLAYERBOTS
   [DEFAULT_CLIENT_DATA_IMAGE_PLAYERBOTS]=AC_CLIENT_DATA_IMAGE_PLAYERBOTS
@@ -278,60 +283,15 @@ normalize_module_name(){
 
 declare -A MODULE_ENABLE_SET=()
 
-KNOWN_MODULE_VARS=(
-  MODULE_PLAYERBOTS
-  MODULE_AOE_LOOT
-  MODULE_LEARN_SPELLS
-  MODULE_FIREWORKS
-  MODULE_INDIVIDUAL_PROGRESSION
-  MODULE_AHBOT
-  MODULE_AUTOBALANCE
-  MODULE_TRANSMOG
-  MODULE_NPC_BUFFER
-  MODULE_DYNAMIC_XP
-  MODULE_SOLO_LFG
-  MODULE_1V1_ARENA
-  MODULE_PHASED_DUELS
-  MODULE_BREAKING_NEWS
-  MODULE_BOSS_ANNOUNCER
-  MODULE_ACCOUNT_ACHIEVEMENTS
-  MODULE_AUTO_REVIVE
-  MODULE_GAIN_HONOR_GUARD
-  MODULE_ARAC
-  MODULE_ELUNA
-  MODULE_TIME_IS_TIME
-  MODULE_POCKET_PORTAL
-  MODULE_RANDOM_ENCHANTS
-  MODULE_SOLOCRAFT
-  MODULE_PVP_TITLES
-  MODULE_NPC_BEASTMASTER
-  MODULE_NPC_ENCHANTER
-  MODULE_INSTANCE_RESET
-  MODULE_LEVEL_GRANT
-  MODULE_CHALLENGE_MODES
-  MODULE_OLLAMA_CHAT
-  MODULE_SKELETON_MODULE
-  MODULE_BG_SLAVERYVALLEY
-  MODULE_ELUNA_TS
-  MODULE_PLAYER_BOT_LEVEL_BRACKETS
-  MODULE_STATBOOSTER
-  MODULE_DUNGEON_RESPAWN
-  MODULE_AZEROTHSHARD
-  MODULE_WORGOBLIN
-  MODULE_ASSISTANT
-  MODULE_REAGENT_BANK
-  MODULE_BLACK_MARKET_AUCTION_HOUSE
-)
-
-declare -A KNOWN_MODULE_LOOKUP=()
-for __mod in "${KNOWN_MODULE_VARS[@]}"; do
-  KNOWN_MODULE_LOOKUP["$__mod"]=1
-done
-unset __mod
-
 module_default(){
   local key="$1"
-  if [ "${MODULE_ENABLE_SET[$key]}" = "1" ]; then
+  if [ "${MODULE_ENABLE_SET[$key]:-0}" = "1" ]; then
+    echo y
+    return
+  fi
+  local current
+  eval "current=\${$key:-${MODULE_DEFAULT_VALUES[$key]:-0}}"
+  if [ "$current" = "1" ]; then
     echo y
   else
     echo n
@@ -345,7 +305,7 @@ apply_module_preset(){
     local mod="${item//[[:space:]]/}"
     [ -z "$mod" ] && continue
     if [ -n "${KNOWN_MODULE_LOOKUP[$mod]:-}" ]; then
-      eval "$mod=1"
+      printf -v "$mod" '%s' "1"
     else
       say WARNING "Preset references unknown module $mod"
     fi
@@ -383,6 +343,204 @@ EOF
     echo -e "${NC}"
 }
 
+# ==============================
+# Module metadata / defaults
+# ==============================
+
+MODULE_MANIFEST_PATH="$SCRIPT_DIR/config/modules.json"
+ENV_TEMPLATE_FILE="$SCRIPT_DIR/.env.template"
+
+declare -a MODULE_KEYS=()
+declare -a MODULE_KEYS_SORTED=()
+declare -A MODULE_NAME_MAP=()
+declare -A MODULE_TYPE_MAP=()
+declare -A MODULE_STATUS_MAP=()
+declare -A MODULE_BLOCK_REASON_MAP=()
+declare -A MODULE_NEEDS_BUILD_MAP=()
+declare -A MODULE_REQUIRES_MAP=()
+declare -A MODULE_NOTES_MAP=()
+declare -A MODULE_DEFAULT_VALUES=()
+declare -A KNOWN_MODULE_LOOKUP=()
+declare -A ENV_TEMPLATE_VALUES=()
+MODULE_METADATA_INITIALIZED=0
+
+load_env_template_values() {
+  local template_file="$ENV_TEMPLATE_FILE"
+  if [ ! -f "$template_file" ]; then
+    echo "ERROR: .env.template file not found at $template_file" >&2
+    exit 1
+  fi
+
+  while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+    local line="${raw_line%%#*}"
+    line="${line%%$'\r'}"
+    line="$(echo "$line" | sed 's/[[:space:]]*$//')"
+    [ -n "$line" ] || continue
+    [[ "$line" == *=* ]] || continue
+    local key="${line%%=*}"
+    local value="${line#*=}"
+    key="$(echo "$key" | sed 's/[[:space:]]//g')"
+    value="$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    [ -n "$key" ] || continue
+    ENV_TEMPLATE_VALUES["$key"]="$value"
+  done < "$template_file"
+}
+
+load_module_manifest_metadata() {
+  if [ ! -f "$MODULE_MANIFEST_PATH" ]; then
+    echo "ERROR: Module manifest not found at $MODULE_MANIFEST_PATH" >&2
+    exit 1
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "ERROR: python3 is required to read $MODULE_MANIFEST_PATH" >&2
+    exit 1
+  fi
+
+  mapfile -t MODULE_KEYS < <(
+    python3 - "$MODULE_MANIFEST_PATH" <<'PY'
+import json, sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+manifest = json.loads(manifest_path.read_text())
+modules = manifest.get("modules", [])
+for entry in modules:
+    key = entry.get("key")
+    if not key:
+        continue
+    print(key)
+PY
+  )
+
+  if [ ${#MODULE_KEYS[@]} -eq 0 ]; then
+    echo "ERROR: No modules defined in manifest $MODULE_MANIFEST_PATH" >&2
+    exit 1
+  fi
+
+  while IFS=$'\t' read -r key name needs_build module_type status block_reason requires notes; do
+    [ -n "$key" ] || continue
+    MODULE_NAME_MAP["$key"]="$name"
+    MODULE_NEEDS_BUILD_MAP["$key"]="$needs_build"
+    MODULE_TYPE_MAP["$key"]="$module_type"
+    MODULE_STATUS_MAP["$key"]="$status"
+    MODULE_BLOCK_REASON_MAP["$key"]="$block_reason"
+    MODULE_REQUIRES_MAP["$key"]="$requires"
+    MODULE_NOTES_MAP["$key"]="$notes"
+    KNOWN_MODULE_LOOKUP["$key"]=1
+  done < <(
+    python3 - "$MODULE_MANIFEST_PATH" <<'PY'
+import json, sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+manifest = json.loads(manifest_path.read_text())
+
+def clean(value):
+    if value is None:
+        return ""
+    return str(value).replace("\t", " ").replace("\n", " ").strip()
+
+for entry in manifest.get("modules", []):
+    key = entry.get("key")
+    if not key:
+        continue
+    name = clean(entry.get("name", key))
+    needs_build = "1" if entry.get("needs_build") else "0"
+    module_type = clean(entry.get("type", ""))
+    status = clean(entry.get("status", "active"))
+    block_reason = clean(entry.get("block_reason", ""))
+    requires = entry.get("requires") or []
+    depends_on = entry.get("depends_on") or []
+    ordered = []
+    for dep in list(requires) + list(depends_on):
+        if dep and dep not in ordered:
+            ordered.append(dep)
+    requires_csv = ",".join(ordered)
+    notes = clean(entry.get("notes", ""))
+    print("\t".join([key, name, needs_build, module_type, status or "active", block_reason, requires_csv, notes]))
+PY
+  )
+
+  mapfile -t MODULE_KEYS_SORTED < <(
+    python3 - "$MODULE_MANIFEST_PATH" <<'PY'
+import json, sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+manifest = json.loads(manifest_path.read_text())
+modules = manifest.get("modules", [])
+sorted_keys = sorted(modules, key=lambda m: (str(m.get("type", "")), str(m.get("name", m.get("key"))).lower()))
+for entry in sorted_keys:
+    key = entry.get("key")
+    if key:
+        print(key)
+PY
+  )
+}
+
+initialize_module_defaults() {
+  if [ "$MODULE_METADATA_INITIALIZED" = "1" ]; then
+    return
+  fi
+  load_env_template_values
+  load_module_manifest_metadata
+
+  for key in "${MODULE_KEYS[@]}"; do
+    if [ -z "${ENV_TEMPLATE_VALUES[$key]+_}" ]; then
+      echo "ERROR: .env.template missing default value for ${key}" >&2
+      exit 1
+    fi
+    local default="${ENV_TEMPLATE_VALUES[$key]}"
+    MODULE_DEFAULT_VALUES["$key"]="$default"
+    printf -v "$key" '%s' "$default"
+  done
+  MODULE_METADATA_INITIALIZED=1
+}
+
+reset_modules_to_defaults() {
+  for key in "${MODULE_KEYS[@]}"; do
+    printf -v "$key" '%s' "${MODULE_DEFAULT_VALUES[$key]}"
+  done
+}
+
+module_display_name() {
+  local key="$1"
+  local name="${MODULE_NAME_MAP[$key]:-$key}"
+  local note="${MODULE_NOTES_MAP[$key]}"
+  if [ -n "$note" ]; then
+    echo "${name} - ${note}"
+  else
+    echo "$name"
+  fi
+}
+
+auto_enable_module_dependencies() {
+  local changed=1
+  while [ "$changed" -eq 1 ]; do
+    changed=0
+    for key in "${MODULE_KEYS[@]}"; do
+      local enabled
+      eval "enabled=\${$key:-0}"
+      [ "$enabled" = "1" ] || continue
+      local requires_csv="${MODULE_REQUIRES_MAP[$key]}"
+      IFS=',' read -r -a deps <<< "${requires_csv}"
+      for dep in "${deps[@]}"; do
+        dep="${dep//[[:space:]]/}"
+        [ -n "$dep" ] || continue
+        [ -n "${KNOWN_MODULE_LOOKUP[$dep]:-}" ] || continue
+        local dep_value
+        eval "dep_value=\${$dep:-0}"
+        if [ "$dep_value" != "1" ]; then
+          say INFO "Automatically enabling ${dep#MODULE_} (required by ${key#MODULE_})."
+          printf -v "$dep" '%s' "1"
+          MODULE_ENABLE_SET["$dep"]=1
+          changed=1
+        fi
+      done
+    done
+  done
+}
+
 
 show_realm_configured(){
   echo -e "\n${GREEN}⚔️ Your realm configuration has been forged! ⚔️${NC}"
@@ -413,6 +571,9 @@ main(){
   local CLI_MODULES_SOURCE=""
   local FORCE_OVERWRITE=0
   local CLI_ENABLE_MODULES_RAW=()
+
+  initialize_module_defaults
+  reset_modules_to_defaults
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -707,8 +868,14 @@ fi
 
   # Permission scheme
   say HEADER "PERMISSION SCHEME"
+  local CURRENT_UID CURRENT_GID CURRENT_USER_PAIR CURRENT_USER_NAME CURRENT_GROUP_NAME
+  CURRENT_UID="$(id -u 2>/dev/null || echo 1000)"
+  CURRENT_GID="$(id -g 2>/dev/null || echo 1000)"
+  CURRENT_USER_NAME="$(id -un 2>/dev/null || echo user)"
+  CURRENT_GROUP_NAME="$(id -gn 2>/dev/null || echo users)"
+  CURRENT_USER_PAIR="${CURRENT_UID}:${CURRENT_GID}"
   echo "1) 🏠 Local Root (0:0)"
-  echo "2) 🗂️ User (1001:1000)"
+  echo "2) 🗂️ Current User (${CURRENT_USER_NAME}:${CURRENT_GROUP_NAME} → ${CURRENT_USER_PAIR})"
   echo "3) ⚙️ Custom"
   local PERMISSION_SCHEME_INPUT="${CLI_PERMISSION_SCHEME}"
   local PERMISSION_SCHEME_NAME=""
@@ -725,9 +892,9 @@ fi
         CONTAINER_USER="$PERMISSION_LOCAL_USER"
         PERMISSION_SCHEME_NAME="local"
         ;;
-      2|nfs)
-        CONTAINER_USER="$PERMISSION_NFS_USER"
-        PERMISSION_SCHEME_NAME="nfs"
+      2|nfs|user)
+        CONTAINER_USER="$CURRENT_USER_PAIR"
+        PERMISSION_SCHEME_NAME="user"
         ;;
       3|custom)
         local uid gid
@@ -911,15 +1078,6 @@ fi
     fi
   fi
 
-  # Initialize toggles
-  local MODULE_PLAYERBOTS=0 MODULE_AOE_LOOT=0 MODULE_LEARN_SPELLS=0 MODULE_FIREWORKS=0 MODULE_INDIVIDUAL_PROGRESSION=0 \
-        MODULE_AHBOT=0 MODULE_AUTOBALANCE=0 MODULE_TRANSMOG=0 MODULE_NPC_BUFFER=0 MODULE_DYNAMIC_XP=0 MODULE_SOLO_LFG=0 \
-        MODULE_1V1_ARENA=0 MODULE_PHASED_DUELS=0 MODULE_BREAKING_NEWS=0 MODULE_BOSS_ANNOUNCER=0 MODULE_ACCOUNT_ACHIEVEMENTS=0 \
-        MODULE_AUTO_REVIVE=0 MODULE_GAIN_HONOR_GUARD=0 MODULE_TIME_IS_TIME=0 MODULE_POCKET_PORTAL=0 \
-        MODULE_RANDOM_ENCHANTS=0 MODULE_SOLOCRAFT=0 MODULE_PVP_TITLES=0 MODULE_NPC_BEASTMASTER=0 MODULE_NPC_ENCHANTER=0 \
-        MODULE_INSTANCE_RESET=0 MODULE_LEVEL_GRANT=0 MODULE_ASSISTANT=0 MODULE_REAGENT_BANK=0 MODULE_BLACK_MARKET_AUCTION_HOUSE=0 MODULE_ARAC=0 MODULE_ELUNA=0 \
-        MODULE_CHALLENGE_MODES=0 MODULE_OLLAMA_CHAT=0 MODULE_SKELETON_MODULE=0 MODULE_BG_SLAVERYVALLEY=0 MODULE_ELUNA_TS=0 \
-        MODULE_PLAYER_BOT_LEVEL_BRACKETS=0 MODULE_STATBOOSTER=0 MODULE_DUNGEON_RESPAWN=0 MODULE_AZEROTHSHARD=0 MODULE_WORGOBLIN=0
   local AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_AUTH_IMAGE_PLAYERBOTS"
   local AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_WORLD_IMAGE_PLAYERBOTS"
   local AC_AUTHSERVER_IMAGE_MODULES_VALUE="$DEFAULT_AUTH_IMAGE_MODULES"
@@ -929,17 +1087,17 @@ fi
 
   local mod_var
   for mod_var in "${!MODULE_ENABLE_SET[@]}"; do
-    if [ -n "${KNOWN_MODULE_LOOKUP[$mod_var]}" ]; then
-      eval "$mod_var=1"
+    if [ -n "${KNOWN_MODULE_LOOKUP[$mod_var]:-}" ]; then
+      printf -v "$mod_var" '%s' "1"
     fi
   done
 
-  if { [ "${MODULE_PLAYER_BOT_LEVEL_BRACKETS}" = "1" ] || [ "${MODULE_OLLAMA_CHAT}" = "1" ]; } && [ "$MODULE_PLAYERBOTS" != "1" ]; then
+  auto_enable_module_dependencies
+
+  if [ "${MODULE_OLLAMA_CHAT:-0}" = "1" ] && [ "${MODULE_PLAYERBOTS:-0}" != "1" ]; then
+    say INFO "Automatically enabling MODULE_PLAYERBOTS for MODULE_OLLAMA_CHAT."
     MODULE_PLAYERBOTS=1
     MODULE_ENABLE_SET["MODULE_PLAYERBOTS"]=1
-    if [ ${#MODULE_ENABLE_SET[@]} -gt 0 ]; then
-      say INFO "Automatically enabling MODULE_PLAYERBOTS to satisfy playerbot-dependent modules."
-    fi
   fi
 
   declare -A DISABLED_MODULE_REASONS=(
@@ -968,55 +1126,40 @@ fi
     for key in "${!DISABLED_MODULE_REASONS[@]}"; do
       say WARNING "${key#MODULE_}: ${DISABLED_MODULE_REASONS[$key]}"
     done
-    # Core Gameplay
-    MODULE_PLAYERBOTS=$(ask_yn "Playerbots - AI companions" "$(module_default MODULE_PLAYERBOTS)")
-    MODULE_PLAYER_BOT_LEVEL_BRACKETS=$(ask_yn "Playerbot Level Brackets - Evenly distribute bot levels" "$(module_default MODULE_PLAYER_BOT_LEVEL_BRACKETS)")
-    MODULE_OLLAMA_CHAT=$(ask_yn "Ollama Chat - LLM dialogue for playerbots (requires external Ollama API)" "$(module_default MODULE_OLLAMA_CHAT)")
-    MODULE_SOLO_LFG=$(ask_yn "Solo LFG - Solo dungeon finder" "$(module_default MODULE_SOLO_LFG)")
-    MODULE_SOLOCRAFT=$(ask_yn "Solocraft - Scale dungeons/raids for solo" "$(module_default MODULE_SOLOCRAFT)")
-    MODULE_CHALLENGE_MODES=$(ask_yn "Challenge Modes - Timed dungeon keystones" "$(module_default MODULE_CHALLENGE_MODES)")
-    MODULE_AUTOBALANCE=$(ask_yn "Autobalance - Dynamic difficulty" "$(module_default MODULE_AUTOBALANCE)")
-    # QoL
-    MODULE_TRANSMOG=$(ask_yn "Transmog - Appearance changes" "$(module_default MODULE_TRANSMOG)")
-    MODULE_NPC_BUFFER=$(ask_yn "NPC Buffer - Buff NPCs" "$(module_default MODULE_NPC_BUFFER)")
-    MODULE_LEARN_SPELLS=$(ask_yn "Learn Spells - Auto-learn" "$(module_default MODULE_LEARN_SPELLS)")
-    MODULE_AOE_LOOT=$(ask_yn "AOE Loot - Multi-corpse loot" "$(module_default MODULE_AOE_LOOT)")
-    MODULE_FIREWORKS=$(ask_yn "Fireworks - Level-up FX" "$(module_default MODULE_FIREWORKS)")
-    MODULE_ASSISTANT=$(ask_yn "Assistant - Multi-service NPC" "$(module_default MODULE_ASSISTANT)")
-    MODULE_STATBOOSTER=$(ask_yn "Stat Booster - Random enchant upgrades" "$(module_default MODULE_STATBOOSTER)")
-    MODULE_DUNGEON_RESPAWN=$(ask_yn "Dungeon Respawn - Return to entrance on death" "$(module_default MODULE_DUNGEON_RESPAWN)")
-    MODULE_SKELETON_MODULE=$(ask_yn "Skeleton Module - Blank module template" "$(module_default MODULE_SKELETON_MODULE)")
-    # Economy
-    MODULE_AHBOT=$(ask_yn "AH Bot - Auction automation" "$(module_default MODULE_AHBOT)")
-    MODULE_REAGENT_BANK=$(ask_yn "Reagent Bank - Materials storage" "$(module_default MODULE_REAGENT_BANK)")
-    MODULE_BLACK_MARKET_AUCTION_HOUSE=$(ask_yn "Black Market - MoP-style" "$(module_default MODULE_BLACK_MARKET_AUCTION_HOUSE)")
-    # PvP
-    MODULE_1V1_ARENA=$(ask_yn "1v1 Arena - Solo arena queue system" "$(module_default MODULE_1V1_ARENA)")
-    MODULE_PHASED_DUELS=$(ask_yn "Phased Duels - Isolated duel instances" "$(module_default MODULE_PHASED_DUELS)")
-    MODULE_PVP_TITLES=$(ask_yn "PvP Titles - Classic honor rank titles" "$(module_default MODULE_PVP_TITLES)")
-    MODULE_BG_SLAVERYVALLEY=$(ask_yn "Slavery Valley - Custom battleground" "$(module_default MODULE_BG_SLAVERYVALLEY)")
-    # Progression
-    MODULE_INDIVIDUAL_PROGRESSION=$(ask_yn "Individual Progression (Vanilla→TBC→WotLK)" "$(module_default MODULE_INDIVIDUAL_PROGRESSION)")
-    MODULE_DYNAMIC_XP=$(ask_yn "Dynamic XP - Adaptive experience rates" "$(module_default MODULE_DYNAMIC_XP)")
-    MODULE_ACCOUNT_ACHIEVEMENTS=$(ask_yn "Account Achievements - Share progress across characters" "$(module_default MODULE_ACCOUNT_ACHIEVEMENTS)")
-    MODULE_AZEROTHSHARD=$(ask_yn "AzerothShard - Blended custom features" "$(module_default MODULE_AZEROTHSHARD)")
-    # Server Features
-    MODULE_BREAKING_NEWS=$(ask_yn "Breaking News - Server announcement system" "$(module_default MODULE_BREAKING_NEWS)")
-    MODULE_BOSS_ANNOUNCER=$(ask_yn "Boss Announcer - Broadcast boss kills" "$(module_default MODULE_BOSS_ANNOUNCER)")
-    MODULE_AUTO_REVIVE=$(ask_yn "Auto Revive - Automatic resurrection system" "$(module_default MODULE_AUTO_REVIVE)")
-    MODULE_ELUNA_TS=$(ask_yn "Eluna TS - TypeScript toolchain for Lua" "$(module_default MODULE_ELUNA_TS)")
-    # Utility
-    MODULE_NPC_BEASTMASTER=$(ask_yn "NPC Beastmaster - Rare pet vendor" "$(module_default MODULE_NPC_BEASTMASTER)")
-    MODULE_NPC_ENCHANTER=$(ask_yn "NPC Enchanter - Gear enchanting service" "$(module_default MODULE_NPC_ENCHANTER)")
-    MODULE_RANDOM_ENCHANTS=$(ask_yn "Random Enchants - Suffix property system" "$(module_default MODULE_RANDOM_ENCHANTS)")
-    MODULE_POCKET_PORTAL=$(ask_yn "Pocket Portal - Personal teleportation device" "$(module_default MODULE_POCKET_PORTAL)")
-    MODULE_INSTANCE_RESET=$(ask_yn "Instance Reset - Dungeon lockout management" "$(module_default MODULE_INSTANCE_RESET)")
-    MODULE_TIME_IS_TIME=$(ask_yn "Time is Time - Real-time clock system" "$(module_default MODULE_TIME_IS_TIME)")
-    MODULE_GAIN_HONOR_GUARD=$(ask_yn "Gain Honor Guard - Honor from guard kills" "$(module_default MODULE_GAIN_HONOR_GUARD)")
-    MODULE_ARAC=$(ask_yn "All Races All Classes (requires client patch)" "$(module_default MODULE_ARAC)")
-    MODULE_WORGOBLIN=$(ask_yn "Worgoblin - Worgen & Goblin races (client patch required)" "$(module_default MODULE_WORGOBLIN)")
+    local -a selection_keys=("${MODULE_KEYS_SORTED[@]}")
+    if [ ${#selection_keys[@]} -eq 0 ]; then
+      selection_keys=("${MODULE_KEYS[@]}")
+    fi
+    local key
+    for key in "${selection_keys[@]}"; do
+      [ -n "${KNOWN_MODULE_LOOKUP[$key]:-}" ] || continue
+      local status_lc="${MODULE_STATUS_MAP[$key],,}"
+      if [ -n "$status_lc" ] && [ "$status_lc" != "active" ]; then
+        local reason="${MODULE_BLOCK_REASON_MAP[$key]:-Blocked in manifest}"
+        say WARNING "${key#MODULE_} is blocked: ${reason}"
+        printf -v "$key" '%s' "0"
+        continue
+      fi
+      local prompt_label
+      prompt_label="$(module_display_name "$key")"
+      if [ "${MODULE_NEEDS_BUILD_MAP[$key]}" = "1" ]; then
+        prompt_label="${prompt_label} (requires build)"
+      fi
+      local default_answer
+      default_answer="$(module_default "$key")"
+      local response
+      response=$(ask_yn "$prompt_label" "$default_answer")
+      if [ "$response" = "1" ]; then
+        printf -v "$key" '%s' "1"
+      else
+        printf -v "$key" '%s' "0"
+      fi
+    done
     module_mode_label="preset 3 (Manual)"
   elif [ "$MODE_SELECTION" = "4" ]; then
+    for key in "${MODULE_KEYS[@]}"; do
+      printf -v "$key" '%s' "0"
+    done
     module_mode_label="preset 4 (No modules)"
   elif [ "$MODE_SELECTION" = "preset" ]; then
     local preset_modules="${MODULE_PRESET_CONFIGS[$MODE_PRESET_NAME]}"
@@ -1028,6 +1171,8 @@ fi
     fi
     module_mode_label="preset (${MODE_PRESET_NAME})"
   fi
+
+  auto_enable_module_dependencies
 
   if [ -n "$CLI_PLAYERBOT_ENABLED" ]; then
     if [[ "$CLI_PLAYERBOT_ENABLED" != "0" && "$CLI_PLAYERBOT_ENABLED" != "1" ]]; then
@@ -1051,11 +1196,13 @@ fi
     PLAYERBOT_MAX_BOTS=$(ask "Maximum concurrent playerbots" "${CLI_PLAYERBOT_MAX:-$DEFAULT_PLAYERBOT_MAX}" validate_number)
   fi
 
-  for mod_var in MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_OLLAMA_CHAT MODULE_CHALLENGE_MODES MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN; do
-    eval "value=\$$mod_var"
-    if [ "$value" = "1" ]; then
-      NEEDS_CXX_REBUILD=1
-      break
+  for mod_var in "${MODULE_KEYS[@]}"; do
+    if [ "${MODULE_NEEDS_BUILD_MAP[$mod_var]}" = "1" ]; then
+      eval "value=\${$mod_var:-0}"
+      if [ "$value" = "1" ]; then
+        NEEDS_CXX_REBUILD=1
+        break
+      fi
     fi
   done
 
@@ -1080,8 +1227,8 @@ fi
   printf "  %-18s %s\n" "Playerbot Max Bots:" "$PLAYERBOT_MAX_BOTS"
   printf "  %-18s" "Enabled Modules:"
   local enabled_modules=()
-  for module_var in "${KNOWN_MODULE_VARS[@]}"; do
-    eval "value=\$$module_var"
+  for module_var in "${MODULE_KEYS[@]}"; do
+    eval "value=\${$module_var:-0}"
     if [ "$value" = "1" ]; then
       enabled_modules+=("${module_var#MODULE_}")
     fi
@@ -1111,7 +1258,7 @@ fi
 
   export STORAGE_PATH STORAGE_PATH_LOCAL
   local module_export_var
-  for module_export_var in "${KNOWN_MODULE_VARS[@]}"; do
+  for module_export_var in "${MODULE_KEYS[@]}"; do
     export "$module_export_var"
   done
 
@@ -1227,11 +1374,10 @@ COMPOSE_PROJECT_NAME=$DEFAULT_COMPOSE_PROJECT_NAME
 STORAGE_PATH=$STORAGE_PATH
 STORAGE_PATH_LOCAL=$LOCAL_STORAGE_ROOT
 BACKUP_PATH=$BACKUP_PATH
-HOST_ZONEINFO_PATH=${HOST_ZONEINFO_PATH:-$DEFAULT_HOST_ZONEINFO_PATH}
 TZ=$DEFAULT_TZ
+
 # Database
 MYSQL_IMAGE=$DEFAULT_MYSQL_IMAGE
-CONTAINER_MYSQL=$DEFAULT_CONTAINER_MYSQL
 MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
 MYSQL_ROOT_HOST=$DEFAULT_MYSQL_ROOT_HOST
 MYSQL_USER=$DEFAULT_MYSQL_USER
@@ -1267,7 +1413,18 @@ AC_CLIENT_DATA_IMAGE_PLAYERBOTS=$AC_CLIENT_DATA_IMAGE_PLAYERBOTS_VALUE
 CLIENT_DATA_CACHE_PATH=$DEFAULT_CLIENT_DATA_CACHE_PATH
 CLIENT_DATA_VOLUME=${CLIENT_DATA_VOLUME:-$DEFAULT_CLIENT_DATA_VOLUME}
 
+# Build artifacts
+DOCKER_IMAGE_TAG=$DEFAULT_DOCKER_IMAGE_TAG
+AC_AUTHSERVER_IMAGE_BASE=$DEFAULT_AUTHSERVER_IMAGE_BASE
+AC_WORLDSERVER_IMAGE_BASE=$DEFAULT_WORLDSERVER_IMAGE_BASE
+AC_DB_IMPORT_IMAGE_BASE=$DEFAULT_DB_IMPORT_IMAGE_BASE
+AC_CLIENT_DATA_IMAGE_BASE=$DEFAULT_CLIENT_DATA_IMAGE_BASE
+
+# Container user
+CONTAINER_USER=$CONTAINER_USER
+
 # Containers
+CONTAINER_MYSQL=$DEFAULT_CONTAINER_MYSQL
 CONTAINER_DB_IMPORT=$DEFAULT_CONTAINER_DB_IMPORT
 CONTAINER_DB_INIT=$DEFAULT_CONTAINER_DB_INIT
 CONTAINER_BACKUP=$DEFAULT_CONTAINER_BACKUP
@@ -1293,52 +1450,13 @@ BACKUP_DAILY_TIME=$BACKUP_DAILY_TIME
 BACKUP_HEALTHCHECK_MAX_MINUTES=$BACKUP_HEALTHCHECK_MAX_MINUTES
 BACKUP_HEALTHCHECK_GRACE_SECONDS=$BACKUP_HEALTHCHECK_GRACE_SECONDS
 
-# Container user
-CONTAINER_USER=$CONTAINER_USER
-
-# Modules
-MODULE_PLAYERBOTS=$MODULE_PLAYERBOTS
-MODULE_AOE_LOOT=$MODULE_AOE_LOOT
-MODULE_LEARN_SPELLS=$MODULE_LEARN_SPELLS
-MODULE_FIREWORKS=$MODULE_FIREWORKS
-MODULE_INDIVIDUAL_PROGRESSION=$MODULE_INDIVIDUAL_PROGRESSION
-MODULE_AHBOT=$MODULE_AHBOT
-MODULE_AUTOBALANCE=$MODULE_AUTOBALANCE
-MODULE_TRANSMOG=$MODULE_TRANSMOG
-MODULE_NPC_BUFFER=$MODULE_NPC_BUFFER
-MODULE_DYNAMIC_XP=$MODULE_DYNAMIC_XP
-MODULE_SOLO_LFG=$MODULE_SOLO_LFG
-MODULE_1V1_ARENA=$MODULE_1V1_ARENA
-MODULE_PHASED_DUELS=$MODULE_PHASED_DUELS
-MODULE_BREAKING_NEWS=$MODULE_BREAKING_NEWS
-MODULE_BOSS_ANNOUNCER=$MODULE_BOSS_ANNOUNCER
-MODULE_ACCOUNT_ACHIEVEMENTS=$MODULE_ACCOUNT_ACHIEVEMENTS
-MODULE_AUTO_REVIVE=$MODULE_AUTO_REVIVE
-MODULE_GAIN_HONOR_GUARD=$MODULE_GAIN_HONOR_GUARD
-MODULE_ARAC=$MODULE_ARAC
-MODULE_ELUNA=$MODULE_ELUNA
-MODULE_TIME_IS_TIME=$MODULE_TIME_IS_TIME
-MODULE_POCKET_PORTAL=$MODULE_POCKET_PORTAL
-MODULE_RANDOM_ENCHANTS=$MODULE_RANDOM_ENCHANTS
-MODULE_SOLOCRAFT=$MODULE_SOLOCRAFT
-MODULE_PVP_TITLES=$MODULE_PVP_TITLES
-MODULE_NPC_BEASTMASTER=$MODULE_NPC_BEASTMASTER
-MODULE_NPC_ENCHANTER=$MODULE_NPC_ENCHANTER
-MODULE_INSTANCE_RESET=$MODULE_INSTANCE_RESET
-MODULE_LEVEL_GRANT=$MODULE_LEVEL_GRANT
-MODULE_CHALLENGE_MODES=$MODULE_CHALLENGE_MODES
-MODULE_OLLAMA_CHAT=$MODULE_OLLAMA_CHAT
-MODULE_SKELETON_MODULE=$MODULE_SKELETON_MODULE
-MODULE_BG_SLAVERYVALLEY=$MODULE_BG_SLAVERYVALLEY
-MODULE_ELUNA_TS=$MODULE_ELUNA_TS
-MODULE_PLAYER_BOT_LEVEL_BRACKETS=$MODULE_PLAYER_BOT_LEVEL_BRACKETS
-MODULE_STATBOOSTER=$MODULE_STATBOOSTER
-MODULE_DUNGEON_RESPAWN=$MODULE_DUNGEON_RESPAWN
-MODULE_AZEROTHSHARD=$MODULE_AZEROTHSHARD
-MODULE_WORGOBLIN=$MODULE_WORGOBLIN
-MODULE_ASSISTANT=$MODULE_ASSISTANT
-MODULE_REAGENT_BANK=$MODULE_REAGENT_BANK
-MODULE_BLACK_MARKET_AUCTION_HOUSE=$MODULE_BLACK_MARKET_AUCTION_HOUSE
+EOF
+    echo
+    echo "# Modules"
+    for module_key in "${MODULE_KEYS[@]}"; do
+      printf "%s=%s\n" "$module_key" "${!module_key:-0}"
+    done
+    cat <<EOF
 
 # Client data
 CLIENT_DATA_VERSION=${CLIENT_DATA_VERSION:-$DEFAULT_CLIENT_DATA_VERSION}
@@ -1387,6 +1505,9 @@ NETWORK_NAME=$DEFAULT_NETWORK_NAME
 NETWORK_SUBNET=$DEFAULT_NETWORK_SUBNET
 NETWORK_GATEWAY=$DEFAULT_NETWORK_GATEWAY
 
+# Storage helpers
+HOST_ZONEINFO_PATH=${HOST_ZONEINFO_PATH:-$DEFAULT_HOST_ZONEINFO_PATH}
+
 # Helper images
 ALPINE_GIT_IMAGE=$DEFAULT_ALPINE_GIT_IMAGE
 ALPINE_IMAGE=$DEFAULT_ALPINE_IMAGE
@@ -1398,19 +1519,8 @@ EOF
   local local_mysql_data_dir="${LOCAL_STORAGE_ROOT_ABS}/mysql-data"
   mkdir -p "$local_mysql_data_dir"
 
-  local -a MODULE_STATE_VARS=(
-    MODULE_PLAYERBOTS MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION
-    MODULE_AHBOT MODULE_AUTOBALANCE MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG
-    MODULE_1V1_ARENA MODULE_PHASED_DUELS MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS
-    MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD MODULE_ELUNA MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL
-    MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER MODULE_NPC_ENCHANTER
-    MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK
-    MODULE_BLACK_MARKET_AUCTION_HOUSE MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS
-    MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD
-    MODULE_WORGOBLIN MODULE_ELUNA_TS
-  )
   local module_state_string=""
-  for module_state_var in "${MODULE_STATE_VARS[@]}"; do
+  for module_state_var in "${MODULE_KEYS[@]}"; do
     local module_value="${!module_state_var:-0}"
     module_state_string+="${module_state_var}=${module_value}|"
   done

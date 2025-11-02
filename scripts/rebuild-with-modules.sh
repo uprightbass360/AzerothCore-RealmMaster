@@ -355,69 +355,97 @@ get_template_value() {
   fi
 }
 
+strip_tag(){
+  local image="$1"
+  if [[ "$image" == *:* ]]; then
+    echo "${image%:*}"
+  else
+    echo "$image"
+  fi
+}
+
+tag_if_exists(){
+  local source_image="$1"
+  local target_image="$2"
+  local description="$3"
+  if [ -z "$source_image" ] || [ -z "$target_image" ]; then
+    return 1
+  fi
+  if docker image inspect "$source_image" >/dev/null 2>&1; then
+    if docker tag "$source_image" "$target_image"; then
+      echo "✅ Tagged ${description}: $target_image (from $source_image)"
+      return 0
+    fi
+  fi
+  echo "⚠️  Warning: unable to tag ${description} from $source_image"
+  return 1
+}
+
+SOURCE_IMAGE_TAG="$(read_env DOCKER_IMAGE_TAG "$(get_template_value "DOCKER_IMAGE_TAG" "master")")"
+[ -z "$SOURCE_IMAGE_TAG" ] && SOURCE_IMAGE_TAG="master"
+
+AUTHSERVER_BASE_REPO="$(strip_tag "$(read_env AC_AUTHSERVER_IMAGE_BASE "$(get_template_value "AC_AUTHSERVER_IMAGE_BASE" "acore/ac-wotlk-authserver")")")"
+WORLDSERVER_BASE_REPO="$(strip_tag "$(read_env AC_WORLDSERVER_IMAGE_BASE "$(get_template_value "AC_WORLDSERVER_IMAGE_BASE" "acore/ac-wotlk-worldserver")")")"
+DB_IMPORT_BASE_REPO="$(strip_tag "$(read_env AC_DB_IMPORT_IMAGE_BASE "$(get_template_value "AC_DB_IMPORT_IMAGE_BASE" "acore/ac-wotlk-db-import")")")"
+CLIENT_DATA_BASE_REPO="$(strip_tag "$(read_env AC_CLIENT_DATA_IMAGE_BASE "$(get_template_value "AC_CLIENT_DATA_IMAGE_BASE" "acore/ac-wotlk-client-data")")")"
+
+BUILT_AUTHSERVER_IMAGE="$AUTHSERVER_BASE_REPO:$SOURCE_IMAGE_TAG"
+BUILT_WORLDSERVER_IMAGE="$WORLDSERVER_BASE_REPO:$SOURCE_IMAGE_TAG"
+BUILT_DB_IMPORT_IMAGE="$DB_IMPORT_BASE_REPO:$SOURCE_IMAGE_TAG"
+BUILT_CLIENT_DATA_IMAGE="$CLIENT_DATA_BASE_REPO:$SOURCE_IMAGE_TAG"
+
 TARGET_AUTHSERVER_IMAGE="$(read_env AC_AUTHSERVER_IMAGE_MODULES "$(get_template_value "AC_AUTHSERVER_IMAGE_MODULES")")"
 TARGET_WORLDSERVER_IMAGE="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(get_template_value "AC_WORLDSERVER_IMAGE_MODULES")")"
 PLAYERBOTS_AUTHSERVER_IMAGE="$(read_env AC_AUTHSERVER_IMAGE_PLAYERBOTS "$(get_template_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS")")"
 PLAYERBOTS_WORLDSERVER_IMAGE="$(read_env AC_WORLDSERVER_IMAGE_PLAYERBOTS "$(get_template_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS")")"
 
-[ -z "$TARGET_AUTHSERVER_IMAGE" ] && TARGET_AUTHSERVER_IMAGE="$(resolve_project_image "authserver-modules-latest")"
-[ -z "$TARGET_WORLDSERVER_IMAGE" ] && TARGET_WORLDSERVER_IMAGE="$(resolve_project_image "worldserver-modules-latest")"
-[ -z "$PLAYERBOTS_AUTHSERVER_IMAGE" ] && PLAYERBOTS_AUTHSERVER_IMAGE="$(resolve_project_image "authserver-playerbots")"
-[ -z "$PLAYERBOTS_WORLDSERVER_IMAGE" ] && PLAYERBOTS_WORLDSERVER_IMAGE="$(resolve_project_image "worldserver-playerbots")"
-
-PLAYERBOTS_AUTHSERVER_IMAGE="$(ensure_project_image_tag "authserver-Playerbot" "$(resolve_project_image "authserver-playerbots")")"
-if [ -z "$PLAYERBOTS_AUTHSERVER_IMAGE" ]; then
-  echo "⚠️  Warning: unable to ensure project tag for authserver playerbots image"
-else
-  update_env_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_AUTHSERVER_IMAGE"
+if [ -z "$TARGET_AUTHSERVER_IMAGE" ]; then
+  echo "❌ AC_AUTHSERVER_IMAGE_MODULES is not defined in .env"
+  exit 1
 fi
-
-PLAYERBOTS_WORLDSERVER_IMAGE="$(ensure_project_image_tag "worldserver-Playerbot" "$(resolve_project_image "worldserver-playerbots")")"
+if [ -z "$TARGET_WORLDSERVER_IMAGE" ]; then
+  echo "❌ AC_WORLDSERVER_IMAGE_MODULES is not defined in .env"
+  exit 1
+fi
+if [ -z "$PLAYERBOTS_AUTHSERVER_IMAGE" ]; then
+  echo "❌ AC_AUTHSERVER_IMAGE_PLAYERBOTS is not defined in .env"
+  exit 1
+fi
 if [ -z "$PLAYERBOTS_WORLDSERVER_IMAGE" ]; then
-  echo "⚠️  Warning: unable to ensure project tag for worldserver playerbots image"
-else
-  update_env_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_WORLDSERVER_IMAGE"
+  echo "❌ AC_WORLDSERVER_IMAGE_PLAYERBOTS is not defined in .env"
+  exit 1
 fi
 
 echo "🔁 Tagging modules images from playerbot build artifacts"
-if [ -n "$PLAYERBOTS_AUTHSERVER_IMAGE" ] && docker image inspect "$PLAYERBOTS_AUTHSERVER_IMAGE" >/dev/null 2>&1; then
-  if docker tag "$PLAYERBOTS_AUTHSERVER_IMAGE" "$TARGET_AUTHSERVER_IMAGE"; then
-    echo "✅ Tagged $TARGET_AUTHSERVER_IMAGE from $PLAYERBOTS_AUTHSERVER_IMAGE"
-    update_env_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_AUTHSERVER_IMAGE"
-    update_env_value "AC_AUTHSERVER_IMAGE_MODULES" "$TARGET_AUTHSERVER_IMAGE"
-  else
-    echo "⚠️  Failed to tag $TARGET_AUTHSERVER_IMAGE from $PLAYERBOTS_AUTHSERVER_IMAGE"
-  fi
-else
-  echo "⚠️  Warning: unable to locate project-tagged authserver playerbots image"
+if tag_if_exists "$BUILT_AUTHSERVER_IMAGE" "$PLAYERBOTS_AUTHSERVER_IMAGE" "playerbots authserver"; then
+  update_env_value "AC_AUTHSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_AUTHSERVER_IMAGE"
+fi
+if tag_if_exists "$BUILT_WORLDSERVER_IMAGE" "$PLAYERBOTS_WORLDSERVER_IMAGE" "playerbots worldserver"; then
+  update_env_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_WORLDSERVER_IMAGE"
+fi
+if tag_if_exists "$BUILT_AUTHSERVER_IMAGE" "$TARGET_AUTHSERVER_IMAGE" "modules authserver"; then
+  update_env_value "AC_AUTHSERVER_IMAGE_MODULES" "$TARGET_AUTHSERVER_IMAGE"
+fi
+if tag_if_exists "$BUILT_WORLDSERVER_IMAGE" "$TARGET_WORLDSERVER_IMAGE" "modules worldserver"; then
+  update_env_value "AC_WORLDSERVER_IMAGE_MODULES" "$TARGET_WORLDSERVER_IMAGE"
 fi
 
-if [ -n "$PLAYERBOTS_WORLDSERVER_IMAGE" ] && docker image inspect "$PLAYERBOTS_WORLDSERVER_IMAGE" >/dev/null 2>&1; then
-  if docker tag "$PLAYERBOTS_WORLDSERVER_IMAGE" "$TARGET_WORLDSERVER_IMAGE"; then
-    echo "✅ Tagged $TARGET_WORLDSERVER_IMAGE from $PLAYERBOTS_WORLDSERVER_IMAGE"
-    update_env_value "AC_WORLDSERVER_IMAGE_PLAYERBOTS" "$PLAYERBOTS_WORLDSERVER_IMAGE"
-    update_env_value "AC_WORLDSERVER_IMAGE_MODULES" "$TARGET_WORLDSERVER_IMAGE"
-  else
-    echo "⚠️  Failed to tag $TARGET_WORLDSERVER_IMAGE from $PLAYERBOTS_WORLDSERVER_IMAGE"
-  fi
-else
-  echo "⚠️  Warning: unable to locate project-tagged worldserver playerbots image"
+TARGET_DB_IMPORT_IMAGE="$(read_env AC_DB_IMPORT_IMAGE "$(get_template_value "AC_DB_IMPORT_IMAGE")")"
+if [ -z "$TARGET_DB_IMPORT_IMAGE" ]; then
+  echo "❌ AC_DB_IMPORT_IMAGE is not defined in .env"
+  exit 1
+fi
+if tag_if_exists "$BUILT_DB_IMPORT_IMAGE" "$TARGET_DB_IMPORT_IMAGE" "playerbots db-import"; then
+  update_env_value "AC_DB_IMPORT_IMAGE" "$TARGET_DB_IMPORT_IMAGE"
 fi
 
-TARGET_DB_IMPORT_IMAGE="$(resolve_project_image "db-import-playerbots")"
-DB_IMPORT_IMAGE="$(ensure_project_image_tag "db-import-Playerbot" "$TARGET_DB_IMPORT_IMAGE")"
-if [ -n "$DB_IMPORT_IMAGE" ]; then
-  update_env_value "AC_DB_IMPORT_IMAGE" "$DB_IMPORT_IMAGE"
-else
-  echo "⚠️  Warning: unable to ensure project tag for db-import image"
+TARGET_CLIENT_DATA_IMAGE="$(read_env AC_CLIENT_DATA_IMAGE_PLAYERBOTS "$(get_template_value "AC_CLIENT_DATA_IMAGE_PLAYERBOTS")")"
+if [ -z "$TARGET_CLIENT_DATA_IMAGE" ]; then
+  echo "❌ AC_CLIENT_DATA_IMAGE_PLAYERBOTS is not defined in .env"
+  exit 1
 fi
-
-TARGET_CLIENT_DATA_IMAGE="$(resolve_project_image "client-data-playerbots")"
-CLIENT_DATA_IMAGE="$(ensure_project_image_tag "client-data-Playerbot" "$TARGET_CLIENT_DATA_IMAGE")"
-if [ -n "$CLIENT_DATA_IMAGE" ]; then
-  update_env_value "AC_CLIENT_DATA_IMAGE_PLAYERBOTS" "$CLIENT_DATA_IMAGE"
-else
-  echo "⚠️  Warning: unable to ensure project tag for client-data image"
+if tag_if_exists "$BUILT_CLIENT_DATA_IMAGE" "$TARGET_CLIENT_DATA_IMAGE" "playerbots client-data"; then
+  update_env_value "AC_CLIENT_DATA_IMAGE_PLAYERBOTS" "$TARGET_CLIENT_DATA_IMAGE"
 fi
 
 show_rebuild_step 5 5 "Cleaning up build containers"
