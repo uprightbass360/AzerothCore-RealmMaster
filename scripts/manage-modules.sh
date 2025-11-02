@@ -18,6 +18,10 @@ ok(){ printf '%b\n' "${GREEN}✅ $*${NC}"; }
 warn(){ printf '%b\n' "${YELLOW}⚠️  $*${NC}"; }
 err(){ printf '%b\n' "${RED}❌ $*${NC}"; exit 1; }
 
+# Declare module metadata arrays globally at script level
+declare -A MODULE_NAME MODULE_REPO MODULE_REF MODULE_TYPE MODULE_ENABLED MODULE_NEEDS_BUILD MODULE_BLOCKED MODULE_POST_INSTALL MODULE_REQUIRES MODULE_CONFIG_CLEANUP MODULE_NOTES MODULE_STATUS MODULE_BLOCK_REASON
+declare -a MODULE_KEYS
+
 read_env_value(){
   local key="$1" default="${2:-}" value="${!key:-}"
   if [ -n "$value" ]; then
@@ -86,11 +90,14 @@ generate_module_state(){
   fi
   # shellcheck disable=SC1090
   source "$env_file"
+
+  # Module arrays are already declared at script level
   if ! MODULE_SHELL_STATE="$(python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$MANIFEST_PATH" dump --format shell)"; then
     err "Unable to load manifest metadata"
   fi
   local eval_script
-  eval_script="$(echo "$MODULE_SHELL_STATE" | sed 's/^declare -A /declare -gA /')"
+  # Remove the declare line since we already declared the arrays
+  eval_script="$(echo "$MODULE_SHELL_STATE" | sed '/^declare -A /d')"
   eval "$eval_script"
   IFS=' ' read -r -a MODULES_COMPILE_LIST <<< "${MODULES_COMPILE:-}"
   if [ "${#MODULES_COMPILE_LIST[@]}" -eq 1 ] && [ -z "${MODULES_COMPILE_LIST[0]}" ]; then
@@ -161,8 +168,8 @@ run_post_install_hooks(){
         esac
       fi
 
-      # Clean up environment
-      unset MODULE_KEY MODULE_DIR MODULE_NAME MODULES_ROOT LUA_SCRIPTS_TARGET
+      # Clean up hook-specific environment (preserve MODULE_NAME array and script-level MODULES_ROOT)
+      unset MODULE_KEY MODULE_DIR LUA_SCRIPTS_TARGET
     else
       err "Hook script not found for ${hook} (searched: ${hook_search_paths[*]})"
     fi
