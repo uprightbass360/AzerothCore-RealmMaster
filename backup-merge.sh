@@ -24,6 +24,7 @@ BACKUP_DIR=""
 AUTH_DB="acore_auth"
 CHARACTERS_DB="acore_characters"
 DRY_RUN=false
+AUTO_CONFIRM=false
 IMPORT_ACCOUNTS=()
 IMPORT_CHARACTERS=()
 IMPORT_ALL_ACCOUNTS=false
@@ -52,6 +53,7 @@ Options:
       --skip-conflicts         Skip accounts/characters that already exist
       --exclude-bots           Exclude bot accounts/characters (RNDBOT*, playerbots)
       --dry-run                Show what would be imported without making changes
+      --yes                    Skip confirmation prompt
   -h, --help                   Show this help and exit
 
 Examples:
@@ -121,6 +123,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --dry-run)
       DRY_RUN=true
+      shift
+      ;;
+    --yes)
+      AUTO_CONFIRM=true
       shift
       ;;
     -h|--help)
@@ -516,6 +522,12 @@ EOF
 
 log "ID mapping tables created"
 
+# Debug: Show mapping table counts
+CHAR_MAP_COUNT=$(mysql_query "$STAGE_CHARS_DB" "SELECT COUNT(*) FROM character_guid_map;")
+ITEM_MAP_COUNT=$(mysql_query "$STAGE_CHARS_DB" "SELECT COUNT(*) FROM item_guid_map;")
+info "  Character mappings created: $CHAR_MAP_COUNT"
+info "  Item mappings created: $ITEM_MAP_COUNT"
+
 # Summary
 info ""
 info "═══════════════════════════════════════════════════════════"
@@ -545,12 +557,14 @@ if $DRY_RUN; then
 fi
 
 # Confirmation prompt
-info ""
-read -p "Proceed with import? [y/N]: " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-  warn "Import cancelled"
-  exit 0
+if ! $AUTO_CONFIRM; then
+  info ""
+  read -p "Proceed with import? [y/N]: " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    warn "Import cancelled"
+    exit 0
+  fi
 fi
 
 # Import phase
@@ -569,7 +583,8 @@ if [[ $ACCOUNTS_TO_IMPORT -gt 0 ]]; then
   log "Importing $ACCOUNTS_TO_IMPORT account(s)..."
 
   # Import main account table
-  cat <<EOSQL | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g" | mysql_exec "$AUTH_DB"
+  info "  Importing main account table..."
+  ACCOUNT_SQL=$(cat <<EOSQL
 INSERT INTO account (id, username, salt, verifier, session_key, totp_secret, email, reg_mail,
                      joindate, last_ip, last_attempt_ip, failed_logins, locked, lock_country,
                      last_login, online, expansion, Flags, mutetime, mutereason, muteby, locale,
@@ -603,21 +618,40 @@ SELECT
 FROM $STAGE_AUTH_DB.account a
 INNER JOIN $STAGE_AUTH_DB.account_id_map m ON a.id = m.old_id;
 EOSQL
+)
+  ACCOUNT_SQL_EXPANDED=$(echo "$ACCOUNT_SQL" | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g")
+  ACCOUNT_RESULT=$(echo "$ACCOUNT_SQL_EXPANDED" | docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" "$AUTH_DB" 2>&1 || true)
+  if echo "$ACCOUNT_RESULT" | grep -q "ERROR"; then
+    err "  ✗ Account import failed:"
+    echo "$ACCOUNT_RESULT" | grep "ERROR" >&2
+    fatal "Account import failed. Check errors above."
+  fi
+  info "  ✓ Main account table imported"
 
   # Import account_access
-  cat <<EOSQL | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g" | mysql_exec "$AUTH_DB"
+  info "  Importing account_access..."
+  ACCESS_SQL=$(cat <<EOSQL
 INSERT INTO account_access (id, gmlevel, RealmID, comment)
 SELECT
   m.new_id,
   aa.gmlevel,
   aa.RealmID,
   aa.comment
-FROM $STAGE_AUTH_DB.account_access aa
-INNER JOIN $STAGE_AUTH_DB.account_id_map m ON aa.id = m.old_id;
+FROM STAGE_AUTH_DB.account_access aa
+INNER JOIN STAGE_AUTH_DB.account_id_map m ON aa.id = m.old_id;
 EOSQL
+)
+  ACCESS_SQL_EXPANDED=$(echo "$ACCESS_SQL" | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g")
+  ACCESS_RESULT=$(echo "$ACCESS_SQL_EXPANDED" | docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" "$AUTH_DB" 2>&1 || true)
+  if echo "$ACCESS_RESULT" | grep -q "ERROR"; then
+    err "  ✗ account_access import failed:"
+    echo "$ACCESS_RESULT" | grep "ERROR" >&2
+  fi
+  info "  ✓ account_access imported"
 
   # Import account_banned
-  cat <<EOSQL | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g" | mysql_exec "$AUTH_DB"
+  info "  Importing account_banned..."
+  BANNED_SQL=$(cat <<EOSQL
 INSERT INTO account_banned (id, bandate, unbandate, bannedby, banreason, active)
 SELECT
   m.new_id,
@@ -626,12 +660,21 @@ SELECT
   ab.bannedby,
   ab.banreason,
   ab.active
-FROM $STAGE_AUTH_DB.account_banned ab
-INNER JOIN $STAGE_AUTH_DB.account_id_map m ON ab.id = m.old_id;
+FROM STAGE_AUTH_DB.account_banned ab
+INNER JOIN STAGE_AUTH_DB.account_id_map m ON ab.id = m.old_id;
 EOSQL
+)
+  BANNED_SQL_EXPANDED=$(echo "$BANNED_SQL" | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g")
+  BANNED_RESULT=$(echo "$BANNED_SQL_EXPANDED" | docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" "$AUTH_DB" 2>&1 || true)
+  if echo "$BANNED_RESULT" | grep -q "ERROR"; then
+    err "  ✗ account_banned import failed:"
+    echo "$BANNED_RESULT" | grep "ERROR" >&2
+  fi
+  info "  ✓ account_banned imported"
 
   # Import account_muted
-  cat <<EOSQL | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g" | mysql_exec "$AUTH_DB"
+  info "  Importing account_muted..."
+  MUTED_SQL=$(cat <<EOSQL
 INSERT INTO account_muted (guid, mutedate, mutetime, mutedby, mutereason)
 SELECT
   m.new_id,
@@ -639,9 +682,17 @@ SELECT
   am.mutetime,
   am.mutedby,
   am.mutereason
-FROM $STAGE_AUTH_DB.account_muted am
-INNER JOIN $STAGE_AUTH_DB.account_id_map m ON am.guid = m.old_id;
+FROM STAGE_AUTH_DB.account_muted am
+INNER JOIN STAGE_AUTH_DB.account_id_map m ON am.guid = m.old_id;
 EOSQL
+)
+  MUTED_SQL_EXPANDED=$(echo "$MUTED_SQL" | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g")
+  MUTED_RESULT=$(echo "$MUTED_SQL_EXPANDED" | docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" "$AUTH_DB" 2>&1 || true)
+  if echo "$MUTED_RESULT" | grep -q "ERROR"; then
+    err "  ✗ account_muted import failed:"
+    echo "$MUTED_RESULT" | grep "ERROR" >&2
+  fi
+  info "  ✓ account_muted imported"
 
   log "✓ Accounts imported successfully"
 fi
@@ -686,7 +737,7 @@ ON DUPLICATE KEY UPDATE tut0=VALUES(tut0), tut1=VALUES(tut1), tut2=VALUES(tut2),
 EOSQL
 
   # Import main characters table
-  cat <<EOSQL | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g; s/STAGE_CHARS_DB/$STAGE_CHARS_DB/g" | mysql_exec "$CHARACTERS_DB"
+  CHAR_SQL=$(cat <<EOSQL
 INSERT INTO characters (guid, account, name, race, class, gender, level, xp, money, skin, face,
                         hairStyle, hairColor, facialStyle, bankSlots, restState, playerFlags,
                         position_x, position_y, position_z, map, instance_id, instance_mode_mask,
@@ -785,13 +836,23 @@ FROM $STAGE_CHARS_DB.characters c
 INNER JOIN $STAGE_CHARS_DB.character_guid_map cm ON c.guid = cm.old_guid
 INNER JOIN $STAGE_AUTH_DB.account_id_map am ON c.account = am.old_id;
 EOSQL
+)
+  CHAR_SQL_EXPANDED=$(echo "$CHAR_SQL" | sed "s/STAGE_AUTH_DB/$STAGE_AUTH_DB/g; s/STAGE_CHARS_DB/$STAGE_CHARS_DB/g")
+  CHAR_RESULT=$(echo "$CHAR_SQL_EXPANDED" | docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" "$CHARACTERS_DB" 2>&1 | tee /tmp/char-import-result.log)
+  if echo "$CHAR_RESULT" | grep -q "ERROR"; then
+    err "✗ Character import failed with errors:"
+    echo "$CHAR_RESULT" >&2
+    fatal "Character import SQL failed. See /tmp/char-import-result.log for details."
+  fi
+  CHARS_IMPORTED=$(mysql_query "$CHARACTERS_DB" "SELECT COUNT(*) FROM characters WHERE account IN (101, 102);")
+  info "  Characters imported: $CHARS_IMPORTED"
 
   log "✓ Main character data imported"
 
   # Import items
   log "Importing character items..."
 
-  cat <<EOSQL | sed "s/STAGE_CHARS_DB/$STAGE_CHARS_DB/g" | mysql_exec "$CHARACTERS_DB"
+  ITEM_SQL=$(cat <<EOSQL
 INSERT INTO item_instance (guid, itemEntry, owner_guid, creatorGuid, giftCreatorGuid, count,
                             duration, charges, flags, enchantments, randomPropertyId, durability,
                             playedTime, text)
@@ -814,8 +875,14 @@ FROM $STAGE_CHARS_DB.item_instance ii
 INNER JOIN $STAGE_CHARS_DB.item_guid_map im ON ii.guid = im.old_guid
 INNER JOIN $STAGE_CHARS_DB.character_guid_map cm ON ii.owner_guid = cm.old_guid;
 EOSQL
+)
+  ITEM_SQL_EXPANDED=$(echo "$ITEM_SQL" | sed "s/STAGE_CHARS_DB/$STAGE_CHARS_DB/g")
+  ITEM_COUNT=$(echo "$ITEM_SQL_EXPANDED" | docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" "$CHARACTERS_DB" 2>&1 | tee /dev/stderr | grep -c "ERROR" || echo "0")
+  if [[ "$ITEM_COUNT" != "0" ]]; then
+    warn "  Warning: Errors occurred during item_instance import"
+  fi
 
-  cat <<EOSQL | sed "s/STAGE_CHARS_DB/$STAGE_CHARS_DB/g" | mysql_exec "$CHARACTERS_DB"
+  INV_SQL=$(cat <<EOSQL
 INSERT INTO character_inventory (guid, bag, slot, item)
 SELECT
   cm.new_guid,
@@ -826,6 +893,18 @@ FROM $STAGE_CHARS_DB.character_inventory ci
 INNER JOIN $STAGE_CHARS_DB.character_guid_map cm ON ci.guid = cm.old_guid
 INNER JOIN $STAGE_CHARS_DB.item_guid_map im ON ci.item = im.old_guid;
 EOSQL
+)
+  INV_SQL_EXPANDED=$(echo "$INV_SQL" | sed "s/STAGE_CHARS_DB/$STAGE_CHARS_DB/g")
+  INV_COUNT=$(echo "$INV_SQL_EXPANDED" | docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" "$CHARACTERS_DB" 2>&1 | tee /dev/stderr | grep -c "ERROR" || echo "0")
+  if [[ "$INV_COUNT" != "0" ]]; then
+    warn "  Warning: Errors occurred during character_inventory import"
+  fi
+
+  # Report counts
+  ITEMS_IMPORTED=$(mysql_query "$CHARACTERS_DB" "SELECT COUNT(*) FROM item_instance WHERE owner_guid IN (SELECT new_guid FROM $STAGE_CHARS_DB.character_guid_map);")
+  INV_IMPORTED=$(mysql_query "$CHARACTERS_DB" "SELECT COUNT(*) FROM character_inventory WHERE guid IN (SELECT new_guid FROM $STAGE_CHARS_DB.character_guid_map);")
+  info "  Items imported: $ITEMS_IMPORTED"
+  info "  Inventory slots imported: $INV_IMPORTED"
 
   log "✓ Items imported"
 
@@ -898,12 +977,16 @@ EOSQL
     select_list=$(echo "$columns" | sed 's/\bguid\b/cm.new_guid/g')
 
     # Import with guid remapping
-    cat <<EOSQL | sed "s/STAGE_CHARS_DB/$STAGE_CHARS_DB/g" | mysql_exec "$CHARACTERS_DB" 2>/dev/null || warn "  Warning: Could not import $table"
-INSERT IGNORE INTO $table ($columns)
-SELECT $select_list
-FROM $STAGE_CHARS_DB.$table t
-INNER JOIN $STAGE_CHARS_DB.character_guid_map cm ON t.guid = cm.old_guid;
-EOSQL
+    PROG_SQL="INSERT IGNORE INTO $table ($columns) SELECT $select_list FROM $STAGE_CHARS_DB.$table t INNER JOIN $STAGE_CHARS_DB.character_guid_map cm ON t.guid = cm.old_guid;"
+    PROG_SQL_EXPANDED=$(echo "$PROG_SQL" | sed "s/STAGE_CHARS_DB/$STAGE_CHARS_DB/g")
+    PROG_RESULT=$(echo "$PROG_SQL_EXPANDED" | docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" "$CHARACTERS_DB" 2>&1)
+    if echo "$PROG_RESULT" | grep -q "ERROR"; then
+      warn "  Warning: Errors importing $table:"
+      echo "$PROG_RESULT" | grep "ERROR" >&2
+    else
+      ROWS_IMPORTED=$(mysql_query "$CHARACTERS_DB" "SELECT COUNT(*) FROM $table WHERE guid IN (SELECT new_guid FROM $STAGE_CHARS_DB.character_guid_map);")
+      info "    $table: $ROWS_IMPORTED rows"
+    fi
 
   done
 
