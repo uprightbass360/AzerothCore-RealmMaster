@@ -1,0 +1,45 @@
+#!/bin/bash
+# Post-install hook to fix StatBooster API compatibility
+set -e
+
+MODULE_DIR="${MODULE_DIR:-}"
+MODULE_NAME="${MODULE_NAME:-}"
+
+if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
+    echo "❌ fix-statbooster-api: Invalid module directory: $MODULE_DIR"
+    exit 2
+fi
+
+echo "🔧 fix-statbooster-api: Patching API compatibility for $MODULE_NAME"
+
+HEADER_FILE="$MODULE_DIR/src/StatBoost.h"
+CPP_FILE="$MODULE_DIR/src/StatBoost.cpp"
+
+if [ ! -f "$HEADER_FILE" ]; then
+    echo "   ℹ️  Header file not found, skipping: $HEADER_FILE"
+    exit 0
+fi
+
+# Check if already patched
+if grep -q "OnPlayerLogin" "$HEADER_FILE" 2>/dev/null; then
+    echo "   ✅ Module already patched"
+    exit 0
+fi
+
+# Apply API compatibility patches
+echo "   📝 Patching OnLogin -> OnPlayerLogin"
+
+# Patch header file
+if [ -f "$HEADER_FILE" ]; then
+    sed -i 's/void OnLogin(Player\* player) override;/void OnPlayerLogin(Player* player) override;/g' "$HEADER_FILE" && \
+        echo "      ✅ Patched $HEADER_FILE"
+fi
+
+# Patch cpp file
+if [ -f "$CPP_FILE" ]; then
+    sed -i 's/void StatBoosterPlayer::OnLogin(Player\* player)/void StatBoosterPlayer::OnPlayerLogin(Player* player)/g' "$CPP_FILE" && \
+        echo "      ✅ Patched $CPP_FILE"
+fi
+
+echo "   ✅ API compatibility patches applied"
+exit 0

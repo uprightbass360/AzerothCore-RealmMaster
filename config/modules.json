@@ -425,7 +425,7 @@
       "repo": "https://github.com/AnchyDev/StatBooster.git",
       "needs_build": true,
       "type": "cpp",
-      "post_install_hooks": [],
+      "post_install_hooks": ["fix-statbooster-api"],
       "depends_on": []
     },
     {
