@@ -304,14 +304,14 @@ The remote deployment process transfers:
 - ❌ Build artifacts (source code, compilation files stay local)
 
 ### Module Presets
-- Drop comma-separated module lists into `configurations/*.conf` (for example `configurations/playerbot-modules.conf`).
+- Drop comma-separated module lists into `profiles/*.conf` (for example `profiles/playerbot-modules.conf`).
 - `setup.sh` automatically adds these presets to the module menu and enables the listed modules when selected or when `--module-config <name>` is provided.
 - Built-in presets:
-  - `configurations/suggested-modules.conf` – default solo-friendly QoL stack.
-  - `configurations/playerbots-suggested-modules.conf` – suggested stack plus playerbots.
-  - `configurations/playerbot-only.conf` – playerbot-focused profile (adjust `--playerbot-max-bots`).
+  - `profiles/suggested-modules.conf` – default solo-friendly QoL stack.
+  - `profiles/playerbots-suggested-modules.conf` – suggested stack plus playerbots.
+  - `profiles/playerbot-only.conf` – playerbot-focused profile (adjust `--playerbot-max-bots`).
 - Custom example:
-  - `configurations/sam.conf` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
+  - `profiles/sam.conf` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
 
 ---
 
@@ -526,8 +526,8 @@ docker exec -it ac-mysql mysql -u root -p
 ./scripts/restore.sh YYYYMMDD_HHMMSS            # Restore from specific backup
 
 # User data backup/import utilities
-./backup-export.sh [output_dir]                 # Export user accounts & characters
-./backup-import.sh [backup_dir]                 # Import user data from backup
+./scripts/backup-export.sh [output_dir]                 # Export user accounts & characters
+./scripts/backup-import.sh [backup_dir]                 # Import user data from backup
 
 # View available backups
 ls -la storage/backups/
@@ -536,10 +536,10 @@ ls -la storage/backups/
 ### Container Management
 ```bash
 # Start specific services
-./start-containers.sh                           # Start all configured containers
+./scripts/start-containers.sh                           # Start all configured containers
 
 # Stop services gracefully
-./stop-containers.sh                            # Stop all containers
+./scripts/stop-containers.sh                            # Stop all containers
 
 # Monitor service health
 ./status.sh                                     # Check realm status
@@ -550,10 +550,10 @@ ls -la storage/backups/
 ### Deployment Verification
 ```bash
 # Quick health check
-./verify-deployment.sh --skip-deploy --quick
+./scripts/verify-deployment.sh --skip-deploy --quick
 
 # Full deployment verification
-./verify-deployment.sh
+./scripts/verify-deployment.sh
 ```
 
 ---
@@ -636,10 +636,10 @@ Comprehensive cleanup with multiple destruction levels and safety checks.
 
 ### Container Lifecycle Management
 
-#### `start-containers.sh` - Service Startup
+#### `scripts/start-containers.sh` - Service Startup
 Starts all configured containers using appropriate profiles.
 
-#### `stop-containers.sh` - Graceful Shutdown
+#### `scripts/stop-containers.sh` - Graceful Shutdown
 Stops all containers with proper cleanup and data protection.
 
 #### `status.sh` - Service Health Monitoring
@@ -651,12 +651,12 @@ Stops all containers with proper cleanup and data protection.
 
 ### Database & Backup Management
 
-#### `backup-export.sh` - User Data Export
+#### `scripts/backup-export.sh` - User Data Export
 Exports user accounts and character data for migration or backup purposes.
 
 ```bash
-./backup-export.sh                            # Export to ExportBackup_<timestamp>/
-./backup-export.sh /path/to/backup/dir       # Export to specific directory
+./scripts/backup-export.sh                            # Export to ExportBackup_<timestamp>/
+./scripts/backup-export.sh /path/to/backup/dir       # Export to specific directory
 ```
 
 **Output Structure:**
@@ -667,12 +667,12 @@ ExportBackup_YYYYMMDD_HHMMSS/
 └── manifest.json             # Backup metadata
 ```
 
-#### `backup-import.sh` - User Data Import
+#### `scripts/backup-import.sh` - User Data Import
 Restores user accounts and characters from backup while preserving world data.
 
 ```bash
-./backup-import.sh                            # Import from ImportBackup/
-./backup-import.sh /path/to/backup           # Import from specific directory
+./scripts/backup-import.sh                            # Import from ImportBackup/
+./scripts/backup-import.sh /path/to/backup           # Import from specific directory
 ```
 
 **Required Files:**
@@ -781,13 +781,13 @@ Deploys web-based management tools (phpMyAdmin, Keira3) independently.
 ./scripts/deploy-tools.sh                     # Deploy management tools only
 ```
 
-#### `verify-deployment.sh` - Deployment Validation
+#### `scripts/verify-deployment.sh` - Deployment Validation
 Comprehensive deployment verification with health checks and service validation.
 
 ```bash
-./verify-deployment.sh                        # Full deployment verification
-./verify-deployment.sh --skip-deploy         # Verify existing deployment
-./verify-deployment.sh --quick               # Quick health check only
+./scripts/verify-deployment.sh                        # Full deployment verification
+./scripts/verify-deployment.sh --skip-deploy         # Verify existing deployment
+./scripts/verify-deployment.sh --quick               # Quick health check only
 ```
 
 ### Backup System Scripts
@@ -849,20 +849,20 @@ docker logs ac-mysql -f
 docker compose restart ac-worldserver
 
 # Stop all services
-./stop-containers.sh
+./scripts/stop-containers.sh
 
 # Start services
-./start-containers.sh
+./scripts/start-containers.sh
 ```
 
 ### Database Management
 
 ```bash
 # Backup user data
-./backup-export.sh
+./scripts/backup-export.sh
 
 # Restore user data
-./backup-import.sh /path/to/backup
+./scripts/backup-import.sh /path/to/backup
 
 # Access database directly
 docker exec -it ac-mysql mysql -u root -p
@@ -1043,12 +1043,12 @@ storage/backups/
         └── acore_world.sql.gz
 
 # User data import/export
-ExportBackup_YYYYMMDD_HHMMSS/     # Created by backup-export.sh
+ExportBackup_YYYYMMDD_HHMMSS/     # Created by scripts/backup-export.sh
 ├── acore_auth.sql.gz             # User accounts
 ├── acore_characters.sql.gz       # Character data
 └── manifest.json
 
-ImportBackup/                     # Used by backup-import.sh
+ImportBackup/                     # Used by scripts/backup-import.sh
 ├── acore_auth.sql[.gz]           # Required: accounts
 ├── acore_characters.sql[.gz]     # Required: characters
 └── acore_world.sql[.gz]          # Optional: world data
@@ -1154,8 +1154,8 @@ rm -rf local-storage/source local-storage/images
      - `BACKUP_RETENTION_HOURS=6`
    - Test backup/restore:
      ```bash
-     ./backup-export.sh
-     ./backup-import.sh /path/to/backup
+     ./scripts/backup-export.sh
+     ./scripts/backup-import.sh /path/to/backup
      ```
 
 3. **Customize Modules**

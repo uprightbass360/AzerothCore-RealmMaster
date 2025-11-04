@@ -612,7 +612,7 @@ Options:
   --backup-retention-hours N      Hourly backup retention (default 6)
   --backup-daily-time HH          Daily backup hour 00-23 (default 09)
   --module-mode MODE              suggested, playerbots, manual, or none
-  --module-config NAME            Use preset NAME from configurations/<NAME>.conf
+  --module-config NAME            Use preset NAME from profiles/<NAME>.conf
   --enable-modules LIST           Comma-separated module list (MODULE_* or shorthand)
   --playerbot-enabled 0|1         Override PLAYERBOT_ENABLED flag
   --playerbot-max-bots N          Override PLAYERBOT_MAX_BOTS value
@@ -966,7 +966,7 @@ fi
   local MODE_PRESET_NAME=""
   declare -A MODULE_PRESET_CONFIGS=()
   declare -a MODULE_PRESET_ORDER=()
-  local CONFIG_DIR="$SCRIPT_DIR/configurations"
+  local CONFIG_DIR="$SCRIPT_DIR/profiles"
   if [ -d "$CONFIG_DIR" ]; then
     while IFS= read -r preset_path; do
       [ -n "$preset_path" ] || continue
@@ -982,7 +982,7 @@ fi
   local missing_presets=0
   for required_preset in "$DEFAULT_PRESET_SUGGESTED" "$DEFAULT_PRESET_PLAYERBOTS"; do
     if [ -z "${MODULE_PRESET_CONFIGS[$required_preset]:-}" ]; then
-      say ERROR "Missing module preset configurations/${required_preset}.conf"
+      say ERROR "Missing module preset profiles/${required_preset}.conf"
       missing_presets=1
     fi
   done
@@ -1051,7 +1051,7 @@ fi
       fi
       local pretty_name
       pretty_name=$(echo "$preset_name" | tr '_-' ' ' | awk '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}}1')
-      echo "${menu_index}) 🧩 ${pretty_name} (configurations/${preset_name}.conf)"
+      echo "${menu_index}) 🧩 ${pretty_name} (profiles/${preset_name}.conf)"
       MENU_PRESET_INDEX[$menu_index]="$preset_name"
       menu_index=$((menu_index + 1))
     done
