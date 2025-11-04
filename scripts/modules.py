@@ -157,12 +157,6 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
             raise ValueError(f"Manifest entry {key} has non-list 'requires'")
         requires = [str(dep) for dep in requires]
 
-        depends_on = entry.get("depends_on") or []
-        if not isinstance(depends_on, list):
-            raise ValueError(f"Manifest entry {key} has non-list 'depends_on'")
-        depends_on = [str(dep) for dep in depends_on]
-        if depends_on:
-            requires = list(dict.fromkeys(requires + depends_on))
         status = entry.get("status", "active")
         block_reason = entry.get("block_reason")
         post_install_hooks = entry.get("post_install_hooks") or []

@@ -11,8 +11,7 @@
       "post_install_hooks": [],
       "config_cleanup": [
         "playerbots.conf*"
-      ],
-      "depends_on": []
+      ]
     },
     {
       "key": "MODULE_AOE_LOOT",
@@ -24,8 +23,7 @@
       "post_install_hooks": [],
       "config_cleanup": [
         "mod_aoe_loot.conf*"
-      ],
-      "depends_on": []
+      ]
     },
     {
       "key": "MODULE_LEARN_SPELLS",
@@ -37,8 +35,7 @@
       "post_install_hooks": [],
       "config_cleanup": [
         "mod_learnspells.conf*"
-      ],
-      "depends_on": []
+      ]
     },
     {
       "key": "MODULE_FIREWORKS",
@@ -50,8 +47,7 @@
       "post_install_hooks": [],
       "config_cleanup": [
         "mod_fireworks.conf*"
-      ],
-      "depends_on": []
+      ]
     },
     {
       "key": "MODULE_INDIVIDUAL_PROGRESSION",
@@ -63,8 +59,7 @@
       "post_install_hooks": [],
       "config_cleanup": [
         "individual_progression.conf*"
-      ],
-      "depends_on": []
+      ]
     },
     {
       "key": "MODULE_AHBOT",
@@ -76,8 +71,7 @@
       "post_install_hooks": [],
       "config_cleanup": [
         "mod_ahbot.conf*"
-      ],
-      "depends_on": []
+      ]
     },
     {
       "key": "MODULE_AUTOBALANCE",
@@ -89,7 +83,6 @@
       "config_cleanup": [
         "AutoBalance.conf*"
       ],
-      "depends_on": [],
       "description": "Adjusts creature health and damage in real time to keep fights tuned for the current party size"
     },
     {
@@ -102,7 +95,6 @@
       "config_cleanup": [
         "transmog.conf*"
       ],
-      "depends_on": [],
       "description": "Adds a transmogrification vendor so players can restyle gear without changing stats"
     },
     {
@@ -115,7 +107,6 @@
       "config_cleanup": [
         "npc_buffer.conf*"
       ],
-      "depends_on": [],
       "description": "Provides a ready-to-use buff NPC who hands out class buffs, food, and utility spells"
     },
     {
@@ -128,7 +119,6 @@
       "config_cleanup": [
         "Individual-XP.conf*"
       ],
-      "depends_on": [],
       "description": "Tweaks XP gain based on population or custom rules to keep leveling flexible"
     },
     {
@@ -141,7 +131,6 @@
       "config_cleanup": [
         "SoloLfg.conf*"
       ],
-      "depends_on": [],
       "description": "A solo-friendly queue that lets every player run dungeons without needing a premade group"
     },
     {
@@ -154,7 +143,6 @@
       "config_cleanup": [
         "1v1arena.conf*"
       ],
-      "depends_on": [],
       "description": "Creates a structured 1v1 ranked arena ladder for duel enthusiasts"
     },
     {
@@ -167,7 +155,6 @@
       "config_cleanup": [
         "phasedduels.conf*"
       ],
-      "depends_on": [],
       "description": "Moves duelers into their own phase to block interference and griefing"
     },
     {
@@ -180,7 +167,6 @@
       "config_cleanup": [
         "breaking_news.conf*"
       ],
-      "depends_on": [],
       "description": "Replaces the client breaking-news panel with server-managed announcements"
     },
     {
@@ -193,7 +179,6 @@
       "config_cleanup": [
         "boss_announcer.conf*"
       ],
-      "depends_on": [],
       "description": "Broadcasts dramatic messages when raid bosses fall to your players"
     },
     {
@@ -206,7 +191,6 @@
       "config_cleanup": [
         "account_achievements.conf*"
       ],
-      "depends_on": [],
       "description": "Shares achievements across characters on the same account for persistent milestones"
     },
     {
@@ -219,7 +203,6 @@
       "config_cleanup": [
         "AutoRevive.conf*"
       ],
-      "depends_on": [],
       "description": "Automatically resurrects characters on death\u2014handy for casual PvE or testing realms"
     },
     {
@@ -232,7 +215,6 @@
       "config_cleanup": [
         "GainHonorGuard.conf*"
       ],
-      "depends_on": [],
       "description": "Awards honor when players kill city guards, spicing up world PvP raids"
     },
     {
@@ -247,7 +229,6 @@
       "config_cleanup": [
         "mod_eluna.conf*"
       ],
-      "depends_on": [],
       "description": "Adds Eluna Lua scripting engine for creating custom gameplay mechanics"
     },
     {
@@ -260,7 +241,6 @@
       "config_cleanup": [
         "mod-time_is_time.conf*"
       ],
-      "depends_on": [],
       "description": "Adds experimental time-twisting mechanics suited for custom events"
     },
     {
@@ -275,7 +255,6 @@
       "config_cleanup": [
         "pocketportal.conf*"
       ],
-      "depends_on": [],
       "description": "Gives players a portal gadget for quick travel to configured destinations"
     },
     {
@@ -288,7 +267,6 @@
       "config_cleanup": [
         "RandomEnchants.conf*"
       ],
-      "depends_on": [],
       "description": "Rolls randomized stat bonuses on loot to add Diablo-style gear chasing"
     },
     {
@@ -301,7 +279,6 @@
       "config_cleanup": [
         "Solocraft.conf*"
       ],
-      "depends_on": [],
       "description": "Automatically scales dungeon and raid encounters for solo players or small teams"
     },
     {
@@ -311,13 +288,13 @@
       "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "config_cleanup": [
         "mod_pvptitles.conf*"
       ],
-      "description": "Restores classic honor titles with a configurable ranking ladder"
+      "description": "Restores classic honor titles with a configurable ranking ladder",
+      "requires": [
+        "MODULE_ELUNA"
+      ]
     },
     {
       "key": "MODULE_NPC_BEASTMASTER",
@@ -331,7 +308,6 @@
       "config_cleanup": [
         "npc_beastmaster.conf*"
       ],
-      "depends_on": [],
       "description": "Adds an NPC who can teach, reset, and manage hunter pets for convenience"
     },
     {
@@ -344,7 +320,6 @@
       "config_cleanup": [
         "npc_enchanter.conf*"
       ],
-      "depends_on": [],
       "description": "Introduces an enchanting vendor who applies enchants directly for a fee"
     },
     {
@@ -357,7 +332,6 @@
       "config_cleanup": [
         "instance-reset.conf*"
       ],
-      "depends_on": [],
       "description": "Adds commands to reset instances quickly\u2014useful for testing or events"
     },
     {
@@ -370,7 +344,6 @@
       "config_cleanup": [
         "levelGrant.conf*"
       ],
-      "depends_on": [],
       "description": "Enables leveling exclusively through questing by awarding tokens after quest completion"
     },
     {
@@ -383,7 +356,6 @@
       "config_cleanup": [
         "arac.conf*"
       ],
-      "depends_on": [],
       "description": "Unlocks every race/class pairing so players can roll any combination"
     },
     {
@@ -393,7 +365,6 @@
       "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
-      "depends_on": [],
       "description": "Spawns an all-purpose assistant NPC with heirlooms, professions, and convenience commands"
     },
     {
@@ -403,7 +374,6 @@
       "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
-      "depends_on": [],
       "description": "Lets players stash crafting reagents with a dedicated banker NPC"
     },
     {
@@ -418,9 +388,6 @@
       "post_install_hooks": [
         "black-market-setup"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Backports the Mists-era Black Market Auction House via Eluna scripts"
     },
     {
@@ -430,7 +397,6 @@
       "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
-      "depends_on": [],
       "description": "Implements keystone-style timed runs with leaderboards and scaling modifiers"
     },
     {
@@ -440,7 +406,6 @@
       "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
-      "depends_on": [],
       "description": "Connects playerbots to an Ollama LLM so they can chat with humans organically"
     },
     {
@@ -453,7 +418,6 @@
         "MODULE_PLAYERBOTS"
       ],
       "post_install_hooks": [],
-      "depends_on": [],
       "description": "Keeps bot levels spread evenly across configured brackets"
     },
     {
@@ -465,7 +429,6 @@
       "post_install_hooks": [
         "fix-statbooster-api"
       ],
-      "depends_on": [],
       "description": "Lets players refine gear stats by rerolling random enchantments with special materials"
     },
     {
@@ -477,7 +440,6 @@
       "status": "blocked",
       "block_reason": "Upstream override signature mismatch (OnBeforeTeleport); awaiting fix",
       "post_install_hooks": [],
-      "depends_on": [],
       "description": "Teleports dead players back to the dungeon entrance instead of a distant graveyard"
     },
     {
@@ -487,7 +449,6 @@
       "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
-      "depends_on": [],
       "description": "Provides a minimal AzerothCore module scaffold for building new features"
     },
     {
@@ -496,11 +457,11 @@
       "repo": "https://github.com/Helias/mod-bg-slaveryvalley.git",
       "needs_build": true,
       "type": "cpp",
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "post_install_hooks": [],
-      "description": "Adds the Slavery Valley battleground complete with objectives and queue hooks"
+      "description": "Adds the Slavery Valley battleground complete with objectives and queue hooks",
+      "requires": [
+        "MODULE_ELUNA"
+      ]
     },
     {
       "key": "MODULE_AZEROTHSHARD",
@@ -509,7 +470,6 @@
       "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
-      "depends_on": [],
       "description": "Bundles AzerothShard tweaks: utility NPCs, scripted events, and gameplay improvements"
     },
     {
@@ -518,11 +478,11 @@
       "repo": "https://github.com/heyitsbench/mod-worgoblin.git",
       "needs_build": true,
       "type": "cpp",
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "post_install_hooks": [],
-      "description": "Enables Worgen and Goblin characters with DB/DBC adjustments"
+      "description": "Enables Worgen and Goblin characters with DB/DBC adjustments",
+      "requires": [
+        "MODULE_ELUNA"
+      ]
     },
     {
       "key": "MODULE_ELUNA_TS",
@@ -534,9 +494,6 @@
         "MODULE_ELUNA"
       ],
       "post_install_hooks": [],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Adds a TS-to-Lua workflow so Eluna scripts can be authored with modern tooling"
     },
     {
@@ -547,7 +504,6 @@
       "type": "cpp",
       "notes": "Azeroth Interface Override - enables client-server interface communication",
       "post_install_hooks": [],
-      "depends_on": [],
       "description": "Pure Lua server-client communication system for bidirectional data transmission"
     },
     {
@@ -561,9 +517,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Collection of Lua scripts for creating custom gameplay mechanics and features"
     },
@@ -579,9 +532,6 @@
       "post_install_hooks": [
         "copy-aio-lua"
       ],
-      "depends_on": [
-        "MODULE_AIO"
-      ],
       "description": "Transmogrification system built with AIO and Eluna for changing equipment appearance"
     },
     {
@@ -595,9 +545,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Lua scripts that spawn custom NPCs with scripted combat and community events"
     },
@@ -613,9 +560,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Rewards players with in-game mail when reaching certain levels"
     },
     {
@@ -629,9 +573,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Shares achievements, currency, mounts, and reputation across account characters"
     },
@@ -647,9 +588,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Spawns a customizable NPC vendor that exchanges materials based on settings"
     },
     {
@@ -663,9 +601,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Implements Recruit-a-Friend system with rewards for reaching level milestones"
     },
@@ -681,9 +616,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Enables characters to reset to level one for prestige rewards with optional spell selection"
     },
     {
@@ -697,9 +629,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Automated auction house bot for buying and selling items"
     },
@@ -715,9 +644,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Implements hardcore mode system allowing activation via NPC token"
     },
     {
@@ -731,9 +657,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Provides gear templates, transmog clearing, and chat features for NPC bots"
     },
@@ -749,9 +672,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Enables multiple NPC merchants with database integration"
     },
     {
@@ -765,9 +685,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Allows GMs to create and manage treasure chests with custom loot"
     },
@@ -783,9 +700,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Populates artificial world and guild chat to make servers feel more lively"
     },
     {
@@ -799,9 +713,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Spawns loot chests containing gear and gold when players die in PvP"
     },
@@ -817,9 +728,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Diablo II-inspired crafting system with item synthesis and transmutation"
     },
     {
@@ -833,9 +741,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Enables creating character copies at specific progression points for twinking"
     },
@@ -851,9 +756,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Allows GMs to create temporary server announcements that repeat at intervals"
     },
     {
@@ -867,9 +769,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Checks player zones and automatically removes players from restricted areas"
     },
@@ -885,9 +784,6 @@
       "post_install_hooks": [
         "copy-aio-lua"
       ],
-      "depends_on": [
-        "MODULE_AIO"
-      ],
       "description": "Implements a Blackjack game for players to gamble against an NPC dealer"
     },
     {
@@ -901,9 +797,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Allows admins to send soulbound items to players via command"
     },
@@ -919,9 +812,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Provides auction house alternative with dynamic pricing"
     },
     {
@@ -935,9 +825,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Implements customizable lottery system where players can win prizes"
     },
@@ -953,9 +840,6 @@
       "post_install_hooks": [
         "copy-standard-lua"
       ],
-      "depends_on": [
-        "MODULE_ELUNA"
-      ],
       "description": "Relays in-game chat events to Discord channels"
     },
     {
@@ -969,9 +853,6 @@
       ],
       "post_install_hooks": [
         "copy-standard-lua"
-      ],
-      "depends_on": [
-        "MODULE_ELUNA"
       ],
       "description": "Allows access to bank, mailbox, and auction house from anywhere via chat commands"
     }

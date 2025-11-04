@@ -359,6 +359,7 @@ declare -A MODULE_BLOCK_REASON_MAP=()
 declare -A MODULE_NEEDS_BUILD_MAP=()
 declare -A MODULE_REQUIRES_MAP=()
 declare -A MODULE_NOTES_MAP=()
+declare -A MODULE_DESCRIPTION_MAP=()
 declare -A MODULE_DEFAULT_VALUES=()
 declare -A KNOWN_MODULE_LOOKUP=()
 declare -A ENV_TEMPLATE_VALUES=()
@@ -417,8 +418,13 @@ PY
     exit 1
   fi
 
-  while IFS=$'\t' read -r key name needs_build module_type status block_reason requires notes; do
+  while IFS=$'\t' read -r key name needs_build module_type status block_reason requires notes description; do
     [ -n "$key" ] || continue
+    # Convert placeholder back to empty string
+    [ "$block_reason" = "-" ] && block_reason=""
+    [ "$requires" = "-" ] && requires=""
+    [ "$notes" = "-" ] && notes=""
+    [ "$description" = "-" ] && description=""
     MODULE_NAME_MAP["$key"]="$name"
     MODULE_NEEDS_BUILD_MAP["$key"]="$needs_build"
     MODULE_TYPE_MAP["$key"]="$module_type"
@@ -426,6 +432,7 @@ PY
     MODULE_BLOCK_REASON_MAP["$key"]="$block_reason"
     MODULE_REQUIRES_MAP["$key"]="$requires"
     MODULE_NOTES_MAP["$key"]="$notes"
+    MODULE_DESCRIPTION_MAP["$key"]="$description"
     KNOWN_MODULE_LOOKUP["$key"]=1
   done < <(
     python3 - "$MODULE_MANIFEST_PATH" <<'PY'
@@ -436,8 +443,8 @@ manifest_path = Path(sys.argv[1])
 manifest = json.loads(manifest_path.read_text())
 
 def clean(value):
-    if value is None:
-        return ""
+    if value is None or value == "":
+        return "-"
     return str(value).replace("\t", " ").replace("\n", " ").strip()
 
 for entry in manifest.get("modules", []):
@@ -446,18 +453,18 @@ for entry in manifest.get("modules", []):
         continue
     name = clean(entry.get("name", key))
     needs_build = "1" if entry.get("needs_build") else "0"
-    module_type = clean(entry.get("type", ""))
+    module_type = clean(entry.get("type", "")) or "-"
     status = clean(entry.get("status", "active"))
     block_reason = clean(entry.get("block_reason", ""))
     requires = entry.get("requires") or []
-    depends_on = entry.get("depends_on") or []
     ordered = []
-    for dep in list(requires) + list(depends_on):
+    for dep in list(requires):
         if dep and dep not in ordered:
             ordered.append(dep)
-    requires_csv = ",".join(ordered)
+    requires_csv = ",".join(ordered) if ordered else "-"
     notes = clean(entry.get("notes", ""))
-    print("\t".join([key, name, needs_build, module_type, status or "active", block_reason, requires_csv, notes]))
+    description = clean(entry.get("description", ""))
+    print("\t".join([key, name, needs_build, module_type, status, block_reason, requires_csv, notes, description]))
 PY
   )
 
@@ -1144,6 +1151,10 @@ fi
       prompt_label="$(module_display_name "$key")"
       if [ "${MODULE_NEEDS_BUILD_MAP[$key]}" = "1" ]; then
         prompt_label="${prompt_label} (requires build)"
+      fi
+      local description="${MODULE_DESCRIPTION_MAP[$key]:-}"
+      if [ -n "$description" ]; then
+        printf '%b\n' "${BLUE}ℹ️  ${MODULE_NAME_MAP[$key]:-$key}: ${description}${NC}"
       fi
       local default_answer
       default_answer="$(module_default "$key")"
