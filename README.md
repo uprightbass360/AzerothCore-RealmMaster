@@ -1,6 +1,6 @@
-# AzerothCore Docker/Compose Stack
+# AzerothCore RealmMaster
 
-A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with 30+ enhanced modules and intelligent automation.
+A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with 68 enhanced modules and intelligent automation.
 
 ## 🚀 Quick Start
 
@@ -13,8 +13,8 @@ A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich
 
 ```bash
 # 1. Get the code
-git clone https://github.com/uprightbass360/acore-compose.git
-cd acore-compose
+git clone https://github.com/uprightbass360/AzerothCore-RealmMaster.git
+cd AzerothCore-RealmMaster
 
 # 2. Configure your server
 ./setup.sh
@@ -138,8 +138,8 @@ Complete walkthrough for deploying on your local machine.
 
 **1.1 Clone the Repository**
 ```bash
-git clone https://github.com/uprightbass360/acore-compose.git
-cd acore-compose
+git clone https://github.com/uprightbass360/AzerothCore-RealmMaster.git
+cd AzerothCore-RealmMaster
 ```
 
 **1.2 Run Interactive Setup**
@@ -271,7 +271,7 @@ You can deploy remotely in two ways:
 ./deploy.sh --yes \
   --remote-host your-server.com \
   --remote-user youruser \
-  --remote-project-dir /home/youruser/acore-compose
+  --remote-project-dir /home/youruser/AzerothCore-RealmMaster
 ```
 
 Optional flags:
@@ -282,7 +282,7 @@ Optional flags:
 **Step 3: Deploy on Remote Host**
 ```bash
 ssh your-server.com
-cd /home/youruser/acore-compose
+cd /home/youruser/AzerothCore-RealmMaster
 ./deploy.sh --yes --no-watch
 ```
 
@@ -756,7 +756,7 @@ Exports and transfers locally built images to remote hosts via SSH.
 ./scripts/migrate-stack.sh \
   --host docker-server \
   --user sam \
-  --project-dir /home/sam/acore-compose
+  --project-dir /home/sam/AzerothCore-RealmMaster
 
 ./scripts/migrate-stack.sh \
   --host remote.example.com \
