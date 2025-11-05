@@ -68,6 +68,7 @@ declare -A TEMPLATE_VALUE_MAP=(
   [DEFAULT_AUTH_PORT]=AUTH_EXTERNAL_PORT
   [DEFAULT_SOAP_PORT]=SOAP_EXTERNAL_PORT
   [DEFAULT_MYSQL_PORT]=MYSQL_EXTERNAL_PORT
+  [DEFAULT_PLAYERBOT_MIN]=PLAYERBOT_MIN_BOTS
   [DEFAULT_PLAYERBOT_MAX]=PLAYERBOT_MAX_BOTS
   [DEFAULT_LOCAL_STORAGE]=STORAGE_PATH
   [DEFAULT_BACKUP_PATH]=BACKUP_PATH
@@ -577,6 +578,7 @@ main(){
   local CLI_MODULE_MODE=""
   local CLI_MODULE_PRESET=""
   local CLI_PLAYERBOT_ENABLED=""
+  local CLI_PLAYERBOT_MIN=""
   local CLI_PLAYERBOT_MAX=""
   local CLI_AUTO_REBUILD=0
   local CLI_MODULES_SOURCE=""
@@ -619,7 +621,8 @@ Options:
   --module-config NAME            Use preset NAME from profiles/<NAME>.conf
   --enable-modules LIST           Comma-separated module list (MODULE_* or shorthand)
   --playerbot-enabled 0|1         Override PLAYERBOT_ENABLED flag
-  --playerbot-max-bots N          Override PLAYERBOT_MAX_BOTS value
+    --playerbot-min-bots N          Override PLAYERBOT_MIN_BOTS value
+    --playerbot-max-bots N          Override PLAYERBOT_MAX_BOTS value
   --auto-rebuild-on-deploy        Enable automatic rebuild during deploys
   --modules-rebuild-source PATH   Source checkout used for module rebuilds
   --deploy-after                  Run ./deploy.sh automatically after setup completes
@@ -759,6 +762,12 @@ EOF
         ;;
       --playerbot-max-bots)
         [[ $# -ge 2 ]] || { say ERROR "--playerbot-max-bots requires a value"; exit 1; }
+        CLI_PLAYERBOT_MIN="$2"; shift 2
+        ;;
+      --playerbot-min-bots=*)
+        CLI_PLAYERBOT_MIN="${1#*=}"; shift
+        ;;
+      --playerbot-max-bots)
         CLI_PLAYERBOT_MAX="$2"; shift 2
         ;;
       --playerbot-max-bots=*)
@@ -1116,7 +1125,9 @@ fi
     [MODULE_LEVEL_GRANT]="QuestCountLevel module relies on removed ConfigMgr APIs and fails to build"
   )
 
-  local PLAYERBOT_ENABLED=0 PLAYERBOT_MAX_BOTS=40
+  local PLAYERBOT_ENABLED=0
+  local PLAYERBOT_MIN_BOTS="${DEFAULT_PLAYERBOT_MIN:-40}"
+  local PLAYERBOT_MAX_BOTS="${DEFAULT_PLAYERBOT_MAX:-40}"
 
   local AUTO_REBUILD_ON_DEPLOY=$CLI_AUTO_REBUILD
   local MODULES_REBUILD_SOURCE_PATH_VALUE="${CLI_MODULES_SOURCE}"
@@ -1248,6 +1259,13 @@ fi
     fi
     PLAYERBOT_ENABLED="$CLI_PLAYERBOT_ENABLED"
   fi
+  if [ -n "$CLI_PLAYERBOT_MIN" ]; then
+    if ! [[ "$CLI_PLAYERBOT_MIN" =~ ^[0-9]+$ ]]; then
+      say ERROR "--playerbot-min-bots must be numeric"
+      exit 1
+    fi
+    PLAYERBOT_MIN_BOTS="$CLI_PLAYERBOT_MIN"
+  fi
   if [ -n "$CLI_PLAYERBOT_MAX" ]; then
     if ! [[ "$CLI_PLAYERBOT_MAX" =~ ^[0-9]+$ ]]; then
       say ERROR "--playerbot-max-bots must be numeric"
@@ -1260,7 +1278,15 @@ fi
     if [ -z "$CLI_PLAYERBOT_ENABLED" ]; then
       PLAYERBOT_ENABLED=1
     fi
+    PLAYERBOT_MIN_BOTS=$(ask "Minimum concurrent playerbots" "${CLI_PLAYERBOT_MIN:-$DEFAULT_PLAYERBOT_MIN}" validate_number)
     PLAYERBOT_MAX_BOTS=$(ask "Maximum concurrent playerbots" "${CLI_PLAYERBOT_MAX:-$DEFAULT_PLAYERBOT_MAX}" validate_number)
+  fi
+
+  if [ -n "$PLAYERBOT_MIN_BOTS" ] && [ -n "$PLAYERBOT_MAX_BOTS" ]; then
+    if [ "$PLAYERBOT_MAX_BOTS" -lt "$PLAYERBOT_MIN_BOTS" ]; then
+      say WARNING "Playerbot max bots ($PLAYERBOT_MAX_BOTS) lower than min ($PLAYERBOT_MIN_BOTS); adjusting max to match min."
+      PLAYERBOT_MAX_BOTS="$PLAYERBOT_MIN_BOTS"
+    fi
   fi
 
   for mod_var in "${MODULE_KEYS[@]}"; do
@@ -1291,6 +1317,7 @@ fi
   printf "  %-18s %s\n" "Modules images:" "$AC_AUTHSERVER_IMAGE_MODULES_VALUE | $AC_WORLDSERVER_IMAGE_MODULES_VALUE"
 
   printf "  %-18s %s\n" "Modules preset:" "$SUMMARY_MODE_TEXT"
+  printf "  %-18s %s\n" "Playerbot Min Bots:" "$PLAYERBOT_MIN_BOTS"
   printf "  %-18s %s\n" "Playerbot Max Bots:" "$PLAYERBOT_MAX_BOTS"
   printf "  %-18s" "Enabled Modules:"
   local enabled_modules=()
@@ -1530,6 +1557,7 @@ CLIENT_DATA_VERSION=${CLIENT_DATA_VERSION:-$DEFAULT_CLIENT_DATA_VERSION}
 
 # Playerbot runtime
 PLAYERBOT_ENABLED=$PLAYERBOT_ENABLED
+PLAYERBOT_MIN_BOTS=$PLAYERBOT_MIN_BOTS
 PLAYERBOT_MAX_BOTS=$PLAYERBOT_MAX_BOTS
 
 # Rebuild automation

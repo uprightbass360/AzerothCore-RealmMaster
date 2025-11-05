@@ -209,35 +209,158 @@ install_enabled_modules(){
 
 update_playerbots_db_info(){
   local target="$1"
-  if [ ! -f "$target" ]; then
+  if [ ! -f "$target" ] && [ ! -L "$target" ]; then
     return 0
   fi
 
-  local host
-  host="$(read_env_value CONTAINER_MYSQL)"
-  if [ -z "$host" ]; then
-    host="$(read_env_value MYSQL_HOST)"
-  fi
-  host="${host:-ac-mysql}"
+  local env_file="${ENV_PATH:-}"
+  local resolved
 
-  local port
-  port="$(read_env_value MYSQL_PORT "3306")"
+  resolved="$(
+    python3 - "$target" "${env_file}" <<'PY'
+import os
+import pathlib
+import sys
+import re
 
-  local user
-  user="$(read_env_value MYSQL_USER "root")"
+def load_env_file(path):
+    data = {}
+    if not path:
+        return data
+    candidate = pathlib.Path(path)
+    if not candidate.is_file():
+        return data
+    for raw in candidate.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if not raw or raw.lstrip().startswith("#"):
+            continue
+        if "=" not in raw:
+            continue
+        key, val = raw.split("=", 1)
+        key = key.strip()
+        val = val.strip()
+        if not key:
+            continue
+        if val and val[0] == val[-1] and val[0] in {"'", '"'}:
+            val = val[1:-1]
+        if "#" in val:
+            # Strip inline comments
+            val = val.split("#", 1)[0].rstrip()
+        data[key] = val
+    return data
 
-  local pass
-  pass="$(read_env_value MYSQL_ROOT_PASSWORD)"
+def resolve_key(env_map, key, default=""):
+    value = os.environ.get(key)
+    if value:
+        return value
+    return env_map.get(key, default)
 
-  local db
-  db="$(read_env_value DB_PLAYERBOTS_NAME "acore_playerbots")"
-  local value="${host};${port};${user};${pass};${db}"
+def parse_bool(value):
+    if value is None:
+        return None
+    value = value.strip().lower()
+    if value == "":
+        return None
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    return None
 
-  if grep -qE '^[[:space:]]*PlayerbotsDatabaseInfo[[:space:]]*=' "$target"; then
-    sed -i "s|^[[:space:]]*PlayerbotsDatabaseInfo[[:space:]]*=.*|PlayerbotsDatabaseInfo = \"${value}\"|" "$target" || return
-  else
-    printf '\nPlayerbotsDatabaseInfo = "%s"\n' "$value" >> "$target" || return
-  fi
+def parse_int(value):
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    if re.fullmatch(r"[+-]?\d+", value):
+        return str(int(value))
+    return None
+
+def update_config(path_in, settings):
+    if not (os.path.exists(path_in) or os.path.islink(path_in)):
+        return False
+    path = os.path.realpath(path_in)
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+            lines = fh.read().splitlines()
+    except FileNotFoundError:
+        lines = []
+
+    changed = False
+    pending = dict(settings)
+
+    for idx, raw in enumerate(lines):
+        stripped = raw.strip()
+        for key, value in list(pending.items()):
+            if re.match(rf"^\s*{re.escape(key)}\s*=", stripped):
+                desired = f"{key} = {value}"
+                if stripped != desired:
+                    leading = raw[: len(raw) - len(raw.lstrip())]
+                    trailing = ""
+                    if "#" in raw:
+                        before, comment = raw.split("#", 1)
+                        if before.strip():
+                            trailing = f"  # {comment.strip()}"
+                    lines[idx] = f"{leading}{desired}{trailing}"
+                    changed = True
+                pending.pop(key, None)
+                break
+
+    if pending:
+        if lines and lines[-1] and not lines[-1].endswith("\n"):
+            lines[-1] = lines[-1] + "\n"
+        if lines and lines[-1].strip():
+            lines.append("\n")
+        for key, value in pending.items():
+            lines.append(f"{key} = {value}\n")
+        changed = True
+
+    if changed:
+        output = "\n".join(lines)
+        if output and not output.endswith("\n"):
+            output += "\n"
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(output)
+
+    return True
+
+target_path, env_path = sys.argv[1:3]
+env_map = load_env_file(env_path)
+
+host = resolve_key(env_map, "CONTAINER_MYSQL") or resolve_key(env_map, "MYSQL_HOST", "ac-mysql") or "ac-mysql"
+port = resolve_key(env_map, "MYSQL_PORT", "3306") or "3306"
+user = resolve_key(env_map, "MYSQL_USER", "root") or "root"
+password = resolve_key(env_map, "MYSQL_ROOT_PASSWORD", "")
+database = resolve_key(env_map, "DB_PLAYERBOTS_NAME", "acore_playerbots") or "acore_playerbots"
+
+value = ";".join([host, port, user, password, database])
+settings = {"PlayerbotsDatabaseInfo": f'"{value}"'}
+
+enabled_setting = parse_bool(resolve_key(env_map, "PLAYERBOT_ENABLED"))
+if enabled_setting is not None:
+    settings["AiPlayerbot.Enabled"] = "1" if enabled_setting else "0"
+
+max_bots = parse_int(resolve_key(env_map, "PLAYERBOT_MAX_BOTS"))
+min_bots = parse_int(resolve_key(env_map, "PLAYERBOT_MIN_BOTS"))
+
+if max_bots and not min_bots:
+    min_bots = max_bots
+
+if min_bots:
+    settings["AiPlayerbot.MinRandomBots"] = min_bots
+if max_bots:
+    settings["AiPlayerbot.MaxRandomBots"] = max_bots
+
+update_config(target_path, settings)
+
+print(value)
+PY
+  )" || return 0
+
+  local host port
+  host="${resolved%%;*}"
+  port="${resolved#*;}"
+  port="${port%%;*}"
 
   if [ "$PLAYERBOTS_DB_UPDATE_LOGGED" = "0" ]; then
     info "Updated PlayerbotsDatabaseInfo to use host ${host}:${port}"
@@ -279,17 +402,12 @@ manage_configuration_files(){
     unset patterns
   done
 
-  local module_dir
-  for key in "${MODULE_KEYS[@]}"; do
-    module_dir="${MODULE_NAME[$key]:-}"
-    [ -n "$module_dir" ] || continue
-    [ -d "$module_dir" ] || continue
-    find "$module_dir" -name "*.conf.dist" -exec cp {} "$env_target"/ \; 2>/dev/null || true
-  done
-
   local modules_conf_dir="${env_target%/}/modules"
   mkdir -p "$modules_conf_dir"
+  rm -rf "${modules_conf_dir}.backup"
   rm -f "$modules_conf_dir"/*.conf "$modules_conf_dir"/*.conf.dist 2>/dev/null || true
+
+  local module_dir
   for key in "${MODULE_KEYS[@]}"; do
     module_dir="${MODULE_NAME[$key]:-}"
     [ -n "$module_dir" ] || continue
@@ -297,8 +415,26 @@ manage_configuration_files(){
     while IFS= read -r conf_file; do
       [ -n "$conf_file" ] || continue
       base_name="$(basename "$conf_file")"
-      dest_name="${base_name%.dist}"
-      cp "$conf_file" "$modules_conf_dir/$dest_name"
+      # Ensure previous copies in root config are removed to keep modules/ canonical
+      main_conf_path="${env_target}/${base_name}"
+      if [ -f "$main_conf_path" ]; then
+        rm -f "$main_conf_path"
+      fi
+      if [[ "$base_name" == *.conf.dist ]]; then
+        root_conf="${env_target}/${base_name%.dist}"
+        if [ -f "$root_conf" ]; then
+          rm -f "$root_conf"
+        fi
+      fi
+
+      dest_path="${modules_conf_dir}/${base_name}"
+      cp "$conf_file" "$dest_path"
+      if [[ "$base_name" == *.conf.dist ]]; then
+        dest_conf="${modules_conf_dir}/${base_name%.dist}"
+        if [ ! -f "$dest_conf" ]; then
+          cp "$conf_file" "$dest_conf"
+        fi
+      fi
     done < <(find "$module_dir" -path "*/conf/*" -type f \( -name "*.conf" -o -name "*.conf.dist" \) 2>/dev/null)
   done
 
@@ -308,8 +444,6 @@ manage_configuration_files(){
   fi
 
   if [ "$playerbots_enabled" = "1" ]; then
-    update_playerbots_db_info "$env_target/playerbots.conf"
-    update_playerbots_db_info "$env_target/playerbots.conf.dist"
     update_playerbots_db_info "$modules_conf_dir/playerbots.conf"
     update_playerbots_db_info "$modules_conf_dir/playerbots.conf.dist"
   fi
