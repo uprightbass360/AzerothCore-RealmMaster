@@ -41,78 +41,186 @@ See [Local Deployment](#-local-deployment) for detailed walkthrough.
 
 ### ✅ Available Enhanced Modules
 
-All modules are automatically downloaded, configured, and SQL scripts executed when enabled. Browse the complete collection of **68 modules** below:
+All modules are automatically downloaded, configured, and SQL scripts executed when enabled. Browse the complete collection of **93 modules** organized by category:
+
+#### 🤖 Automation
 
 | Module | Description |
 |--------|-------------|
-| **[mod-playerbots](https://github.com/mod-playerbots/mod-playerbots.git)** | Adds scriptable playerbot characters that can form dungeon parties, raid, and PvP with humans |
-| **[mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot.git)** | Lets characters loot multiple corpses with one click for faster farming |
-| **[mod-learn-spells](https://github.com/azerothcore/mod-learn-spells.git)** | Teaches class spells automatically at the correct level to streamline leveling |
-| **[mod-fireworks-on-level](https://github.com/azerothcore/mod-fireworks-on-level.git)** | Spawns celebratory fireworks whenever a player dings a new level |
-| **[mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression.git)** | Tracks each character through Vanilla → TBC → WotLK progression, unlocking content sequentially |
-| **[mod-ahbot](https://github.com/azerothcore/mod-ahbot.git)** | Populates the auction house with configurable buying/selling behavior to keep markets active |
-| **[mod-autobalance](https://github.com/azerothcore/mod-autobalance.git)** | Adjusts creature health and damage in real time to keep fights tuned for the current party size |
-| **[mod-transmog](https://github.com/azerothcore/mod-transmog.git)** | Adds a transmogrification vendor so players can restyle gear without changing stats |
-| **[mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer.git)** | Provides a ready-to-use buff NPC who hands out class buffs, food, and utility spells |
-| **[mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp.git)** | Tweaks XP gain based on population or custom rules to keep leveling flexible |
-| **[mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg.git)** | A solo-friendly queue that lets every player run dungeons without needing a premade group |
-| **[mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena.git)** | Creates a structured 1v1 ranked arena ladder for duel enthusiasts |
-| **[mod-phased-duels](https://github.com/azerothcore/mod-phased-duels.git)** | Moves duelers into their own phase to block interference and griefing |
-| **[mod-breaking-news-override](https://github.com/azerothcore/mod-breaking-news-override.git)** | Replaces the client breaking-news panel with server-managed announcements |
-| **[mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer.git)** | Broadcasts dramatic messages when raid bosses fall to your players |
-| **[mod-account-achievements](https://github.com/azerothcore/mod-account-achievements.git)** | Shares achievements across characters on the same account for persistent milestones |
-| **[mod-auto-revive](https://github.com/azerothcore/mod-auto-revive.git)** | Automatically resurrects characters on death—handy for casual PvE or testing realms |
-| **[mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard.git)** | Awards honor when players kill city guards, spicing up world PvP raids |
-| **[mod-ale](https://github.com/azerothcore/mod-ale.git)** | Adds Eluna Lua scripting engine for creating custom gameplay mechanics |
-| **[mod-TimeIsTime](https://github.com/dunjeon/mod-TimeIsTime.git)** | Adds experimental time-twisting mechanics suited for custom events |
-| **[mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal.git)** | Gives players a portal gadget for quick travel to configured destinations |
-| **[mod-random-enchants](https://github.com/azerothcore/mod-random-enchants.git)** | Rolls randomized stat bonuses on loot to add Diablo-style gear chasing |
-| **[mod-solocraft](https://github.com/azerothcore/mod-solocraft.git)** | Automatically scales dungeon and raid encounters for solo players or small teams |
-| **[mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles.git)** | Restores classic honor titles with a configurable ranking ladder |
-| **[mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster.git)** | Adds an NPC who can teach, reset, and manage hunter pets for convenience |
-| **[mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter.git)** | Introduces an enchanting vendor who applies enchants directly for a fee |
-| **[mod-instance-reset](https://github.com/azerothcore/mod-instance-reset.git)** | Adds commands to reset instances quickly—useful for testing or events |
-| **[mod-quest-count-level](https://github.com/michaeldelago/mod-quest-count-level.git)** | Enables leveling exclusively through questing by awarding tokens after quest completion |
-| **[mod-arac](https://github.com/heyitsbench/mod-arac.git)** | Unlocks every race/class pairing so players can roll any combination |
-| **[mod-assistant](https://github.com/noisiver/mod-assistant.git)** | Spawns an all-purpose assistant NPC with heirlooms, professions, and convenience commands |
-| **[mod-reagent-bank](https://github.com/ZhengPeiRu21/mod-reagent-bank.git)** | Lets players stash crafting reagents with a dedicated banker NPC |
-| **[mod-black-market](https://github.com/Youpeoples/Black-Market-Auction-House.git)** | Backports the Mists-era Black Market Auction House via Eluna scripts |
-| **[mod-challenge-modes](https://github.com/ZhengPeiRu21/mod-challenge-modes.git)** | Implements keystone-style timed runs with leaderboards and scaling modifiers |
 | **[mod-ollama-chat](https://github.com/DustinHendrickson/mod-ollama-chat.git)** | Connects playerbots to an Ollama LLM so they can chat with humans organically |
 | **[mod-player-bot-level-brackets](https://github.com/DustinHendrickson/mod-player-bot-level-brackets.git)** | Keeps bot levels spread evenly across configured brackets |
-| **[StatBooster](https://github.com/AnchyDev/StatBooster.git)** | Lets players refine gear stats by rerolling random enchantments with special materials |
-| **[DungeonRespawn](https://github.com/AnchyDev/DungeonRespawn.git)** | Teleports dead players back to the dungeon entrance instead of a distant graveyard |
-| **[skeleton-module](https://github.com/azerothcore/skeleton-module.git)** | Provides a minimal AzerothCore module scaffold for building new features |
-| **[mod-bg-slaveryvalley](https://github.com/Helias/mod-bg-slaveryvalley.git)** | Adds the Slavery Valley battleground complete with objectives and queue hooks |
-| **[mod-azerothshard](https://github.com/azerothcore/mod-azerothshard.git)** | Bundles AzerothShard tweaks: utility NPCs, scripted events, and gameplay improvements |
-| **[mod-worgoblin](https://github.com/heyitsbench/mod-worgoblin.git)** | Enables Worgen and Goblin characters with DB/DBC adjustments |
-| **[eluna-ts](https://github.com/azerothcore/eluna-ts.git)** | Adds a TS-to-Lua workflow so Eluna scripts can be authored with modern tooling |
-| **[mod-aio](https://github.com/Rochet2/AIO.git)** | Pure Lua server-client communication system for bidirectional data transmission |
-| **[eluna-scripts](https://github.com/Isidorsson/Eluna-scripts.git)** | Collection of Lua scripts for creating custom gameplay mechanics and features |
-| **[azerothcore-transmog-3.3.5a](https://github.com/DanieltheDeveloper/azerothcore-transmog-3.3.5a.git)** | Transmogrification system built with AIO and Eluna for changing equipment appearance |
-| **[acore-eventscripts](https://github.com/55Honey/Acore_eventScripts.git)** | Lua scripts that spawn custom NPCs with scripted combat and community events |
-| **[acore-levelupreward](https://github.com/55Honey/Acore_LevelUpReward.git)** | Rewards players with in-game mail when reaching certain levels |
-| **[azerothcore-eluna-accountwide](https://github.com/Aldori15/azerothcore-eluna-accountwide.git)** | Shares achievements, currency, mounts, and reputation across account characters |
-| **[acore-exchangenpc](https://github.com/55Honey/Acore_ExchangeNpc.git)** | Spawns a customizable NPC vendor that exchanges materials based on settings |
-| **[acore-recruitafriend](https://github.com/55Honey/Acore_RecruitAFriend.git)** | Implements Recruit-a-Friend system with rewards for reaching level milestones |
-| **[prestige-and-draft-mode](https://github.com/Youpeoples/Prestige-and-Draft-Mode.git)** | Enables characters to reset to level one for prestige rewards with optional spell selection |
-| **[azerothcore-lua-ah-bot](https://github.com/mostlynick3/azerothcore-lua-ah-bot.git)** | Automated auction house bot for buying and selling items |
-| **[lua-hardcoremode](https://github.com/HellionOP/Lua-HardcoreMode.git)** | Implements hardcore mode system allowing activation via NPC token |
+| **[mod-playerbots](https://github.com/mod-playerbots/mod-playerbots.git)** | Adds scriptable playerbot characters that can form dungeon parties, raid, and PvP with humans |
 | **[npcbot-extended-commands](https://github.com/Day36512/Npcbot_Extended_Commands.git)** | Provides gear templates, transmog clearing, and chat features for NPC bots |
-| **[azerothcore-lua-multivendor](https://github.com/Shadowveil-WotLK/AzerothCore-lua-MultiVendor.git)** | Enables multiple NPC merchants with database integration |
-| **[treasure-chest-system](https://github.com/zyggy123/Treasure-Chest-System.git)** | Allows GMs to create and manage treasure chests with custom loot |
-| **[activechat](https://github.com/Day36512/ActiveChat.git)** | Populates artificial world and guild chat to make servers feel more lively |
-| **[ultimate-full-loot-pvp](https://github.com/Youpeoples/Ultimate-Full-Loot-Pvp.git)** | Spawns loot chests containing gear and gold when players die in PvP |
+
+#### ✨ Quality of Life
+
+| Module | Description |
+|--------|-------------|
+| **[mod-aoe-loot](https://github.com/azerothcore/mod-aoe-loot.git)** | Lets characters loot multiple corpses with one click for faster farming |
+| **[mod-auto-revive](https://github.com/azerothcore/mod-auto-revive.git)** | Automatically resurrects characters on death—handy for casual PvE or testing realms |
+| **[mod-fireworks-on-level](https://github.com/azerothcore/mod-fireworks-on-level.git)** | Spawns celebratory fireworks whenever a player dings a new level |
+| **[mod-instance-reset](https://github.com/azerothcore/mod-instance-reset.git)** | Adds commands to reset instances quickly—useful for testing or events |
+| **[mod-learn-spells](https://github.com/azerothcore/mod-learn-spells.git)** | Teaches class spells automatically at the correct level to streamline leveling |
+| **[mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg.git)** | A solo-friendly queue that lets every player run dungeons without needing a premade group |
+
+#### ⚔️ Gameplay Enhancement
+
+| Module | Description |
+|--------|-------------|
+| **[DungeonRespawn](https://github.com/AnchyDev/DungeonRespawn.git)** | Teleports dead players back to the dungeon entrance instead of a distant graveyard |
+| **[StatBooster](https://github.com/AnchyDev/StatBooster.git)** | Lets players refine gear stats by rerolling random enchantments with special materials |
 | **[horadric-cube-for-world-of-warcraft](https://github.com/TITIaio/Horadric-Cube-for-World-of-Warcraft.git)** | Diablo II-inspired crafting system with item synthesis and transmutation |
-| **[acore-carboncopy](https://github.com/55Honey/Acore_CarbonCopy.git)** | Enables creating character copies at specific progression points for twinking |
-| **[acore-tempannouncements](https://github.com/55Honey/Acore_TempAnnouncements.git)** | Allows GMs to create temporary server announcements that repeat at intervals |
-| **[acore-zonecheck](https://github.com/55Honey/Acore_Zonecheck.git)** | Checks player zones and automatically removes players from restricted areas |
-| **[aio-blackjack](https://github.com/Manmadedrummer/AIO-Blackjack.git)** | Implements a Blackjack game for players to gamble against an NPC dealer |
-| **[acore-sendandbind](https://github.com/55Honey/Acore_SendAndBind.git)** | Allows admins to send soulbound items to players via command |
+| **[lua-hardcoremode](https://github.com/HellionOP/Lua-HardcoreMode.git)** | Implements hardcore mode system allowing activation via NPC token |
+| **[mod-TimeIsTime](https://github.com/dunjeon/mod-TimeIsTime.git)** | Adds experimental time-twisting mechanics suited for custom events |
+| **[mod-autobalance](https://github.com/azerothcore/mod-autobalance.git)** | Adjusts creature health and damage in real time to keep fights tuned for the current party size |
+| **[mod-challenge-modes](https://github.com/ZhengPeiRu21/mod-challenge-modes.git)** | Implements keystone-style timed runs with leaderboards and scaling modifiers |
+| **[mod-duel-reset](https://github.com/azerothcore/mod-duel-reset.git)** | Adds some duel reset features |
+| **[mod-solocraft](https://github.com/azerothcore/mod-solocraft.git)** | Automatically scales dungeon and raid encounters for solo players or small teams |
+
+#### 🏪 NPC Services
+
+| Module | Description |
+|--------|-------------|
+| **[azerothcore-lua-multivendor](https://github.com/Shadowveil-WotLK/AzerothCore-lua-MultiVendor.git)** | Enables multiple NPC merchants with database integration |
+| **[mod-assistant](https://github.com/noisiver/mod-assistant.git)** | Spawns an all-purpose assistant NPC with heirlooms, professions, and convenience commands |
+| **[mod-npc-beastmaster](https://github.com/azerothcore/mod-npc-beastmaster.git)** | Adds an NPC who can teach, reset, and manage hunter pets for convenience |
+| **[mod-npc-buffer](https://github.com/azerothcore/mod-npc-buffer.git)** | Provides a ready-to-use buff NPC who hands out class buffs, food, and utility spells |
+| **[mod-npc-enchanter](https://github.com/azerothcore/mod-npc-enchanter.git)** | Introduces an enchanting vendor who applies enchants directly for a fee |
+| **[mod-npc-free-professions](https://github.com/azerothcore/mod-npc-free-professions.git)** | Makes a ProfessionsNPC who gives 2 free professions (full with recipes) to player |
+| **[mod-npc-talent-template](https://github.com/azerothcore/mod-npc-talent-template.git)** | An NPC that allows players to instantly apply pre-configured character templates that gear up, gem, set talents, and apply glyphs for any class |
+| **[mod-reagent-bank](https://github.com/ZhengPeiRu21/mod-reagent-bank.git)** | Lets players stash crafting reagents with a dedicated banker NPC |
+| **[mod-transmog](https://github.com/azerothcore/mod-transmog.git)** | Adds a transmogrification vendor so players can restyle gear without changing stats |
+
+#### ⚡ PvP
+
+| Module | Description |
+|--------|-------------|
+| **[mod-1v1-arena](https://github.com/azerothcore/mod-1v1-arena.git)** | Creates a structured 1v1 ranked arena ladder for duel enthusiasts |
+| **[mod-arena-replay](https://github.com/azerothcore/mod-arena-replay.git)** | Allows you to watch a replay of rated arena games |
+| **[mod-gain-honor-guard](https://github.com/azerothcore/mod-gain-honor-guard.git)** | Awards honor when players kill city guards, spicing up world PvP raids |
+| **[mod-phased-duels](https://github.com/azerothcore/mod-phased-duels.git)** | Moves duelers into their own phase to block interference and griefing |
+| **[mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles.git)** | Restores classic honor titles with a configurable ranking ladder |
+| **[ultimate-full-loot-pvp](https://github.com/Youpeoples/Ultimate-Full-Loot-Pvp.git)** | Spawns loot chests containing gear and gold when players die in PvP |
+
+#### 📈 Progression
+
+| Module | Description |
+|--------|-------------|
+| **[mod-dynamic-xp](https://github.com/azerothcore/mod-dynamic-xp.git)** | Tweaks XP gain based on population or custom rules to keep leveling flexible |
+| **[mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression.git)** | Tracks each character through Vanilla → TBC → WotLK progression, unlocking content sequentially |
+| **[mod-item-level-up](https://github.com/azerothcore/mod-item-level-up.git)** | Creates an item that allows you to level up (id = 701001) |
+| **[mod-progression-system](https://github.com/azerothcore/mod-progression-system.git)** | Allows for the automatic loading of scripts and SQL files based on level brackets |
+| **[mod-promotion-azerothcore](https://github.com/azerothcore/mod-promotion-azerothcore.git)** | Allows player to receive a promotion consisting of a level 90 character, backpacks, gold, armor, and a mount |
+| **[mod-quest-count-level](https://github.com/michaeldelago/mod-quest-count-level.git)** | Enables leveling exclusively through questing by awarding tokens after quest completion |
+| **[mod-weekend-xp](https://github.com/azerothcore/mod-weekend-xp.git)** | XP module that allows server owner to select how much XP players can receive on the weekend via config file |
+| **[mod-zone-difficulty](https://github.com/azerothcore/mod-zone-difficulty.git)** | Support module for mod-progression-system, handles nerfs and debuffs per zone |
+
+#### 💰 Economy
+
+| Module | Description |
+|--------|-------------|
+| **[acore-exchangenpc](https://github.com/55Honey/Acore_ExchangeNpc.git)** | Spawns a customizable NPC vendor that exchanges materials based on settings |
+| **[azerothcore-global-mail-banking-auctions](https://github.com/Aldori15/azerothcore-global-mail_banking_auctions.git)** | Allows access to bank, mailbox, and auction house from anywhere via chat commands |
+| **[azerothcore-lua-ah-bot](https://github.com/mostlynick3/azerothcore-lua-ah-bot.git)** | Automated auction house bot for buying and selling items |
 | **[dynamic-trader](https://github.com/Day36512/Dynamic-Trader.git)** | Provides auction house alternative with dynamic pricing |
 | **[lottery-lua](https://github.com/zyggy123/lottery-lua.git)** | Implements customizable lottery system where players can win prizes |
+| **[mod-ahbot](https://github.com/azerothcore/mod-ahbot.git)** | Populates the auction house with configurable buying/selling behavior to keep markets active |
+| **[mod-black-market](https://github.com/Youpeoples/Black-Market-Auction-House.git)** | Backports the Mists-era Black Market Auction House via Eluna scripts |
+| **[mod-random-enchants](https://github.com/azerothcore/mod-random-enchants.git)** | Rolls randomized stat bonuses on loot to add Diablo-style gear chasing |
+
+#### 👥 Social
+
+| Module | Description |
+|--------|-------------|
 | **[acore-discordnotifier](https://github.com/0xCiBeR/Acore_DiscordNotifier.git)** | Relays in-game chat events to Discord channels |
-| **[azerothcore-global-mail-banking-auctions](https://github.com/Aldori15/azerothcore-global-mail_banking_auctions.git)** | Allows access to bank, mailbox, and auction house from anywhere via chat commands |
+| **[acore-tempannouncements](https://github.com/55Honey/Acore_TempAnnouncements.git)** | Allows GMs to create temporary server announcements that repeat at intervals |
+| **[activechat](https://github.com/Day36512/ActiveChat.git)** | Populates artificial world and guild chat to make servers feel more lively |
+| **[mod-boss-announcer](https://github.com/azerothcore/mod-boss-announcer.git)** | Broadcasts dramatic messages when raid bosses fall to your players |
+| **[mod-breaking-news-override](https://github.com/azerothcore/mod-breaking-news-override.git)** | Replaces the client breaking-news panel with server-managed announcements |
+| **[mod-global-chat](https://github.com/azerothcore/mod-global-chat.git)** | Simple global chat for AzerothCore enabling worldserver-wide messaging functionality |
+
+#### 👤 Account-Wide
+
+| Module | Description |
+|--------|-------------|
+| **[azerothcore-eluna-accountwide](https://github.com/Aldori15/azerothcore-eluna-accountwide.git)** | Shares achievements, currency, mounts, and reputation across account characters |
+| **[mod-account-achievements](https://github.com/azerothcore/mod-account-achievements.git)** | Shares achievements across characters on the same account for persistent milestones |
+| **[mod-account-mounts](https://github.com/azerothcore/mod-account-mounts.git)** | Goes through the list of characters on an account to obtain playerGuids and store mount spells that all characters know |
+
+#### 🎨 Customization
+
+| Module | Description |
+|--------|-------------|
+| **[azerothcore-transmog-3.3.5a](https://github.com/DanieltheDeveloper/azerothcore-transmog-3.3.5a.git)** | Transmogrification system built with AIO and Eluna for changing equipment appearance |
+| **[mod-arac](https://github.com/heyitsbench/mod-arac.git)** | Unlocks every race/class pairing so players can roll any combination |
+| **[mod-morphsummon](https://github.com/azerothcore/mod-morphsummon.git)** | Change appearance of summoned permanent creatures |
+| **[mod-worgoblin](https://github.com/heyitsbench/mod-worgoblin.git)** | Enables Worgen and Goblin characters with DB/DBC adjustments |
+
+#### 📜 Scripting
+
+| Module | Description |
+|--------|-------------|
+| **[acore-eventscripts](https://github.com/55Honey/Acore_eventScripts.git)** | Lua scripts that spawn custom NPCs with scripted combat and community events |
+| **[eluna-scripts](https://github.com/Isidorsson/Eluna-scripts.git)** | Collection of Lua scripts for creating custom gameplay mechanics and features |
+| **[eluna-ts](https://github.com/azerothcore/eluna-ts.git)** | Adds a TS-to-Lua workflow so Eluna scripts can be authored with modern tooling |
+| **[mod-aio](https://github.com/Rochet2/AIO.git)** | Pure Lua server-client communication system for bidirectional data transmission |
+| **[mod-ale](https://github.com/azerothcore/mod-ale.git)** | Adds Eluna Lua scripting engine for creating custom gameplay mechanics |
+
+#### 🔧 Admin Tools
+
+| Module | Description |
+|--------|-------------|
+| **[acore-carboncopy](https://github.com/55Honey/Acore_CarbonCopy.git)** | Enables creating character copies at specific progression points for twinking |
+| **[acore-sendandbind](https://github.com/55Honey/Acore_SendAndBind.git)** | Allows admins to send soulbound items to players via command |
+| **[acore-zonecheck](https://github.com/55Honey/Acore_Zonecheck.git)** | Checks player zones and automatically removes players from restricted areas |
+| **[mod-antifarming](https://github.com/azerothcore/mod-antifarming.git)** | Port of the AntiFarming Script from SymbolixDEV's repo to AzerothCore |
+| **[mod-keep-out](https://github.com/azerothcore/mod-keep-out.git)** | Keeps players who are non-GM from entering a zone/map |
+| **[mod-server-auto-shutdown](https://github.com/azerothcore/mod-server-auto-shutdown.git)** | Establishes a daily restart with configurable time, notification period, and custom messages |
+| **[mod-spell-regulator](https://github.com/azerothcore/mod-spell-regulator.git)** | Modify the percentage of the spells by regulating in the best way |
+| **[mod-who-logged](https://github.com/azerothcore/mod-who-logged.git)** | Outputs to the console when a player logs into the world |
+
+#### 💎 Premium/VIP
+
+| Module | Description |
+|--------|-------------|
+| **[mod-acore-subscriptions](https://github.com/azerothcore/mod-acore-subscriptions.git)** | Handles the subscription logic, no longer requires modules or services to have subscription logic in their code |
+| **[mod-premium](https://github.com/azerothcore/mod-premium.git)** | Adds Premium account features to players |
+| **[mod-system-vip](https://github.com/azerothcore/mod-system-vip.git)** | System offering VIP features and benefits to players |
+
+#### 🎮 Mini-Games
+
+| Module | Description |
+|--------|-------------|
+| **[aio-blackjack](https://github.com/Manmadedrummer/AIO-Blackjack.git)** | Implements a Blackjack game for players to gamble against an NPC dealer |
+| **[mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal.git)** | Gives players a portal gadget for quick travel to configured destinations |
+| **[mod-tic-tac-toe](https://github.com/azerothcore/mod-tic-tac-toe.git)** | Allows players to play Tic Tac Toe between players and against different AI |
+
+#### 🏰 Content
+
+| Module | Description |
+|--------|-------------|
+| **[mod-azerothshard](https://github.com/azerothcore/mod-azerothshard.git)** | Bundles AzerothShard tweaks: utility NPCs, scripted events, and gameplay improvements |
+| **[mod-bg-slaveryvalley](https://github.com/Helias/mod-bg-slaveryvalley.git)** | Adds the Slavery Valley battleground complete with objectives and queue hooks |
+| **[mod-guildhouse](https://github.com/azerothcore/mod-guildhouse.git)** | Phased guild house system allowing guild members to visit their private guild house |
+| **[mod-war-effort](https://github.com/azerothcore/mod-war-effort.git)** | Brings back the war effort of the two factions for the opening of the gates of Ahn'Qiraj |
+| **[treasure-chest-system](https://github.com/zyggy123/Treasure-Chest-System.git)** | Allows GMs to create and manage treasure chests with custom loot |
+
+#### 🎁 Rewards
+
+| Module | Description |
+|--------|-------------|
+| **[acore-levelupreward](https://github.com/55Honey/Acore_LevelUpReward.git)** | Rewards players with in-game mail when reaching certain levels |
+| **[acore-recruitafriend](https://github.com/55Honey/Acore_RecruitAFriend.git)** | Implements Recruit-a-Friend system with rewards for reaching level milestones |
+| **[mod-resurrection-scroll](https://github.com/azerothcore/mod-resurrection-scroll.git)** | Allows users to grant rested XP bonuses to players who have not logged in X days |
+| **[mod-reward-played-time](https://github.com/azerothcore/mod-reward-played-time.git)** | Adds items for players that have stayed logged in for x amount of time |
+| **[prestige-and-draft-mode](https://github.com/Youpeoples/Prestige-and-Draft-Mode.git)** | Enables characters to reset to level one for prestige rewards with optional spell selection |
+
+#### 🛠️ Developer Tools
+
+| Module | Description |
+|--------|-------------|
+| **[skeleton-module](https://github.com/azerothcore/skeleton-module.git)** | Provides a minimal AzerothCore module scaffold for building new features |
+
 
 ### ✅ Automated Configuration
 - **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import
@@ -901,9 +1009,17 @@ Some modules require additional manual configuration after deployment:
 - **NPC spawning required**: Use GM commands to spawn service NPCs
 - Examples:
   ```bash
-  .npc add 190010    # Transmog NPC
-  .npc add 290011    # Reagent Bank NPC
-  # Check module docs for enchanter/beastmaster NPC IDs
+  .npc add 190010    # Transmog NPC (mod-transmog)
+  .npc add 601016    # Buff NPC (mod-npc-buffer)
+  .npc add 601026    # Beastmaster NPC "White Fang" (mod-npc-beastmaster)
+  .npc add 601015    # Enchanter NPC (mod-npc-enchanter)
+  .npc add 290011    # Reagent Bank NPC (mod-reagent-bank)
+  .npc add 500030    # Guild House vendor (mod-guildhouse)
+  .npc add 601072    # Morph Summon NPC (mod-morphsummon)
+  .npc add 98500     # Arena Replay NPC (mod-arena-replay)
+  .npc add 100155    # Tic-Tac-Toe game NPC (mod-tic-tac-toe)
+  .npc add 1128001   # Mythic Mode NPC (mod-zone-difficulty, spawns in raids/heroic dungeons)
+  .npc add 1128002   # Mythic Rewards NPC (mod-zone-difficulty)
   ```
 
 #### mod-arac (All Races All Classes)
@@ -1129,6 +1245,7 @@ rm -rf local-storage/source local-storage/images
    - Solo LFG: Queue for a dungeon solo
    - Transmog: Use `.npc add 190010` to spawn transmog NPC
    - Playerbots: Use `.bot add` command (if enabled)
+   - See "Module-Specific Requirements" section for complete list of NPC spawn commands
 
 3. **Configure Realmlist** - Update server address in database:
    ```sql

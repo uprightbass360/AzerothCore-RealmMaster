@@ -360,6 +360,7 @@ declare -A MODULE_NEEDS_BUILD_MAP=()
 declare -A MODULE_REQUIRES_MAP=()
 declare -A MODULE_NOTES_MAP=()
 declare -A MODULE_DESCRIPTION_MAP=()
+declare -A MODULE_CATEGORY_MAP=()
 declare -A MODULE_DEFAULT_VALUES=()
 declare -A KNOWN_MODULE_LOOKUP=()
 declare -A ENV_TEMPLATE_VALUES=()
@@ -418,13 +419,14 @@ PY
     exit 1
   fi
 
-  while IFS=$'\t' read -r key name needs_build module_type status block_reason requires notes description; do
+  while IFS=$'\t' read -r key name needs_build module_type status block_reason requires notes description category; do
     [ -n "$key" ] || continue
     # Convert placeholder back to empty string
     [ "$block_reason" = "-" ] && block_reason=""
     [ "$requires" = "-" ] && requires=""
     [ "$notes" = "-" ] && notes=""
     [ "$description" = "-" ] && description=""
+    [ "$category" = "-" ] && category=""
     MODULE_NAME_MAP["$key"]="$name"
     MODULE_NEEDS_BUILD_MAP["$key"]="$needs_build"
     MODULE_TYPE_MAP["$key"]="$module_type"
@@ -433,6 +435,7 @@ PY
     MODULE_REQUIRES_MAP["$key"]="$requires"
     MODULE_NOTES_MAP["$key"]="$notes"
     MODULE_DESCRIPTION_MAP["$key"]="$description"
+    MODULE_CATEGORY_MAP["$key"]="$category"
     KNOWN_MODULE_LOOKUP["$key"]=1
   done < <(
     python3 - "$MODULE_MANIFEST_PATH" <<'PY'
@@ -464,7 +467,8 @@ for entry in manifest.get("modules", []):
     requires_csv = ",".join(ordered) if ordered else "-"
     notes = clean(entry.get("notes", ""))
     description = clean(entry.get("description", ""))
-    print("\t".join([key, name, needs_build, module_type, status, block_reason, requires_csv, notes, description]))
+    category = clean(entry.get("category", ""))
+    print("\t".join([key, name, needs_build, module_type, status, block_reason, requires_csv, notes, description, category]))
 PY
   )
 
@@ -1129,7 +1133,7 @@ fi
     module_mode_label="preset 2 (Playerbots + Suggested)"
   elif [ "$MODE_SELECTION" = "3" ]; then
     MODE_PRESET_NAME=""
-    say INFO "Answer y/n for each module"
+    say INFO "Answer y/n for each module (organized by category)"
     for key in "${!DISABLED_MODULE_REASONS[@]}"; do
       say WARNING "${key#MODULE_}: ${DISABLED_MODULE_REASONS[$key]}"
     done
@@ -1137,34 +1141,86 @@ fi
     if [ ${#selection_keys[@]} -eq 0 ]; then
       selection_keys=("${MODULE_KEYS[@]}")
     fi
+
+    # Define category display order and titles
+    local -a category_order=(
+      "automation" "quality-of-life" "gameplay-enhancement" "npc-service"
+      "pvp" "progression" "economy" "social" "account-wide"
+      "customization" "scripting" "admin" "premium" "minigame"
+      "content" "rewards" "developer"
+    )
+    declare -A category_titles=(
+      ["automation"]="🤖 Automation"
+      ["quality-of-life"]="✨ Quality of Life"
+      ["gameplay-enhancement"]="⚔️ Gameplay Enhancement"
+      ["npc-service"]="🏪 NPC Services"
+      ["pvp"]="⚡ PvP"
+      ["progression"]="📈 Progression"
+      ["economy"]="💰 Economy"
+      ["social"]="👥 Social"
+      ["account-wide"]="👤 Account-Wide"
+      ["customization"]="🎨 Customization"
+      ["scripting"]="📜 Scripting"
+      ["admin"]="🔧 Admin Tools"
+      ["premium"]="💎 Premium/VIP"
+      ["minigame"]="🎮 Mini-Games"
+      ["content"]="🏰 Content"
+      ["rewards"]="🎁 Rewards"
+      ["developer"]="🛠️ Developer Tools"
+    )
+
+    # Group modules by category
+    declare -A modules_by_category
     local key
     for key in "${selection_keys[@]}"; do
       [ -n "${KNOWN_MODULE_LOOKUP[$key]:-}" ] || continue
-      local status_lc="${MODULE_STATUS_MAP[$key],,}"
-      if [ -n "$status_lc" ] && [ "$status_lc" != "active" ]; then
-        local reason="${MODULE_BLOCK_REASON_MAP[$key]:-Blocked in manifest}"
-        say WARNING "${key#MODULE_} is blocked: ${reason}"
-        printf -v "$key" '%s' "0"
-        continue
-      fi
-      local prompt_label
-      prompt_label="$(module_display_name "$key")"
-      if [ "${MODULE_NEEDS_BUILD_MAP[$key]}" = "1" ]; then
-        prompt_label="${prompt_label} (requires build)"
-      fi
-      local description="${MODULE_DESCRIPTION_MAP[$key]:-}"
-      if [ -n "$description" ]; then
-        printf '%b\n' "${BLUE}ℹ️  ${MODULE_NAME_MAP[$key]:-$key}: ${description}${NC}"
-      fi
-      local default_answer
-      default_answer="$(module_default "$key")"
-      local response
-      response=$(ask_yn "$prompt_label" "$default_answer")
-      if [ "$response" = "1" ]; then
-        printf -v "$key" '%s' "1"
+      local category="${MODULE_CATEGORY_MAP[$key]:-uncategorized}"
+      if [ -z "${modules_by_category[$category]:-}" ]; then
+        modules_by_category[$category]="$key"
       else
-        printf -v "$key" '%s' "0"
+        modules_by_category[$category]="${modules_by_category[$category]} $key"
       fi
+    done
+
+    # Process modules by category
+    local cat
+    for cat in "${category_order[@]}"; do
+      local module_list="${modules_by_category[$cat]:-}"
+      [ -n "$module_list" ] || continue
+
+      # Display category header
+      local cat_title="${category_titles[$cat]:-$cat}"
+      printf '\n%b\n' "${BOLD}${CYAN}═══ ${cat_title} ═══${NC}"
+
+      # Process modules in this category
+      for key in $module_list; do
+        [ -n "${KNOWN_MODULE_LOOKUP[$key]:-}" ] || continue
+        local status_lc="${MODULE_STATUS_MAP[$key],,}"
+        if [ -n "$status_lc" ] && [ "$status_lc" != "active" ]; then
+          local reason="${MODULE_BLOCK_REASON_MAP[$key]:-Blocked in manifest}"
+          say WARNING "${key#MODULE_} is blocked: ${reason}"
+          printf -v "$key" '%s' "0"
+          continue
+        fi
+        local prompt_label
+        prompt_label="$(module_display_name "$key")"
+        if [ "${MODULE_NEEDS_BUILD_MAP[$key]}" = "1" ]; then
+          prompt_label="${prompt_label} (requires build)"
+        fi
+        local description="${MODULE_DESCRIPTION_MAP[$key]:-}"
+        if [ -n "$description" ]; then
+          printf '%b\n' "${BLUE}ℹ️  ${MODULE_NAME_MAP[$key]:-$key}: ${description}${NC}"
+        fi
+        local default_answer
+        default_answer="$(module_default "$key")"
+        local response
+        response=$(ask_yn "$prompt_label" "$default_answer")
+        if [ "$response" = "1" ]; then
+          printf -v "$key" '%s' "1"
+        else
+          printf -v "$key" '%s' "0"
+        fi
+      done
     done
     module_mode_label="preset 3 (Manual)"
   elif [ "$MODE_SELECTION" = "4" ]; then
