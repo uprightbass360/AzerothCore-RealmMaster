@@ -1,0 +1,15 @@
+{
+  "modules": [
+    "MODULE_ELUNA",
+    "MODULE_SOLO_LFG",
+    "MODULE_SOLOCRAFT",
+    "MODULE_AUTOBALANCE",
+    "MODULE_TRANSMOG",
+    "MODULE_NPC_BUFFER",
+    "MODULE_LEARN_SPELLS",
+    "MODULE_FIREWORKS"
+  ],
+  "label": "\u2b50 Suggested Modules",
+  "description": "Baseline solo-friendly quality of life mix",
+  "order": 1
+}

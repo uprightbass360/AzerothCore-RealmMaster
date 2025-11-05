@@ -412,14 +412,28 @@ The remote deployment process transfers:
 - ❌ Build artifacts (source code, compilation files stay local)
 
 ### Module Presets
-- Drop comma-separated module lists into `profiles/*.conf` (for example `profiles/playerbot-modules.conf`).
+- Define JSON presets in `profiles/*.json`. Each file contains:
+  - `modules` (array, required) – list of `MODULE_*` identifiers to enable.
+  - `label` (string, optional) – text shown in the setup menu (emoji welcome).
+  - `description` (string, optional) – short help text for maintainers.
+  - `order` (number, optional) – determines the menu position (lower appears first).
+  Example:
+
+  ```json
+  {
+    "modules": ["MODULE_ELUNA", "MODULE_SOLO_LFG", "MODULE_SOLOCRAFT"],
+    "label": "⭐ Suggested Modules",
+    "description": "Baseline solo-friendly quality of life mix",
+    "order": 1
+  }
+  ```
 - `setup.sh` automatically adds these presets to the module menu and enables the listed modules when selected or when `--module-config <name>` is provided.
 - Built-in presets:
-  - `profiles/suggested-modules.conf` – default solo-friendly QoL stack.
-  - `profiles/playerbots-suggested-modules.conf` – suggested stack plus playerbots.
-  - `profiles/playerbot-only.conf` – playerbot-focused profile (adjust `--playerbot-max-bots`).
+  - `profiles/suggested-modules.json` – default solo-friendly QoL stack.
+  - `profiles/playerbots-suggested-modules.json` – suggested stack plus playerbots.
+  - `profiles/playerbots-only.json` – playerbot-focused profile (adjust `--playerbot-max-bots`).
 - Custom example:
-  - `profiles/sam.conf` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
+  - `profiles/sam.json` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
 
 ---
 

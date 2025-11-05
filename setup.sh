@@ -350,6 +350,7 @@ EOF
 
 MODULE_MANIFEST_PATH="$SCRIPT_DIR/config/modules.json"
 MODULE_MANIFEST_HELPER="$SCRIPT_DIR/scripts/setup_manifest.py"
+MODULE_PROFILES_HELPER="$SCRIPT_DIR/scripts/setup_profiles.py"
 ENV_TEMPLATE_FILE="$SCRIPT_DIR/.env.template"
 
 declare -a MODULE_KEYS=()
@@ -566,7 +567,7 @@ Options:
   --backup-retention-hours N      Hourly backup retention (default 6)
   --backup-daily-time HH          Daily backup hour 00-23 (default 09)
   --module-mode MODE              suggested, playerbots, manual, or none
-  --module-config NAME            Use preset NAME from profiles/<NAME>.conf
+  --module-config NAME            Use preset NAME from profiles/<NAME>.json
   --enable-modules LIST           Comma-separated module list (MODULE_* or shorthand)
   --playerbot-enabled 0|1         Override PLAYERBOT_ENABLED flag
     --playerbot-min-bots N          Override PLAYERBOT_MIN_BOTS value
@@ -926,24 +927,28 @@ fi
   local MODE_SELECTION=""
   local MODE_PRESET_NAME=""
   declare -A MODULE_PRESET_CONFIGS=()
-  declare -a MODULE_PRESET_ORDER=()
+  declare -A MODULE_PRESET_LABELS=()
+  declare -A MODULE_PRESET_DESCRIPTIONS=()
+  declare -A MODULE_PRESET_ORDER=()
   local CONFIG_DIR="$SCRIPT_DIR/profiles"
+  if [ ! -x "$MODULE_PROFILES_HELPER" ]; then
+    say ERROR "Profile helper not found or not executable at $MODULE_PROFILES_HELPER"
+    exit 1
+  fi
   if [ -d "$CONFIG_DIR" ]; then
-    while IFS= read -r preset_path; do
-      [ -n "$preset_path" ] || continue
-      local preset_name
-      preset_name="$(basename "$preset_path" .conf)"
-      local preset_value
-      preset_value="$(tr -d '\r' < "$preset_path" | tr '\n' ',' | sed -E 's/,+/,/g; s/^,//; s/,$//')"
-      MODULE_PRESET_CONFIGS["$preset_name"]="$preset_value"
-      MODULE_PRESET_ORDER+=("$preset_name")
-    done < <(find "$CONFIG_DIR" -maxdepth 1 -type f -name '*.conf' -print | sort)
+    while IFS=$'\t' read -r preset_name preset_modules preset_label preset_desc preset_order; do
+      [ -n "$preset_name" ] || continue
+      MODULE_PRESET_CONFIGS["$preset_name"]="$preset_modules"
+      MODULE_PRESET_LABELS["$preset_name"]="$preset_label"
+      MODULE_PRESET_DESCRIPTIONS["$preset_name"]="$preset_desc"
+      MODULE_PRESET_ORDER["$preset_name"]="${preset_order:-10000}"
+    done < <(python3 "$MODULE_PROFILES_HELPER" list "$CONFIG_DIR")
   fi
 
   local missing_presets=0
   for required_preset in "$DEFAULT_PRESET_SUGGESTED" "$DEFAULT_PRESET_PLAYERBOTS"; do
     if [ -z "${MODULE_PRESET_CONFIGS[$required_preset]:-}" ]; then
-      say ERROR "Missing module preset profiles/${required_preset}.conf"
+      say ERROR "Missing module preset profiles/${required_preset}.json"
       missing_presets=1
     fi
   done
@@ -998,25 +1003,38 @@ fi
 
   # Module config
   say HEADER "MODULE PRESET"
-  echo "1) ⭐ Suggested Modules"
-  echo "2) 🤖 Playerbots + Suggested modules"
+  echo "1) ${MODULE_PRESET_LABELS[$DEFAULT_PRESET_SUGGESTED]:-⭐ Suggested Modules}"
+  echo "2) ${MODULE_PRESET_LABELS[$DEFAULT_PRESET_PLAYERBOTS]:-🤖 Playerbots + Suggested modules}"
   echo "3) ⚙️  Manual selection"
   echo "4) 🚫 No modules"
 
   local menu_index=5
   declare -A MENU_PRESET_INDEX=()
-  if [ ${#MODULE_PRESET_ORDER[@]} -gt 0 ]; then
-    for preset_name in "${MODULE_PRESET_ORDER[@]}"; do
-      if [ "$preset_name" = "$DEFAULT_PRESET_SUGGESTED" ] || [ "$preset_name" = "$DEFAULT_PRESET_PLAYERBOTS" ]; then
-        continue
-      fi
-      local pretty_name
-      pretty_name=$(echo "$preset_name" | tr '_-' ' ' | awk '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}}1')
-      echo "${menu_index}) 🧩 ${pretty_name} (profiles/${preset_name}.conf)"
-      MENU_PRESET_INDEX[$menu_index]="$preset_name"
-      menu_index=$((menu_index + 1))
-    done
+  local -a ORDERED_PRESETS=()
+  for preset_name in "${!MODULE_PRESET_CONFIGS[@]}"; do
+    if [ "$preset_name" = "$DEFAULT_PRESET_SUGGESTED" ] || [ "$preset_name" = "$DEFAULT_PRESET_PLAYERBOTS" ]; then
+      continue
+    fi
+    local order="${MODULE_PRESET_ORDER[$preset_name]:-10000}"
+    ORDERED_PRESETS+=("$(printf '%05d::%s' "$order" "$preset_name")")
+  done
+  if [ ${#ORDERED_PRESETS[@]} -gt 0 ]; then
+    IFS=$'\n' ORDERED_PRESETS=($(printf '%s\n' "${ORDERED_PRESETS[@]}" | sort))
   fi
+
+  for entry in "${ORDERED_PRESETS[@]}"; do
+    local preset_name="${entry#*::}"
+    [ -n "${MODULE_PRESET_CONFIGS[$preset_name]:-}" ] || continue
+    local pretty_name
+    if [ -n "${MODULE_PRESET_LABELS[$preset_name]:-}" ]; then
+      pretty_name="${MODULE_PRESET_LABELS[$preset_name]}"
+    else
+      pretty_name=$(echo "$preset_name" | tr '_-' ' ' | awk '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}}1')
+    fi
+    echo "${menu_index}) ${pretty_name} (profiles/${preset_name}.json)"
+    MENU_PRESET_INDEX[$menu_index]="$preset_name"
+    menu_index=$((menu_index + 1))
+  done
   local max_option=$((menu_index - 1))
 
   if [ "$NON_INTERACTIVE" = "1" ] && [ -z "$MODE_SELECTION" ]; then
@@ -1085,11 +1103,13 @@ fi
   if [ "$MODE_SELECTION" = "1" ]; then
     MODE_PRESET_NAME="$DEFAULT_PRESET_SUGGESTED"
     apply_module_preset "${MODULE_PRESET_CONFIGS[$DEFAULT_PRESET_SUGGESTED]}"
-    module_mode_label="preset 1 (Suggested)"
+    local preset_label="${MODULE_PRESET_LABELS[$DEFAULT_PRESET_SUGGESTED]:-Suggested Modules}"
+    module_mode_label="preset 1 (${preset_label})"
   elif [ "$MODE_SELECTION" = "2" ]; then
     MODE_PRESET_NAME="$DEFAULT_PRESET_PLAYERBOTS"
     apply_module_preset "${MODULE_PRESET_CONFIGS[$DEFAULT_PRESET_PLAYERBOTS]}"
-    module_mode_label="preset 2 (Playerbots + Suggested)"
+    local preset_label="${MODULE_PRESET_LABELS[$DEFAULT_PRESET_PLAYERBOTS]:-Playerbots + Suggested}"
+    module_mode_label="preset 2 (${preset_label})"
   elif [ "$MODE_SELECTION" = "3" ]; then
     MODE_PRESET_NAME=""
     say INFO "Answer y/n for each module (organized by category)"
@@ -1195,7 +1215,8 @@ fi
     else
       say WARNING "Preset '${MODE_PRESET_NAME}' did not contain any module selections."
     fi
-    module_mode_label="preset (${MODE_PRESET_NAME})"
+    local preset_label="${MODULE_PRESET_LABELS[$MODE_PRESET_NAME]:-$MODE_PRESET_NAME}"
+    module_mode_label="preset (${preset_label})"
   fi
 
   auto_enable_module_dependencies

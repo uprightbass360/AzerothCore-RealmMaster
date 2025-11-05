@@ -1,0 +1,15 @@
+{
+  "modules": [
+    "MODULE_PLAYERBOTS",
+    "MODULE_SOLO_LFG",
+    "MODULE_SOLOCRAFT",
+    "MODULE_AUTOBALANCE",
+    "MODULE_TRANSMOG",
+    "MODULE_NPC_BUFFER",
+    "MODULE_LEARN_SPELLS",
+    "MODULE_FIREWORKS"
+  ],
+  "label": "\ud83e\udd16 Playerbots + Suggested modules",
+  "description": "Suggested stack plus playerbots enabled",
+  "order": 2
+}
