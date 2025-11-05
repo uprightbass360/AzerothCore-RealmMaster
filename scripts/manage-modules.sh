@@ -221,6 +221,7 @@ update_playerbots_db_info(){
 import os
 import pathlib
 import sys
+import re
 
 def load_env_file(path):
     data = {}
@@ -253,7 +254,29 @@ def resolve_key(env_map, key, default=""):
         return value
     return env_map.get(key, default)
 
-def update_config(path_in, replacement):
+def parse_bool(value):
+    if value is None:
+        return None
+    value = value.strip().lower()
+    if value == "":
+        return None
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    return None
+
+def parse_int(value):
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    if re.fullmatch(r"[+-]?\d+", value):
+        return str(int(value))
+    return None
+
+def update_config(path_in, settings):
     if not (os.path.exists(path_in) or os.path.islink(path_in)):
         return False
     path = os.path.realpath(path_in)
@@ -263,18 +286,33 @@ def update_config(path_in, replacement):
     except FileNotFoundError:
         lines = []
 
-    key = "PlayerbotsDatabaseInfo"
-    replacement_line = f'{key} = "{replacement}"'
     changed = False
+    pending = dict(settings)
 
     for idx, raw in enumerate(lines):
-        if raw.strip().startswith(key):
-            if raw.strip() != replacement_line:
-                lines[idx] = replacement_line
-                changed = True
-            break
-    else:
-        lines.append(replacement_line)
+        stripped = raw.strip()
+        for key, value in list(pending.items()):
+            if re.match(rf"^\s*{re.escape(key)}\s*=", stripped):
+                desired = f"{key} = {value}"
+                if stripped != desired:
+                    leading = raw[: len(raw) - len(raw.lstrip())]
+                    trailing = ""
+                    if "#" in raw:
+                        before, comment = raw.split("#", 1)
+                        if before.strip():
+                            trailing = f"  # {comment.strip()}"
+                    lines[idx] = f"{leading}{desired}{trailing}"
+                    changed = True
+                pending.pop(key, None)
+                break
+
+    if pending:
+        if lines and lines[-1] and not lines[-1].endswith("\n"):
+            lines[-1] = lines[-1] + "\n"
+        if lines and lines[-1].strip():
+            lines.append("\n")
+        for key, value in pending.items():
+            lines.append(f"{key} = {value}\n")
         changed = True
 
     if changed:
@@ -296,7 +334,24 @@ password = resolve_key(env_map, "MYSQL_ROOT_PASSWORD", "")
 database = resolve_key(env_map, "DB_PLAYERBOTS_NAME", "acore_playerbots") or "acore_playerbots"
 
 value = ";".join([host, port, user, password, database])
-update_config(target_path, value)
+settings = {"PlayerbotsDatabaseInfo": f'"{value}"'}
+
+enabled_setting = parse_bool(resolve_key(env_map, "PLAYERBOT_ENABLED"))
+if enabled_setting is not None:
+    settings["AiPlayerbot.Enabled"] = "1" if enabled_setting else "0"
+
+max_bots = parse_int(resolve_key(env_map, "PLAYERBOT_MAX_BOTS"))
+min_bots = parse_int(resolve_key(env_map, "PLAYERBOT_MIN_BOTS"))
+
+if max_bots and not min_bots:
+    min_bots = max_bots
+
+if min_bots:
+    settings["AiPlayerbot.MinRandomBots"] = min_bots
+if max_bots:
+    settings["AiPlayerbot.MaxRandomBots"] = max_bots
+
+update_config(target_path, settings)
 
 print(value)
 PY
