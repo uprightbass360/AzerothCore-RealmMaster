@@ -140,8 +140,6 @@ else
   sed -i "s|^LoginDatabaseInfo *=.*|LoginDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}\"|" /azerothcore/config/worldserver.conf || true
   sed -i "s|^WorldDatabaseInfo *=.*|WorldDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}\"|" /azerothcore/config/worldserver.conf || true
   sed -i "s|^CharacterDatabaseInfo *=.*|CharacterDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_CHARACTERS_NAME}\"|" /azerothcore/config/worldserver.conf || true
-  update_playerbots_conf /azerothcore/config/playerbots.conf
-  update_playerbots_conf /azerothcore/config/playerbots.conf.dist
   update_playerbots_conf /azerothcore/config/modules/playerbots.conf
   update_playerbots_conf /azerothcore/config/modules/playerbots.conf.dist
 
