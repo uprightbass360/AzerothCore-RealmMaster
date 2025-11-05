@@ -349,6 +349,7 @@ EOF
 # ==============================
 
 MODULE_MANIFEST_PATH="$SCRIPT_DIR/config/modules.json"
+MODULE_MANIFEST_HELPER="$SCRIPT_DIR/scripts/setup_manifest.py"
 ENV_TEMPLATE_FILE="$SCRIPT_DIR/.env.template"
 
 declare -a MODULE_KEYS=()
@@ -394,25 +395,17 @@ load_module_manifest_metadata() {
     echo "ERROR: Module manifest not found at $MODULE_MANIFEST_PATH" >&2
     exit 1
   fi
+  if [ ! -x "$MODULE_MANIFEST_HELPER" ]; then
+    echo "ERROR: Manifest helper not found or not executable at $MODULE_MANIFEST_HELPER" >&2
+    exit 1
+  fi
   if ! command -v python3 >/dev/null 2>&1; then
     echo "ERROR: python3 is required to read $MODULE_MANIFEST_PATH" >&2
     exit 1
   fi
 
   mapfile -t MODULE_KEYS < <(
-    python3 - "$MODULE_MANIFEST_PATH" <<'PY'
-import json, sys
-from pathlib import Path
-
-manifest_path = Path(sys.argv[1])
-manifest = json.loads(manifest_path.read_text())
-modules = manifest.get("modules", [])
-for entry in modules:
-    key = entry.get("key")
-    if not key:
-        continue
-    print(key)
-PY
+    python3 "$MODULE_MANIFEST_HELPER" keys "$MODULE_MANIFEST_PATH"
   )
 
   if [ ${#MODULE_KEYS[@]} -eq 0 ]; then
@@ -438,55 +431,10 @@ PY
     MODULE_DESCRIPTION_MAP["$key"]="$description"
     MODULE_CATEGORY_MAP["$key"]="$category"
     KNOWN_MODULE_LOOKUP["$key"]=1
-  done < <(
-    python3 - "$MODULE_MANIFEST_PATH" <<'PY'
-import json, sys
-from pathlib import Path
-
-manifest_path = Path(sys.argv[1])
-manifest = json.loads(manifest_path.read_text())
-
-def clean(value):
-    if value is None or value == "":
-        return "-"
-    return str(value).replace("\t", " ").replace("\n", " ").strip()
-
-for entry in manifest.get("modules", []):
-    key = entry.get("key")
-    if not key:
-        continue
-    name = clean(entry.get("name", key))
-    needs_build = "1" if entry.get("needs_build") else "0"
-    module_type = clean(entry.get("type", "")) or "-"
-    status = clean(entry.get("status", "active"))
-    block_reason = clean(entry.get("block_reason", ""))
-    requires = entry.get("requires") or []
-    ordered = []
-    for dep in list(requires):
-        if dep and dep not in ordered:
-            ordered.append(dep)
-    requires_csv = ",".join(ordered) if ordered else "-"
-    notes = clean(entry.get("notes", ""))
-    description = clean(entry.get("description", ""))
-    category = clean(entry.get("category", ""))
-    print("\t".join([key, name, needs_build, module_type, status, block_reason, requires_csv, notes, description, category]))
-PY
-  )
+  done < <(python3 "$MODULE_MANIFEST_HELPER" metadata "$MODULE_MANIFEST_PATH")
 
   mapfile -t MODULE_KEYS_SORTED < <(
-    python3 - "$MODULE_MANIFEST_PATH" <<'PY'
-import json, sys
-from pathlib import Path
-
-manifest_path = Path(sys.argv[1])
-manifest = json.loads(manifest_path.read_text())
-modules = manifest.get("modules", [])
-sorted_keys = sorted(modules, key=lambda m: (str(m.get("type", "")), str(m.get("name", m.get("key"))).lower()))
-for entry in sorted_keys:
-    key = entry.get("key")
-    if key:
-        print(key)
-PY
+    python3 "$MODULE_MANIFEST_HELPER" sorted-keys "$MODULE_MANIFEST_PATH"
   )
 }
 
