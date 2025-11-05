@@ -760,8 +760,8 @@ EOF
       --playerbot-enabled=*)
         CLI_PLAYERBOT_ENABLED="${1#*=}"; shift
         ;;
-      --playerbot-max-bots)
-        [[ $# -ge 2 ]] || { say ERROR "--playerbot-max-bots requires a value"; exit 1; }
+      --playerbot-min-bots)
+        [[ $# -ge 2 ]] || { say ERROR "--playerbot-min-bots requires a value"; exit 1; }
         CLI_PLAYERBOT_MIN="$2"; shift 2
         ;;
       --playerbot-min-bots=*)
