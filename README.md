@@ -1,6 +1,33 @@
+<div align="center">
+  <img src="img/logo.png" alt="AzerothCore RealmMaster Logo" width="400">
+</div>
+
 # AzerothCore RealmMaster
 
-A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with 68 enhanced modules and intelligent automation.
+A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with 93+ enhanced modules and intelligent automation.
+
+## 📖 Table of Contents
+
+- [🚀 Quick Start](#🚀-quick-start)
+- [🎯 What You Get](#🎯-what-you-get)
+- [📋 Getting Started](#📋-getting-started)
+  - [Local Deployment](#local-deployment)
+  - [Remote Deployment](#remote-deployment)
+  - [Post-Installation Steps](#post-installation-steps)
+- [📚 Complete Module Catalog](#📚-complete-module-catalog)
+- [🛠️ Management & Operations](#🛠️-management--operations)
+  - [Common Workflows](#common-workflows)
+  - [Management Commands](#management-commands)
+  - [Database Operations](#database-operations)
+- [🏗️ Advanced Configuration](#🏗️-advanced-configuration)
+  - [Architecture Overview](#architecture-overview)
+  - [Build System](#build-system)
+  - [Custom Configuration](#custom-configuration)
+- [📜 Script Reference](#📜-script-reference)
+- [🔧 Troubleshooting](#🔧-troubleshooting)
+- [📄 Credits & Next Steps](#📄-credits--next-steps)
+
+---
 
 ## 🚀 Quick Start
 
@@ -19,27 +46,270 @@ cd AzerothCore-RealmMaster
 # 2. Configure your server
 ./setup.sh
 
-# 3. Build (if using modules/playerbots) and deploy
-./build.sh    # Optional - only if you enabled C++ modules or playerbots
-./deploy.sh   # Always required
+# 3. Deploy (if using modules/playerbots) and deploy
+./build.sh    # Optional - Will be triggered if required in deploy. c++ modules require compilation
+./deploy.sh   # Always required - Supports ssh remote deploy or local
+./status.sh   # Optional - Shows health and accesibility of all containers and current user data
 ```
 
 **First deployment takes 30-60 minutes** for database setup and client data download. Subsequent starts are much faster.
 
-See [Local Deployment](#-local-deployment) for detailed walkthrough.
+See [Getting Started](#-getting-started) for detailed walkthrough.
 
 ---
 
-## 📋 What Gets Installed Automatically
+## 🎯 What You Get
 
 ### ✅ Core Server Components
-- **AzerothCore 3.3.5a** - WotLK server application
+- **AzerothCore 3.3.5a** - WotLK server application with 93+ enhanced modules
 - **MySQL 8.0** - Database with intelligent initialization and restoration
-- **Smart Module System** - Automated module management and source builds (compiles the [mod-playerbots fork](https://github.com/mod-playerbots/azerothcore-wotlk/tree/Playerbot) whenever modules need C++ changes)
+- **Smart Module System** - Automated module management and source builds
 - **phpMyAdmin** - Web-based database administration
 - **Keira3** - Game content editor and developer tools
 
-### ✅ Available Enhanced Modules
+### ✅ Automated Configuration
+- **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import
+- **Backup Management** - Automated hourly/daily backups with intelligent restoration
+- **Module Integration** - Automatic source builds when C++ modules are enabled
+- **Service Orchestration** - Profile-based deployment (standard/playerbots/modules)
+
+---
+
+## 📋 Getting Started
+
+Complete walkthrough for deploying on your local machine or remote server.
+
+### Local Deployment
+
+#### Step 1: Initial Setup
+
+**1.1 Clone the Repository**
+```bash
+git clone https://github.com/uprightbass360/AzerothCore-RealmMaster.git
+cd AzerothCore-RealmMaster
+```
+
+**1.2 Run Interactive Setup**
+```bash
+./setup.sh
+```
+
+The setup wizard will guide you through:
+- **Server Configuration**: IP address, ports, timezone
+- **Module Selection**: Choose from 30+ available modules or use presets
+- **Storage Paths**: Configure NFS/local storage locations
+- **Playerbot Settings**: Max bots, account limits (if enabled)
+- **Backup Settings**: Retention policies for automated backups
+- **Permissions**: User/group IDs for file ownership
+
+**Setup Output:** Creates `.env` file with your configuration
+
+#### Step 2: Build Images (if using C++ modules or playerbots)
+
+```bash
+./build.sh
+```
+
+**Skip this step if:**
+- You're using only Lua/data modules
+- You want vanilla AzerothCore without playerbots
+
+**Required when:**
+- Playerbots enabled (`MODULE_PLAYERBOTS=1`)
+- Any C++ module enabled (check `needs_build: true` in `config/modules.json`)
+
+**Build process:**
+1. Clones AzerothCore source to `local-storage/source/`
+2. Downloads and stages enabled modules
+3. Compiles server binaries with modules
+4. Creates Docker images tagged as `<project-name>:authserver-modules-latest`, etc.
+5. Takes 20-60 minutes depending on hardware
+
+#### Step 3: Deploy Services
+
+```bash
+./deploy.sh
+```
+
+**Deployment flow:**
+1. Validates environment configuration
+2. Auto-selects Docker Compose profile:
+   - `services-standard` - Vanilla AzerothCore
+   - `services-playerbots` - Playerbot build
+   - `services-modules` - Custom C++ modules build
+3. Starts services in dependency order:
+   - Database layer (`ac-mysql`, `ac-db-init`, `ac-db-import`, `ac-backup`)
+   - Module management (`ac-modules`, `ac-post-install`)
+   - Client data (`ac-client-data`)
+   - Game servers (`ac-authserver`, `ac-worldserver`)
+4. Tails worldserver logs (Ctrl+C to detach safely)
+
+**First deployment takes longer** due to:
+- Database schema import (~5-10 minutes)
+- Client data download (~15GB, ~10-30 minutes)
+- Module SQL execution
+
+**Subsequent deployments** restore from backups and skip imports.
+
+#### Step 4: Create Admin Account
+
+```bash
+# Attach to worldserver console
+docker attach ac-worldserver
+
+# Create admin account
+account create admin yourpassword
+account set gmlevel admin 3 -1
+
+# Detach: Ctrl+P, Ctrl+Q (NOT Ctrl+C - that stops the server!)
+```
+
+#### Step 5: Connect Game Client
+
+Edit `realmlist.wtf` in your WoW 3.3.5a client folder:
+```
+set realmlist 127.0.0.1
+```
+
+For custom ports:
+```
+set realmlist 127.0.0.1 8215
+```
+
+#### Step 6: Access Management Tools
+
+- **phpMyAdmin**: http://localhost:8081 - Database administration
+- **Keira3**: http://localhost:4201 - World database editor
+
+**Credentials:**
+- Username: `root`
+- Password: From `MYSQL_ROOT_PASSWORD` in `.env`
+
+### Remote Deployment
+
+Deploy your configured realm to a remote server while building images locally.
+
+#### Remote Deployment Workflow
+
+**Step 1: Configure & Build Locally**
+```bash
+# Interactive configuration with module selection
+./setup.sh
+
+# Build custom images (if using C++ modules or playerbots)
+./build.sh --yes
+```
+
+#### Step 2: Package & Transfer to Remote Host
+
+You can deploy remotely in two ways:
+
+**Option A: Interactive (Recommended)**
+```bash
+./deploy.sh
+# When prompted, select "2) Remote host (package for SSH deployment)"
+# Follow prompts for hostname, username, and paths
+```
+
+**Option B: Non-Interactive**
+```bash
+./deploy.sh --yes \
+  --remote-host your-server.com \
+  --remote-user youruser \
+  --remote-project-dir /home/youruser/AzerothCore-RealmMaster
+```
+
+Optional flags:
+- `--remote-port 2222` - Custom SSH port
+- `--remote-identity ~/.ssh/custom_key` - Specific SSH key
+- `--remote-skip-storage` - Don't sync storage directory (fresh install on remote)
+
+#### Step 3: Deploy on Remote Host
+```bash
+ssh your-server.com
+cd /home/youruser/AzerothCore-RealmMaster
+./deploy.sh --yes --no-watch
+```
+
+The remote deployment uses the images you built locally (no rebuild needed).
+
+#### Step 4: Verify Deployment
+```bash
+./status.sh
+# Check service logs
+docker logs ac-worldserver -f
+```
+
+#### What Gets Transferred
+
+The remote deployment process transfers:
+- ✅ Docker images (exported to `local-storage/images/`)
+- ✅ Project files (scripts, configs, docker-compose.yml, .env)
+- ✅ Storage directory (unless `--remote-skip-storage` is used)
+- ❌ Build artifacts (source code, compilation files stay local)
+
+#### Module Presets
+- Define JSON presets in `profiles/*.json`. Each file contains:
+  - `modules` (array, required) – list of `MODULE_*` identifiers to enable.
+  - `label` (string, optional) – text shown in the setup menu (emoji welcome).
+  - `description` (string, optional) – short help text for maintainers.
+  - `order` (number, optional) – determines the menu position (lower appears first).
+  Example:
+
+  ```json
+  {
+    "modules": ["MODULE_ELUNA", "MODULE_SOLO_LFG", "MODULE_SOLOCRAFT"],
+    "label": "⭐ Suggested Modules",
+    "description": "Baseline solo-friendly quality of life mix",
+    "order": 1
+  }
+  ```
+- `setup.sh` automatically adds these presets to the module menu and enables the listed modules when selected or when `--module-config <name>` is provided.
+- Built-in presets:
+  - `profiles/suggested-modules.json` – default solo-friendly QoL stack.
+  - `profiles/playerbots-suggested-modules.json` – suggested stack plus playerbots.
+  - `profiles/playerbots-only.json` – playerbot-focused profile (adjust `--playerbot-max-bots`).
+- Custom example:
+  - `profiles/sam.json` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
+
+### Post-Installation Steps
+
+#### Create Admin Account
+
+```bash
+# Attach to worldserver console
+docker attach ac-worldserver
+
+# Create admin account
+account create admin yourpassword
+account set gmlevel admin 3 -1
+
+# Detach: Ctrl+P, Ctrl+Q (NOT Ctrl+C - that stops the server!)
+```
+
+#### Access Management Tools
+
+- **phpMyAdmin**: http://localhost:8081 - Database administration
+- **Keira3**: http://localhost:4201 - World database editor
+
+**Credentials:**
+- Username: `root`
+- Password: From `MYSQL_ROOT_PASSWORD` in `.env`
+
+#### Configure Server for Public Access
+
+```sql
+-- Update realmlist for public server
+UPDATE acore_auth.realmlist
+SET address = 'your-public-ip', port = 8215
+WHERE id = 1;
+```
+
+See [Next Steps After Installation](#-credits--next-steps) for detailed setup and administration guidance.
+
+---
+
+## 📚 Complete Module Catalog
 
 All modules are automatically downloaded, configured, and SQL scripts executed when enabled. Browse the complete collection of **93 modules** organized by category:
 
@@ -221,223 +491,188 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 |--------|-------------|
 | **[skeleton-module](https://github.com/azerothcore/skeleton-module.git)** | Provides a minimal AzerothCore module scaffold for building new features |
 
-
-### ✅ Automated Configuration
-- **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import
-- **Backup Management** - Automated hourly/daily backups with intelligent restoration
-- **Module Integration** - Automatic source builds when C++ modules are enabled
-- **Realmlist Configuration** - Server address and port setup
-- **Service Orchestration** - Profile-based deployment (standard/playerbots/modules)
-- **Health Monitoring** - Container health checks and restart policies
-
-### ✅ Lua Scripting Environment
-- **Eluna Engine** - Built-in Lua scripting support with TypeScript compilation
-- **Script Auto-loading** - Scripts automatically loaded from `storage/lua_scripts/`
-- **Development Tools** - Script reloading with `.reload eluna` command
-- **Volume Mounting** - Hot-reload development environment
-
 ---
 
-## 🏗️ Local Deployment
+## 🛠️ Management & Operations
 
-Complete walkthrough for deploying on your local machine.
+Essential commands and workflows for operating your AzerothCore server.
 
-### Step 1: Initial Setup
+### Common Workflows
 
-**1.1 Clone the Repository**
-```bash
-git clone https://github.com/uprightbass360/AzerothCore-RealmMaster.git
-cd AzerothCore-RealmMaster
-```
-
-**1.2 Run Interactive Setup**
-```bash
-./setup.sh
-```
-
-The setup wizard will guide you through:
-- **Server Configuration**: IP address, ports, timezone
-- **Module Selection**: Choose from 30+ available modules or use presets
-- **Storage Paths**: Configure NFS/local storage locations
-- **Playerbot Settings**: Max bots, account limits (if enabled)
-- **Backup Settings**: Retention policies for automated backups
-- **Permissions**: User/group IDs for file ownership
-
-**Setup Output:** Creates `.env` file with your configuration
-
-### Step 2: Build Images (if using C++ modules or playerbots)
+#### Changing Module Configuration
 
 ```bash
-./build.sh
-```
-
-**Skip this step if:**
-- You're using only Lua/data modules
-- You want vanilla AzerothCore without playerbots
-
-**Required when:**
-- Playerbots enabled (`MODULE_PLAYERBOTS=1`)
-- Any C++ module enabled (check `needs_build: true` in `config/modules.json`)
-
-**Build process:**
-1. Clones AzerothCore source to `local-storage/source/`
-2. Downloads and stages enabled modules
-3. Compiles server binaries with modules
-4. Creates Docker images tagged as `<project-name>:authserver-modules-latest`, etc.
-5. Takes 20-60 minutes depending on hardware
-
-### Step 3: Deploy Services
-
-```bash
-./deploy.sh
-```
-
-**Deployment flow:**
-1. Validates environment configuration
-2. Auto-selects Docker Compose profile:
-   - `services-standard` - Vanilla AzerothCore
-   - `services-playerbots` - Playerbot build
-   - `services-modules` - Custom C++ modules build
-3. Starts services in dependency order:
-   - Database layer (`ac-mysql`, `ac-db-init`, `ac-db-import`, `ac-backup`)
-   - Module management (`ac-modules`, `ac-post-install`)
-   - Client data (`ac-client-data`)
-   - Game servers (`ac-authserver`, `ac-worldserver`)
-4. Tails worldserver logs (Ctrl+C to detach safely)
-
-**First deployment takes longer** due to:
-- Database schema import (~5-10 minutes)
-- Client data download (~15GB, ~10-30 minutes)
-- Module SQL execution
-
-**Subsequent deployments** restore from backups and skip imports.
-
-### Step 4: Create Admin Account
-
-```bash
-# Attach to worldserver console
-docker attach ac-worldserver
-
-# Create admin account
-account create admin yourpassword
-account set gmlevel admin 3 -1
-
-# Detach: Ctrl+P, Ctrl+Q (NOT Ctrl+C - that stops the server!)
-```
-
-### Step 5: Connect Game Client
-
-Edit `realmlist.wtf` in your WoW 3.3.5a client folder:
-```
-set realmlist 127.0.0.1
-```
-
-For custom ports:
-```
-set realmlist 127.0.0.1 8215
-```
-
-### Step 6: Access Management Tools
-
-- **phpMyAdmin**: http://localhost:8081 - Database administration
-- **Keira3**: http://localhost:4201 - World database editor
-
-**Credentials:**
-- Username: `root`
-- Password: From `MYSQL_ROOT_PASSWORD` in `.env`
-
----
-
-## 🚀 Remote Deployment
-
-Deploy your configured realm to a remote server while building images locally.
-
-### Remote Deployment Workflow
-
-**Step 1: Configure & Build Locally**
-```bash
-# Interactive configuration with module selection
+# 1. Reconfigure modules
 ./setup.sh
 
-# Build custom images (if using C++ modules or playerbots)
+# 2. Rebuild if you changed C++ modules
 ./build.sh --yes
-```
 
-**Step 2: Package & Transfer to Remote Host**
-
-You can deploy remotely in two ways:
-
-**Option A: Interactive (Recommended)**
-```bash
+# 3. Redeploy with new configuration
 ./deploy.sh
-# When prompted, select "2) Remote host (package for SSH deployment)"
-# Follow prompts for hostname, username, and paths
 ```
 
-**Option B: Non-Interactive**
+#### Updating to Latest Code
+
 ```bash
-./deploy.sh --yes \
-  --remote-host your-server.com \
-  --remote-user youruser \
-  --remote-project-dir /home/youruser/AzerothCore-RealmMaster
+# Pull latest changes
+git pull origin main
+
+# Rebuild images (if using modules/playerbots)
+./build.sh --force
+
+# Restart services
+docker compose down
+./deploy.sh
 ```
 
-Optional flags:
-- `--remote-port 2222` - Custom SSH port
-- `--remote-identity ~/.ssh/custom_key` - Specific SSH key
-- `--remote-skip-storage` - Don't sync storage directory (fresh install on remote)
+#### Managing Services
 
-**Step 3: Deploy on Remote Host**
 ```bash
-ssh your-server.com
-cd /home/youruser/AzerothCore-RealmMaster
-./deploy.sh --yes --no-watch
-```
-
-The remote deployment uses the images you built locally (no rebuild needed).
-
-**Step 4: Verify Deployment**
-```bash
+# Check service status
 ./status.sh
-# Check service logs
+
+# View logs
 docker logs ac-worldserver -f
+docker logs ac-authserver -f
+docker logs ac-mysql -f
+
+# Restart specific service
+docker compose restart ac-worldserver
+
+# Stop all services
+./scripts/stop-containers.sh
+
+# Start services
+./scripts/start-containers.sh
 ```
 
-### What Gets Transferred
+### Management Commands
 
-The remote deployment process transfers:
-- ✅ Docker images (exported to `local-storage/images/`)
-- ✅ Project files (scripts, configs, docker-compose.yml, .env)
-- ✅ Storage directory (unless `--remote-skip-storage` is used)
-- ❌ Build artifacts (source code, compilation files stay local)
+#### Health Monitoring
+```bash
+# Check realm status
+./status.sh
 
-### Module Presets
-- Define JSON presets in `profiles/*.json`. Each file contains:
-  - `modules` (array, required) – list of `MODULE_*` identifiers to enable.
-  - `label` (string, optional) – text shown in the setup menu (emoji welcome).
-  - `description` (string, optional) – short help text for maintainers.
-  - `order` (number, optional) – determines the menu position (lower appears first).
-  Example:
+# Watch services continuously
+./status.sh --watch
 
-  ```json
-  {
-    "modules": ["MODULE_ELUNA", "MODULE_SOLO_LFG", "MODULE_SOLOCRAFT"],
-    "label": "⭐ Suggested Modules",
-    "description": "Baseline solo-friendly quality of life mix",
-    "order": 1
-  }
-  ```
-- `setup.sh` automatically adds these presets to the module menu and enables the listed modules when selected or when `--module-config <name>` is provided.
-- Built-in presets:
-  - `profiles/suggested-modules.json` – default solo-friendly QoL stack.
-  - `profiles/playerbots-suggested-modules.json` – suggested stack plus playerbots.
-  - `profiles/playerbots-only.json` – playerbot-focused profile (adjust `--playerbot-max-bots`).
-- Custom example:
-  - `profiles/sam.json` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
+# View service logs
+docker logs ac-worldserver -f
+docker logs ac-authserver -f
+
+# Check module management
+docker logs ac-modules --tail 50
+```
+
+#### Web Tools Access
+
+Once deployed, access the management tools in your browser:
+
+```bash
+# Database Management (phpMyAdmin)
+http://YOUR_SERVER_IP:8081
+
+# World Database Editor (Keira3)
+http://YOUR_SERVER_IP:4201
+
+# Replace YOUR_SERVER_IP with your actual server address
+# Example: http://192.168.1.100:4201
+```
+
+**Note**: Initial Keira3 startup may show database connection errors until the world database import completes. This is expected behavior.
+
+#### Module Management
+
+```bash
+# Reconfigure modules via interactive setup
+./setup.sh
+
+# Build custom images with enabled modules
+./build.sh                          # Interactive build (prompts for confirmation)
+./build.sh --yes                    # Auto-confirm build
+./build.sh --force                  # Force rebuild regardless of state
+
+# Deploy with automatic profile selection
+./deploy.sh                         # Auto-detects and deploys correct profile
+./deploy.sh --profile standard      # Force standard AzerothCore
+./deploy.sh --profile playerbots    # Force playerbots branch
+./deploy.sh --profile modules       # Force custom modules build
+
+# Lower-level module operations
+./scripts/stage-modules.sh                    # Download enabled modules
+./scripts/setup-source.sh                     # Initialize AzerothCore source
+./scripts/copy-module-configs.sh              # Create module .conf files
+./scripts/manage-modules-sql.sh               # Execute module SQL scripts
+
+# Management tools
+./scripts/deploy-tools.sh                     # Launch phpMyAdmin + Keira3
+```
+
+#### Container Management
+```bash
+# Start specific services
+./scripts/start-containers.sh                           # Start all configured containers
+
+# Stop services gracefully
+./scripts/stop-containers.sh                            # Stop all containers
+
+# Monitor service health
+./status.sh                                     # Check realm status
+./status.sh --watch                            # Watch services continuously
+./status.sh --once                             # Single status check
+```
+
+#### Deployment Verification
+```bash
+# Quick health check
+./scripts/verify-deployment.sh --skip-deploy --quick
+
+# Full deployment verification
+./scripts/verify-deployment.sh
+```
+
+#### Cleaning Up
+
+```bash
+# Soft cleanup (stop containers only)
+./cleanup.sh --soft
+
+# Hard cleanup (remove containers and networks)
+./cleanup.sh --hard
+
+# Nuclear cleanup (everything including images and data)
+./cleanup.sh --nuclear --preserve-backups
+```
+
+### Database Operations
+
+```bash
+# Access database via phpMyAdmin
+open http://localhost:8081
+
+# Direct MySQL access
+docker exec -it ac-mysql mysql -u root -p
+
+# Manual backup operations
+./scripts/backup.sh                              # Create immediate backup
+./scripts/restore.sh YYYYMMDD_HHMMSS            # Restore from specific backup
+
+# User data backup/import utilities
+./scripts/backup-export.sh [output_dir]                 # Export user accounts & characters
+./scripts/backup-import.sh [backup_dir]                 # Import user data from backup
+
+# View available backups
+ls -la storage/backups/
+```
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Advanced Configuration
+
+Technical details for advanced users and system administrators.
+
+### Architecture Overview
 
 ### Container Profiles
 
@@ -571,114 +806,24 @@ local-storage/
 
 This separation ensures database and build artifacts stay on fast local storage while configuration, modules, and backups can be shared across hosts via NFS.
 
----
+### Build System
+The build system is optimized for development and production deployments with Docker multi-stage builds and caching.
 
-## 🛠️ Management Commands
+**Build Configuration:**
+- Automated dependency resolution and compilation
+- Multi-stage Docker builds for optimal image sizes
+- Build artifact caching for faster rebuilds
+- Support for custom patches and modifications
 
-### Health Monitoring
-```bash
-# Check realm status
-./status.sh
+### Custom Configuration
+Advanced customization options for specialized deployments and development environments.
 
-# Watch services continuously
-./status.sh --watch
+**Configuration Options:**
+- Environment-specific overrides in `docker-compose.override.yml`
+- Custom module loading and configuration
+- Database schema modifications and patches
+- Network and security configuration
 
-# View service logs
-docker logs ac-worldserver -f
-docker logs ac-authserver -f
-
-# Check module management
-docker logs ac-modules --tail 50
-```
-
-### Web Tools Access
-
-Once deployed, access the management tools in your browser:
-
-```bash
-# Database Management (phpMyAdmin)
-http://YOUR_SERVER_IP:8081
-
-# World Database Editor (Keira3)
-http://YOUR_SERVER_IP:4201
-
-# Replace YOUR_SERVER_IP with your actual server address
-# Example: http://192.168.1.100:4201
-```
-
-**Note**: Initial Keira3 startup may show database connection errors until the world database import completes. This is expected behavior.
-
-### Module Management
-
-```bash
-# Reconfigure modules via interactive setup
-./setup.sh
-
-# Build custom images with enabled modules
-./build.sh                          # Interactive build (prompts for confirmation)
-./build.sh --yes                    # Auto-confirm build
-./build.sh --force                  # Force rebuild regardless of state
-
-# Deploy with automatic profile selection
-./deploy.sh                         # Auto-detects and deploys correct profile
-./deploy.sh --profile standard      # Force standard AzerothCore
-./deploy.sh --profile playerbots    # Force playerbots branch
-./deploy.sh --profile modules       # Force custom modules build
-
-# Lower-level module operations
-./scripts/stage-modules.sh                    # Download enabled modules
-./scripts/setup-source.sh                     # Initialize AzerothCore source
-./scripts/copy-module-configs.sh              # Create module .conf files
-./scripts/manage-modules-sql.sh               # Execute module SQL scripts
-
-# Management tools
-./scripts/deploy-tools.sh                     # Launch phpMyAdmin + Keira3
-```
-
-### Database Operations
-```bash
-# Access database via phpMyAdmin
-open http://localhost:8081
-
-# Direct MySQL access
-docker exec -it ac-mysql mysql -u root -p
-
-# Manual backup operations
-./scripts/backup.sh                              # Create immediate backup
-./scripts/restore.sh YYYYMMDD_HHMMSS            # Restore from specific backup
-
-# User data backup/import utilities
-./scripts/backup-export.sh [output_dir]                 # Export user accounts & characters
-./scripts/backup-import.sh [backup_dir]                 # Import user data from backup
-
-# View available backups
-ls -la storage/backups/
-```
-
-### Container Management
-```bash
-# Start specific services
-./scripts/start-containers.sh                           # Start all configured containers
-
-# Stop services gracefully
-./scripts/stop-containers.sh                            # Stop all containers
-
-# Monitor service health
-./status.sh                                     # Check realm status
-./status.sh --watch                            # Watch services continuously
-./status.sh --once                             # Single status check
-```
-
-### Deployment Verification
-```bash
-# Quick health check
-./scripts/verify-deployment.sh --skip-deploy --quick
-
-# Full deployment verification
-./scripts/verify-deployment.sh
-```
-
----
 
 ## 📜 Script Reference
 
@@ -688,8 +833,8 @@ ls -la storage/backups/
 Interactive `.env` generator with module selection, server configuration, and deployment profiles.
 
 ```bash
-./setup.sh                                      # Interactive configuration
-./setup.sh --module-config sam                 # Use predefined module preset
+./setup.sh                                    # Interactive configuration
+./setup.sh --module-config sam                # Use predefined module profile, check profiles directory
 ./setup.sh --playerbot-max-bots 3000          # Set playerbot limits
 ```
 
@@ -705,9 +850,9 @@ Interactive `.env` generator with module selection, server configuration, and de
 Compiles AzerothCore with enabled C++ modules and creates deployment-ready Docker images.
 
 ```bash
-./build.sh                                      # Interactive build
-./build.sh --yes                               # Auto-confirm all prompts
-./build.sh --force                             # Force rebuild regardless of state
+./build.sh                                    # Interactive build
+./build.sh --yes                              # Auto-confirm all prompts
+./build.sh --force                            # Force rebuild regardless of state
 ./build.sh --source-path /custom/path         # Use custom source path
 ./build.sh --skip-source-setup                # Skip source repo setup
 ```
@@ -723,7 +868,7 @@ Compiles AzerothCore with enabled C++ modules and creates deployment-ready Docke
 Module-aware deployment with automatic profile selection and optional remote deployment.
 
 ```bash
-./deploy.sh                                     # Interactive deployment
+./deploy.sh                                    # Interactive deployment
 ./deploy.sh --yes                              # Auto-confirm deployment
 ./deploy.sh --profile standard                 # Force standard AzerothCore
 ./deploy.sh --profile playerbots               # Force playerbots branch
@@ -748,7 +893,7 @@ Module-aware deployment with automatic profile selection and optional remote dep
 Comprehensive cleanup with multiple destruction levels and safety checks.
 
 ```bash
-./cleanup.sh                                   # Interactive cleanup
+./cleanup.sh                                  # Interactive cleanup
 ./cleanup.sh --soft                           # Stop containers only
 ./cleanup.sh --hard                           # Remove containers, networks, volumes
 ./cleanup.sh --nuclear                        # Full cleanup including images
@@ -925,162 +1070,6 @@ Runs inside the backup container to provide scheduled database backups.
 
 ---
 
----
-
-## 🔄 Common Workflows
-
-### Changing Module Configuration
-
-```bash
-# 1. Reconfigure modules
-./setup.sh
-
-# 2. Rebuild if you changed C++ modules
-./build.sh --yes
-
-# 3. Redeploy with new configuration
-./deploy.sh
-```
-
-### Updating to Latest Code
-
-```bash
-# Pull latest changes
-git pull origin main
-
-# Rebuild images (if using modules/playerbots)
-./build.sh --force
-
-# Restart services
-docker compose down
-./deploy.sh
-```
-
-### Managing Services
-
-```bash
-# Check service status
-./status.sh
-
-# View logs
-docker logs ac-worldserver -f
-docker logs ac-authserver -f
-docker logs ac-mysql -f
-
-# Restart specific service
-docker compose restart ac-worldserver
-
-# Stop all services
-./scripts/stop-containers.sh
-
-# Start services
-./scripts/start-containers.sh
-```
-
-### Database Management
-
-```bash
-# Backup user data
-./scripts/backup-export.sh
-
-# Restore user data
-./scripts/backup-import.sh /path/to/backup
-
-# Access database directly
-docker exec -it ac-mysql mysql -u root -p
-```
-
-### Cleaning Up
-
-```bash
-# Soft cleanup (stop containers only)
-./cleanup.sh --soft
-
-# Hard cleanup (remove containers and networks)
-./cleanup.sh --hard
-
-# Nuclear cleanup (everything including images and data)
-./cleanup.sh --nuclear --preserve-backups
-```
-
----
-
-## 🔧 Advanced Configuration
-
-### Module-Specific Requirements
-
-Some modules require additional manual configuration after deployment:
-
-#### mod-playerbots
-- Requires playerbots-specific AzerothCore branch
-- Automatically handled when `MODULE_PLAYERBOTS=1` is set in setup
-
-#### mod-individual-progression
-- **Client patches required**: `patch-V.mpq` (found in module storage)
-- **Server config**: Add `EnablePlayerSettings = 1` and `DBC.EnforceItemAttributes = 0` to worldserver.conf
-
-#### mod-transmog / mod-npc-* modules
-- **NPC spawning required**: Use GM commands to spawn service NPCs
-- Examples:
-  ```bash
-  .npc add 190010    # Transmog NPC (mod-transmog)
-  .npc add 601016    # Buff NPC (mod-npc-buffer)
-  .npc add 601026    # Beastmaster NPC "White Fang" (mod-npc-beastmaster)
-  .npc add 601015    # Enchanter NPC (mod-npc-enchanter)
-  .npc add 290011    # Reagent Bank NPC (mod-reagent-bank)
-  .npc add 500030    # Guild House vendor (mod-guildhouse)
-  .npc add 601072    # Morph Summon NPC (mod-morphsummon)
-  .npc add 98500     # Arena Replay NPC (mod-arena-replay)
-  .npc add 100155    # Tic-Tac-Toe game NPC (mod-tic-tac-toe)
-  .npc add 1128001   # Mythic Mode NPC (mod-zone-difficulty, spawns in raids/heroic dungeons)
-  .npc add 1128002   # Mythic Rewards NPC (mod-zone-difficulty)
-  ```
-
-#### mod-arac (All Races All Classes)
-- **Client patches required**: `Patch-A.MPQ` (found in module storage)
-- **Installation**: Players must copy to `WoW/Data/` directory
-- **Server-side**: DBC files automatically applied during module installation
-
-### Profile Selection
-
-The deployment system uses Docker Compose profiles to manage different configurations:
-
-| Profile | When Used | Image Source |
-|---------|-----------|--------------|
-| `services-standard` | No C++ modules, no playerbots | Upstream `acore/*` images |
-| `services-playerbots` | `MODULE_PLAYERBOTS=1` + no other C++ modules | Project-built `<name>:*-playerbots` |
-| `services-modules` | Any C++ module enabled (incl. playerbots + others) | Project-built `<name>:*-modules-latest` |
-
-**Profile selection is automatic** - `deploy.sh` analyzes your `.env` and selects the appropriate profile.
-
-### Build System
-
-**When builds are required:**
-- Playerbots enabled (`MODULE_PLAYERBOTS=1`)
-- Any C++ module enabled (see `needs_build: true` in `config/modules.json`)
-
-**Build workflow (`./build.sh`):**
-1. Clones AzerothCore source to `local-storage/source/`
-   - Uses [mod-playerbots fork](https://github.com/mod-playerbots/azerothcore-wotlk) when playerbots enabled
-   - Uses [main AzerothCore](https://github.com/azerothcore/azerothcore-wotlk) otherwise
-2. Stages enabled C++ modules into `modules/` directory within source
-3. Compiles binaries using Dockerized build environment
-4. Creates and tags images:
-   - `<project>:authserver-playerbots` / `authserver-modules-latest`
-   - `<project>:worldserver-playerbots` / `worldserver-modules-latest`
-   - `<project>:client-data-playerbots` (playerbots only)
-   - `<project>:db-import-playerbots` (playerbots only)
-
-**Build time:** 20-60 minutes depending on hardware and module count
-
-### MySQL Runtime Storage & Timezone Data
-
-- `MYSQL_RUNTIME_TMPFS_SIZE` controls the in-memory datadir used by the MySQL container. Increase this value if you see `No space left on device` errors inside `/var/lib/mysql-runtime`.
-- `MYSQL_INNODB_REDO_LOG_CAPACITY` increases redo log headroom (defaults to `512M`). Raise it further if logs report `log_checkpointer` lag.
-- `HOST_ZONEINFO_PATH` should point to a host directory containing timezone definitions (defaults to `/usr/share/zoneinfo`). The path is mounted read-only so the container can load timezone tables without extra image customization. Set it to a valid directory on your host if your OS stores zoneinfo elsewhere.
-
----
-
 ## 🔧 Troubleshooting
 
 ### Common Issues
@@ -1184,69 +1173,28 @@ ImportBackup/                     # Used by scripts/backup-import.sh
 └── acore_world.sql[.gz]          # Optional: world data
 ```
 
----
 
-## 📚 Advanced Deployment Options
 
-### Custom Environment Configuration
-```bash
-# Setup with specific module preset
-./setup.sh --module-config sam --playerbot-max-bots 3000
 
-# Build with custom source path
-./build.sh --source-path /path/to/custom/azerothcore --force
 
-# Deploy with specific options
-./deploy.sh --profile modules --no-watch --keep-running
-```
+## 📄 Credits & Next Steps
 
-### Manual Source Management
-```bash
-# Initialize/update AzerothCore source repository
-./scripts/setup-source.sh
+### Project Credits
 
-# Stage modules into source tree (called by build.sh)
-./scripts/stage-modules.sh
+This project builds upon:
+- **[AzerothCore](https://github.com/azerothcore/azerothcore-wotlk)** - Core server application
+- **[AzerothCore Module Community](https://github.com/azerothcore)** - Enhanced gameplay modules
 
-# Build images from prepared source
-./build.sh --skip-source-setup
-```
+#### Key Features
+- ✅ **Fully Automated Setup** - Interactive configuration and deployment
+- ✅ **Intelligent Module System** - Automatic source builds and profile selection
+- ✅ **Automated Backups** - Health checks, scheduled backups, and monitoring
+- ✅ **Docker-Based** - Containerized deployment for easy setup and portability
+- ✅ **Comprehensive Documentation** - Clear setup and troubleshooting guides
 
-### Manual Service Control
-```bash
-# Stop all services
-docker compose --profile db --profile services-standard \
-  --profile services-playerbots --profile services-modules \
-  --profile client-data --profile modules --profile tools down
+### Next Steps After Installation
 
-# Start specific profile
-docker compose --profile db --profile services-playerbots --profile tools up -d
-
-# Restart after configuration changes
-docker compose restart ac-worldserver ac-authserver
-```
-
-### Force Rebuild
-```bash
-# Force complete rebuild (ignores build state markers)
-./build.sh --force
-
-# Clean build artifacts and rebuild
-rm -rf local-storage/source local-storage/images
-./build.sh
-```
-
----
-
-## 🧭 Ownership Hardening TODO
-
-- [ ] MySQL container: prototype running as `${CONTAINER_USER}` (or via Docker userns remap/custom entrypoint) so shared `${STORAGE_PATH}` data stays user-owned while preserving required init privileges.
-
----
-
-## 🎯 Next Steps After Installation
-
-### In-Game Setup
+#### In-Game Setup
 
 1. **Create GM Account**
    ```bash
@@ -1268,7 +1216,7 @@ rm -rf local-storage/source local-storage/images
    WHERE id = 1;
    ```
 
-### Server Administration
+#### Server Administration
 
 1. **Set Up Monitoring**
    ```bash
@@ -1298,7 +1246,7 @@ rm -rf local-storage/source local-storage/images
    - Auto-loaded on worldserver start
    - Reload with `.reload eluna` in-game
 
-### Performance Tuning
+#### Performance Tuning
 
 1. **Database Optimization**
    - Adjust `MYSQL_INNODB_BUFFER_POOL_SIZE` in `.env`
@@ -1314,17 +1262,3 @@ rm -rf local-storage/source local-storage/images
      - `8215` (worldserver)
    - Configure NAT/port forwarding for public access
 
----
-
-## 📄 Project Credits
-
-This project builds upon:
-- **[AzerothCore](https://github.com/azerothcore/azerothcore-wotlk)** - Core server application
-- **[AzerothCore Module Community](https://github.com/azerothcore)** - Enhanced gameplay modules
-
-### Key Features
-- ✅ **Fully Automated Setup** - Interactive configuration and deployment
-- ✅ **Intelligent Module System** - Automatic source builds and profile selection
-- ✅ **Automated Backups** - Health checks, scheduled backups, and monitoring
-- ✅ **Docker-Based** - Containerized deployment for easy setup and portability
-- ✅ **Comprehensive Documentation** - Clear setup and troubleshooting guides
