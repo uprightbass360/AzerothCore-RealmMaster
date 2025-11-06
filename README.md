@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="img/logo.jpg" alt="AzerothCore RealmMaster Logo" width="400">
+  <img src="img/logo.jpg" alt="AzerothCore RealmMaster Logo">
 </div>
 
 # AzerothCore RealmMaster
