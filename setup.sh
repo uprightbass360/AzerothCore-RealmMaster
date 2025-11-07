@@ -200,7 +200,7 @@ unset __hc_key __hc_value
 # Route detection IP (not in template)
 readonly ROUTE_DETECTION_IP="1.1.1.1"
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; MAGENTA='\033[0;35m'; NC='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; MAGENTA='\033[0;35m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 say(){ local t=$1; shift; case "$t" in
   INFO) echo -e "${BLUE}ℹ️  $*${NC}";;
   SUCCESS) echo -e "${GREEN}✅ $*${NC}";;
@@ -364,6 +364,8 @@ declare -A MODULE_REQUIRES_MAP=()
 declare -A MODULE_NOTES_MAP=()
 declare -A MODULE_DESCRIPTION_MAP=()
 declare -A MODULE_CATEGORY_MAP=()
+declare -A MODULE_SPECIAL_MESSAGE_MAP=()
+declare -A MODULE_REPO_MAP=()
 declare -A MODULE_DEFAULT_VALUES=()
 declare -A KNOWN_MODULE_LOOKUP=()
 declare -A ENV_TEMPLATE_VALUES=()
@@ -414,7 +416,7 @@ load_module_manifest_metadata() {
     exit 1
   fi
 
-  while IFS=$'\t' read -r key name needs_build module_type status block_reason requires notes description category; do
+  while IFS=$'\t' read -r key name needs_build module_type status block_reason requires notes description category special_message repo; do
     [ -n "$key" ] || continue
     # Convert placeholder back to empty string
     [ "$block_reason" = "-" ] && block_reason=""
@@ -422,6 +424,8 @@ load_module_manifest_metadata() {
     [ "$notes" = "-" ] && notes=""
     [ "$description" = "-" ] && description=""
     [ "$category" = "-" ] && category=""
+    [ "$special_message" = "-" ] && special_message=""
+    [ "$repo" = "-" ] && repo=""
     MODULE_NAME_MAP["$key"]="$name"
     MODULE_NEEDS_BUILD_MAP["$key"]="$needs_build"
     MODULE_TYPE_MAP["$key"]="$module_type"
@@ -431,6 +435,8 @@ load_module_manifest_metadata() {
     MODULE_NOTES_MAP["$key"]="$notes"
     MODULE_DESCRIPTION_MAP["$key"]="$description"
     MODULE_CATEGORY_MAP["$key"]="$category"
+    MODULE_SPECIAL_MESSAGE_MAP["$key"]="$special_message"
+    MODULE_REPO_MAP["$key"]="$repo"
     KNOWN_MODULE_LOOKUP["$key"]=1
   done < <(python3 "$MODULE_MANIFEST_HELPER" metadata "$MODULE_MANIFEST_PATH")
 
@@ -1064,6 +1070,7 @@ fi
     fi
   fi
 
+
   local AC_AUTHSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_AUTH_IMAGE_PLAYERBOTS"
   local AC_WORLDSERVER_IMAGE_PLAYERBOTS_VALUE="$DEFAULT_WORLD_IMAGE_PLAYERBOTS"
   local AC_AUTHSERVER_IMAGE_MODULES_VALUE="$DEFAULT_AUTH_IMAGE_MODULES"
@@ -1148,7 +1155,7 @@ fi
       ["developer"]="🛠️ Developer Tools"
     )
 
-    # Group modules by category
+    # Group modules by category using arrays
     declare -A modules_by_category
     local key
     for key in "${selection_keys[@]}"; do
@@ -1167,12 +1174,29 @@ fi
       local module_list="${modules_by_category[$cat]:-}"
       [ -n "$module_list" ] || continue
 
-      # Display category header
+      # Check if this category has any valid modules before showing header
+      local has_valid_modules=0
+      # Split the space-separated string properly
+      local -a module_array
+      IFS=' ' read -ra module_array <<< "$module_list"
+      for key in "${module_array[@]}"; do
+        [ -n "${KNOWN_MODULE_LOOKUP[$key]:-}" ] || continue
+        local status_lc="${MODULE_STATUS_MAP[$key],,}"
+        if [ -z "$status_lc" ] || [ "$status_lc" = "active" ]; then
+          has_valid_modules=1
+          break
+        fi
+      done
+
+      # Skip category if no valid modules
+      [ "$has_valid_modules" = "1" ] || continue
+
+      # Display category header only when we have valid modules
       local cat_title="${category_titles[$cat]:-$cat}"
       printf '\n%b\n' "${BOLD}${CYAN}═══ ${cat_title} ═══${NC}"
 
       # Process modules in this category
-      for key in $module_list; do
+      for key in "${module_array[@]}"; do
         [ -n "${KNOWN_MODULE_LOOKUP[$key]:-}" ] || continue
         local status_lc="${MODULE_STATUS_MAP[$key],,}"
         if [ -n "$status_lc" ] && [ "$status_lc" != "active" ]; then
@@ -1189,6 +1213,14 @@ fi
         local description="${MODULE_DESCRIPTION_MAP[$key]:-}"
         if [ -n "$description" ]; then
           printf '%b\n' "${BLUE}ℹ️  ${MODULE_NAME_MAP[$key]:-$key}: ${description}${NC}"
+        fi
+        local special_message="${MODULE_SPECIAL_MESSAGE_MAP[$key]:-}"
+        if [ -n "$special_message" ]; then
+          printf '%b\n' "${MAGENTA}💡 ${special_message}${NC}"
+        fi
+        local repo="${MODULE_REPO_MAP[$key]:-}"
+        if [ -n "$repo" ]; then
+          printf '%b\n' "${GREEN}🔗 ${repo}${NC}"
         fi
         local default_answer
         default_answer="$(module_default "$key")"

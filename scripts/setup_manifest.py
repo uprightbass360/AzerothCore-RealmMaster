@@ -67,6 +67,8 @@ def cmd_metadata(manifest_path: str) -> None:
         notes = clean(entry.get("notes", ""))
         description = clean(entry.get("description", ""))
         category = clean(entry.get("category", ""))
+        special_message = clean(entry.get("special_message", ""))
+        repo = clean(entry.get("repo", ""))
         print(
             "\t".join(
                 [
@@ -80,6 +82,8 @@ def cmd_metadata(manifest_path: str) -> None:
                     notes,
                     description,
                     category,
+                    special_message,
+                    repo,
                 ]
             )
         )
@@ -90,7 +94,11 @@ def cmd_sorted_keys(manifest_path: str) -> None:
     modules = list(iter_modules(manifest))
     modules.sort(
         key=lambda item: (
+            # Primary sort by order (default to 5000 if not specified)
+            item.get("order", 5000),
+            # Secondary sort by type
             str(item.get("type", "")),
+            # Tertiary sort by name (case insensitive)
             str(item.get("name", item.get("key", ""))).lower(),
         )
     )

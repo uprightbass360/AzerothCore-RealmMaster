@@ -12,7 +12,9 @@
       "config_cleanup": [
         "playerbots.conf*"
       ],
-      "category": "automation"
+      "category": "automation",
+      "order": 1,
+      "special_message": "🤖 Foundation module: Enables AI-powered companions for solo and group content"
     },
     {
       "key": "MODULE_AOE_LOOT",
@@ -248,7 +250,9 @@
         "mod_eluna.conf*"
       ],
       "description": "Adds Eluna Lua scripting engine for creating custom gameplay mechanics",
-      "category": "scripting"
+      "category": "scripting",
+      "order": 9998,
+      "special_message": "⚡ Advanced scripting: Required by many Lua-based modules. Enable this first if you plan to use scripted features"
     },
     {
       "key": "MODULE_TIME_IS_TIME",
@@ -547,7 +551,9 @@
       "notes": "Azeroth Interface Override - enables client-server interface communication",
       "post_install_hooks": [],
       "description": "Pure Lua server-client communication system for bidirectional data transmission",
-      "category": "scripting"
+      "category": "scripting",
+      "order": 9999,
+      "special_message": "🌉 UI Bridge: Enables advanced client-server interfaces. Most users don't need this unless using AIO-based modules"
     },
     {
       "key": "MODULE_ELUNA_SCRIPTS",
