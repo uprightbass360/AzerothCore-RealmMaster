@@ -6,30 +6,30 @@
 
 A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with 93+ enhanced modules and intelligent automation.
 
-## 📖 Table of Contents
+## Table of Contents
 
-- [🚀 Quick Start](#🚀-quick-start)
-- [🎯 What You Get](#🎯-what-you-get)
-- [📋 Getting Started](#📋-getting-started)
+- [Quick Start](#quick-start)
+- [What You Get](#what-you-get)
+- [Getting Started](#getting-started)
   - [Local Deployment](#local-deployment)
   - [Remote Deployment](#remote-deployment)
   - [Post-Installation Steps](#post-installation-steps)
-- [📚 Complete Module Catalog](#📚-complete-module-catalog)
-- [🛠️ Management & Operations](#🛠️-management--operations)
+- [Complete Module Catalog](#complete-module-catalog)
+- [Management & Operations](#management--operations)
   - [Common Workflows](#common-workflows)
   - [Management Commands](#management-commands)
   - [Database Operations](#database-operations)
-- [🏗️ Advanced Configuration](#🏗️-advanced-configuration)
+- [Advanced Configuration](#advanced-configuration)
   - [Architecture Overview](#architecture-overview)
   - [Build System](#build-system)
   - [Custom Configuration](#custom-configuration)
-- [📜 Script Reference](#📜-script-reference)
-- [🔧 Troubleshooting](#🔧-troubleshooting)
-- [📄 Credits & Next Steps](#📄-credits--next-steps)
+- [Script Reference](#script-reference)
+- [Troubleshooting](#troubleshooting)
+- [Credits & Next Steps](#credits--next-steps)
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - **Docker** with Docker Compose
@@ -54,11 +54,11 @@ cd AzerothCore-RealmMaster
 
 **First deployment takes 30-60 minutes** for database setup and client data download. Subsequent starts are much faster.
 
-See [Getting Started](#-getting-started) for detailed walkthrough.
+See [Getting Started](#getting-started) for detailed walkthrough.
 
 ---
 
-## 🎯 What You Get
+## What You Get
 
 ### ✅ Core Server Components
 - **AzerothCore 3.3.5a** - WotLK server application with 93+ enhanced modules
@@ -75,7 +75,7 @@ See [Getting Started](#-getting-started) for detailed walkthrough.
 
 ---
 
-## 📋 Getting Started
+## Getting Started
 
 Complete walkthrough for deploying on your local machine or remote server.
 
@@ -309,11 +309,11 @@ See [Next Steps After Installation](#-credits--next-steps) for detailed setup an
 
 ---
 
-## 📚 Complete Module Catalog
+## Complete Module Catalog
 
 All modules are automatically downloaded, configured, and SQL scripts executed when enabled. Browse the complete collection of **93 modules** organized by category:
 
-#### 🤖 Automation
+#### Automation
 
 | Module | Description |
 |--------|-------------|
@@ -322,7 +322,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-playerbots](https://github.com/mod-playerbots/mod-playerbots.git)** | Adds scriptable playerbot characters that can form dungeon parties, raid, and PvP with humans |
 | **[npcbot-extended-commands](https://github.com/Day36512/Npcbot_Extended_Commands.git)** | Provides gear templates, transmog clearing, and chat features for NPC bots |
 
-#### ✨ Quality of Life
+#### Quality of Life
 
 | Module | Description |
 |--------|-------------|
@@ -333,7 +333,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-learn-spells](https://github.com/azerothcore/mod-learn-spells.git)** | Teaches class spells automatically at the correct level to streamline leveling |
 | **[mod-solo-lfg](https://github.com/azerothcore/mod-solo-lfg.git)** | A solo-friendly queue that lets every player run dungeons without needing a premade group |
 
-#### ⚔️ Gameplay Enhancement
+#### Gameplay Enhancement
 
 | Module | Description |
 |--------|-------------|
@@ -347,7 +347,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-duel-reset](https://github.com/azerothcore/mod-duel-reset.git)** | Adds some duel reset features |
 | **[mod-solocraft](https://github.com/azerothcore/mod-solocraft.git)** | Automatically scales dungeon and raid encounters for solo players or small teams |
 
-#### 🏪 NPC Services
+#### NPC Services
 
 | Module | Description |
 |--------|-------------|
@@ -361,7 +361,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-reagent-bank](https://github.com/ZhengPeiRu21/mod-reagent-bank.git)** | Lets players stash crafting reagents with a dedicated banker NPC |
 | **[mod-transmog](https://github.com/azerothcore/mod-transmog.git)** | Adds a transmogrification vendor so players can restyle gear without changing stats |
 
-#### ⚡ PvP
+#### PvP
 
 | Module | Description |
 |--------|-------------|
@@ -372,7 +372,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-pvp-titles](https://github.com/azerothcore/mod-pvp-titles.git)** | Restores classic honor titles with a configurable ranking ladder |
 | **[ultimate-full-loot-pvp](https://github.com/Youpeoples/Ultimate-Full-Loot-Pvp.git)** | Spawns loot chests containing gear and gold when players die in PvP |
 
-#### 📈 Progression
+#### Progression
 
 | Module | Description |
 |--------|-------------|
@@ -385,7 +385,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-weekend-xp](https://github.com/azerothcore/mod-weekend-xp.git)** | XP module that allows server owner to select how much XP players can receive on the weekend via config file |
 | **[mod-zone-difficulty](https://github.com/azerothcore/mod-zone-difficulty.git)** | Support module for mod-progression-system, handles nerfs and debuffs per zone |
 
-#### 💰 Economy
+#### Economy
 
 | Module | Description |
 |--------|-------------|
@@ -398,7 +398,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-black-market](https://github.com/Youpeoples/Black-Market-Auction-House.git)** | Backports the Mists-era Black Market Auction House via Eluna scripts |
 | **[mod-random-enchants](https://github.com/azerothcore/mod-random-enchants.git)** | Rolls randomized stat bonuses on loot to add Diablo-style gear chasing |
 
-#### 👥 Social
+#### Social
 
 | Module | Description |
 |--------|-------------|
@@ -409,7 +409,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-breaking-news-override](https://github.com/azerothcore/mod-breaking-news-override.git)** | Replaces the client breaking-news panel with server-managed announcements |
 | **[mod-global-chat](https://github.com/azerothcore/mod-global-chat.git)** | Simple global chat for AzerothCore enabling worldserver-wide messaging functionality |
 
-#### 👤 Account-Wide
+#### Account-Wide
 
 | Module | Description |
 |--------|-------------|
@@ -417,7 +417,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-account-achievements](https://github.com/azerothcore/mod-account-achievements.git)** | Shares achievements across characters on the same account for persistent milestones |
 | **[mod-account-mounts](https://github.com/azerothcore/mod-account-mounts.git)** | Goes through the list of characters on an account to obtain playerGuids and store mount spells that all characters know |
 
-#### 🎨 Customization
+#### Customization
 
 | Module | Description |
 |--------|-------------|
@@ -426,7 +426,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-morphsummon](https://github.com/azerothcore/mod-morphsummon.git)** | Change appearance of summoned permanent creatures |
 | **[mod-worgoblin](https://github.com/heyitsbench/mod-worgoblin.git)** | Enables Worgen and Goblin characters with DB/DBC adjustments |
 
-#### 📜 Scripting
+#### Scripting
 
 | Module | Description |
 |--------|-------------|
@@ -436,7 +436,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-aio](https://github.com/Rochet2/AIO.git)** | Pure Lua server-client communication system for bidirectional data transmission |
 | **[mod-ale](https://github.com/azerothcore/mod-ale.git)** | Adds Eluna Lua scripting engine for creating custom gameplay mechanics |
 
-#### 🔧 Admin Tools
+#### Admin Tools
 
 | Module | Description |
 |--------|-------------|
@@ -449,7 +449,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-spell-regulator](https://github.com/azerothcore/mod-spell-regulator.git)** | Modify the percentage of the spells by regulating in the best way |
 | **[mod-who-logged](https://github.com/azerothcore/mod-who-logged.git)** | Outputs to the console when a player logs into the world |
 
-#### 💎 Premium/VIP
+#### Premium/VIP
 
 | Module | Description |
 |--------|-------------|
@@ -457,7 +457,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-premium](https://github.com/azerothcore/mod-premium.git)** | Adds Premium account features to players |
 | **[mod-system-vip](https://github.com/azerothcore/mod-system-vip.git)** | System offering VIP features and benefits to players |
 
-#### 🎮 Mini-Games
+#### Mini-Games
 
 | Module | Description |
 |--------|-------------|
@@ -465,7 +465,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-pocket-portal](https://github.com/azerothcore/mod-pocket-portal.git)** | Gives players a portal gadget for quick travel to configured destinations |
 | **[mod-tic-tac-toe](https://github.com/azerothcore/mod-tic-tac-toe.git)** | Allows players to play Tic Tac Toe between players and against different AI |
 
-#### 🏰 Content
+#### Content
 
 | Module | Description |
 |--------|-------------|
@@ -475,7 +475,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-war-effort](https://github.com/azerothcore/mod-war-effort.git)** | Brings back the war effort of the two factions for the opening of the gates of Ahn'Qiraj |
 | **[treasure-chest-system](https://github.com/zyggy123/Treasure-Chest-System.git)** | Allows GMs to create and manage treasure chests with custom loot |
 
-#### 🎁 Rewards
+#### Rewards
 
 | Module | Description |
 |--------|-------------|
@@ -485,7 +485,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 | **[mod-reward-played-time](https://github.com/azerothcore/mod-reward-played-time.git)** | Adds items for players that have stayed logged in for x amount of time |
 | **[prestige-and-draft-mode](https://github.com/Youpeoples/Prestige-and-Draft-Mode.git)** | Enables characters to reset to level one for prestige rewards with optional spell selection |
 
-#### 🛠️ Developer Tools
+#### Developer Tools
 
 | Module | Description |
 |--------|-------------|
@@ -493,7 +493,7 @@ All modules are automatically downloaded, configured, and SQL scripts executed w
 
 ---
 
-## 🛠️ Management & Operations
+## Management & Operations
 
 Essential commands and workflows for operating your AzerothCore server.
 
@@ -668,7 +668,7 @@ ls -la storage/backups/
 
 ---
 
-## 🏗️ Advanced Configuration
+## Advanced Configuration
 
 Technical details for advanced users and system administrators.
 
@@ -825,7 +825,7 @@ Advanced customization options for specialized deployments and development envir
 - Network and security configuration
 
 
-## 📜 Script Reference
+## Script Reference
 
 ### Core Deployment Scripts
 
@@ -1070,7 +1070,7 @@ Runs inside the backup container to provide scheduled database backups.
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -1177,7 +1177,7 @@ ImportBackup/                     # Used by scripts/backup-import.sh
 
 
 
-## 📄 Credits & Next Steps
+## Credits & Next Steps
 
 ### Project Credits
 
