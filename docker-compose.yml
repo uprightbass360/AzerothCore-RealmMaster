@@ -283,7 +283,7 @@ services:
     profiles: ["client-data-bots"]
     image: ${AC_CLIENT_DATA_IMAGE_PLAYERBOTS}
     container_name: ac-client-data
-    user: "${CONTAINER_USER}"
+    user: "0:0"
     depends_on:
       ac-volume-init:
         condition: service_completed_successfully
@@ -299,10 +299,15 @@ services:
       - sh
       - -c
       - |
+        echo "📦 Installing 7z for faster extraction..."
+        apt-get update -qq && apt-get install -y p7zip-full
         mkdir -p /cache
         if [ -f /tmp/scripts/download-client-data.sh ]; then
           chmod +x /tmp/scripts/download-client-data.sh 2>/dev/null || true
           bash /tmp/scripts/download-client-data.sh
+          echo "🔧 Fixing ownership of extracted files..."
+          chown -R ${CONTAINER_USER} /azerothcore/data
+          echo "✅ Client data extraction and ownership setup complete"
         else
           echo "No local client-data script"
         fi
