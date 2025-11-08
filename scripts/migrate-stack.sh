@@ -124,7 +124,7 @@ expand_remote_path(){
   local path="$1"
   case "$path" in
     "~") echo "/home/${USER}";;
-    "~/"*) echo "/home/${USER}/${path#~/}";;
+    "~/"*) echo "/home/${USER}/${path#\~/}";;
     *) echo "$path";;
   esac
 }
@@ -367,4 +367,4 @@ fi
 
 echo "⋅ Remote prepares completed"
 echo "Run on the remote host to deploy:"
-echo "  cd $PROJECT_DIR && ./deploy.sh --no-watch"
+echo "  cd '$PROJECT_DIR' && ./deploy.sh --no-watch"
