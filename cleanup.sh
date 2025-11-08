@@ -13,6 +13,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${SCRIPT_DIR}"
 DEFAULT_COMPOSE_FILE="${PROJECT_DIR}/docker-compose.yml"
 ENV_FILE="${PROJECT_DIR}/.env"
+source "${PROJECT_DIR}/scripts/lib/compose_overrides.sh"
+declare -a COMPOSE_FILE_ARGS=()
 
 # Colors
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; MAGENTA='\033[0;35m'; NC='\033[0m'
@@ -125,15 +127,7 @@ if [ -f "$ENV_FILE" ]; then
   set -a; source "$ENV_FILE"; set +a
 fi
 
-COMPOSE_FILE_ARGS=(-f "$DEFAULT_COMPOSE_FILE")
-if [ "${MYSQL_EXPOSE_PORT:-0}" = "1" ]; then
-  EXTRA_COMPOSE_FILE="${PROJECT_DIR}/docker-compose.mysql-expose.yml"
-  if [ -f "$EXTRA_COMPOSE_FILE" ]; then
-    COMPOSE_FILE_ARGS+=(-f "$EXTRA_COMPOSE_FILE")
-  else
-    print_status WARNING "MYSQL_EXPOSE_PORT=1 but $EXTRA_COMPOSE_FILE missing; skipping port exposure override."
-  fi
-fi
+compose_overrides::build_compose_args "$PROJECT_DIR" "$ENV_FILE" "$DEFAULT_COMPOSE_FILE" COMPOSE_FILE_ARGS
 COMPOSE_FILE_ARGS_STR=""
 for arg in "${COMPOSE_FILE_ARGS[@]}"; do
   COMPOSE_FILE_ARGS_STR+=" ${arg}"

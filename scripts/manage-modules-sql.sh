@@ -130,7 +130,7 @@ ensure_module_metadata(){
     fi
   done
 
-  local manifest_path="${MANIFEST_PATH:-${MODULES_MANIFEST_PATH:-/tmp/config/modules.json}}"
+  local manifest_path="${MANIFEST_PATH:-${MODULES_MANIFEST_PATH:-/tmp/config/module-manifest.json}}"
   local env_path="${ENV_PATH:-${MODULES_ENV_PATH:-/tmp/.env}}"
   local state_env_candidate="${STATE_DIR:-${MODULES_ROOT:-/modules}}/modules.env"
   if [ -f "$state_env_candidate" ]; then

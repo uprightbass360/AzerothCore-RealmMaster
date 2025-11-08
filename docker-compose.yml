@@ -596,7 +596,7 @@ services:
     env_file:
       - ./.env
     environment:
-      MODULES_MANIFEST_PATH: /tmp/config/modules.json
+      MODULES_MANIFEST_PATH: /tmp/config/module-manifest.json
     entrypoint: ["/bin/sh"]
     command:
       - -c

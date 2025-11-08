@@ -179,7 +179,7 @@ ensure_module_state(){
   local storage_root
   storage_root="$(resolve_local_storage_path)"
   MODULE_STATE_DIR="${storage_root}/modules"
-  if ! python3 "$MODULE_HELPER" --env-path "$ENV_FILE" --manifest "$PROJECT_DIR/config/modules.json" generate --output-dir "$MODULE_STATE_DIR"; then
+  if ! python3 "$MODULE_HELPER" --env-path "$ENV_FILE" --manifest "$PROJECT_DIR/config/module-manifest.json" generate --output-dir "$MODULE_STATE_DIR"; then
     echo "❌ Module manifest validation failed. See details above."
     exit 1
   fi
@@ -463,7 +463,7 @@ remove_sentinel(){
   fi
   if command -v docker >/dev/null 2>&1; then
     local db_image
-    db_image="$(read_env AC_DB_IMPORT_IMAGE "acore/ac-wotlk-db-import:14.0.0-dev")"
+    db_image="$(read_env AC_DB_IMPORT_IMAGE "acore/ac-wotlk-db-import:master")"
     if docker image inspect "$db_image" >/dev/null 2>&1; then
       local mount_dir
       mount_dir="$(dirname "$sentinel_path")"

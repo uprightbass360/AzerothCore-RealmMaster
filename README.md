@@ -97,6 +97,7 @@ cd AzerothCore-RealmMaster
 The setup wizard will guide you through:
 - **Server Configuration**: IP address, ports, timezone
 - **Module Selection**: Choose from 30+ available modules or use presets
+- **Module Definitions**: Customize defaults in `config/module-manifest.json` and optional presets under `config/module-profiles/`
 - **Storage Paths**: Configure NFS/local storage locations
 - **Playerbot Settings**: Max bots, account limits (if enabled)
 - **Backup Settings**: Retention policies for automated backups
@@ -116,7 +117,7 @@ The setup wizard will guide you through:
 
 **Required when:**
 - Playerbots enabled (`MODULE_PLAYERBOTS=1`)
-- Any C++ module enabled (modules with `"type": "cpp"` in `config/modules.json`)
+- Any C++ module enabled (modules with `"type": "cpp"` in `config/module-manifest.json`)
 
 **Build process:**
 1. Clones AzerothCore source to `local-storage/source/`
@@ -249,7 +250,7 @@ The remote deployment process transfers:
 - ❌ Build artifacts (source code, compilation files stay local)
 
 #### Module Presets
-- Define JSON presets in `profiles/*.json`. Each file contains:
+- Define JSON presets in `config/module-profiles/*.json`. Each file contains:
   - `modules` (array, required) – list of `MODULE_*` identifiers to enable.
   - `label` (string, optional) – text shown in the setup menu (emoji welcome).
   - `description` (string, optional) – short help text for maintainers.
@@ -266,11 +267,12 @@ The remote deployment process transfers:
   ```
 - `setup.sh` automatically adds these presets to the module menu and enables the listed modules when selected or when `--module-config <name>` is provided.
 - Built-in presets:
-  - `profiles/suggested-modules.json` – default solo-friendly QoL stack.
-  - `profiles/playerbots-suggested-modules.json` – suggested stack plus playerbots.
-  - `profiles/playerbots-only.json` – playerbot-focused profile (adjust `--playerbot-max-bots`).
+  - `config/module-profiles/suggested-modules.json` – default solo-friendly QoL stack.
+  - `config/module-profiles/playerbots-suggested-modules.json` – suggested stack plus playerbots.
+  - `config/module-profiles/playerbots-only.json` – playerbot-focused profile (adjust `--playerbot-max-bots`).
 - Custom example:
-  - `profiles/sam.json` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
+  - `config/module-profiles/sam.json` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
+- Module metadata lives in `config/module-manifest.json`; update that file if you need to add new modules or change repositories/branches.
 
 ### Post-Installation Steps
 
@@ -757,7 +759,7 @@ flowchart TB
 
 | Service / Container | Role | Ports (host → container) | Profile |
 |---------------------|------|--------------------------|---------|
-| `ac-mysql` | MySQL 8.0 database | *(optional)* `64306 → 3306` (`MYSQL_EXPOSE_PORT=1`) | `db` |
+| `ac-mysql` | MySQL 8.0 database | *(optional)* `64306 → 3306` (`COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED=1`) | `db` |
 | `ac-db-init` | Database schema initialization | – | `db` |
 | `ac-db-import` | Database content import | – | `db` |
 | `ac-backup` | Automated backup system | – | `db` |
@@ -775,9 +777,21 @@ flowchart TB
 
 ### Database Hardening
 
-- **MySQL port exposure** – By default `MYSQL_EXPOSE_PORT=0`, so `ac-mysql` is reachable only from the internal Docker network. Set `MYSQL_EXPOSE_PORT=1` to publish `${MYSQL_EXTERNAL_PORT}` on the host; RealmMaster scripts automatically include `docker-compose.mysql-expose.yml` so the override Just Works. If you invoke Compose manually, remember to add `-f docker-compose.mysql-expose.yml`.
+- **MySQL port exposure** – By default `COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED=0`, so `ac-mysql` is reachable only from the internal Docker network. Set it to `1` to publish `${MYSQL_EXTERNAL_PORT}` on the host; RealmMaster scripts automatically include `compose-overrides/mysql-expose.yml` so the override Just Works. If you invoke Compose manually, remember to add `-f compose-overrides/mysql-expose.yml`. You can follow the same `COMPOSE_OVERRIDE_<NAME>_ENABLED=1` pattern for any custom override files you drop into `compose-overrides/`.
+- **Worldserver debug logging** – Need extra verbosity temporarily? Flip `COMPOSE_OVERRIDE_WORLDSERVER_DEBUG_LOGGING_ENABLED=1` to include `compose-overrides/worldserver-debug-logging.yml`, which bumps `AC_LOG_LEVEL` across all worldserver profiles. Turn it back off once you’re done to avoid noisy logs.
 - **Binary logging toggle** – `MYSQL_DISABLE_BINLOG=1` appends `--skip-log-bin` via the MySQL wrapper entrypoint to keep disk churn low (and match Playerbot guidance). Flip the flag to `0` to re-enable binlogs for debugging or replication.
 - **Drop-in configs** – Any `.cnf` placed in `${STORAGE_PATH}/config/mysql/conf.d` (exposed via `MYSQL_CONFIG_DIR`) is mounted into `/etc/mysql/conf.d`. Use this to add custom tunables or temporarily override the binlog setting without touching the image.
+
+### Compose Overrides
+
+All helper scripts automatically include any override file found in `compose-overrides/` when its matching flag `COMPOSE_OVERRIDE_<NAME>_ENABLED` is set to `1` in `.env`. Each override declares its flag at the top with `# override-flag: ...`. This lets you ship opt-in tweaks without editing `docker-compose.yml`.
+
+Current examples:
+
+- `compose-overrides/mysql-expose.yml` (`COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED`) – Publishes MySQL to `${MYSQL_EXTERNAL_PORT}` for external clients.
+- `compose-overrides/worldserver-debug-logging.yml` (`COMPOSE_OVERRIDE_WORLDSERVER_DEBUG_LOGGING_ENABLED`) – Raises `AC_LOG_LEVEL` to `3` across all worldserver profiles for troubleshooting.
+
+Add your own override by dropping a new `.yml` file into `compose-overrides/`, documenting the flag name in a comment, and toggling that flag in `.env`.
 
 ### Storage Structure
 
@@ -986,9 +1000,9 @@ Internal script that runs inside the `ac-modules` container to handle module lif
 - Manages module configuration files
 - Tracks installation state
 
-#### `config/modules.json` & `scripts/modules.py`
+#### `config/module-manifest.json` & `scripts/modules.py`
 Central module registry and management system:
-- **`config/modules.json`** - Declarative manifest defining all 30+ supported modules with metadata:
+- **`config/module-manifest.json`** - Declarative manifest defining all 30+ supported modules with metadata:
   - Repository URLs
   - Module type (cpp, data, lua)
   - Build requirements

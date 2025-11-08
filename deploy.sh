@@ -11,6 +11,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_PATH="$ROOT_DIR/.env"
+source "$ROOT_DIR/scripts/lib/compose_overrides.sh"
 TARGET_PROFILE=""
 WATCH_LOGS=1
 KEEP_RUNNING=0
@@ -280,17 +281,7 @@ read_env(){
 }
 
 init_compose_files(){
-  local expose_port
-  expose_port="$(read_env MYSQL_EXPOSE_PORT "0")"
-  COMPOSE_FILE_ARGS=(-f "$DEFAULT_COMPOSE_FILE")
-  if [ "$expose_port" = "1" ]; then
-    local extra_file="$ROOT_DIR/docker-compose.mysql-expose.yml"
-    if [ -f "$extra_file" ]; then
-      COMPOSE_FILE_ARGS+=(-f "$extra_file")
-    else
-      warn "MYSQL_EXPOSE_PORT=1 but $extra_file not found; skipping port override"
-    fi
-  fi
+  compose_overrides::build_compose_args "$ROOT_DIR" "$ENV_PATH" "$DEFAULT_COMPOSE_FILE" COMPOSE_FILE_ARGS
 }
 
 init_compose_files
@@ -337,7 +328,7 @@ ensure_module_state(){
   local output_dir="${storage_root}/modules"
   ensure_modules_dir_writable "$storage_root"
 
-  if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/modules.json" generate --output-dir "$output_dir"; then
+  if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/module-manifest.json" generate --output-dir "$output_dir"; then
     err "Module manifest validation failed. See errors above."
   fi
 

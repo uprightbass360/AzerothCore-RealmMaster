@@ -2,7 +2,7 @@
 """
 Module manifest helper.
 
-Reads config/modules.json and .env to produce canonical module state that
+Reads config/module-manifest.json and .env to produce canonical module state that
 downstream shell scripts can consume for staging, rebuild detection, and
 dependency validation.
 """
@@ -466,8 +466,8 @@ def configure_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--manifest",
-        default="config/modules.json",
-        help="Path to module manifest (default: config/modules.json)",
+        default="config/module-manifest.json",
+        help="Path to module manifest (default: config/module-manifest.json)",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)

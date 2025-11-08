@@ -114,7 +114,7 @@ generate_module_state(){
   storage_root="$(resolve_local_storage_path)"
   local output_dir="${storage_root}/modules"
   ensure_modules_dir_writable "$storage_root"
-  if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/modules.json" generate --output-dir "$output_dir"; then
+  if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/module-manifest.json" generate --output-dir "$output_dir"; then
     err "Module manifest validation failed. See errors above."
     exit 1
   fi

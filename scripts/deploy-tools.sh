@@ -7,6 +7,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
 DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_FILE="$ROOT_DIR/.env"
+source "$ROOT_DIR/scripts/lib/compose_overrides.sh"
 declare -a COMPOSE_FILE_ARGS=()
 
 BLUE='\033[0;34m'
@@ -46,15 +47,7 @@ resolve_project_name(){
 }
 
 init_compose_files(){
-  COMPOSE_FILE_ARGS=(-f "$DEFAULT_COMPOSE_FILE")
-  if [ "$(read_env MYSQL_EXPOSE_PORT "0")" = "1" ]; then
-    local extra_file="$ROOT_DIR/docker-compose.mysql-expose.yml"
-    if [ -f "$extra_file" ]; then
-      COMPOSE_FILE_ARGS+=(-f "$extra_file")
-    else
-      warn "MYSQL_EXPOSE_PORT=1 but $extra_file missing; skipping port override."
-    fi
-  fi
+  compose_overrides::build_compose_args "$ROOT_DIR" "$ENV_FILE" "$DEFAULT_COMPOSE_FILE" COMPOSE_FILE_ARGS
 }
 
 init_compose_files

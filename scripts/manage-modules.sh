@@ -55,22 +55,22 @@ resolve_manifest_path(){
     return
   fi
   local candidate
-  candidate="$PROJECT_ROOT/config/modules.json"
+  candidate="$PROJECT_ROOT/config/module-manifest.json"
   if [ -f "$candidate" ]; then
     echo "$candidate"
     return
   fi
-  candidate="$SCRIPT_DIR/../config/modules.json"
+  candidate="$SCRIPT_DIR/../config/module-manifest.json"
   if [ -f "$candidate" ]; then
     echo "$candidate"
     return
   fi
-  candidate="/tmp/config/modules.json"
+  candidate="/tmp/config/module-manifest.json"
   if [ -f "$candidate" ]; then
     echo "$candidate"
     return
   fi
-  err "Unable to locate module manifest (set MODULES_MANIFEST_PATH or ensure config/modules.json exists)"
+  err "Unable to locate module manifest (set MODULES_MANIFEST_PATH or ensure config/module-manifest.json exists)"
 }
 
 setup_git_config(){

@@ -14,9 +14,27 @@ This guide mirrors the community “Installing AzerothCore using Docker” workf
 
 RealmMaster keeps the familiar `docker-compose.yml` at the repo root. Instead of editing the YAML directly, run `./setup.sh` (see [README → Getting Started](../README.md#getting-started)) to generate `.env`; every setting from storage paths and ports to module toggles lives there. This mirrors the upstream “use docker-compose.override.yml” advice while preserving a single declarative stack.
 
-- **Security**: databases stay on the internal `azerothcore` bridge and never publish MySQL ports unless you explicitly set `MYSQL_EXPOSE_PORT` in `.env`. Binary logging is disabled via `MYSQL_DISABLE_BINLOG=1`, matching the upstream recommendation for playerbots.
+- **Security**: databases stay on the internal `azerothcore` bridge and never publish MySQL ports unless you explicitly set `COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED=1` in `.env`. Binary logging is disabled via `MYSQL_DISABLE_BINLOG=1`, matching the upstream recommendation for playerbots.
 - **Storage**: bind mounts map to `storage/` and `local-storage/`, ensuring data survives container rebuilds just like the original bind-mount instructions. `ac-volume-init` and `ac-storage-init` bootstrap ownership so you do not need to chown paths manually.
 - **Networks & profiles**: all services share the `azerothcore` bridge, and Compose profiles (`services-standard`, `services-playerbots`, `services-modules`, `tools`) let you enable only what you need, similar to copying multiple override files upstream.
+- **Override toggles**: drop-in files under `compose-overrides/` (like `mysql-expose.yml` for port exposure or `worldserver-debug-logging.yml` for verbose logs) can be activated by setting `COMPOSE_OVERRIDE_<NAME>_ENABLED=1` in `.env`, so you can extend the stack without editing the main compose file.
+- **Module manifest**: all module metadata lives in `config/module-manifest.json`; presets surfaced in `setup.sh` come from `config/module-profiles/*.json`, so you can adapt the same workflow the upstream document used by editing those files.
+
+### Override Examples
+
+RealmMaster ships with two opt-in overrides to demonstrate the pattern:
+
+- `compose-overrides/mysql-expose.yml` (`COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED=1`) publishes MySQL on `${MYSQL_EXTERNAL_PORT}` for IDEs or external tooling.
+- `compose-overrides/worldserver-debug-logging.yml` (`COMPOSE_OVERRIDE_WORLDSERVER_DEBUG_LOGGING_ENABLED=1`) bumps `AC_LOG_LEVEL` to `3` across every worldserver profile for troubleshooting.
+
+Add your own overrides by dropping a `.yml` file into `compose-overrides/` with a `# override-flag: ...` header and toggling the matching env flag. All project scripts automatically include enabled overrides, so the workflow mirrors the upstream “override file” approach without manual compose arguments.
+
+### Module Layout
+
+- **Manifest**: `config/module-manifest.json` tracks every supported module (type, repo, dependencies). Edit this if you need to add or update modules—`scripts/modules.py` and all container helpers consume it automatically.
+- **Presets**: `config/module-profiles/*.json` replaces the old `profiles/*.json`. Each preset defines a `modules` list plus optional `label/description/order`, and `setup.sh` surfaces them in the module-selection menu or via `--module-config <name>`.
+
+Because the manifest/preset locations mirror the upstream structure conceptually, experienced users can jump straight into editing those files without re-learning the workflow.
 
 Example excerpt (trimmed for clarity):
 

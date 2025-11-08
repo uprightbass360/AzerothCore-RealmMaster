@@ -1,0 +1,15 @@
+# override-flag: COMPOSE_OVERRIDE_WORLDSERVER_DEBUG_LOGGING_ENABLED
+# Example override that bumps worldserver log verbosity across all profiles.
+# Enable by setting COMPOSE_OVERRIDE_WORLDSERVER_DEBUG_LOGGING_ENABLED=1 in .env.
+# Helpful while investigating live issues; remember to turn it off to reduce noise.
+# Follow this pattern for any compose layers you want to implement
+services:
+  ac-worldserver-standard:
+    environment:
+      AC_LOG_LEVEL: "3"
+  ac-worldserver-playerbots:
+    environment:
+      AC_LOG_LEVEL: "3"
+  ac-worldserver-modules:
+    environment:
+      AC_LOG_LEVEL: "3"

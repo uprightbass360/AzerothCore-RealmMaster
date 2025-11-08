@@ -15,7 +15,7 @@ from pathlib import Path
 root = Path(sys.argv[1])
 modules_py = root / "scripts" / "modules.py"
 env_path = root / ".env"
-manifest_path = root / "config" / "modules.json"
+manifest_path = root / "config" / "module-manifest.json"
 
 state = json.loads(subprocess.check_output([
     sys.executable,

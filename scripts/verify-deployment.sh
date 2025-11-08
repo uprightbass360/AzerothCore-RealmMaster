@@ -13,6 +13,7 @@ err(){ echo -e "${RED}❌ $*${NC}"; }
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
 ENV_FILE=""
+source "$PROJECT_DIR/scripts/lib/compose_overrides.sh"
 PROFILES=(db services-standard client-data modules tools)
 SKIP_DEPLOY=false
 QUICK=false
@@ -73,15 +74,13 @@ run_compose(){
     compose_args+=(--env-file "$ENV_FILE")
   fi
   compose_args+=(-f "$COMPOSE_FILE")
-  if [ "$(read_env_value MYSQL_EXPOSE_PORT "0")" = "1" ]; then
-    local extra_file
-    extra_file="$(dirname "$COMPOSE_FILE")/docker-compose.mysql-expose.yml"
-    if [ -f "$extra_file" ]; then
-      compose_args+=(-f "$extra_file")
-    else
-      warn "MYSQL_EXPOSE_PORT=1 but ${extra_file} missing; skipping port exposure override."
-    fi
-  fi
+  local env_path
+  env_path="$(env_file_path)"
+  declare -a enabled_overrides=()
+  compose_overrides::list_enabled_files "$PROJECT_DIR" "$env_path" enabled_overrides
+  for file in "${enabled_overrides[@]}"; do
+    compose_args+=(-f "$file")
+  done
   docker compose "${compose_args[@]}" "$@"
 }
 

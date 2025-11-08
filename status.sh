@@ -53,7 +53,7 @@ AUTH_PORT="$(read_env AUTH_EXTERNAL_PORT)"
 WORLD_PORT="$(read_env WORLD_EXTERNAL_PORT)"
 SOAP_PORT="$(read_env SOAP_EXTERNAL_PORT)"
 MYSQL_PORT="$(read_env MYSQL_EXTERNAL_PORT)"
-MYSQL_EXPOSE_PORT="$(read_env MYSQL_EXPOSE_PORT)"
+MYSQL_EXPOSE_OVERRIDE="$(read_env COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED "$(read_env MYSQL_EXPOSE_PORT "0")")"
 PMA_PORT="$(read_env PMA_EXTERNAL_PORT)"
 KEIRA_PORT="$(read_env KEIRA3_EXTERNAL_PORT)"
 ELUNA_ENABLED="$(read_env AC_ELUNA_ENABLED)"
@@ -255,7 +255,7 @@ ports_summary(){
   for i in "${!names[@]}"; do
     local svc="${names[$i]}"
     local port="${ports[$i]}"
-    if [ "$svc" = "MySQL" ] && [ "${MYSQL_EXPOSE_PORT}" != "1" ]; then
+    if [ "$svc" = "MySQL" ] && [ "${MYSQL_EXPOSE_OVERRIDE}" != "1" ]; then
       printf "  %-10s %-6s %b○%b not exposed\n" "$svc" "--" "$CYAN" "$NC"
       continue
     fi

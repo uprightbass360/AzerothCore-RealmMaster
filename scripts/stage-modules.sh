@@ -65,7 +65,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_DIR/.env"
 DEFAULT_COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
-EXTRA_COMPOSE_FILE="$PROJECT_DIR/docker-compose.mysql-expose.yml"
+source "$PROJECT_DIR/scripts/lib/compose_overrides.sh"
 
 usage(){
   cat <<EOF
@@ -116,12 +116,10 @@ resolve_project_name(){
 
 if [ -z "${COMPOSE_FILE:-}" ]; then
   compose_files=("$DEFAULT_COMPOSE_FILE")
-  if [ "$(read_env MYSQL_EXPOSE_PORT "0")" = "1" ]; then
-    if [ -f "$EXTRA_COMPOSE_FILE" ]; then
-      compose_files+=("$EXTRA_COMPOSE_FILE")
-    else
-      echo "⚠️  MYSQL_EXPOSE_PORT=1 but ${EXTRA_COMPOSE_FILE} not found; continuing without port exposure override."
-    fi
+  declare -a enabled_overrides=()
+  compose_overrides::list_enabled_files "$PROJECT_DIR" "$ENV_FILE" enabled_overrides
+  if [ "${#enabled_overrides[@]}" -gt 0 ]; then
+    compose_files+=("${enabled_overrides[@]}")
   fi
   COMPOSE_FILE="$(IFS=:; echo "${compose_files[*]}")"
   export COMPOSE_FILE

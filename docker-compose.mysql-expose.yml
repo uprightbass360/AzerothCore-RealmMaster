@@ -1,5 +1,0 @@
-services:
-  ac-mysql:
-    # Optional override that publishes the MySQL port when MYSQL_EXPOSE_PORT=1
-    ports:
-      - "${MYSQL_EXTERNAL_PORT}:${MYSQL_PORT}"

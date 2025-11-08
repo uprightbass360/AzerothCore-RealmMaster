@@ -1,0 +1,12 @@
+# override-flag: COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED
+# legacy-flag: MYSQL_EXPOSE_PORT
+# Optional override file that publishes MySQL to the host. Use it only when you
+# intentionally need direct access (e.g., external DB clients). RealmMaster scripts
+# auto-include this file whenever `COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED=1`
+# (or the legacy `MYSQL_EXPOSE_PORT=1`) in `.env`. When running Compose manually, add:
+#   docker compose -f docker-compose.yml -f compose-overrides/mysql-expose.yml up -d
+# Reset the flag to 0 to return to the secure, internal-only default.
+services:
+  ac-mysql:
+    ports:
+      - "${MYSQL_EXTERNAL_PORT}:${MYSQL_PORT}"
