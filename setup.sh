@@ -50,7 +50,7 @@ sanitize_project_name(){
   sanitized="${sanitized// /-}"
   sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
   if [[ -z "$sanitized" ]]; then
-    sanitized="acore-compose"
+    sanitized="azerothcore-realmmaster"
   elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
     sanitized="ac${sanitized}"
   fi

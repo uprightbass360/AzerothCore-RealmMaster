@@ -58,7 +58,7 @@ show_realm_ready(){
 show_remote_plan(){
   local plan_host="${REMOTE_HOST:-<host>}"
   local plan_user="${REMOTE_USER:-<user>}"
-  local plan_dir="${REMOTE_PROJECT_DIR:-~/acore-compose}"
+  local plan_dir="${REMOTE_PROJECT_DIR:-~/AzerothCore-RealmMaster}"
 
   printf '\n%b\n' "${BLUE}🧭 Remote Deployment Plan${NC}"
   printf '%b\n' "${YELLOW}├─ Validate build status locally${NC}"
@@ -138,7 +138,7 @@ collect_remote_details(){
   fi
 
   if [ -z "$REMOTE_PROJECT_DIR" ]; then
-    REMOTE_PROJECT_DIR="~/acore-compose"
+    REMOTE_PROJECT_DIR="~/AzerothCore-RealmMaster"
   fi
   if [ "$interactive" -eq 1 ]; then
     local dir_input
@@ -182,7 +182,7 @@ validate_remote_configuration(){
     fi
   fi
   if [ -z "$REMOTE_PROJECT_DIR" ]; then
-    REMOTE_PROJECT_DIR="~/acore-compose"
+    REMOTE_PROJECT_DIR="~/AzerothCore-RealmMaster"
   fi
   if [ ! -f "$ROOT_DIR/scripts/migrate-stack.sh" ]; then
     err "Migration script not found: $ROOT_DIR/scripts/migrate-stack.sh"
@@ -207,7 +207,7 @@ Options:
   --remote-user USER                       SSH username for remote migration
   --remote-port PORT                       SSH port for remote migration (default: 22)
   --remote-identity PATH                   SSH private key for remote migration
-  --remote-project-dir DIR                 Remote project directory (default: ~/acore-compose)
+  --remote-project-dir DIR                 Remote project directory (default: ~/AzerothCore-RealmMaster)
   --remote-skip-storage                    Skip syncing the storage directory during migration
   -h, --help                               Show this help
 
@@ -347,13 +347,13 @@ ensure_module_state(){
 }
 
 resolve_project_name(){
-  local raw_name="$(read_env COMPOSE_PROJECT_NAME "acore-compose")"
+  local raw_name="$(read_env COMPOSE_PROJECT_NAME "azerothcore-realmmaster")"
   local sanitized
   sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
   sanitized="${sanitized// /-}"
   sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
   if [[ -z "$sanitized" ]]; then
-    sanitized="acore-compose"
+    sanitized="azerothcore-realmmaster"
   elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
     sanitized="ac${sanitized}"
   fi
@@ -702,7 +702,7 @@ main(){
     show_step 2 "$remote_steps" "Migrating deployment to $REMOTE_HOST"
     if run_remote_migration; then
       ok "Remote deployment package prepared for $REMOTE_USER@$REMOTE_HOST."
-      local remote_dir="${REMOTE_PROJECT_DIR:-~/acore-compose}"
+      local remote_dir="${REMOTE_PROJECT_DIR:-~/AzerothCore-RealmMaster}"
       info "Run the following on the remote host to complete deployment:"
       printf '  %bcd %s && ./deploy.sh --yes --no-watch%b\n' "$YELLOW" "$remote_dir" "$NC"
       exit 0

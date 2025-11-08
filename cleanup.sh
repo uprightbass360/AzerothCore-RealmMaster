@@ -144,14 +144,14 @@ sanitize_project_name(){
   sanitized="${sanitized// /-}"
   sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
   if [[ -z "$sanitized" ]]; then
-    sanitized="acore-compose"
+    sanitized="azerothcore-realmmaster"
   elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
     sanitized="ac${sanitized}"
   fi
   echo "$sanitized"
 }
 
-PROJECT_IMAGE_PREFIX="$(sanitize_project_name "${COMPOSE_PROJECT_NAME:-acore-compose}")"
+PROJECT_IMAGE_PREFIX="$(sanitize_project_name "${COMPOSE_PROJECT_NAME:-azerothcore-realmmaster}")"
 
 remove_storage_dir(){
   local path="$1"

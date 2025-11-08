@@ -51,14 +51,14 @@ resolve_project_name(){
     raw_name="$(grep -E '^COMPOSE_PROJECT_NAME=' "$env_path" | tail -n1 | cut -d'=' -f2-)"
   fi
   if [ -z "$raw_name" ]; then
-    raw_name="acore-compose"
+    raw_name="azerothcore-realmmaster"
   fi
   local sanitized
   sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
   sanitized="${sanitized// /-}"
   sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
   if [[ -z "$sanitized" ]]; then
-    sanitized="acore-compose"
+    sanitized="azerothcore-realmmaster"
   elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
     sanitized="ac${sanitized}"
   fi

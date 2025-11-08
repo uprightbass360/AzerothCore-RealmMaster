@@ -101,13 +101,13 @@ read_env(){
 
 resolve_project_name(){
   local raw_name
-  raw_name="$(read_env COMPOSE_PROJECT_NAME "acore-compose")"
+  raw_name="$(read_env COMPOSE_PROJECT_NAME "azerothcore-realmmaster")"
   local sanitized
   sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
   sanitized="${sanitized// /-}"
   sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
   if [[ -z "$sanitized" ]]; then
-    sanitized="acore-compose"
+    sanitized="azerothcore-realmmaster"
   elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
     sanitized="ac${sanitized}"
   fi

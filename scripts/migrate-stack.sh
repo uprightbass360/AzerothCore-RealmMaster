@@ -25,13 +25,13 @@ read_env_value(){
 
 resolve_project_name(){
   local raw_name
-  raw_name="$(read_env_value COMPOSE_PROJECT_NAME "acore-compose")"
+raw_name="$(read_env_value COMPOSE_PROJECT_NAME "azerothcore-realmmaster")"
   local sanitized
   sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
   sanitized="${sanitized// /-}"
   sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
   if [[ -z "$sanitized" ]]; then
-    sanitized="acore-compose"
+  sanitized="azerothcore-realmmaster"
   elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
     sanitized="ac${sanitized}"
   fi
@@ -79,7 +79,7 @@ Options:
   --user USER           SSH username on remote host (required)
   --port PORT           SSH port (default: 22)
   --identity PATH       SSH private key (passed to scp/ssh)
-  --project-dir DIR     Remote project directory (default: ~/acore-compose)
+  --project-dir DIR     Remote project directory (default: ~/AzerothCore-RealmMaster)
   --tarball PATH        Output path for the image tar (default: ./local-storage/images/acore-modules-images.tar)
   --storage PATH        Remote storage directory (default: <project-dir>/storage)
   --skip-storage        Do not sync the storage directory
@@ -120,8 +120,19 @@ if [[ -z "$HOST" || -z "$USER" ]]; then
   exit 1
 fi
 
-PROJECT_DIR="${PROJECT_DIR:-/home/${USER}/acore-compose}"
+expand_remote_path(){
+  local path="$1"
+  case "$path" in
+    "~") echo "/home/${USER}";;
+    "~/"*) echo "/home/${USER}/${path#~/}";;
+    *) echo "$path";;
+  esac
+}
+
+PROJECT_DIR="${PROJECT_DIR:-/home/${USER}/AzerothCore-RealmMaster}"
+PROJECT_DIR="$(expand_remote_path "$PROJECT_DIR")"
 REMOTE_STORAGE="${REMOTE_STORAGE:-${PROJECT_DIR}/storage}"
+REMOTE_STORAGE="$(expand_remote_path "$REMOTE_STORAGE")"
 LOCAL_STORAGE_ROOT="${STORAGE_PATH_LOCAL:-}"
 if [ -z "$LOCAL_STORAGE_ROOT" ]; then
   LOCAL_STORAGE_ROOT="$(read_env_value STORAGE_PATH_LOCAL "./local-storage")"

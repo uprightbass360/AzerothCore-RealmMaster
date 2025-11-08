@@ -102,7 +102,7 @@ set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 docker compose -f "${PROJECT_DIR}/docker-compose.yml" \
   --profile services-standard \
-  -p "${COMPOSE_PROJECT_NAME:-acore-compose}" up -d --build
+  -p "${COMPOSE_PROJECT_NAME:-azerothcore-realmmaster}" up -d --build
 ```
 
 
