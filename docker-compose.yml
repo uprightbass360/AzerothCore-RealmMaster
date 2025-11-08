@@ -18,8 +18,6 @@ services:
       MYSQL_MAX_CONNECTIONS: ${MYSQL_MAX_CONNECTIONS}
       MYSQL_INNODB_BUFFER_POOL_SIZE: ${MYSQL_INNODB_BUFFER_POOL_SIZE}
       MYSQL_INNODB_LOG_FILE_SIZE: ${MYSQL_INNODB_LOG_FILE_SIZE}
-    ports:
-      - "${MYSQL_EXTERNAL_PORT}:${MYSQL_PORT}"
     entrypoint:
       - /usr/local/bin/mysql-entrypoint.sh
     volumes:
@@ -27,6 +25,7 @@ services:
       - ${STORAGE_PATH_LOCAL}/mysql-data:/var/lib/mysql-persistent
       - ${BACKUP_PATH}:/backups
       - ${HOST_ZONEINFO_PATH}:/usr/share/zoneinfo:ro
+      - ${MYSQL_CONFIG_DIR:-${STORAGE_PATH}/config/mysql/conf.d}:/etc/mysql/conf.d
     tmpfs:
       - /var/lib/mysql-runtime:size=${MYSQL_RUNTIME_TMPFS_SIZE}
     command:
@@ -210,12 +209,13 @@ services:
     container_name: ac-volume-init
     user: "0:0"
     volumes:
-      - ac-client-data:/azerothcore/data
+      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
       - client-data-cache:/cache
     command:
       - sh
       - -c
       - |
+        mkdir -p /azerothcore/data
         echo "🔧 Fixing Docker volume permissions..."
         chown -R ${CONTAINER_USER} /azerothcore/data /cache
         chmod -R 755 /azerothcore/data /cache
@@ -236,6 +236,8 @@ services:
       - |
         echo "🔧 Initializing storage directories with proper permissions..."
         mkdir -p /storage-root/config /storage-root/logs /storage-root/modules /storage-root/lua_scripts /storage-root/install-markers
+        mkdir -p /storage-root/config/mysql/conf.d
+        mkdir -p /storage-root/client-data
         mkdir -p /storage-root/backups /local-storage-root/mysql-data
         # Fix ownership of root directories and all contents
         chown -R ${CONTAINER_USER} /storage-root /local-storage-root
@@ -255,7 +257,7 @@ services:
       ac-volume-init:
         condition: service_completed_successfully
     volumes:
-      - ac-client-data:/azerothcore/data
+      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
       - client-data-cache:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
@@ -286,7 +288,7 @@ services:
       ac-volume-init:
         condition: service_completed_successfully
     volumes:
-      - ac-client-data:/azerothcore/data
+      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
       - client-data-cache:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
@@ -380,7 +382,7 @@ services:
       - "${WORLD_EXTERNAL_PORT}:${WORLD_PORT}"
       - "${SOAP_EXTERNAL_PORT}:${SOAP_PORT}"
     volumes:
-      - ac-client-data:/azerothcore/data
+      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
       - ${STORAGE_PATH}/modules:/azerothcore/modules
@@ -503,7 +505,7 @@ services:
       - "${WORLD_EXTERNAL_PORT}:${WORLD_PORT}"
       - "${SOAP_EXTERNAL_PORT}:${SOAP_PORT}"
     volumes:
-      - ac-client-data:/azerothcore/data
+      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
       - ${STORAGE_PATH}/modules:/azerothcore/modules
@@ -550,7 +552,7 @@ services:
       PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS}"
       AC_LOG_LEVEL: "2"
     volumes:
-      - ac-client-data:/azerothcore/data
+      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
       - ${STORAGE_PATH}/modules:/azerothcore/modules
@@ -723,9 +725,6 @@ services:
       - azerothcore
 
 volumes:
-  ac-client-data:
-    name: ${CLIENT_DATA_VOLUME}
-    driver: local
   client-data-cache:
     driver: local
 

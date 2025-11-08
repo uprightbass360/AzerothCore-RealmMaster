@@ -10,7 +10,8 @@ ok(){ echo -e "${GREEN}✅ $*${NC}"; }
 warn(){ echo -e "${YELLOW}⚠️  $*${NC}"; }
 err(){ echo -e "${RED}❌ $*${NC}"; }
 
-COMPOSE_FILE="$(dirname "$0")/docker-compose.yml"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
 ENV_FILE=""
 PROFILES=(db services-standard client-data modules tools)
 SKIP_DEPLOY=false
@@ -72,6 +73,15 @@ run_compose(){
     compose_args+=(--env-file "$ENV_FILE")
   fi
   compose_args+=(-f "$COMPOSE_FILE")
+  if [ "$(read_env_value MYSQL_EXPOSE_PORT "0")" = "1" ]; then
+    local extra_file
+    extra_file="$(dirname "$COMPOSE_FILE")/docker-compose.mysql-expose.yml"
+    if [ -f "$extra_file" ]; then
+      compose_args+=(-f "$extra_file")
+    else
+      warn "MYSQL_EXPOSE_PORT=1 but ${extra_file} missing; skipping port exposure override."
+    fi
+  fi
   docker compose "${compose_args[@]}" "$@"
 }
 

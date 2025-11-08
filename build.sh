@@ -199,6 +199,37 @@ ensure_source_repo(){
   echo "$src_path"
 }
 
+show_client_data_requirement(){
+  local repo_path="$1"
+  local detector="$ROOT_DIR/scripts/detect-client-data-version.sh"
+  if [ ! -x "$detector" ]; then
+    return
+  fi
+
+  local detection
+  if ! detection="$("$detector" --no-header "$repo_path" 2>/dev/null | head -n1)"; then
+    warn "Could not detect client data version for $repo_path"
+    return
+  fi
+
+  local detected_repo raw_version normalized_version
+  IFS=$'\t' read -r detected_repo raw_version normalized_version <<< "$detection"
+  if [ -z "$normalized_version" ] || [ "$normalized_version" = "<unknown>" ]; then
+    warn "Could not detect client data version for $repo_path"
+    return
+  fi
+
+  local env_value
+  env_value="$(read_env CLIENT_DATA_VERSION)"
+  if [ -n "$env_value" ] && [ "$env_value" != "$normalized_version" ]; then
+    warn "Source at $repo_path expects client data ${normalized_version} (raw ${raw_version}) but .env specifies ${env_value}. Update CLIENT_DATA_VERSION to avoid mismatched maps."
+  elif [ -n "$env_value" ]; then
+    info "Client data requirement satisfied: ${normalized_version} (raw ${raw_version})"
+  else
+    info "Detected client data requirement: ${normalized_version} (raw ${raw_version}). Set CLIENT_DATA_VERSION in .env to avoid mismatches."
+  fi
+}
+
 # Build state detection (extracted from setup.sh and deploy.sh)
 modules_need_rebuild(){
   local storage_path
@@ -576,6 +607,7 @@ main(){
 
   info "Step 1/6: Setting up source repository"
   src_dir="$(ensure_source_repo)"
+  show_client_data_requirement "$src_dir"
 
   info "Step 2/6: Detecting build requirements"
   readarray -t rebuild_reasons < <(detect_rebuild_reasons)

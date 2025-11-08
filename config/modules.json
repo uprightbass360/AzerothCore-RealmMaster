@@ -5,7 +5,6 @@
       "name": "mod-playerbots",
       "repo": "https://github.com/mod-playerbots/mod-playerbots.git",
       "description": "Adds scriptable playerbot characters that can form dungeon parties, raid, and PvP with humans",
-      "needs_build": false,
       "type": "data",
       "notes": "Installs SQL/config assets; core functionality is built into playerbot images",
       "post_install_hooks": [],
@@ -14,14 +13,13 @@
       ],
       "category": "automation",
       "order": 1,
-      "special_message": "🤖 Foundation module: Enables AI-powered companions for solo and group content"
+      "special_message": "\ud83e\udd16 Foundation module: Enables AI-powered companions for solo and group content"
     },
     {
       "key": "MODULE_AOE_LOOT",
       "name": "mod-aoe-loot",
       "repo": "https://github.com/azerothcore/mod-aoe-loot.git",
       "description": "Lets characters loot multiple corpses with one click for faster farming",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -34,7 +32,6 @@
       "name": "mod-learn-spells",
       "repo": "https://github.com/azerothcore/mod-learn-spells.git",
       "description": "Teaches class spells automatically at the correct level to streamline leveling",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -47,7 +44,6 @@
       "name": "mod-fireworks-on-level",
       "repo": "https://github.com/azerothcore/mod-fireworks-on-level.git",
       "description": "Spawns celebratory fireworks whenever a player dings a new level",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -60,7 +56,6 @@
       "name": "mod-individual-progression",
       "repo": "https://github.com/ZhengPeiRu21/mod-individual-progression.git",
       "description": "Tracks each character through Vanilla \u2192 TBC \u2192 WotLK progression, unlocking content sequentially",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -73,7 +68,6 @@
       "name": "mod-ahbot",
       "repo": "https://github.com/azerothcore/mod-ahbot.git",
       "description": "Populates the auction house with configurable buying/selling behavior to keep markets active",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -85,7 +79,6 @@
       "key": "MODULE_AUTOBALANCE",
       "name": "mod-autobalance",
       "repo": "https://github.com/azerothcore/mod-autobalance.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -98,7 +91,6 @@
       "key": "MODULE_TRANSMOG",
       "name": "mod-transmog",
       "repo": "https://github.com/azerothcore/mod-transmog.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -111,7 +103,6 @@
       "key": "MODULE_NPC_BUFFER",
       "name": "mod-npc-buffer",
       "repo": "https://github.com/azerothcore/mod-npc-buffer.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -124,7 +115,6 @@
       "key": "MODULE_DYNAMIC_XP",
       "name": "mod-dynamic-xp",
       "repo": "https://github.com/azerothcore/mod-dynamic-xp.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -137,7 +127,6 @@
       "key": "MODULE_SOLO_LFG",
       "name": "mod-solo-lfg",
       "repo": "https://github.com/azerothcore/mod-solo-lfg.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -150,7 +139,6 @@
       "key": "MODULE_1V1_ARENA",
       "name": "mod-1v1-arena",
       "repo": "https://github.com/azerothcore/mod-1v1-arena.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -163,7 +151,6 @@
       "key": "MODULE_PHASED_DUELS",
       "name": "mod-phased-duels",
       "repo": "https://github.com/azerothcore/mod-phased-duels.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -176,7 +163,6 @@
       "key": "MODULE_BREAKING_NEWS",
       "name": "mod-breaking-news-override",
       "repo": "https://github.com/azerothcore/mod-breaking-news-override.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -189,7 +175,6 @@
       "key": "MODULE_BOSS_ANNOUNCER",
       "name": "mod-boss-announcer",
       "repo": "https://github.com/azerothcore/mod-boss-announcer.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -202,7 +187,6 @@
       "key": "MODULE_ACCOUNT_ACHIEVEMENTS",
       "name": "mod-account-achievements",
       "repo": "https://github.com/azerothcore/mod-account-achievements.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -215,7 +199,6 @@
       "key": "MODULE_AUTO_REVIVE",
       "name": "mod-auto-revive",
       "repo": "https://github.com/azerothcore/mod-auto-revive.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -228,7 +211,6 @@
       "key": "MODULE_GAIN_HONOR_GUARD",
       "name": "mod-gain-honor-guard",
       "repo": "https://github.com/azerothcore/mod-gain-honor-guard.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -241,7 +223,6 @@
       "key": "MODULE_ELUNA",
       "name": "mod-ale",
       "repo": "https://github.com/azerothcore/mod-ale.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [
         "mod-ale-patches"
@@ -252,13 +233,12 @@
       "description": "Adds Eluna Lua scripting engine for creating custom gameplay mechanics",
       "category": "scripting",
       "order": 9998,
-      "special_message": "⚡ Advanced scripting: Required by many Lua-based modules. Enable this first if you plan to use scripted features"
+      "special_message": "\u26a1 Advanced scripting: Required by many Lua-based modules. Enable this first if you plan to use scripted features"
     },
     {
       "key": "MODULE_TIME_IS_TIME",
       "name": "mod-TimeIsTime",
       "repo": "https://github.com/dunjeon/mod-TimeIsTime.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -271,7 +251,6 @@
       "key": "MODULE_POCKET_PORTAL",
       "name": "mod-pocket-portal",
       "repo": "https://github.com/azerothcore/mod-pocket-portal.git",
-      "needs_build": true,
       "type": "cpp",
       "status": "blocked",
       "block_reason": "Requires C++20 std::format support patch before enabling",
@@ -286,7 +265,6 @@
       "key": "MODULE_RANDOM_ENCHANTS",
       "name": "mod-random-enchants",
       "repo": "https://github.com/azerothcore/mod-random-enchants.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -299,7 +277,6 @@
       "key": "MODULE_SOLOCRAFT",
       "name": "mod-solocraft",
       "repo": "https://github.com/azerothcore/mod-solocraft.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -312,7 +289,6 @@
       "key": "MODULE_PVP_TITLES",
       "name": "mod-pvp-titles",
       "repo": "https://github.com/azerothcore/mod-pvp-titles.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -328,7 +304,6 @@
       "key": "MODULE_NPC_BEASTMASTER",
       "name": "mod-npc-beastmaster",
       "repo": "https://github.com/azerothcore/mod-npc-beastmaster.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [
         "fix-beastmaster-sql"
@@ -343,7 +318,6 @@
       "key": "MODULE_NPC_ENCHANTER",
       "name": "mod-npc-enchanter",
       "repo": "https://github.com/azerothcore/mod-npc-enchanter.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -356,7 +330,6 @@
       "key": "MODULE_INSTANCE_RESET",
       "name": "mod-instance-reset",
       "repo": "https://github.com/azerothcore/mod-instance-reset.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -369,7 +342,6 @@
       "key": "MODULE_LEVEL_GRANT",
       "name": "mod-quest-count-level",
       "repo": "https://github.com/michaeldelago/mod-quest-count-level.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -382,7 +354,6 @@
       "key": "MODULE_ARAC",
       "name": "mod-arac",
       "repo": "https://github.com/heyitsbench/mod-arac.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -395,7 +366,6 @@
       "key": "MODULE_ASSISTANT",
       "name": "mod-assistant",
       "repo": "https://github.com/noisiver/mod-assistant.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "description": "Spawns an all-purpose assistant NPC with heirlooms, professions, and convenience commands",
@@ -405,7 +375,6 @@
       "key": "MODULE_REAGENT_BANK",
       "name": "mod-reagent-bank",
       "repo": "https://github.com/ZhengPeiRu21/mod-reagent-bank.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "description": "Lets players stash crafting reagents with a dedicated banker NPC",
@@ -415,7 +384,6 @@
       "key": "MODULE_BLACK_MARKET_AUCTION_HOUSE",
       "name": "mod-black-market",
       "repo": "https://github.com/Youpeoples/Black-Market-Auction-House.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -430,7 +398,6 @@
       "key": "MODULE_CHALLENGE_MODES",
       "name": "mod-challenge-modes",
       "repo": "https://github.com/ZhengPeiRu21/mod-challenge-modes.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "description": "Implements keystone-style timed runs with leaderboards and scaling modifiers",
@@ -440,7 +407,6 @@
       "key": "MODULE_OLLAMA_CHAT",
       "name": "mod-ollama-chat",
       "repo": "https://github.com/DustinHendrickson/mod-ollama-chat.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "description": "Connects playerbots to an Ollama LLM so they can chat with humans organically",
@@ -450,7 +416,6 @@
       "key": "MODULE_PLAYER_BOT_LEVEL_BRACKETS",
       "name": "mod-player-bot-level-brackets",
       "repo": "https://github.com/DustinHendrickson/mod-player-bot-level-brackets.git",
-      "needs_build": true,
       "type": "cpp",
       "requires": [
         "MODULE_PLAYERBOTS"
@@ -463,7 +428,6 @@
       "key": "MODULE_STATBOOSTER",
       "name": "StatBooster",
       "repo": "https://github.com/AnchyDev/StatBooster.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [
         "fix-statbooster-api"
@@ -475,7 +439,6 @@
       "key": "MODULE_DUNGEON_RESPAWN",
       "name": "DungeonRespawn",
       "repo": "https://github.com/AnchyDev/DungeonRespawn.git",
-      "needs_build": true,
       "type": "cpp",
       "status": "blocked",
       "block_reason": "Upstream override signature mismatch (OnBeforeTeleport); awaiting fix",
@@ -487,7 +450,6 @@
       "key": "MODULE_SKELETON_MODULE",
       "name": "skeleton-module",
       "repo": "https://github.com/azerothcore/skeleton-module.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "description": "Provides a minimal AzerothCore module scaffold for building new features",
@@ -497,7 +459,6 @@
       "key": "MODULE_BG_SLAVERYVALLEY",
       "name": "mod-bg-slaveryvalley",
       "repo": "https://github.com/Helias/mod-bg-slaveryvalley.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "description": "Adds the Slavery Valley battleground complete with objectives and queue hooks",
@@ -510,7 +471,6 @@
       "key": "MODULE_AZEROTHSHARD",
       "name": "mod-azerothshard",
       "repo": "https://github.com/azerothcore/mod-azerothshard.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "description": "Bundles AzerothShard tweaks: utility NPCs, scripted events, and gameplay improvements",
@@ -520,7 +480,6 @@
       "key": "MODULE_WORGOBLIN",
       "name": "mod-worgoblin",
       "repo": "https://github.com/heyitsbench/mod-worgoblin.git",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "description": "Enables Worgen and Goblin characters with DB/DBC adjustments",
@@ -533,7 +492,6 @@
       "key": "MODULE_ELUNA_TS",
       "name": "eluna-ts",
       "repo": "https://github.com/azerothcore/eluna-ts.git",
-      "needs_build": false,
       "type": "tool",
       "requires": [
         "MODULE_ELUNA"
@@ -546,20 +504,18 @@
       "key": "MODULE_AIO",
       "name": "mod-aio",
       "repo": "https://github.com/Rochet2/AIO.git",
-      "needs_build": true,
       "type": "cpp",
       "notes": "Azeroth Interface Override - enables client-server interface communication",
       "post_install_hooks": [],
       "description": "Pure Lua server-client communication system for bidirectional data transmission",
       "category": "scripting",
       "order": 9999,
-      "special_message": "🌉 UI Bridge: Enables advanced client-server interfaces. Most users don't need this unless using AIO-based modules"
+      "special_message": "\ud83c\udf09 UI Bridge: Enables advanced client-server interfaces. Most users don't need this unless using AIO-based modules"
     },
     {
       "key": "MODULE_ELUNA_SCRIPTS",
       "name": "eluna-scripts",
       "repo": "https://github.com/Isidorsson/Eluna-scripts.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -574,7 +530,6 @@
       "key": "MODULE_TRANSMOG_AIO",
       "name": "azerothcore-transmog-3.3.5a",
       "repo": "https://github.com/DanieltheDeveloper/azerothcore-transmog-3.3.5a.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_AIO"
@@ -589,7 +544,6 @@
       "key": "MODULE_EVENT_SCRIPTS",
       "name": "acore-eventscripts",
       "repo": "https://github.com/55Honey/Acore_eventScripts.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -604,7 +558,6 @@
       "key": "MODULE_LEVEL_UP_REWARD",
       "name": "acore-levelupreward",
       "repo": "https://github.com/55Honey/Acore_LevelUpReward.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -619,7 +572,6 @@
       "key": "MODULE_ACCOUNTWIDE_SYSTEMS",
       "name": "azerothcore-eluna-accountwide",
       "repo": "https://github.com/Aldori15/azerothcore-eluna-accountwide.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -634,7 +586,6 @@
       "key": "MODULE_EXCHANGE_NPC",
       "name": "acore-exchangenpc",
       "repo": "https://github.com/55Honey/Acore_ExchangeNpc.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -649,7 +600,6 @@
       "key": "MODULE_RECRUIT_A_FRIEND",
       "name": "acore-recruitafriend",
       "repo": "https://github.com/55Honey/Acore_RecruitAFriend.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -664,7 +614,6 @@
       "key": "MODULE_PRESTIGE_DRAFT_MODE",
       "name": "prestige-and-draft-mode",
       "repo": "https://github.com/Youpeoples/Prestige-and-Draft-Mode.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -679,7 +628,6 @@
       "key": "MODULE_LUA_AH_BOT",
       "name": "azerothcore-lua-ah-bot",
       "repo": "https://github.com/mostlynick3/azerothcore-lua-ah-bot.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -694,7 +642,6 @@
       "key": "MODULE_HARDCORE_MODE",
       "name": "lua-hardcoremode",
       "repo": "https://github.com/HellionOP/Lua-HardcoreMode.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -709,7 +656,6 @@
       "key": "MODULE_NPCBOT_EXTENDED_COMMANDS",
       "name": "npcbot-extended-commands",
       "repo": "https://github.com/Day36512/Npcbot_Extended_Commands.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -724,7 +670,6 @@
       "key": "MODULE_MULTIVENDOR",
       "name": "azerothcore-lua-multivendor",
       "repo": "https://github.com/Shadowveil-WotLK/AzerothCore-lua-MultiVendor.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -739,7 +684,6 @@
       "key": "MODULE_TREASURE_CHEST_SYSTEM",
       "name": "treasure-chest-system",
       "repo": "https://github.com/zyggy123/Treasure-Chest-System.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -754,7 +698,6 @@
       "key": "MODULE_ACTIVE_CHAT",
       "name": "activechat",
       "repo": "https://github.com/Day36512/ActiveChat.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -769,7 +712,6 @@
       "key": "MODULE_ULTIMATE_FULL_LOOT_PVP",
       "name": "ultimate-full-loot-pvp",
       "repo": "https://github.com/Youpeoples/Ultimate-Full-Loot-Pvp.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -784,7 +726,6 @@
       "key": "MODULE_HORADRIC_CUBE",
       "name": "horadric-cube-for-world-of-warcraft",
       "repo": "https://github.com/TITIaio/Horadric-Cube-for-World-of-Warcraft.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -799,7 +740,6 @@
       "key": "MODULE_CARBON_COPY",
       "name": "acore-carboncopy",
       "repo": "https://github.com/55Honey/Acore_CarbonCopy.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -814,7 +754,6 @@
       "key": "MODULE_TEMP_ANNOUNCEMENTS",
       "name": "acore-tempannouncements",
       "repo": "https://github.com/55Honey/Acore_TempAnnouncements.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -829,7 +768,6 @@
       "key": "MODULE_ZONE_CHECK",
       "name": "acore-zonecheck",
       "repo": "https://github.com/55Honey/Acore_Zonecheck.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -844,7 +782,6 @@
       "key": "MODULE_AIO_BLACKJACK",
       "name": "aio-blackjack",
       "repo": "https://github.com/Manmadedrummer/AIO-Blackjack.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_AIO"
@@ -859,7 +796,6 @@
       "key": "MODULE_SEND_AND_BIND",
       "name": "acore-sendandbind",
       "repo": "https://github.com/55Honey/Acore_SendAndBind.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -874,7 +810,6 @@
       "key": "MODULE_DYNAMIC_TRADER",
       "name": "dynamic-trader",
       "repo": "https://github.com/Day36512/Dynamic-Trader.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -889,7 +824,6 @@
       "key": "MODULE_LOTTERY_LUA",
       "name": "lottery-lua",
       "repo": "https://github.com/zyggy123/lottery-lua.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -904,7 +838,6 @@
       "key": "MODULE_DISCORD_NOTIFIER",
       "name": "acore-discordnotifier",
       "repo": "https://github.com/0xCiBeR/Acore_DiscordNotifier.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -919,7 +852,6 @@
       "key": "MODULE_GLOBAL_MAIL_BANKING_AUCTIONS",
       "name": "azerothcore-global-mail-banking-auctions",
       "repo": "https://github.com/Aldori15/azerothcore-global-mail_banking_auctions.git",
-      "needs_build": false,
       "type": "lua",
       "requires": [
         "MODULE_ELUNA"
@@ -935,7 +867,6 @@
       "name": "mod-guildhouse",
       "repo": "https://github.com/azerothcore/mod-guildhouse.git",
       "description": "Phased guild house system allowing guild members to visit their private guild house",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -948,7 +879,6 @@
       "name": "mod-progression-system",
       "repo": "https://github.com/azerothcore/mod-progression-system.git",
       "description": "Allows for the automatic loading of scripts and SQL files based on level brackets",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -962,7 +892,6 @@
       "name": "mod-npc-free-professions",
       "repo": "https://github.com/azerothcore/mod-npc-free-professions.git",
       "description": "Makes a ProfessionsNPC who gives 2 free professions (full with recipes) to player",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -973,7 +902,6 @@
       "name": "mod-duel-reset",
       "repo": "https://github.com/azerothcore/mod-duel-reset.git",
       "description": "Adds some duel reset features",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -986,7 +914,6 @@
       "name": "mod-zone-difficulty",
       "repo": "https://github.com/azerothcore/mod-zone-difficulty.git",
       "description": "Support module for mod-progression-system, handles nerfs and debuffs per zone",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -998,7 +925,6 @@
       "name": "mod-morphsummon",
       "repo": "https://github.com/azerothcore/mod-morphsummon.git",
       "description": "Change appearance of summoned permanent creatures",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -1012,7 +938,6 @@
       "name": "mod-spell-regulator",
       "repo": "https://github.com/azerothcore/mod-spell-regulator.git",
       "description": "Modify the percentage of the spells by regulating in the best way",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1024,7 +949,6 @@
       "name": "mod-weekend-xp",
       "repo": "https://github.com/azerothcore/mod-weekend-xp.git",
       "description": "XP module that allows server owner to select how much XP players can receive on the weekend via config file",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -1037,7 +961,6 @@
       "name": "mod-reward-played-time",
       "repo": "https://github.com/azerothcore/mod-reward-played-time.git",
       "description": "Adds items for players that have stayed logged in for x amount of time",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -1050,7 +973,6 @@
       "name": "mod-resurrection-scroll",
       "repo": "https://github.com/azerothcore/mod-resurrection-scroll.git",
       "description": "Allows users to grant rested XP bonuses to players who have not logged in X days",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1062,7 +984,6 @@
       "name": "mod-item-level-up",
       "repo": "https://github.com/azerothcore/mod-item-level-up.git",
       "description": "Creates an item that allows you to level up (id = 701001)",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1073,7 +994,6 @@
       "name": "mod-npc-talent-template",
       "repo": "https://github.com/azerothcore/mod-npc-talent-template.git",
       "description": "An NPC that allows players to instantly apply pre-configured character templates that gear up, gem, set talents, and apply glyphs for any class",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1085,7 +1005,6 @@
       "name": "mod-global-chat",
       "repo": "https://github.com/azerothcore/mod-global-chat.git",
       "description": "Simple global chat for AzerothCore enabling worldserver-wide messaging functionality",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -1098,7 +1017,6 @@
       "name": "mod-premium",
       "repo": "https://github.com/azerothcore/mod-premium.git",
       "description": "Adds Premium account features to players",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -1112,7 +1030,6 @@
       "name": "mod-system-vip",
       "repo": "https://github.com/azerothcore/mod-system-vip.git",
       "description": "System offering VIP features and benefits to players",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -1125,7 +1042,6 @@
       "name": "mod-acore-subscriptions",
       "repo": "https://github.com/azerothcore/mod-acore-subscriptions.git",
       "description": "Handles the subscription logic, no longer requires modules or services to have subscription logic in their code",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1136,7 +1052,6 @@
       "name": "mod-keep-out",
       "repo": "https://github.com/azerothcore/mod-keep-out.git",
       "description": "Keeps players who are non-GM from entering a zone/map",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1148,7 +1063,6 @@
       "name": "mod-server-auto-shutdown",
       "repo": "https://github.com/azerothcore/mod-server-auto-shutdown.git",
       "description": "Establishes a daily restart with configurable time, notification period, and custom messages",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1159,7 +1073,6 @@
       "name": "mod-who-logged",
       "repo": "https://github.com/azerothcore/mod-who-logged.git",
       "description": "Outputs to the console when a player logs into the world",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -1172,7 +1085,6 @@
       "name": "mod-account-mounts",
       "repo": "https://github.com/azerothcore/mod-account-mounts.git",
       "description": "Goes through the list of characters on an account to obtain playerGuids and store mount spells that all characters know",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1183,7 +1095,6 @@
       "name": "mod-antifarming",
       "repo": "https://github.com/azerothcore/mod-antifarming.git",
       "description": "Port of the AntiFarming Script from SymbolixDEV's repo to AzerothCore",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -1196,7 +1107,6 @@
       "name": "mod-arena-replay",
       "repo": "https://github.com/azerothcore/mod-arena-replay.git",
       "description": "Allows you to watch a replay of rated arena games",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1208,7 +1118,6 @@
       "name": "mod-tic-tac-toe",
       "repo": "https://github.com/azerothcore/mod-tic-tac-toe.git",
       "description": "Allows players to play Tic Tac Toe between players and against different AI",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [],
@@ -1220,7 +1129,6 @@
       "name": "mod-war-effort",
       "repo": "https://github.com/azerothcore/mod-war-effort.git",
       "description": "Brings back the war effort of the two factions for the opening of the gates of Ahn'Qiraj",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [
@@ -1233,7 +1141,6 @@
       "name": "mod-promotion-azerothcore",
       "repo": "https://github.com/azerothcore/mod-promotion-azerothcore.git",
       "description": "Allows player to receive a promotion consisting of a level 90 character, backpacks, gold, armor, and a mount",
-      "needs_build": true,
       "type": "cpp",
       "post_install_hooks": [],
       "config_cleanup": [

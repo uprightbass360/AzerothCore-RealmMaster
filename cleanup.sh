@@ -11,7 +11,7 @@ set -e
 # Resolve project dir and compose
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${SCRIPT_DIR}"
-COMPOSE_FILE="${PROJECT_DIR}/docker-compose.yml"
+DEFAULT_COMPOSE_FILE="${PROJECT_DIR}/docker-compose.yml"
 ENV_FILE="${PROJECT_DIR}/.env"
 
 # Colors
@@ -87,7 +87,7 @@ confirm() {
 
 format_container_table() {
   local containers
-  containers="$(docker compose -f "$COMPOSE_FILE" ps -a --format 'table {{.Name}}\t{{.Status}}\t{{.Service}}\t{{.Image}}' 2>/dev/null || echo "")"
+  containers="$($COMPOSE_BASE ps -a --format 'table {{.Name}}\t{{.Status}}\t{{.Service}}\t{{.Image}}' 2>/dev/null || echo "")"
   if [ -n "$containers" ]; then
     echo "$containers" | head -1
     echo "$containers" | tail -n +2 | while IFS=$'\t' read -r name status service image; do
@@ -124,6 +124,21 @@ STORAGE_PATH_LOCAL_DEFAULT="${PROJECT_DIR}/local-storage"
 if [ -f "$ENV_FILE" ]; then
   set -a; source "$ENV_FILE"; set +a
 fi
+
+COMPOSE_FILE_ARGS=(-f "$DEFAULT_COMPOSE_FILE")
+if [ "${MYSQL_EXPOSE_PORT:-0}" = "1" ]; then
+  EXTRA_COMPOSE_FILE="${PROJECT_DIR}/docker-compose.mysql-expose.yml"
+  if [ -f "$EXTRA_COMPOSE_FILE" ]; then
+    COMPOSE_FILE_ARGS+=(-f "$EXTRA_COMPOSE_FILE")
+  else
+    print_status WARNING "MYSQL_EXPOSE_PORT=1 but $EXTRA_COMPOSE_FILE missing; skipping port exposure override."
+  fi
+fi
+COMPOSE_FILE_ARGS_STR=""
+for arg in "${COMPOSE_FILE_ARGS[@]}"; do
+  COMPOSE_FILE_ARGS_STR+=" ${arg}"
+done
+COMPOSE_BASE="docker compose${COMPOSE_FILE_ARGS_STR}"
 STORAGE_PATH="${STORAGE_PATH:-$STORAGE_PATH_DEFAULT}"
 STORAGE_PATH_LOCAL="${STORAGE_PATH_LOCAL:-$STORAGE_PATH_LOCAL_DEFAULT}"
 PROJECT_NAME="${COMPOSE_PROJECT_NAME:-ac-compose}"
@@ -170,7 +185,7 @@ soft_cleanup() {
     --profile tools
     --profile db
   )
-  execute_command "Stopping runtime profiles" docker compose -f "$COMPOSE_FILE" "${profiles[@]}" down
+  execute_command "Stopping runtime profiles" $COMPOSE_BASE "${profiles[@]}" down
   print_status SUCCESS "Soft cleanup complete"
 }
 
@@ -187,7 +202,7 @@ hard_cleanup() {
     --profile tools
     --profile db
   )
-  execute_command "Removing containers and networks" docker compose -f "$COMPOSE_FILE" "${profiles[@]}" down --remove-orphans
+  execute_command "Removing containers and networks" $COMPOSE_BASE "${profiles[@]}" down --remove-orphans
   execute_command "Remove project volumes" remove_project_volumes
   # Remove straggler containers matching project name (defensive)
   execute_command "Remove stray project containers" "docker ps -a --format '{{.Names}}' | grep -E '^ac-' | xargs -r docker rm -f"
@@ -214,7 +229,7 @@ nuclear_cleanup() {
     --profile tools
     --profile db
   )
-  execute_command "Removing containers, networks and volumes" docker compose -f "$COMPOSE_FILE" "${profiles[@]}" down --volumes --remove-orphans
+  execute_command "Removing containers, networks and volumes" $COMPOSE_BASE "${profiles[@]}" down --volumes --remove-orphans
   execute_command "Remove leftover volumes" remove_project_volumes
 
   # Remove project images (server/tool images typical to this project)
@@ -266,8 +281,8 @@ main(){
     print_status ERROR "Docker not found"
     exit 1
   fi
-  if [ ! -f "$COMPOSE_FILE" ]; then
-    print_status ERROR "Compose file not found at $COMPOSE_FILE"
+  if [ ! -f "$DEFAULT_COMPOSE_FILE" ]; then
+    print_status ERROR "Compose file not found at $DEFAULT_COMPOSE_FILE"
     exit 1
   fi
   if [ -z "$CLEANUP_LEVEL" ]; then

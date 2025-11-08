@@ -53,6 +53,7 @@ AUTH_PORT="$(read_env AUTH_EXTERNAL_PORT)"
 WORLD_PORT="$(read_env WORLD_EXTERNAL_PORT)"
 SOAP_PORT="$(read_env SOAP_EXTERNAL_PORT)"
 MYSQL_PORT="$(read_env MYSQL_EXTERNAL_PORT)"
+MYSQL_EXPOSE_PORT="$(read_env MYSQL_EXPOSE_PORT)"
 PMA_PORT="$(read_env PMA_EXTERNAL_PORT)"
 KEIRA_PORT="$(read_env KEIRA3_EXTERNAL_PORT)"
 ELUNA_ENABLED="$(read_env AC_ELUNA_ENABLED)"
@@ -254,12 +255,20 @@ ports_summary(){
   for i in "${!names[@]}"; do
     local svc="${names[$i]}"
     local port="${ports[$i]}"
+    if [ "$svc" = "MySQL" ] && [ "${MYSQL_EXPOSE_PORT}" != "1" ]; then
+      printf "  %-10s %-6s %b○%b not exposed\n" "$svc" "--" "$CYAN" "$NC"
+      continue
+    fi
     if [ -z "$port" ]; then
       printf "  %-10s %-6s %b○%b not set\n" "$svc" "--" "$YELLOW" "$NC"
       continue
     fi
     if timeout 1 bash -c "</dev/tcp/127.0.0.1/${port}" >/dev/null 2>&1; then
-      printf "  %-10s %-6s %b●%b reachable\n" "$svc" "$port" "$GREEN" "$NC"
+      if [ "$svc" = "MySQL" ]; then
+        printf "  %-10s %-6s %b●%b reachable %b!note%b exposed\n" "$svc" "$port" "$GREEN" "$NC" "$YELLOW" "$NC"
+      else
+        printf "  %-10s %-6s %b●%b reachable\n" "$svc" "$port" "$GREEN" "$NC"
+      fi
     else
       printf "  %-10s %-6s %b○%b unreachable\n" "$svc" "$port" "$RED" "$NC"
     fi

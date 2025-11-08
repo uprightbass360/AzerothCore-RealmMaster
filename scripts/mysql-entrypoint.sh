@@ -79,4 +79,18 @@ for path in /var/lib/mysql-runtime /var/lib/mysql /var/lib/mysql-persistent /bac
   fi
 done
 
+disable_binlog="${MYSQL_DISABLE_BINLOG:-}"
+if [ "${disable_binlog}" = "1" ]; then
+  add_skip_flag=1
+  for arg in "$@"; do
+    if [ "$arg" = "--skip-log-bin" ] || [[ "$arg" == --log-bin* ]]; then
+      add_skip_flag=0
+      break
+    fi
+  done
+  if [ "$add_skip_flag" -eq 1 ]; then
+    set -- "$@" --skip-log-bin
+  fi
+fi
+
 exec "$ORIGINAL_ENTRYPOINT" "$@"

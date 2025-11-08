@@ -131,9 +131,10 @@ class ModuleCollectionState:
     def requires_playerbot_source(self) -> bool:
         module_map = {m.key: m for m in self.modules}
         playerbots_enabled = module_map.get("MODULE_PLAYERBOTS")
-        playerbots = bool(playerbots_enabled and playerbots_enabled.enabled_effective)
-        needs_cpp = any(module.needs_build and module.enabled_effective for module in self.modules)
-        return playerbots or needs_cpp
+        return bool(playerbots_enabled and playerbots_enabled.enabled_effective)
+
+    def requires_custom_build(self) -> bool:
+        return any(module.needs_build and module.enabled_effective for module in self.modules)
 
 
 def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
@@ -150,8 +151,12 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
         key = entry["key"]
         name = entry["name"]
         repo = entry["repo"]
-        needs_build = bool(entry.get("needs_build", False))
         module_type = str(entry.get("type", "cpp"))
+        needs_build_flag = entry.get("needs_build")
+        if needs_build_flag is None:
+            needs_build = module_type.lower() == "cpp"
+        else:
+            needs_build = bool(needs_build_flag)
         requires = entry.get("requires") or []
         if not isinstance(requires, list):
             raise ValueError(f"Manifest entry {key} has non-list 'requires'")
@@ -263,19 +268,29 @@ def write_outputs(state: ModuleCollectionState, output_dir: Path) -> None:
 
     enabled_names: List[str] = []
     compile_names: List[str] = []
+    enabled_keys: List[str] = []
+    compile_keys: List[str] = []
 
     for module in state.modules:
         env_lines.append(f"export {module.key}={module.value}")
         if module.enabled_effective:
             enabled_names.append(module.name)
+            enabled_keys.append(module.key)
         if module.enabled_effective and module.needs_build:
             compile_names.append(module.name)
+            compile_keys.append(module.key)
 
     env_lines.append(f'export MODULES_ENABLED="{ " ".join(enabled_names) }"'.rstrip())
     env_lines.append(f'export MODULES_COMPILE="{ " ".join(compile_names) }"'.rstrip())
+    env_lines.append(f'export MODULES_ENABLED_LIST="{",".join(enabled_keys)}"')
+    env_lines.append(f'export MODULES_CPP_LIST="{",".join(compile_keys)}"')
     env_lines.append(
         f"export MODULES_REQUIRES_PLAYERBOT_SOURCE="
         f'{"1" if state.requires_playerbot_source() else "0"}'
+    )
+    env_lines.append(
+        f"export MODULES_REQUIRES_CUSTOM_BUILD="
+        f'{"1" if state.requires_custom_build() else "0"}'
     )
     env_lines.append(f"export MODULES_WARNING_COUNT={len(state.warnings)}")
     env_lines.append(f"export MODULES_ERROR_COUNT={len(state.errors)}")
@@ -301,6 +316,7 @@ def write_outputs(state: ModuleCollectionState, output_dir: Path) -> None:
         "enabled_modules": [module.name for module in state.enabled_modules()],
         "compile_modules": [module.name for module in state.compile_modules()],
         "requires_playerbot_source": state.requires_playerbot_source(),
+        "requires_custom_build": state.requires_custom_build(),
     }
 
     modules_state_path = output_dir / "modules-state.json"
@@ -340,6 +356,11 @@ def print_list(state: ModuleCollectionState, selector: str) -> None:
 
 def print_requires_playerbot(state: ModuleCollectionState) -> None:
     print("1" if state.requires_playerbot_source() else "0")
+
+
+
+def print_requires_custom_build(state: ModuleCollectionState) -> None:
+    print("1" if state.requires_custom_build() else "0")
 
 
 def print_state(state: ModuleCollectionState, fmt: str) -> None:
@@ -484,6 +505,18 @@ def configure_parser() -> argparse.ArgumentParser:
         return 1 if state.errors else 0
 
     rps_parser.set_defaults(func=handle_requires_playerbot)
+
+    rcb_parser = subparsers.add_parser(
+        "requires-custom-build",
+        help="Print 1 if a custom source build is required else 0",
+    )
+
+    def handle_requires_custom_build(args: argparse.Namespace) -> int:
+        state = build_state(Path(args.env_path).resolve(), Path(args.manifest).resolve())
+        print_requires_custom_build(state)
+        return 1 if state.errors else 0
+
+    rcb_parser.set_defaults(func=handle_requires_custom_build)
 
     dump_parser = subparsers.add_parser("dump", help="Dump module state (JSON format)")
     dump_parser.add_argument(

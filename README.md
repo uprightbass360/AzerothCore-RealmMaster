@@ -116,7 +116,7 @@ The setup wizard will guide you through:
 
 **Required when:**
 - Playerbots enabled (`MODULE_PLAYERBOTS=1`)
-- Any C++ module enabled (check `needs_build: true` in `config/modules.json`)
+- Any C++ module enabled (modules with `"type": "cpp"` in `config/modules.json`)
 
 **Build process:**
 1. Clones AzerothCore source to `local-storage/source/`
@@ -757,7 +757,7 @@ flowchart TB
 
 | Service / Container | Role | Ports (host → container) | Profile |
 |---------------------|------|--------------------------|---------|
-| `ac-mysql` | MySQL 8.0 database | `64306 → 3306` | `db` |
+| `ac-mysql` | MySQL 8.0 database | *(optional)* `64306 → 3306` (`MYSQL_EXPOSE_PORT=1`) | `db` |
 | `ac-db-init` | Database schema initialization | – | `db` |
 | `ac-db-import` | Database content import | – | `db` |
 | `ac-backup` | Automated backup system | – | `db` |
@@ -773,6 +773,12 @@ flowchart TB
 | `ac-phpmyadmin` | Database admin UI | `8081 → 80` | `tools` |
 | `ac-keira3` | Game content editor | `4201 → 8080` | `tools` |
 
+### Database Hardening
+
+- **MySQL port exposure** – By default `MYSQL_EXPOSE_PORT=0`, so `ac-mysql` is reachable only from the internal Docker network. Set `MYSQL_EXPOSE_PORT=1` to publish `${MYSQL_EXTERNAL_PORT}` on the host; RealmMaster scripts automatically include `docker-compose.mysql-expose.yml` so the override Just Works. If you invoke Compose manually, remember to add `-f docker-compose.mysql-expose.yml`.
+- **Binary logging toggle** – `MYSQL_DISABLE_BINLOG=1` appends `--skip-log-bin` via the MySQL wrapper entrypoint to keep disk churn low (and match Playerbot guidance). Flip the flag to `0` to re-enable binlogs for debugging or replication.
+- **Drop-in configs** – Any `.cnf` placed in `${STORAGE_PATH}/config/mysql/conf.d` (exposed via `MYSQL_CONFIG_DIR`) is mounted into `/etc/mysql/conf.d`. Use this to add custom tunables or temporarily override the binlog setting without touching the image.
+
 ### Storage Structure
 
 The project uses a dual-storage approach for optimal performance:
@@ -780,15 +786,22 @@ The project uses a dual-storage approach for optimal performance:
 **Primary Storage** (`STORAGE_PATH` - default: NFS mount or shared storage)
 ```
 storage/
-├── config/           # Server configuration files (.conf)
-├── logs/             # Server log files
-├── modules/          # Downloaded module source code
-├── lua_scripts/      # Eluna Lua scripts (auto-loaded)
-├── install-markers/  # Module installation state tracking
-└── backups/          # Automated database backups
+├── config/               # Server configuration files (.conf)
+│   └── mysql/
+│       └── conf.d/       # Drop-in MySQL overrides (mapped to /etc/mysql/conf.d)
+├── client-data/          # Unpacked WoW client data & DBC overrides
+├── logs/                 # Server log files
+├── modules/              # Downloaded module source code
+├── lua_scripts/          # Eluna Lua scripts (auto-loaded)
+├── install-markers/      # Module installation state tracking
+└── backups/              # Automated database backups
     ├── daily/        # Daily backups (retained per BACKUP_RETENTION_DAYS)
     └── hourly/       # Hourly backups (retained per BACKUP_RETENTION_HOURS)
 ```
+
+`storage/client-data` is bind-mounted into every world/auth/client-data container. Drop patched `dbc`, `maps`, `vmaps`, or `mmaps` files directly into that folder (e.g., `storage/client-data/dbc/SkillLine.dbc`) and the containers will read them immediately—perfect for modules like Individual Progression or mod-worgoblin that need to overwrite Blizzard data.
+
+To tweak MySQL settings, place `.cnf` snippets in `storage/config/mysql/conf.d`. Files in this directory map straight to `/etc/mysql/conf.d` inside `ac-mysql`, so you can re-enable binary logs or tune buffers without rebuilding images.
 
 **Local Storage** (`STORAGE_PATH_LOCAL` - default: `./local-storage`)
 ```
@@ -800,8 +813,7 @@ local-storage/
 └── images/               # Exported Docker images for remote deployment
 ```
 
-**Docker Volumes**
-- `ac-client-data` - Unpacked game client data (DBC, maps, vmaps, mmaps)
+**Docker Volume**
 - `client-data-cache` - Temporary storage for client data downloads
 
 This separation ensures database and build artifacts stay on fast local storage while configuration, modules, and backups can be shared across hosts via NFS.
@@ -1261,4 +1273,3 @@ This project builds upon:
      - `3784` (authserver)
      - `8215` (worldserver)
    - Configure NAT/port forwarding for public access
-

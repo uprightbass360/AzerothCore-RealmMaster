@@ -9,7 +9,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
+DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_PATH="$ROOT_DIR/.env"
 TARGET_PROFILE=""
 WATCH_LOGS=1
@@ -29,6 +29,7 @@ REMOTE_ARGS_PROVIDED=0
 MODULE_HELPER="$ROOT_DIR/scripts/modules.py"
 MODULE_STATE_INITIALIZED=0
 declare -a MODULES_COMPILE_LIST=()
+declare -a COMPOSE_FILE_ARGS=()
 
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
@@ -278,6 +279,22 @@ read_env(){
   echo "$value"
 }
 
+init_compose_files(){
+  local expose_port
+  expose_port="$(read_env MYSQL_EXPOSE_PORT "0")"
+  COMPOSE_FILE_ARGS=(-f "$DEFAULT_COMPOSE_FILE")
+  if [ "$expose_port" = "1" ]; then
+    local extra_file="$ROOT_DIR/docker-compose.mysql-expose.yml"
+    if [ -f "$extra_file" ]; then
+      COMPOSE_FILE_ARGS+=(-f "$extra_file")
+    else
+      warn "MYSQL_EXPOSE_PORT=1 but $extra_file not found; skipping port override"
+    fi
+  fi
+}
+
+init_compose_files
+
 resolve_local_storage_path(){
   local path
   path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
@@ -376,7 +393,7 @@ compose(){
   local project_name
   project_name="$(resolve_project_name)"
   # Add --quiet for less verbose output, filter excessive empty lines
-  docker compose --project-name "$project_name" -f "$COMPOSE_FILE" "$@" | filter_empty_lines
+  docker compose --project-name "$project_name" "${COMPOSE_FILE_ARGS[@]}" "$@" | filter_empty_lines
 }
 
 # Build detection logic

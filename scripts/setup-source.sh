@@ -14,35 +14,54 @@ PROJECT_ROOT="$(pwd)"
 
 # Default values
 MODULE_PLAYERBOTS="${MODULE_PLAYERBOTS:-0}"
-NEEDS_CXX_REBUILD="${NEEDS_CXX_REBUILD:-0}"
-
-COMPILE_MODULE_KEYS=(
-  MODULE_AOE_LOOT MODULE_LEARN_SPELLS MODULE_FIREWORKS MODULE_INDIVIDUAL_PROGRESSION MODULE_AHBOT MODULE_AUTOBALANCE
-  MODULE_TRANSMOG MODULE_NPC_BUFFER MODULE_DYNAMIC_XP MODULE_SOLO_LFG MODULE_1V1_ARENA MODULE_PHASED_DUELS
-  MODULE_BREAKING_NEWS MODULE_BOSS_ANNOUNCER MODULE_ACCOUNT_ACHIEVEMENTS MODULE_AUTO_REVIVE MODULE_GAIN_HONOR_GUARD
-  MODULE_TIME_IS_TIME MODULE_POCKET_PORTAL MODULE_RANDOM_ENCHANTS MODULE_SOLOCRAFT MODULE_PVP_TITLES MODULE_NPC_BEASTMASTER
-  MODULE_NPC_ENCHANTER MODULE_INSTANCE_RESET MODULE_LEVEL_GRANT MODULE_ARAC MODULE_ASSISTANT MODULE_REAGENT_BANK
-  MODULE_CHALLENGE_MODES MODULE_OLLAMA_CHAT MODULE_PLAYER_BOT_LEVEL_BRACKETS MODULE_STATBOOSTER MODULE_DUNGEON_RESPAWN
-  MODULE_SKELETON_MODULE MODULE_BG_SLAVERYVALLEY MODULE_AZEROTHSHARD MODULE_WORGOBLIN
-)
-
-if [ "$NEEDS_CXX_REBUILD" != "1" ]; then
-  for key in "${COMPILE_MODULE_KEYS[@]}"; do
-    if [ "${!key:-0}" = "1" ]; then
-      NEEDS_CXX_REBUILD=1
-      break
+PLAYERBOT_ENABLED="${PLAYERBOT_ENABLED:-0}"
+STACK_SOURCE_VARIANT="${STACK_SOURCE_VARIANT:-}"
+if [ -z "$STACK_SOURCE_VARIANT" ]; then
+    if [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
+        STACK_SOURCE_VARIANT="playerbots"
+    else
+        STACK_SOURCE_VARIANT="core"
     fi
-  done
 fi
 LOCAL_STORAGE_ROOT="${STORAGE_PATH_LOCAL:-./local-storage}"
 DEFAULT_STANDARD_PATH="${LOCAL_STORAGE_ROOT%/}/source/azerothcore"
 DEFAULT_PLAYERBOTS_PATH="${LOCAL_STORAGE_ROOT%/}/source/azerothcore-playerbots"
 
 SOURCE_PATH_DEFAULT="$DEFAULT_STANDARD_PATH"
-if [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$NEEDS_CXX_REBUILD" = "1" ]; then
+if [ "$STACK_SOURCE_VARIANT" = "playerbots" ]; then
     SOURCE_PATH_DEFAULT="$DEFAULT_PLAYERBOTS_PATH"
 fi
 SOURCE_PATH="${MODULES_REBUILD_SOURCE_PATH:-$SOURCE_PATH_DEFAULT}"
+
+show_client_data_requirement(){
+    local repo_path="$1"
+    local detector="$PROJECT_ROOT/scripts/detect-client-data-version.sh"
+    if [ ! -x "$detector" ]; then
+        return
+    fi
+
+    local detection
+    if ! detection="$("$detector" --no-header "$repo_path" 2>/dev/null | head -n1)"; then
+        echo "⚠️  Could not detect client data version for $repo_path"
+        return
+    fi
+
+    local detected_repo raw_version normalized_version
+    IFS=$'\t' read -r detected_repo raw_version normalized_version <<< "$detection"
+    if [ -z "$normalized_version" ] || [ "$normalized_version" = "<unknown>" ]; then
+        echo "⚠️  Could not detect client data version for $repo_path"
+        return
+    fi
+
+    local env_value="${CLIENT_DATA_VERSION:-}"
+    if [ -n "$env_value" ] && [ "$env_value" != "$normalized_version" ]; then
+        echo "⚠️  Source requires client data ${normalized_version} (raw ${raw_version}) but .env specifies ${env_value}. Update CLIENT_DATA_VERSION to avoid mismatched maps."
+    elif [ -n "$env_value" ]; then
+        echo "📦 Client data requirement satisfied: ${normalized_version} (raw ${raw_version})"
+    else
+        echo "ℹ️  Detected client data requirement: ${normalized_version} (raw ${raw_version}). Set CLIENT_DATA_VERSION in .env to avoid mismatches."
+    fi
+}
 
 STORAGE_PATH_VALUE="${STORAGE_PATH:-./storage}"
 if [[ "$STORAGE_PATH_VALUE" != /* ]]; then
@@ -72,8 +91,8 @@ ACORE_BRANCH_STANDARD="${ACORE_BRANCH_STANDARD:-master}"
 ACORE_REPO_PLAYERBOTS="${ACORE_REPO_PLAYERBOTS:-https://github.com/mod-playerbots/azerothcore-wotlk.git}"
 ACORE_BRANCH_PLAYERBOTS="${ACORE_BRANCH_PLAYERBOTS:-Playerbot}"
 
-# Repository and branch selection based on playerbots mode
-if [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$NEEDS_CXX_REBUILD" = "1" ]; then
+# Repository and branch selection based on source variant
+if [ "$STACK_SOURCE_VARIANT" = "playerbots" ]; then
     REPO_URL="$ACORE_REPO_PLAYERBOTS"
     BRANCH="$ACORE_BRANCH_PLAYERBOTS"
     echo "📌 Playerbots mode: Using $REPO_URL, branch $BRANCH"
@@ -130,5 +149,6 @@ echo "📊 Current status:"
 echo "   Branch: $CURRENT_BRANCH"
 echo "   Commit: $CURRENT_COMMIT"
 echo "   Last commit: $(git log -1 --pretty=format:'%s (%an, %ar)')"
+show_client_data_requirement "$SOURCE_PATH"
 
 echo '🎉 Source repository setup complete!'

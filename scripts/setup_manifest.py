@@ -58,8 +58,13 @@ def cmd_metadata(manifest_path: str) -> None:
     for entry in iter_modules(manifest):
         key = entry["key"]
         name = clean(entry.get("name", key))
-        needs_build = "1" if entry.get("needs_build") else "0"
-        module_type = clean(entry.get("type", ""))
+        module_type_raw = entry.get("type", "")
+        module_type = clean(module_type_raw)
+        needs_build_flag = entry.get("needs_build")
+        if needs_build_flag is None:
+            needs_build = "1" if str(module_type_raw).lower() == "cpp" else "0"
+        else:
+            needs_build = "1" if needs_build_flag else "0"
         status = clean(entry.get("status", "active"))
         block_reason = clean(entry.get("block_reason", ""))
         requires = unique_preserve_order(entry.get("requires") or [])
