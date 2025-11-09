@@ -1,0 +1,404 @@
+# AzerothCore RealmMaster - Script Reference
+
+This document provides comprehensive documentation for all scripts included in the AzerothCore RealmMaster project. These scripts automate deployment, module management, backup operations, and system administration tasks.
+
+## Overview
+
+The AzerothCore RealmMaster includes a comprehensive set of scripts organized into several categories:
+
+- **Core Deployment Scripts** - Essential scripts for setup, build, and deployment
+- **Container Lifecycle Management** - Scripts for managing Docker containers and services
+- **Database & Backup Management** - Tools for backup, restore, and data management
+- **Module Management Scripts** - Automated module staging, configuration, and integration
+- **Post-Deployment Automation** - Scripts that run after deployment for configuration
+- **Advanced Deployment Tools** - Specialized tools for remote deployment and validation
+- **Backup System Scripts** - Automated backup scheduling and management
+
+## Script Reference
+
+### Core Deployment Scripts
+
+#### `setup.sh` - Interactive Environment Configuration
+Interactive `.env` generator with module selection, server configuration, and deployment profiles.
+
+```bash
+./setup.sh                                    # Interactive configuration
+./setup.sh --module-config sam                # Use predefined module profile, check profiles directory
+./setup.sh --playerbot-max-bots 3000          # Set playerbot limits
+```
+
+**Features:**
+- Server address and port configuration
+- Module selection with presets
+- Storage path configuration (NFS/local)
+- Playerbot configuration
+- Backup retention settings
+- User/group permission settings
+
+#### `build.sh` - Custom Image Builder
+Compiles AzerothCore with enabled C++ modules and creates deployment-ready Docker images.
+
+```bash
+./build.sh                                    # Interactive build
+./build.sh --yes                              # Auto-confirm all prompts
+./build.sh --force                            # Force rebuild regardless of state
+./build.sh --source-path /custom/path         # Use custom source path
+./build.sh --skip-source-setup                # Skip source repo setup
+```
+
+**What it does:**
+- Clones/updates AzerothCore source repository
+- Stages enabled modules into source tree
+- Compiles server binaries with modules
+- Builds and tags Docker images (`<project>:authserver-modules-latest`, etc.)
+- Updates build state markers
+
+#### `deploy.sh` - Deployment Orchestrator
+Module-aware deployment with automatic profile selection and optional remote deployment.
+
+```bash
+./deploy.sh                                    # Interactive deployment
+./deploy.sh --yes                              # Auto-confirm deployment
+./deploy.sh --profile standard                 # Force standard AzerothCore
+./deploy.sh --profile playerbots               # Force playerbots branch
+./deploy.sh --profile modules                  # Force custom modules build
+./deploy.sh --no-watch                         # Don't tail worldserver logs
+./deploy.sh --keep-running                     # Deploy and exit immediately
+
+# Remote deployment
+./deploy.sh --remote-host server.com \
+            --remote-user username \
+            --remote-project-dir /path/to/project
+```
+
+**Automated workflow:**
+1. Loads environment configuration
+2. Detects required profile based on enabled modules
+3. Triggers build if C++ modules or playerbots enabled
+4. Launches Docker Compose with appropriate profiles
+5. Optionally migrates stack to remote host
+
+#### `cleanup.sh` - Project Cleanup Utility
+Comprehensive cleanup with multiple destruction levels and safety checks.
+
+```bash
+./cleanup.sh                                  # Interactive cleanup
+./cleanup.sh --soft                           # Stop containers only
+./cleanup.sh --hard                           # Remove containers, networks, volumes
+./cleanup.sh --nuclear                        # Full cleanup including images
+./cleanup.sh --preserve-backups               # Retain backup data during cleanup
+./cleanup.sh --dry-run                        # Preview cleanup actions
+```
+
+### Container Lifecycle Management
+
+#### `scripts/start-containers.sh` - Service Startup
+Starts all configured containers using appropriate profiles.
+
+#### `scripts/stop-containers.sh` - Graceful Shutdown
+Stops all containers with proper cleanup and data protection.
+
+#### `status.sh` - Service Health Monitoring
+```bash
+./status.sh                                    # Single status check with summary
+./status.sh --watch                           # Continuous monitoring mode
+./status.sh --once                            # Script-friendly single check
+```
+
+### Database & Backup Management
+
+#### `scripts/backup-export.sh` - User Data Export
+Exports user accounts and character data for migration or backup purposes.
+
+```bash
+./scripts/backup-export.sh                            # Export to ExportBackup_<timestamp>/
+./scripts/backup-export.sh /path/to/backup/dir       # Export to specific directory
+```
+
+**Output Structure:**
+```
+ExportBackup_YYYYMMDD_HHMMSS/
+├── acore_auth.sql.gz         # User accounts
+├── acore_characters.sql.gz   # Character data
+└── manifest.json             # Backup metadata
+```
+
+#### `scripts/backup-import.sh` - User Data Import
+Restores user accounts and characters from backup while preserving world data.
+
+```bash
+./scripts/backup-import.sh                            # Import from ImportBackup/
+./scripts/backup-import.sh /path/to/backup           # Import from specific directory
+```
+
+**Required Files:**
+- `acore_auth.sql[.gz]` - User accounts (required)
+- `acore_characters.sql[.gz]` - Character data (required)
+- `acore_world.sql[.gz]` - World data (optional)
+
+### Module Management Scripts
+
+#### `scripts/stage-modules.sh` - Module Staging
+Downloads and stages enabled modules for source integration.
+
+```bash
+./scripts/stage-modules.sh                    # Stage all enabled modules
+```
+
+Called automatically by `build.sh`. Downloads enabled modules from GitHub and prepares them for compilation.
+
+#### `scripts/setup-source.sh` - Source Repository Setup
+Initializes or updates AzerothCore source repositories for compilation.
+
+```bash
+./scripts/setup-source.sh                     # Setup source for current configuration
+```
+
+Automatically clones the appropriate AzerothCore fork (main or playerbot) based on configuration.
+
+#### `scripts/manage-modules.sh` - Module Management Container
+Internal script that runs inside the `ac-modules` container to handle module lifecycle:
+- Downloads module source code
+- Executes module SQL scripts
+- Manages module configuration files
+- Tracks installation state
+
+#### `config/module-manifest.json` & `scripts/modules.py`
+Central module registry and management system:
+- **`config/module-manifest.json`** - Declarative manifest defining all 30+ supported modules with metadata:
+  - Repository URLs
+  - Module type (cpp, data, lua)
+  - Build requirements
+  - SQL scripts and config files
+  - Dependencies
+- **`scripts/modules.py`** - Python helper that reads the manifest and `.env` to:
+  - Generate `modules.env` with enabled module lists
+  - Determine if rebuild is required
+  - Provide module metadata to shell scripts
+
+This centralized approach eliminates duplicate module definitions across scripts.
+
+#### `scripts/manage-modules-sql.sh` - Module Database Integration
+Executes module-specific SQL scripts for database schema updates.
+
+#### `scripts/copy-module-configs.sh` - Configuration File Management
+Creates module `.conf` files from `.dist.conf` templates for active modules.
+
+```bash
+./scripts/copy-module-configs.sh              # Create missing module configs
+```
+
+### Post-Deployment Automation
+
+#### `scripts/auto-post-install.sh` - Post-Installation Configuration
+Automated post-deployment tasks including module configuration, service verification, and initial setup.
+
+```bash
+./scripts/auto-post-install.sh                # Run post-install tasks
+```
+
+**Automated Tasks:**
+1. Module configuration file creation
+2. Service health verification
+3. Database connectivity testing
+4. Initial realm configuration
+
+### Advanced Deployment Tools
+
+#### `scripts/migrate-stack.sh` - Remote Deployment Migration
+Exports and transfers locally built images to remote hosts via SSH.
+
+```bash
+./scripts/migrate-stack.sh \
+  --host docker-server \
+  --user sam \
+  --project-dir /home/sam/AzerothCore-RealmMaster
+
+./scripts/migrate-stack.sh \
+  --host remote.example.com \
+  --user deploy \
+  --port 2222 \
+  --identity ~/.ssh/deploy_key \
+  --skip-storage
+```
+
+**What it does:**
+1. Exports module images to `local-storage/images/acore-modules-images.tar`
+2. Syncs project files (.env, docker-compose.yml, scripts) via rsync/scp
+3. Syncs storage directory (unless `--skip-storage`)
+4. Imports images on remote host
+
+**Note:** Typically called via `./deploy.sh --remote-host` rather than directly.
+
+#### `scripts/deploy-tools.sh` - Management Tools Deployment
+Deploys web-based management tools (phpMyAdmin, Keira3) independently.
+
+```bash
+./scripts/deploy-tools.sh                     # Deploy management tools only
+```
+
+#### `scripts/verify-deployment.sh` - Deployment Validation
+Comprehensive deployment verification with health checks and service validation.
+
+```bash
+./scripts/verify-deployment.sh                        # Full deployment verification
+./scripts/verify-deployment.sh --skip-deploy         # Verify existing deployment
+./scripts/verify-deployment.sh --quick               # Quick health check only
+```
+
+### Backup System Scripts
+
+#### `scripts/backup-scheduler.sh` - Automated Backup Service
+Runs inside the backup container to provide scheduled database backups.
+
+**Features:**
+- Hourly backups (retained for 6 hours)
+- Daily backups (retained for 3 days)
+- Automatic cleanup based on retention policies
+- Database detection (includes playerbots if present)
+
+## Script Usage Patterns
+
+### Common Workflows
+
+#### Initial Setup and Deployment
+```bash
+# 1. Configure environment and select modules
+./setup.sh
+
+# 2. Build custom images (if using C++ modules or playerbots)
+./build.sh --yes
+
+# 3. Deploy services
+./deploy.sh
+```
+
+#### Module Configuration Changes
+```bash
+# 1. Reconfigure modules
+./setup.sh
+
+# 2. Rebuild if you changed C++ modules
+./build.sh --yes
+
+# 3. Redeploy with new configuration
+./deploy.sh
+```
+
+#### Remote Deployment
+```bash
+# 1. Configure and build locally
+./setup.sh
+./build.sh --yes
+
+# 2. Deploy to remote host
+./deploy.sh --remote-host server.com --remote-user username
+```
+
+#### Service Management
+```bash
+# Check service status
+./status.sh
+
+# Monitor continuously
+./status.sh --watch
+
+# Stop all services
+./scripts/stop-containers.sh
+
+# Start services
+./scripts/start-containers.sh
+```
+
+#### Backup and Restore Operations
+```bash
+# Export user data for migration
+./scripts/backup-export.sh
+
+# Import user data from backup
+./scripts/backup-import.sh /path/to/backup
+
+# Verify deployment health
+./scripts/verify-deployment.sh --quick
+```
+
+#### Project Cleanup
+```bash
+# Soft cleanup (stop containers)
+./cleanup.sh --soft
+
+# Full cleanup with backup preservation
+./cleanup.sh --nuclear --preserve-backups
+```
+
+## Script Dependencies and Requirements
+
+### System Requirements
+- Docker and Docker Compose
+- Bash 4.0+ (most scripts)
+- Python 3.6+ (module management)
+- rsync and ssh (remote deployment)
+- Standard Unix utilities (grep, awk, sed, etc.)
+
+### Environment Variables
+Most scripts rely on environment variables defined in `.env`. Key variables include:
+
+- `PROJECT_NAME` - Docker image and container naming
+- `STORAGE_PATH` - Primary storage location
+- `STORAGE_PATH_LOCAL` - Local build storage
+- Module toggles (`MODULE_*` variables)
+- Docker Compose profile settings
+- Backup retention configurations
+
+### File Dependencies
+- `.env` - Environment configuration (created by `setup.sh`)
+- `docker-compose.yml` - Container orchestration
+- `config/module-manifest.json` - Module definitions
+- `config/module-profiles/*.json` - Module presets
+
+## Troubleshooting Scripts
+
+When scripts encounter issues, use these debugging approaches:
+
+### General Debugging
+```bash
+# Run scripts with debug output
+bash -x ./script-name.sh
+
+# Check script exit codes
+echo $? # after running a script
+```
+
+### Container-Related Issues
+```bash
+# Check Docker daemon
+systemctl status docker
+
+# Verify Docker Compose
+docker compose version
+
+# Check container logs
+docker logs <container-name>
+```
+
+### Environment Issues
+```bash
+# Verify .env file
+cat .env | grep -v '^#'
+
+# Check module configuration
+./scripts/modules.py --list-enabled
+```
+
+### Permission Issues
+```bash
+# Check file ownership
+ls -la storage/
+
+# Fix permissions (if needed)
+sudo chown -R $USER:$USER storage/
+```
+
+---
+
+For additional help and troubleshooting information, refer to the main README.md file or check the project repository issues.
