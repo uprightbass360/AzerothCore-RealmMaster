@@ -32,6 +32,8 @@ REMOTE_IDENTITY=""
 REMOTE_PROJECT_DIR=""
 REMOTE_SKIP_STORAGE=0
 REMOTE_ARGS_PROVIDED=0
+REMOTE_AUTO_DEPLOY=0
+REMOTE_AUTO_DEPLOY=0
 
 MODULE_HELPER="$ROOT_DIR/scripts/python/modules.py"
 MODULE_STATE_INITIALIZED=0
@@ -215,6 +217,7 @@ Options:
   --remote-identity PATH                   SSH private key for remote migration
   --remote-project-dir DIR                 Remote project directory (default: ~/<project-name>)
   --remote-skip-storage                    Skip syncing the storage directory during migration
+  --remote-auto-deploy                     Run './deploy.sh --yes --no-watch' on the remote host after migration
   --skip-config                            Skip applying server configuration preset
   -h, --help                               Show this help
 
@@ -241,6 +244,7 @@ while [[ $# -gt 0 ]]; do
     --remote-identity) REMOTE_IDENTITY="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-project-dir) REMOTE_PROJECT_DIR="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --remote-auto-deploy) REMOTE_AUTO_DEPLOY=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --skip-config) SKIP_CONFIG=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
@@ -608,6 +612,25 @@ run_remote_migration(){
   (cd "$ROOT_DIR" && ./scripts/bash/migrate-stack.sh "${args[@]}")
 }
 
+remote_exec(){
+  local remote_cmd="$1"
+  local ssh_cmd=(ssh -p "${REMOTE_PORT:-22}")
+  if [ -n "$REMOTE_IDENTITY" ]; then
+    ssh_cmd+=(-i "$REMOTE_IDENTITY")
+  fi
+  ssh_cmd+=("${REMOTE_USER}@${REMOTE_HOST}" "$remote_cmd")
+  "${ssh_cmd[@]}"
+}
+
+run_remote_auto_deploy(){
+  local remote_dir="${1:-${REMOTE_PROJECT_DIR:-$(get_default_remote_dir)}}"
+  local deploy_cmd="cd ${remote_dir} && ./deploy.sh --yes --no-watch"
+  local quoted_cmd
+  quoted_cmd=$(printf '%q' "$deploy_cmd")
+  info "Triggering remote deployment on ${REMOTE_HOST}..."
+  remote_exec "bash -lc ${quoted_cmd}"
+}
+
 
 stage_runtime(){
   local args=(--yes)
@@ -759,8 +782,19 @@ main(){
     if run_remote_migration; then
       ok "Remote deployment package prepared for $REMOTE_USER@$REMOTE_HOST."
       local remote_dir="${REMOTE_PROJECT_DIR:-$(get_default_remote_dir)}"
-      info "Run the following on the remote host to complete deployment:"
-      printf '  %bcd %s && ./deploy.sh --yes --no-watch%b\n' "$YELLOW" "$remote_dir" "$NC"
+      if [ "$REMOTE_AUTO_DEPLOY" -eq 1 ]; then
+        if run_remote_auto_deploy "$remote_dir"; then
+          ok "Remote host deployment completed."
+        else
+          warn "Automatic remote deployment failed."
+          info "Run the following on the remote host to complete deployment:"
+          printf '  %bcd %s && ./deploy.sh --yes --no-watch%b\n' "$YELLOW" "$remote_dir" "$NC"
+          exit 1
+        fi
+      else
+        info "Run the following on the remote host to complete deployment:"
+        printf '  %bcd %s && ./deploy.sh --yes --no-watch%b\n' "$YELLOW" "$remote_dir" "$NC"
+      fi
       exit 0
     else
       err "Remote migration failed."
