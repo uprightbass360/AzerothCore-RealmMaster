@@ -170,25 +170,39 @@ services:
       - /bin/bash
       - -c
       - |
-        microdnf install -y curl || yum install -y curl || (apt-get update -qq && apt-get install -y curl)
-        echo "📥 Preparing backup scheduler (dropping privileges to ${CONTAINER_USER})..."
-        run_as_user(){
-          if command -v gosu >/dev/null 2>&1; then
-            gosu ${CONTAINER_USER} "$@"
-          else
-            echo "⚠️  gosu not found; running backup scheduler as root."
-            "$@"
-          fi
+        install_curl(){
+          microdnf install -y curl >/dev/null 2>&1 && return
+          yum install -y curl >/dev/null 2>&1 && return
+          apt-get update -qq && apt-get install -y curl >/dev/null 2>&1 && return
+          echo "❌ Failed to install curl"; exit 1
         }
-        if [ -f /tmp/scripts/bash/backup-scheduler.sh ]; then
-          chmod +x /tmp/scripts/bash/backup-scheduler.sh 2>/dev/null || true
-          run_as_user /tmp/scripts/bash/backup-scheduler.sh
-        else
-          echo "No local scheduler provided"
-        fi
-        # Fix permissions for any backup directories created
+        ensure_gosu(){
+          if command -v gosu >/dev/null 2>&1; then
+            return
+          fi
+          install_curl
+          arch="$$(uname -m)"
+          case "$${arch}" in
+            x86_64|amd64) gosu_arch=amd64 ;;
+            aarch64|arm64) gosu_arch=arm64 ;;
+            *) echo "❌ Unsupported architecture for gosu: $${arch}"; exit 1 ;;
+          esac
+          echo "⬇️  Installing gosu for privilege drop..."
+          curl -fsSL "https://github.com/tianon/gosu/releases/download/1.14/gosu-$${gosu_arch}" -o /usr/local/bin/gosu
+          chmod +x /usr/local/bin/gosu
+        }
+        install_curl
+        ensure_gosu
+        echo "📥 Preparing backup scheduler (running as ${CONTAINER_USER})..."
         chown -R ${CONTAINER_USER} /backups 2>/dev/null || true
         chmod -R 755 /backups 2>/dev/null || true
+        if [ -f /tmp/scripts/bash/backup-scheduler.sh ]; then
+          chmod +x /tmp/scripts/bash/backup-scheduler.sh 2>/dev/null || true
+          exec gosu ${CONTAINER_USER} /tmp/scripts/bash/backup-scheduler.sh
+        else
+          echo "No local scheduler provided"
+          sleep infinity
+        fi
     restart: unless-stopped
     healthcheck:
       test:

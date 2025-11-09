@@ -78,6 +78,15 @@ EOF
   fi
 
   log "Backup complete: $target_dir (size ${size})"
+  if find "$target_dir" ! -user "$(id -un)" -o ! -group "$(id -gn)" -prune -print -quit >/dev/null 2>&1; then
+    log "ℹ️  Ownership drift detected; correcting permissions in $target_dir"
+    if chown -R "$(id -u):$(id -g)" "$target_dir" >/dev/null 2>&1; then
+      chmod -R u+rwX,g+rX "$target_dir" >/dev/null 2>&1 || true
+      log "✅ Ownership reset for $target_dir"
+    else
+      log "⚠️  Failed to adjust ownership for $target_dir"
+    fi
+  fi
 }
 
 cleanup_old() {

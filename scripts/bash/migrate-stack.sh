@@ -396,9 +396,7 @@ reset_remote_post_install_marker(){
   run_ssh "mkdir -p '$marker_dir' && rm -f '$marker_path'"
 }
 
-if [[ $SKIP_STORAGE -eq 0 ]]; then
-  reset_remote_post_install_marker
-fi
+reset_remote_post_install_marker
 
 # Clean up stale Docker resources before loading new images
 cleanup_stale_docker_resources
