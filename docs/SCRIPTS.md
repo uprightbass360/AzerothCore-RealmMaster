@@ -92,10 +92,10 @@ Comprehensive cleanup with multiple destruction levels and safety checks.
 
 ### Container Lifecycle Management
 
-#### `scripts/start-containers.sh` - Service Startup
+#### `scripts/bash/start-containers.sh` - Service Startup
 Starts all configured containers using appropriate profiles.
 
-#### `scripts/stop-containers.sh` - Graceful Shutdown
+#### `scripts/bash/stop-containers.sh` - Graceful Shutdown
 Stops all containers with proper cleanup and data protection.
 
 #### `status.sh` - Service Health Monitoring
@@ -107,12 +107,12 @@ Stops all containers with proper cleanup and data protection.
 
 ### Database & Backup Management
 
-#### `scripts/backup-export.sh` - User Data Export
+#### `scripts/bash/backup-export.sh` - User Data Export
 Exports user accounts and character data for migration or backup purposes.
 
 ```bash
-./scripts/backup-export.sh                            # Export to ExportBackup_<timestamp>/
-./scripts/backup-export.sh /path/to/backup/dir       # Export to specific directory
+./scripts/bash/backup-export.sh                            # Export to ExportBackup_<timestamp>/
+./scripts/bash/backup-export.sh /path/to/backup/dir       # Export to specific directory
 ```
 
 **Output Structure:**
@@ -123,12 +123,12 @@ ExportBackup_YYYYMMDD_HHMMSS/
 └── manifest.json             # Backup metadata
 ```
 
-#### `scripts/backup-import.sh` - User Data Import
+#### `scripts/bash/backup-import.sh` - User Data Import
 Restores user accounts and characters from backup while preserving world data.
 
 ```bash
-./scripts/backup-import.sh                            # Import from ImportBackup/
-./scripts/backup-import.sh /path/to/backup           # Import from specific directory
+./scripts/bash/backup-import.sh                            # Import from ImportBackup/
+./scripts/bash/backup-import.sh /path/to/backup           # Import from specific directory
 ```
 
 **Required Files:**
@@ -138,32 +138,32 @@ Restores user accounts and characters from backup while preserving world data.
 
 ### Module Management Scripts
 
-#### `scripts/stage-modules.sh` - Module Staging
+#### `scripts/bash/stage-modules.sh` - Module Staging
 Downloads and stages enabled modules for source integration.
 
 ```bash
-./scripts/stage-modules.sh                    # Stage all enabled modules
+./scripts/bash/stage-modules.sh                    # Stage all enabled modules
 ```
 
 Called automatically by `build.sh`. Downloads enabled modules from GitHub and prepares them for compilation.
 
-#### `scripts/setup-source.sh` - Source Repository Setup
+#### `scripts/bash/setup-source.sh` - Source Repository Setup
 Initializes or updates AzerothCore source repositories for compilation.
 
 ```bash
-./scripts/setup-source.sh                     # Setup source for current configuration
+./scripts/bash/setup-source.sh                     # Setup source for current configuration
 ```
 
 Automatically clones the appropriate AzerothCore fork (main or playerbot) based on configuration.
 
-#### `scripts/manage-modules.sh` - Module Management Container
+#### `scripts/bash/manage-modules.sh` - Module Management Container
 Internal script that runs inside the `ac-modules` container to handle module lifecycle:
 - Downloads module source code
 - Executes module SQL scripts
 - Manages module configuration files
 - Tracks installation state
 
-#### `config/module-manifest.json` & `scripts/modules.py`
+#### `config/module-manifest.json` & `scripts/python/modules.py`
 Central module registry and management system:
 - **`config/module-manifest.json`** - Declarative manifest defining all 30+ supported modules with metadata:
   - Repository URLs
@@ -171,30 +171,30 @@ Central module registry and management system:
   - Build requirements
   - SQL scripts and config files
   - Dependencies
-- **`scripts/modules.py`** - Python helper that reads the manifest and `.env` to:
+- **`scripts/python/modules.py`** - Python helper that reads the manifest and `.env` to:
   - Generate `modules.env` with enabled module lists
   - Determine if rebuild is required
   - Provide module metadata to shell scripts
 
 This centralized approach eliminates duplicate module definitions across scripts.
 
-#### `scripts/manage-modules-sql.sh` - Module Database Integration
+#### `scripts/bash/manage-modules-sql.sh` - Module Database Integration
 Executes module-specific SQL scripts for database schema updates.
 
-#### `scripts/copy-module-configs.sh` - Configuration File Management
+#### `scripts/bash/copy-module-configs.sh` - Configuration File Management
 Creates module `.conf` files from `.dist.conf` templates for active modules.
 
 ```bash
-./scripts/copy-module-configs.sh              # Create missing module configs
+./scripts/bash/copy-module-configs.sh              # Create missing module configs
 ```
 
 ### Post-Deployment Automation
 
-#### `scripts/auto-post-install.sh` - Post-Installation Configuration
+#### `scripts/bash/auto-post-install.sh` - Post-Installation Configuration
 Automated post-deployment tasks including module configuration, service verification, and initial setup.
 
 ```bash
-./scripts/auto-post-install.sh                # Run post-install tasks
+./scripts/bash/auto-post-install.sh                # Run post-install tasks
 ```
 
 **Automated Tasks:**
@@ -205,16 +205,16 @@ Automated post-deployment tasks including module configuration, service verifica
 
 ### Advanced Deployment Tools
 
-#### `scripts/migrate-stack.sh` - Remote Deployment Migration
+#### `scripts/bash/migrate-stack.sh` - Remote Deployment Migration
 Exports and transfers locally built images to remote hosts via SSH.
 
 ```bash
-./scripts/migrate-stack.sh \
+./scripts/bash/migrate-stack.sh \
   --host docker-server \
   --user sam \
   --project-dir /home/sam/AzerothCore-RealmMaster
 
-./scripts/migrate-stack.sh \
+./scripts/bash/migrate-stack.sh \
   --host remote.example.com \
   --user deploy \
   --port 2222 \
@@ -230,25 +230,25 @@ Exports and transfers locally built images to remote hosts via SSH.
 
 **Note:** Typically called via `./deploy.sh --remote-host` rather than directly.
 
-#### `scripts/deploy-tools.sh` - Management Tools Deployment
+#### `scripts/bash/deploy-tools.sh` - Management Tools Deployment
 Deploys web-based management tools (phpMyAdmin, Keira3) independently.
 
 ```bash
-./scripts/deploy-tools.sh                     # Deploy management tools only
+./scripts/bash/deploy-tools.sh                     # Deploy management tools only
 ```
 
-#### `scripts/verify-deployment.sh` - Deployment Validation
+#### `scripts/bash/verify-deployment.sh` - Deployment Validation
 Comprehensive deployment verification with health checks and service validation.
 
 ```bash
-./scripts/verify-deployment.sh                        # Full deployment verification
-./scripts/verify-deployment.sh --skip-deploy         # Verify existing deployment
-./scripts/verify-deployment.sh --quick               # Quick health check only
+./scripts/bash/verify-deployment.sh                        # Full deployment verification
+./scripts/bash/verify-deployment.sh --skip-deploy         # Verify existing deployment
+./scripts/bash/verify-deployment.sh --quick               # Quick health check only
 ```
 
 ### Backup System Scripts
 
-#### `scripts/backup-scheduler.sh` - Automated Backup Service
+#### `scripts/bash/backup-scheduler.sh` - Automated Backup Service
 Runs inside the backup container to provide scheduled database backups.
 
 **Features:**
@@ -304,22 +304,22 @@ Runs inside the backup container to provide scheduled database backups.
 ./status.sh --watch
 
 # Stop all services
-./scripts/stop-containers.sh
+./scripts/bash/stop-containers.sh
 
 # Start services
-./scripts/start-containers.sh
+./scripts/bash/start-containers.sh
 ```
 
 #### Backup and Restore Operations
 ```bash
 # Export user data for migration
-./scripts/backup-export.sh
+./scripts/bash/backup-export.sh
 
 # Import user data from backup
-./scripts/backup-import.sh /path/to/backup
+./scripts/bash/backup-import.sh /path/to/backup
 
 # Verify deployment health
-./scripts/verify-deployment.sh --quick
+./scripts/bash/verify-deployment.sh --quick
 ```
 
 #### Project Cleanup
@@ -387,7 +387,7 @@ docker logs <container-name>
 cat .env | grep -v '^#'
 
 # Check module configuration
-./scripts/modules.py --list-enabled
+./scripts/python/modules.py --list-enabled
 ```
 
 ### Permission Issues

@@ -2,6 +2,9 @@
 
 This guide provides a complete walkthrough for deploying AzerothCore RealmMaster on your local machine or remote server.
 
+***Note: All :port and credential information is based on default configuration and should be updated based on your settings.***
+***If you have any suggestions about how to make this documentation better, please file an issue and I will look into it.***
+
 ## Prerequisites
 
 Before you begin, ensure you have:
@@ -193,6 +196,9 @@ The remote deployment process transfers:
 - ❌ Build artifacts (source code, compilation files stay local)
 
 ### Module Presets
+
+> **⚠️ Warning:** Module preset support is still in progress. The bundled presets have not been fully tested yet—please share issues or suggestions via Discord (`uprightbass360`).
+
 - Define JSON presets in `config/module-profiles/*.json`. Each file contains:
   - `modules` (array, required) – list of `MODULE_*` identifiers to enable.
   - `label` (string, optional) – text shown in the setup menu (emoji welcome).
@@ -302,10 +308,10 @@ docker logs ac-mysql -f
 docker compose restart ac-worldserver
 
 # Stop all services
-./scripts/stop-containers.sh
+./scripts/bash/stop-containers.sh
 
 # Start services
-./scripts/start-containers.sh
+./scripts/bash/start-containers.sh
 ```
 
 ### Management Commands
@@ -361,22 +367,22 @@ http://YOUR_SERVER_IP:4201
 ./deploy.sh --profile modules       # Force custom modules build
 
 # Lower-level module operations
-./scripts/stage-modules.sh                    # Download enabled modules
-./scripts/setup-source.sh                     # Initialize AzerothCore source
-./scripts/copy-module-configs.sh              # Create module .conf files
-./scripts/manage-modules-sql.sh               # Execute module SQL scripts
+./scripts/bash/stage-modules.sh                    # Download enabled modules
+./scripts/bash/setup-source.sh                     # Initialize AzerothCore source
+./scripts/bash/copy-module-configs.sh              # Create module .conf files
+./scripts/bash/manage-modules-sql.sh               # Execute module SQL scripts
 
 # Management tools
-./scripts/deploy-tools.sh                     # Launch phpMyAdmin + Keira3
+./scripts/bash/deploy-tools.sh                     # Launch phpMyAdmin + Keira3
 ```
 
 #### Container Management
 ```bash
 # Start specific services
-./scripts/start-containers.sh                           # Start all configured containers
+./scripts/bash/start-containers.sh                           # Start all configured containers
 
 # Stop services gracefully
-./scripts/stop-containers.sh                            # Stop all containers
+./scripts/bash/stop-containers.sh                            # Stop all containers
 
 # Monitor service health
 ./status.sh                                     # Check realm status
@@ -387,10 +393,10 @@ http://YOUR_SERVER_IP:4201
 #### Deployment Verification
 ```bash
 # Quick health check
-./scripts/verify-deployment.sh --skip-deploy --quick
+./scripts/bash/verify-deployment.sh --skip-deploy --quick
 
 # Full deployment verification
-./scripts/verify-deployment.sh
+./scripts/bash/verify-deployment.sh
 ```
 
 #### Cleaning Up
@@ -416,12 +422,8 @@ open http://localhost:8081
 docker exec -it ac-mysql mysql -u root -p
 
 # Manual backup operations
-./scripts/backup.sh                              # Create immediate backup
-./scripts/restore.sh YYYYMMDD_HHMMSS            # Restore from specific backup
-
-# User data backup/import utilities
-./scripts/backup-export.sh [output_dir]                 # Export user accounts & characters
-./scripts/backup-import.sh [backup_dir]                 # Import user data from backup
+./scripts/bash/backup-export.sh [output_dir]                 # Export user accounts & characters
+./scripts/bash/backup-import.sh [backup_dir]                 # Import user data from backup
 
 # View available backups
 ls -la storage/backups/

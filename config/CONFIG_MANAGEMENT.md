@@ -35,13 +35,13 @@ AiPlayerbot.MaxRandomBots = 300
 
 ```bash
 # Apply your custom overrides
-./scripts/apply-config.py
+./scripts/python/apply-config.py
 
 # Or apply a preset
-./scripts/apply-config.py --preset fast-leveling
+./scripts/python/apply-config.py --preset fast-leveling
 
 # Preview changes without applying
-./scripts/apply-config.py --dry-run
+./scripts/python/apply-config.py --dry-run
 ```
 
 ### 3. Restart Server
@@ -114,34 +114,34 @@ Step 5/6: Applying server configuration
 
 ### Apply Custom Overrides
 ```bash
-./scripts/apply-config.py
+./scripts/python/apply-config.py
 ```
 
 ### Apply a Preset
 ```bash
 # List available presets
-./scripts/apply-config.py --list-presets
+./scripts/python/apply-config.py --list-presets
 
 # Apply specific preset
-./scripts/apply-config.py --preset blizzlike
-./scripts/apply-config.py --preset fast-leveling
-./scripts/apply-config.py --preset hardcore-pvp
-./scripts/apply-config.py --preset casual-pve
+./scripts/python/apply-config.py --preset blizzlike
+./scripts/python/apply-config.py --preset fast-leveling
+./scripts/python/apply-config.py --preset hardcore-pvp
+./scripts/python/apply-config.py --preset casual-pve
 ```
 
 ### Advanced Usage
 ```bash
 # Apply only specific conf files
-./scripts/apply-config.py --files "worldserver.conf,playerbots.conf"
+./scripts/python/apply-config.py --files "worldserver.conf,playerbots.conf"
 
 # Preview changes without applying
-./scripts/apply-config.py --dry-run
+./scripts/python/apply-config.py --dry-run
 
 # Use different storage path
-./scripts/apply-config.py --storage-path /custom/storage
+./scripts/python/apply-config.py --storage-path /custom/storage
 
 # Use different overrides file
-./scripts/apply-config.py --overrides-file /path/to/custom.conf
+./scripts/python/apply-config.py --overrides-file /path/to/custom.conf
 ```
 
 ## ⚙️ Configuration Format
@@ -267,7 +267,7 @@ AutoBalance.MinPlayerReward = 1        # Scale rewards for solo play
 ### Permission Errors
 ```bash
 # Make sure the script is executable
-chmod +x scripts/apply-config.py
+chmod +x scripts/python/apply-config.py
 
 # Check file permissions in storage/config/
 ls -la storage/config/

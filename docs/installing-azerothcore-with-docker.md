@@ -31,7 +31,7 @@ Add your own overrides by dropping a `.yml` file into `compose-overrides/` with 
 
 ### Module Layout
 
-- **Manifest**: `config/module-manifest.json` tracks every supported module (type, repo, dependencies). Edit this if you need to add or update modules—`scripts/modules.py` and all container helpers consume it automatically.
+- **Manifest**: `config/module-manifest.json` tracks every supported module (type, repo, dependencies). Edit this if you need to add or update modules—`scripts/python/modules.py` and all container helpers consume it automatically.
 - **Presets**: `config/module-profiles/*.json` replaces the old `profiles/*.json`. Each preset defines a `modules` list plus optional `label/description/order`, and `setup.sh` surfaces them in the module-selection menu or via `--module-config <name>`.
 
 Because the manifest/preset locations mirror the upstream structure conceptually, experienced users can jump straight into editing those files without re-learning the workflow.
@@ -77,8 +77,8 @@ services:
 | MySQL container with bind-mounted storage | `ac-mysql` + `ac-storage-init` | Bind mounts live under `storage/` and `local-storage/`; tmpfs keeps runtime data fast and is checkpointed to disk automatically. |
 | Manual DB import container | `ac-db-import` & `ac-db-init` | Automatically imports schemas or restores from backups; disable by skipping the `db` profile if you truly want manual control. |
 | World/Auth servers with optional DBC overrides | `ac-authserver-*` / `ac-worldserver-*` | Profile-based builds cover vanilla, playerbots, and custom module binaries. DBC overrides go into the shared client data mount just like upstream. |
-| Client data bind mounts | `ac-client-data-standard` (or `-playerbots`) | Runs `scripts/download-client-data.sh`, caches releases, and mounts them read-only into the worldserver. |
-| Optional helpers (phpMyAdmin, scripts) | `ac-phpmyadmin`, `ac-keira3`, `scripts/*.sh` | Enable via `--profile tools`. Credentials still come from `MYSQL_ROOT_PASSWORD`, identical to upstream instructions. |
+| Client data bind mounts | `ac-client-data-standard` (or `-playerbots`) | Runs `scripts/bash/download-client-data.sh`, caches releases, and mounts them read-only into the worldserver. |
+| Optional helpers (phpMyAdmin, scripts) | `ac-phpmyadmin`, `ac-keira3`, `scripts/bash/*.sh` | Enable via `--profile tools`. Credentials still come from `MYSQL_ROOT_PASSWORD`, identical to upstream instructions. |
 
 For a full architecture diagram, cross-reference [README → Architecture Overview](../README.md#architecture-overview).
 
@@ -90,8 +90,8 @@ The upstream document introduced `up.sh`, `down.sh`, and `boot.sh`. RealmMaster 
 1. **Configure** – `./setup.sh` (interactive `.env` generator). Mirrors creating `docker-compose.override.yml` without editing YAML.
 2. **Build (optional)** – `./build.sh` compiles images when playerbots or C++ modules are enabled, as described in [README → Getting Started → Step 2](../README.md#getting-started). Skip if you only need vanilla binaries.
 3. **Deploy** – `./deploy.sh` chooses the right profile and runs `docker compose up -d --build`, equivalent to the upstream `up.sh`.
-4. **Stop** – `./scripts/stop-containers.sh` or `docker compose down` (from the README [Management Commands](../README.md#management-commands)), matching the upstream `down.sh`.
-5. **Reboot** – run `./scripts/stop-containers.sh && ./scripts/start-containers.sh`, similar to their `boot.sh`.
+4. **Stop** – `./scripts/bash/stop-containers.sh` or `docker compose down` (from the README [Management Commands](../README.md#management-commands)), matching the upstream `down.sh`.
+5. **Reboot** – run `./scripts/bash/stop-containers.sh && ./scripts/bash/start-containers.sh`, similar to their `boot.sh`.
 6. **Status & Logs** – `./status.sh` summarizes container health and exposed ports (see [README → Management & Operations → Common Workflows](../README.md#management--operations)).
 
 If you still prefer tiny wrappers, feel free to recreate the original scripts pointing at our compose file:
@@ -100,9 +100,17 @@ If you still prefer tiny wrappers, feel free to recreate the original scripts po
 #!/usr/bin/env bash
 set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
+if [ -f "${PROJECT_DIR}/.env" ]; then
+  set -a
+  source "${PROJECT_DIR}/.env"
+  set +a
+else
+  echo "Missing ${PROJECT_DIR}/.env" >&2
+  exit 1
+fi
 docker compose -f "${PROJECT_DIR}/docker-compose.yml" \
   --profile services-standard \
-  -p "${COMPOSE_PROJECT_NAME:-azerothcore-realmmaster}" up -d --build
+  -p "${COMPOSE_PROJECT_NAME}" up -d --build
 ```
 
 
@@ -115,10 +123,10 @@ start:
 	@./deploy.sh
 
 stop:
-	@./scripts/stop-containers.sh
+	@./scripts/bash/stop-containers.sh
 
 boot:
-	@./scripts/stop-containers.sh && ./deploy.sh
+	@./scripts/bash/stop-containers.sh && ./deploy.sh
 
 boot.log:
 	@./deploy.sh && docker logs -f ac-worldserver ||:

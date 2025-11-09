@@ -55,7 +55,7 @@ docker logs ac-modules | grep -A20 -B5 "rebuild"
 ls -la "${STORAGE_PATH_LOCAL:-./local-storage}/source/azerothcore/"
 
 # Force source setup
-./scripts/setup-source.sh
+./scripts/bash/setup-source.sh
 ```
 
 ## Getting Help
@@ -100,12 +100,12 @@ storage/backups/
         └── acore_world.sql.gz
 
 # User data import/export
-ExportBackup_YYYYMMDD_HHMMSS/     # Created by scripts/backup-export.sh
+ExportBackup_YYYYMMDD_HHMMSS/     # Created by scripts/bash/backup-export.sh
 ├── acore_auth.sql.gz             # User accounts
 ├── acore_characters.sql.gz       # Character data
 └── manifest.json
 
-ImportBackup/                     # Used by scripts/backup-import.sh
+ImportBackup/                     # Used by scripts/bash/backup-import.sh
 ├── acore_auth.sql[.gz]           # Required: accounts
 ├── acore_characters.sql[.gz]     # Required: characters
 └── acore_world.sql[.gz]          # Optional: world data
