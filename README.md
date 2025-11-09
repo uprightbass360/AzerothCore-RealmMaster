@@ -37,8 +37,7 @@ cd AzerothCore-RealmMaster
 # 2. Configure your server
 ./setup.sh
 
-# 3. Deploy (if using modules/playerbots) and deploy
-./build.sh    # Optional - Will be triggered if required in deploy. c++ modules require compilation
+# 3. Deploy 
 ./deploy.sh   # Always required - Supports ssh remote deploy or local
 ./status.sh   # Optional - Shows health and accesibility of all containers and current user data
 ```
