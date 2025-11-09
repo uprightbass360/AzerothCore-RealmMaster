@@ -79,6 +79,7 @@ Options:
   --tarball PATH        Output path for the image tar (default: ./local-storage/images/acore-modules-images.tar)
   --storage PATH        Remote storage directory (default: <project-dir>/storage)
   --skip-storage        Do not sync the storage directory
+  --copy-source         Copy the full local project directory instead of syncing via git
   --yes, -y             Auto-confirm prompts (for existing deployments)
   --help                Show this help
 EOF_HELP
@@ -93,6 +94,7 @@ TARBALL=""
 REMOTE_STORAGE=""
 SKIP_STORAGE=0
 ASSUME_YES=0
+COPY_SOURCE=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -104,6 +106,7 @@ while [[ $# -gt 0 ]]; do
     --tarball) TARBALL="$2"; shift 2;;
     --storage) REMOTE_STORAGE="$2"; shift 2;;
     --skip-storage) SKIP_STORAGE=1; shift;;
+    --copy-source) COPY_SOURCE=1; shift;;
     --yes|-y) ASSUME_YES=1; shift;;
     --help|-h) usage; exit 0;;
     *) echo "Unknown option: $1" >&2; usage; exit 1;;
@@ -125,10 +128,13 @@ expand_remote_path(){
   esac
 }
 
-PROJECT_DIR="${PROJECT_DIR:-/home/${USER}/$(resolve_project_name)}"
+DEFAULT_REMOTE_DIR_NAME="$(basename "$PROJECT_ROOT")"
+PROJECT_DIR="${PROJECT_DIR:-~/${DEFAULT_REMOTE_DIR_NAME}}"
 PROJECT_DIR="$(expand_remote_path "$PROJECT_DIR")"
 REMOTE_STORAGE="${REMOTE_STORAGE:-${PROJECT_DIR}/storage}"
 REMOTE_STORAGE="$(expand_remote_path "$REMOTE_STORAGE")"
+REMOTE_TEMP_DIR="${REMOTE_TEMP_DIR:-${PROJECT_DIR}/.rm-migrate}"
+REMOTE_TEMP_DIR="$(expand_remote_path "$REMOTE_TEMP_DIR")"
 LOCAL_STORAGE_ROOT="${STORAGE_PATH_LOCAL:-}"
 if [ -z "$LOCAL_STORAGE_ROOT" ]; then
   LOCAL_STORAGE_ROOT="$(read_env_value STORAGE_PATH_LOCAL "./local-storage")"
@@ -152,6 +158,10 @@ run_ssh(){
 
 run_scp(){
   scp "${SCP_OPTS[@]}" "$@"
+}
+
+ensure_remote_temp_dir(){
+  run_ssh "mkdir -p '$REMOTE_TEMP_DIR'"
 }
 
 validate_remote_environment(){
@@ -201,11 +211,40 @@ validate_remote_environment(){
     fi
   fi
 
-  # 5. Ensure remote repository is up to date
-  echo "  • Ensuring remote repository is current..."
-  setup_remote_repository
+  # 5. Ensure remote project files are up to date
+  echo "  • Ensuring remote project files are current..."
+  if [ "$COPY_SOURCE" -eq 1 ]; then
+    copy_source_tree
+  else
+    setup_remote_repository
+  fi
 
+  ensure_remote_temp_dir
   echo "✅ Remote environment validation complete"
+}
+
+copy_source_tree(){
+  echo "   • Copying full local project directory..."
+  ensure_remote_temp_dir
+  local tmp_tar
+  tmp_tar="$(mktemp)"
+  if ! tar --exclude='./storage' --exclude='./local-storage' -C "$PROJECT_ROOT" -cf "$tmp_tar" .; then
+    echo "❌ Failed to archive local project directory."
+    rm -f "$tmp_tar"
+    exit 1
+  fi
+
+  run_ssh "rm -rf '$PROJECT_DIR' && mkdir -p '$PROJECT_DIR'"
+  run_scp "$tmp_tar" "$USER@$HOST:$REMOTE_TEMP_DIR/acore-project-src.tar"
+  rm -f "$tmp_tar"
+
+  if ! run_ssh "cd '$PROJECT_DIR' && tar -xf '$REMOTE_TEMP_DIR/acore-project-src.tar' && rm '$REMOTE_TEMP_DIR/acore-project-src.tar'"; then
+    echo "❌ Failed to extract project archive on remote host."
+    exit 1
+  fi
+
+  run_ssh "chmod +x '$PROJECT_DIR'/deploy.sh 2>/dev/null || true"
+  echo "   • Source tree synchronized ✓"
 }
 
 setup_remote_repository(){
@@ -241,7 +280,7 @@ setup_remote_repository(){
   fi
 
   # Create local-storage directory structure with proper ownership
-  run_ssh "mkdir -p '$PROJECT_DIR/local-storage/modules' && chown -R $USER: '$PROJECT_DIR/local-storage'"
+  run_ssh "mkdir -p '$PROJECT_DIR/local-storage/modules' && chown -R $USER: '$PROJECT_DIR/local-storage' 2>/dev/null || true"
 
   echo "   • Repository synchronized ✓"
 }
@@ -343,9 +382,10 @@ if [[ $SKIP_STORAGE -eq 0 ]]; then
     run_ssh "rm -rf '$REMOTE_STORAGE/modules' && mkdir -p '$REMOTE_STORAGE/modules'"
     modules_tar=$(mktemp)
     tar -cf "$modules_tar" -C "$LOCAL_MODULES_DIR" .
-    run_scp "$modules_tar" "$USER@$HOST:/tmp/acore-modules.tar"
+    ensure_remote_temp_dir
+    run_scp "$modules_tar" "$USER@$HOST:$REMOTE_TEMP_DIR/acore-modules.tar"
     rm -f "$modules_tar"
-    run_ssh "tar -xf /tmp/acore-modules.tar -C '$REMOTE_STORAGE/modules' && rm /tmp/acore-modules.tar"
+    run_ssh "tar -xf '$REMOTE_TEMP_DIR/acore-modules.tar' -C '$REMOTE_STORAGE/modules' && rm '$REMOTE_TEMP_DIR/acore-modules.tar'"
   fi
 fi
 
@@ -364,8 +404,9 @@ fi
 cleanup_stale_docker_resources
 
 echo "⋅ Loading images on remote"
-run_scp "$TARBALL" "$USER@$HOST:/tmp/acore-modules-images.tar"
-run_ssh "docker load < /tmp/acore-modules-images.tar && rm /tmp/acore-modules-images.tar"
+ensure_remote_temp_dir
+run_scp "$TARBALL" "$USER@$HOST:$REMOTE_TEMP_DIR/acore-modules-images.tar"
+run_ssh "docker load < '$REMOTE_TEMP_DIR/acore-modules-images.tar' && rm '$REMOTE_TEMP_DIR/acore-modules-images.tar'"
 
 if [[ -f .env ]]; then
   echo "⋅ Uploading .env"

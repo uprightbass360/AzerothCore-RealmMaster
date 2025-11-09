@@ -31,6 +31,7 @@ REMOTE_PORT="22"
 REMOTE_IDENTITY=""
 REMOTE_PROJECT_DIR=""
 REMOTE_SKIP_STORAGE=0
+REMOTE_COPY_SOURCE=0
 REMOTE_ARGS_PROVIDED=0
 REMOTE_AUTO_DEPLOY=0
 REMOTE_AUTO_DEPLOY=0
@@ -217,6 +218,7 @@ Options:
   --remote-identity PATH                   SSH private key for remote migration
   --remote-project-dir DIR                 Remote project directory (default: ~/<project-name>)
   --remote-skip-storage                    Skip syncing the storage directory during migration
+  --remote-copy-source                     Copy the local project directory to remote instead of relying on git
   --remote-auto-deploy                     Run './deploy.sh --yes --no-watch' on the remote host after migration
   --skip-config                            Skip applying server configuration preset
   -h, --help                               Show this help
@@ -244,6 +246,7 @@ while [[ $# -gt 0 ]]; do
     --remote-identity) REMOTE_IDENTITY="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-project-dir) REMOTE_PROJECT_DIR="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --remote-copy-source) REMOTE_COPY_SOURCE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-auto-deploy) REMOTE_AUTO_DEPLOY=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --skip-config) SKIP_CONFIG=1; shift;;
     -h|--help) usage; exit 0;;
@@ -364,7 +367,9 @@ resolve_project_name(){
 }
 
 get_default_remote_dir(){
-  echo "~/$(resolve_project_name)"
+  local repo_name
+  repo_name="$(basename "$ROOT_DIR")"
+  echo "~/${repo_name}"
 }
 
 resolve_project_image(){
@@ -603,6 +608,10 @@ run_remote_migration(){
 
   if [ "$REMOTE_SKIP_STORAGE" -eq 1 ]; then
     args+=(--skip-storage)
+  fi
+
+  if [ "$REMOTE_COPY_SOURCE" -eq 1 ]; then
+    args+=(--copy-source)
   fi
 
   if [ "$ASSUME_YES" -eq 1 ]; then
