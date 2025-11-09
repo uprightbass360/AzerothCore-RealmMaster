@@ -5,7 +5,9 @@ trap 'echo "    ❌ SQL helper error (line ${LINENO}): ${BASH_COMMAND}" >&2' ERR
 
 CUSTOM_SQL_ROOT="/tmp/scripts/sql/custom"
 ALT_CUSTOM_SQL_ROOT="/scripts/sql/custom"
-HELPER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HELPER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
+PROJECT_ROOT="$(cd "$HELPER_DIR/../.." && pwd)"
+MODULE_HELPER="${MODULE_HELPER:-$PROJECT_ROOT/scripts/python/modules.py}"
 
 SQL_SUCCESS_LOG=()
 SQL_FAILURE_LOG=()
@@ -116,7 +118,7 @@ ensure_module_metadata(){
 
   local -a module_py_candidates=(
     "${MODULE_HELPER:-}"
-    "${HELPER_DIR%/*}/modules.py"
+    "$PROJECT_ROOT/scripts/python/modules.py"
     "/tmp/scripts/python/modules.py"
     "/scripts/python/modules.py"
   )

@@ -9,7 +9,7 @@ from pathlib import Path
 def load_module_state(root: Path) -> dict:
     env_path = root / ".env"
     manifest_path = root / "config" / "module-manifest.json"
-    modules_py = root / "scripts" / "modules.py"
+    modules_py = root / "scripts" / "python" / "modules.py"
 
     try:
         output = subprocess.check_output(

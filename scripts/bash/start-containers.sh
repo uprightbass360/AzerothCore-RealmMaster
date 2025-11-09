@@ -6,14 +6,15 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-PROFILE="$(python3 - <<'PY' "$ROOT_DIR"
+PROFILE="$(python3 - <<'PY' "$PROJECT_ROOT"
 import json, subprocess, sys
 from pathlib import Path
 
 root = Path(sys.argv[1])
-modules_py = root / "scripts" / "modules.py"
+modules_py = root / "scripts" / "python" / "modules.py"
 env_path = root / ".env"
 manifest_path = root / "config" / "module-manifest.json"
 
@@ -36,4 +37,4 @@ print(profile)
 PY
 )"
 
-exec "${ROOT_DIR}/deploy.sh" --profile "$PROFILE" --yes --no-watch
+exec "${PROJECT_ROOT}/deploy.sh" --profile "$PROFILE" --yes --no-watch

@@ -6,8 +6,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-MODULE_HELPER="$SCRIPT_DIR/modules.py"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+MODULE_HELPER="$PROJECT_ROOT/scripts/python/modules.py"
 DEFAULT_ENV_PATH="$PROJECT_ROOT/.env"
 ENV_PATH="${MODULES_ENV_PATH:-$DEFAULT_ENV_PATH}"
 TEMPLATE_FILE="$PROJECT_ROOT/.env.template"
@@ -61,11 +61,6 @@ resolve_manifest_path(){
   fi
   local candidate
   candidate="$PROJECT_ROOT/config/module-manifest.json"
-  if [ -f "$candidate" ]; then
-    echo "$candidate"
-    return
-  fi
-  candidate="$SCRIPT_DIR/../config/module-manifest.json"
   if [ -f "$candidate" ]; then
     echo "$candidate"
     return
@@ -132,7 +127,7 @@ run_post_install_hooks(){
 
   IFS=',' read -r -a hooks <<< "$hooks_csv"
   local -a hook_search_paths=(
-    "$SCRIPT_DIR/hooks"
+    "$PROJECT_ROOT/scripts/hooks"
     "/tmp/scripts/hooks"
     "/scripts/hooks"
   )
@@ -466,7 +461,7 @@ load_sql_helper(){
   )
 
   if [ "${MODULES_LOCAL_RUN:-0}" = "1" ]; then
-    helper_paths+=("$SCRIPT_DIR/manage-modules-sql.sh")
+    helper_paths+=("$PROJECT_ROOT/scripts/bash/manage-modules-sql.sh")
   fi
 
   local helper_path=""

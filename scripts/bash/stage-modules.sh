@@ -61,8 +61,8 @@ sync_local_staging(){
   fi
 }
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_FILE="$PROJECT_DIR/.env"
 TEMPLATE_FILE="$PROJECT_DIR/.env.template"
 source "$PROJECT_DIR/scripts/bash/project_name.sh"
@@ -314,7 +314,7 @@ if [ "$TARGET_PROFILE" = "modules" ]; then
     show_staging_step "Source Rebuild" "Preparing custom build with modules"
     echo "🚀 Triggering source rebuild with modules..."
     if confirm "Proceed with source rebuild? (15-45 minutes)" n; then
-      "$SCRIPT_DIR/rebuild-with-modules.sh" ${ASSUME_YES:+--yes}
+      "$PROJECT_DIR/scripts/bash/rebuild-with-modules.sh" ${ASSUME_YES:+--yes}
     else
       echo "❌ Rebuild cancelled"
       exit 1

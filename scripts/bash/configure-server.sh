@@ -3,8 +3,9 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+APPLY_SCRIPT="$PROJECT_DIR/scripts/python/apply-config.py"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -70,7 +71,7 @@ EOF
     echo -e "\n${YELLOW}Would you like to apply these changes now? (y/N)${NC}"
     read -r response
     if [[ "$response" =~ ^[Yy]$ ]]; then
-        python3 "$SCRIPT_DIR/apply-config.py"
+        python3 "$APPLY_SCRIPT"
     else
         echo -e "${BLUE}ℹ️  Run '$(basename "$0") apply' when ready to apply changes${NC}"
     fi
@@ -114,7 +115,7 @@ show_status() {
 
     # Show available presets
     echo -e "\n${BLUE}📋 Available Presets:${NC}"
-    python3 "$SCRIPT_DIR/apply-config.py" --list-presets
+    python3 "$APPLY_SCRIPT" --list-presets
 }
 
 main() {
@@ -123,7 +124,7 @@ main() {
     case "${1:-}" in
         "apply")
             echo -e "${YELLOW}🔄 Applying configuration overrides...${NC}"
-            python3 "$SCRIPT_DIR/apply-config.py" "${@:2}"
+            python3 "$APPLY_SCRIPT" "${@:2}"
             echo -e "\n${GREEN}✅ Configuration applied!${NC}"
             echo -e "${YELLOW}ℹ️  Restart your server to apply changes:${NC} docker compose restart"
             ;;
@@ -131,16 +132,16 @@ main() {
             if [[ -z "${2:-}" ]]; then
                 echo -e "${RED}❌ Please specify a preset name${NC}"
                 echo -e "Available presets:"
-                python3 "$SCRIPT_DIR/apply-config.py" --list-presets
+                python3 "$APPLY_SCRIPT" --list-presets
                 exit 1
             fi
             echo -e "${YELLOW}🎯 Applying preset: $2${NC}"
-            python3 "$SCRIPT_DIR/apply-config.py" --preset "$2" "${@:3}"
+            python3 "$APPLY_SCRIPT" --preset "$2" "${@:3}"
             echo -e "\n${GREEN}✅ Preset '$2' applied!${NC}"
             echo -e "${YELLOW}ℹ️  Restart your server to apply changes:${NC} docker compose restart"
             ;;
         "list")
-            python3 "$SCRIPT_DIR/apply-config.py" --list-presets
+            python3 "$APPLY_SCRIPT" --list-presets
             ;;
         "edit")
             edit_config

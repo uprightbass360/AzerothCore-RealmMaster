@@ -2,6 +2,9 @@
 # azerothcore-rm
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 print_help() {
   cat <<'EOF'
 Usage: db-import-conditional.sh [options]
@@ -91,9 +94,9 @@ echo "🔍 Checking for backups to restore..."
 BACKUP_SEARCH_PATHS=(
   "/backups"
   "/var/lib/mysql-persistent"
-  "$SCRIPT_DIR/../storage/backups"
-  "$SCRIPT_DIR/../manual-backups"
-  "$SCRIPT_DIR/../ImportBackup"
+  "$PROJECT_ROOT/storage/backups"
+  "$PROJECT_ROOT/manual-backups"
+  "$PROJECT_ROOT/storage/backups/ImportBackup"
 )
 
 backup_path=""

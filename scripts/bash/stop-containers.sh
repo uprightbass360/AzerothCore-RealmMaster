@@ -4,6 +4,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-exec "${SCRIPT_DIR}/cleanup.sh" --soft --force
+exec "${PROJECT_ROOT}/cleanup.sh" --soft --force
