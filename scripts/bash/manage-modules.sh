@@ -10,6 +10,11 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 MODULE_HELPER="$SCRIPT_DIR/modules.py"
 DEFAULT_ENV_PATH="$PROJECT_ROOT/.env"
 ENV_PATH="${MODULES_ENV_PATH:-$DEFAULT_ENV_PATH}"
+TEMPLATE_FILE="$PROJECT_ROOT/.env.template"
+source "$PROJECT_ROOT/scripts/bash/project_name.sh"
+
+# Default project name (read from .env or template)
+DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_FILE")"
 
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 PLAYERBOTS_DB_UPDATE_LOGGED=0
@@ -75,7 +80,7 @@ resolve_manifest_path(){
 
 setup_git_config(){
   info "Configuring git identity"
-  git config --global user.name "${GIT_USERNAME:-ac-compose}" >/dev/null 2>&1 || true
+  git config --global user.name "${GIT_USERNAME:-$DEFAULT_PROJECT_NAME}" >/dev/null 2>&1 || true
   git config --global user.email "${GIT_EMAIL:-noreply@azerothcore.org}" >/dev/null 2>&1 || true
 }
 
@@ -456,8 +461,8 @@ manage_configuration_files(){
 
 load_sql_helper(){
   local helper_paths=(
-    "/scripts/manage-modules-sql.sh"
-    "/tmp/scripts/manage-modules-sql.sh"
+    "/scripts/bash/manage-modules-sql.sh"
+    "/tmp/scripts/bash/manage-modules-sql.sh"
   )
 
   if [ "${MODULES_LOCAL_RUN:-0}" = "1" ]; then
@@ -556,7 +561,7 @@ track_module_state(){
     if [ -n "$host_rebuild_sentinel" ]; then
       printf '%s\n' "${MODULES_COMPILE_LIST[@]}" > "$host_rebuild_sentinel" 2>/dev/null || true
     fi
-    echo "🚨 Module changes detected; run ./scripts/rebuild-with-modules.sh to rebuild source images."
+    echo "🚨 Module changes detected; run ./scripts/bash/rebuild-with-modules.sh to rebuild source images."
   else
     rm -f "$rebuild_sentinel" 2>/dev/null || true
     if [ -n "$host_rebuild_sentinel" ]; then

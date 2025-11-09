@@ -1,5 +1,5 @@
 #!/bin/bash
-# ac-compose source repository setup
+# azerothcore-rm source repository setup
 set -euo pipefail
 
 echo '🔧 Setting up AzerothCore source repository...'
@@ -35,7 +35,7 @@ SOURCE_PATH="${MODULES_REBUILD_SOURCE_PATH:-$SOURCE_PATH_DEFAULT}"
 
 show_client_data_requirement(){
     local repo_path="$1"
-    local detector="$PROJECT_ROOT/scripts/detect-client-data-version.sh"
+    local detector="$PROJECT_ROOT/scripts/bash/detect-client-data-version.sh"
     if [ ! -x "$detector" ]; then
         return
     fi

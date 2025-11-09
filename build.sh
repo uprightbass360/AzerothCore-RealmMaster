@@ -8,6 +8,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_PATH="$ROOT_DIR/.env"
+TEMPLATE_PATH="$ROOT_DIR/.env.template"
+source "$ROOT_DIR/scripts/bash/project_name.sh"
+
+# Default project name (read from .env or template)
+DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_PATH")"
 ASSUME_YES=0
 FORCE_REBUILD=0
 SKIP_SOURCE_SETUP=0
@@ -95,7 +100,7 @@ update_env_value(){
   fi
 }
 
-MODULE_HELPER="$ROOT_DIR/scripts/modules.py"
+MODULE_HELPER="$ROOT_DIR/scripts/python/modules.py"
 MODULE_STATE_INITIALIZED=0
 declare -a MODULES_COMPILE_LIST=()
 
@@ -185,7 +190,7 @@ ensure_source_repo(){
   fi
 
   warn "AzerothCore source not found at $src_path; running setup-source.sh" >&2
-  if ! (cd "$ROOT_DIR" && ./scripts/setup-source.sh) >&2; then
+  if ! (cd "$ROOT_DIR" && ./scripts/bash/setup-source.sh) >&2; then
     err "Failed to setup source repository" >&2
     exit 1
   fi
@@ -201,7 +206,7 @@ ensure_source_repo(){
 
 show_client_data_requirement(){
   local repo_path="$1"
-  local detector="$ROOT_DIR/scripts/detect-client-data-version.sh"
+  local detector="$ROOT_DIR/scripts/bash/detect-client-data-version.sh"
   if [ ! -x "$detector" ]; then
     return
   fi
@@ -369,17 +374,8 @@ sync_modules(){
 }
 
 resolve_project_name(){
-  local raw_name="$(read_env COMPOSE_PROJECT_NAME "azerothcore-realmmaster")"
-  local sanitized
-  sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
-  sanitized="${sanitized// /-}"
-  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
-  if [[ -z "$sanitized" ]]; then
-    sanitized="azerothcore-realmmaster"
-  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
-    sanitized="ac${sanitized}"
-  fi
-  echo "$sanitized"
+  local raw_name="$(read_env COMPOSE_PROJECT_NAME "$DEFAULT_PROJECT_NAME")"
+  project_name::sanitize "$raw_name"
 }
 
 ensure_modules_dir_writable(){
@@ -484,7 +480,7 @@ stage_modules(){
     rm -f "$staging_modules_dir/.modules_state" "$staging_modules_dir/.requires_rebuild" 2>/dev/null || true
   fi
 
-  if ! (cd "$local_modules_dir" && bash "$ROOT_DIR/scripts/manage-modules.sh"); then
+  if ! (cd "$local_modules_dir" && bash "$ROOT_DIR/scripts/bash/manage-modules.sh"); then
     err "Module staging failed; aborting build"
     return 1
   fi
@@ -543,7 +539,7 @@ execute_build(){
   info "Building AzerothCore with modules (this may take a while)"
   docker compose -f "$compose_file" down --remove-orphans >/dev/null 2>&1 || true
 
-  if (cd "$ROOT_DIR" && ./scripts/rebuild-with-modules.sh --yes --source "$src_path"); then
+  if (cd "$ROOT_DIR" && ./scripts/bash/rebuild-with-modules.sh --yes --source "$src_path"); then
     ok "Source build completed"
   else
     err "Source build failed"

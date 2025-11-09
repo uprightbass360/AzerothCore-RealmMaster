@@ -8,6 +8,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_ROOT/.env"
+TEMPLATE_FILE="$PROJECT_ROOT/.env.template"
+source "$PROJECT_ROOT/scripts/bash/project_name.sh"
+
+# Default project name (read from .env or template)
+DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
 
 read_env_value(){
   local key="$1" default="$2" value=""
@@ -25,17 +30,8 @@ read_env_value(){
 
 resolve_project_name(){
   local raw_name
-raw_name="$(read_env_value COMPOSE_PROJECT_NAME "azerothcore-realmmaster")"
-  local sanitized
-  sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
-  sanitized="${sanitized// /-}"
-  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
-  if [[ -z "$sanitized" ]]; then
-  sanitized="azerothcore-realmmaster"
-  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
-    sanitized="ac${sanitized}"
-  fi
-  echo "$sanitized"
+  raw_name="$(read_env_value COMPOSE_PROJECT_NAME "$DEFAULT_PROJECT_NAME")"
+  project_name::sanitize "$raw_name"
 }
 
 resolve_project_image(){
@@ -79,7 +75,7 @@ Options:
   --user USER           SSH username on remote host (required)
   --port PORT           SSH port (default: 22)
   --identity PATH       SSH private key (passed to scp/ssh)
-  --project-dir DIR     Remote project directory (default: ~/AzerothCore-RealmMaster)
+  --project-dir DIR     Remote project directory (default: ~/<project-name>)
   --tarball PATH        Output path for the image tar (default: ./local-storage/images/acore-modules-images.tar)
   --storage PATH        Remote storage directory (default: <project-dir>/storage)
   --skip-storage        Do not sync the storage directory
@@ -129,7 +125,7 @@ expand_remote_path(){
   esac
 }
 
-PROJECT_DIR="${PROJECT_DIR:-/home/${USER}/AzerothCore-RealmMaster}"
+PROJECT_DIR="${PROJECT_DIR:-/home/${USER}/$(resolve_project_name)}"
 PROJECT_DIR="$(expand_remote_path "$PROJECT_DIR")"
 REMOTE_STORAGE="${REMOTE_STORAGE:-${PROJECT_DIR}/storage}"
 REMOTE_STORAGE="$(expand_remote_path "$REMOTE_STORAGE")"

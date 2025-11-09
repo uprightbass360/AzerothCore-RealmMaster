@@ -1,12 +1,17 @@
 #!/bin/bash
 
-# ac-compose helper to rebuild AzerothCore from source with enabled modules.
+# azerothcore-rm helper to rebuild AzerothCore from source with enabled modules.
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_DIR/.env"
+TEMPLATE_FILE="$PROJECT_DIR/.env.template"
+source "$PROJECT_DIR/scripts/bash/project_name.sh"
+
+# Default project name (read from .env or template)
+DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
 
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
@@ -98,17 +103,8 @@ ensure_project_image_tag(){
 
 resolve_project_name(){
   local raw_name
-  raw_name="$(read_env COMPOSE_PROJECT_NAME "azerothcore-realmmaster")"
-  local sanitized
-  sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
-  sanitized="${sanitized// /-}"
-  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
-  if [[ -z "$sanitized" ]]; then
-    sanitized="azerothcore-realmmaster"
-  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
-    sanitized="ac${sanitized}"
-  fi
-  echo "$sanitized"
+  raw_name="$(read_env COMPOSE_PROJECT_NAME "$DEFAULT_PROJECT_NAME")"
+  project_name::sanitize "$raw_name"
 }
 
 resolve_project_image(){
@@ -158,7 +154,7 @@ ASSUME_YES=0
 SOURCE_OVERRIDE=""
 SKIP_STOP=0
 
-MODULE_HELPER="$PROJECT_DIR/scripts/modules.py"
+MODULE_HELPER="$PROJECT_DIR/scripts/python/modules.py"
 MODULE_STATE_DIR=""
 declare -a MODULES_COMPILE_LIST=()
 

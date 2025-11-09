@@ -11,7 +11,12 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_PATH="$ROOT_DIR/.env"
-source "$ROOT_DIR/scripts/lib/compose_overrides.sh"
+TEMPLATE_PATH="$ROOT_DIR/.env.template"
+source "$ROOT_DIR/scripts/bash/project_name.sh"
+
+# Default project name (read from .env or template)
+DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_PATH")"
+source "$ROOT_DIR/scripts/bash/compose_overrides.sh"
 TARGET_PROFILE=""
 WATCH_LOGS=1
 KEEP_RUNNING=0
@@ -28,7 +33,7 @@ REMOTE_PROJECT_DIR=""
 REMOTE_SKIP_STORAGE=0
 REMOTE_ARGS_PROVIDED=0
 
-MODULE_HELPER="$ROOT_DIR/scripts/modules.py"
+MODULE_HELPER="$ROOT_DIR/scripts/python/modules.py"
 MODULE_STATE_INITIALIZED=0
 declare -a MODULES_COMPILE_LIST=()
 declare -a COMPOSE_FILE_ARGS=()
@@ -59,7 +64,7 @@ show_realm_ready(){
 show_remote_plan(){
   local plan_host="${REMOTE_HOST:-<host>}"
   local plan_user="${REMOTE_USER:-<user>}"
-  local plan_dir="${REMOTE_PROJECT_DIR:-~/AzerothCore-RealmMaster}"
+  local plan_dir="${REMOTE_PROJECT_DIR:-$(get_default_remote_dir)}"
 
   printf '\n%b\n' "${BLUE}🧭 Remote Deployment Plan${NC}"
   printf '%b\n' "${YELLOW}├─ Validate build status locally${NC}"
@@ -139,7 +144,7 @@ collect_remote_details(){
   fi
 
   if [ -z "$REMOTE_PROJECT_DIR" ]; then
-    REMOTE_PROJECT_DIR="~/AzerothCore-RealmMaster"
+    REMOTE_PROJECT_DIR="$(get_default_remote_dir)"
   fi
   if [ "$interactive" -eq 1 ]; then
     local dir_input
@@ -183,10 +188,10 @@ validate_remote_configuration(){
     fi
   fi
   if [ -z "$REMOTE_PROJECT_DIR" ]; then
-    REMOTE_PROJECT_DIR="~/AzerothCore-RealmMaster"
+    REMOTE_PROJECT_DIR="$(get_default_remote_dir)"
   fi
-  if [ ! -f "$ROOT_DIR/scripts/migrate-stack.sh" ]; then
-    err "Migration script not found: $ROOT_DIR/scripts/migrate-stack.sh"
+  if [ ! -f "$ROOT_DIR/scripts/bash/migrate-stack.sh" ]; then
+    err "Migration script not found: $ROOT_DIR/scripts/bash/migrate-stack.sh"
     exit 1
   fi
 }
@@ -208,7 +213,7 @@ Options:
   --remote-user USER                       SSH username for remote migration
   --remote-port PORT                       SSH port for remote migration (default: 22)
   --remote-identity PATH                   SSH private key for remote migration
-  --remote-project-dir DIR                 Remote project directory (default: ~/AzerothCore-RealmMaster)
+  --remote-project-dir DIR                 Remote project directory (default: ~/<project-name>)
   --remote-skip-storage                    Skip syncing the storage directory during migration
   --skip-config                            Skip applying server configuration preset
   -h, --help                               Show this help
@@ -265,8 +270,8 @@ if [ "$REMOTE_MODE" -eq 1 ]; then
       exit 1
     fi
   fi
-  if [ ! -f "$ROOT_DIR/scripts/migrate-stack.sh" ]; then
-    err "Migration script not found: $ROOT_DIR/scripts/migrate-stack.sh"
+  if [ ! -f "$ROOT_DIR/scripts/bash/migrate-stack.sh" ]; then
+    err "Migration script not found: $ROOT_DIR/scripts/bash/migrate-stack.sh"
     exit 1
   fi
 fi
@@ -350,17 +355,12 @@ ensure_module_state(){
 }
 
 resolve_project_name(){
-  local raw_name="$(read_env COMPOSE_PROJECT_NAME "azerothcore-realmmaster")"
-  local sanitized
-  sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
-  sanitized="${sanitized// /-}"
-  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
-  if [[ -z "$sanitized" ]]; then
-    sanitized="azerothcore-realmmaster"
-  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
-    sanitized="ac${sanitized}"
-  fi
-  echo "$sanitized"
+  local raw_name="$(read_env COMPOSE_PROJECT_NAME "$DEFAULT_PROJECT_NAME")"
+  project_name::sanitize "$raw_name"
+}
+
+get_default_remote_dir(){
+  echo "~/$(resolve_project_name)"
 }
 
 resolve_project_image(){
@@ -605,7 +605,7 @@ run_remote_migration(){
     args+=(--yes)
   fi
 
-  (cd "$ROOT_DIR" && ./scripts/migrate-stack.sh "${args[@]}")
+  (cd "$ROOT_DIR" && ./scripts/bash/migrate-stack.sh "${args[@]}")
 }
 
 
@@ -615,7 +615,7 @@ stage_runtime(){
     args+=("$TARGET_PROFILE")
   fi
   info "Staging runtime environment via stage-modules.sh ${args[*]}"
-  (cd "$ROOT_DIR" && ./scripts/stage-modules.sh "${args[@]}")
+  (cd "$ROOT_DIR" && ./scripts/bash/stage-modules.sh "${args[@]}")
 }
 
 tail_world_logs(){
@@ -687,7 +687,7 @@ apply_server_config(){
 
   info "Applying server configuration preset: $server_config_preset"
 
-  local config_script="$ROOT_DIR/scripts/apply-config.py"
+  local config_script="$ROOT_DIR/scripts/python/apply-config.py"
   if [ ! -x "$config_script" ]; then
     warn "Configuration script not found or not executable: $config_script"
     warn "Server will use default settings"
@@ -758,7 +758,7 @@ main(){
     show_step 2 "$remote_steps" "Migrating deployment to $REMOTE_HOST"
     if run_remote_migration; then
       ok "Remote deployment package prepared for $REMOTE_USER@$REMOTE_HOST."
-      local remote_dir="${REMOTE_PROJECT_DIR:-~/AzerothCore-RealmMaster}"
+      local remote_dir="${REMOTE_PROJECT_DIR:-$(get_default_remote_dir)}"
       info "Run the following on the remote host to complete deployment:"
       printf '  %bcd %s && ./deploy.sh --yes --no-watch%b\n' "$YELLOW" "$remote_dir" "$NC"
       exit 0
@@ -781,7 +781,7 @@ main(){
 
   show_step 3 5 "Importing user database files"
   info "Checking for database files in ./database-import/"
-  bash "$ROOT_DIR/scripts/import-database-files.sh"
+  bash "$ROOT_DIR/scripts/bash/import-database-files.sh"
 
   show_step 4 6 "Bringing your realm online"
   info "Pulling images and waiting for containers to become healthy; this may take a few minutes on first deploy."

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Project: ac-compose
+# Project: azerothcore-rm
 set -e
 
 # Simple profile-aware deploy + health check for profiles-verify/docker-compose.yml
@@ -13,7 +13,9 @@ err(){ echo -e "${RED}❌ $*${NC}"; }
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
 ENV_FILE=""
-source "$PROJECT_DIR/scripts/lib/compose_overrides.sh"
+TEMPLATE_FILE="$PROJECT_DIR/.env.template"
+source "$PROJECT_DIR/scripts/bash/project_name.sh"
+source "$PROJECT_DIR/scripts/bash/compose_overrides.sh"
 PROFILES=(db services-standard client-data modules tools)
 SKIP_DEPLOY=false
 QUICK=false
@@ -46,20 +48,17 @@ resolve_project_name(){
   else
     env_path="$(dirname "$COMPOSE_FILE")/.env"
   fi
-  local raw_name=""
-  if [ -f "$env_path" ]; then
-    raw_name="$(grep -E '^COMPOSE_PROJECT_NAME=' "$env_path" | tail -n1 | cut -d'=' -f2-)"
-  fi
-  if [ -z "$raw_name" ]; then
-    raw_name="azerothcore-realmmaster"
-  fi
+  local raw_name
+  raw_name="$(project_name::resolve "$env_path" "$TEMPLATE_FILE")"
   local sanitized
   sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
   sanitized="${sanitized// /-}"
   sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
   if [[ -z "$sanitized" ]]; then
-    sanitized="azerothcore-realmmaster"
-  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
+    echo "Error: COMPOSE_PROJECT_NAME is invalid" >&2
+    exit 1
+  fi
+  if [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
     sanitized="ac${sanitized}"
   fi
   echo "$sanitized"
@@ -120,21 +119,21 @@ handle_auto_rebuild(){
   local auto_rebuild
   auto_rebuild="$(read_env_value AUTO_REBUILD_ON_DEPLOY "0")"
   if [ "$auto_rebuild" != "1" ]; then
-    warn "Run ./scripts/rebuild-with-modules.sh after preparing your source tree."
+    warn "Run ./scripts/bash/rebuild-with-modules.sh after preparing your source tree."
     return 0
   fi
 
   local rebuild_source
   rebuild_source="$(read_env_value MODULES_REBUILD_SOURCE_PATH "")"
-  info "AUTO_REBUILD_ON_DEPLOY=1; invoking ./scripts/rebuild-with-modules.sh."
-  local cmd=(./scripts/rebuild-with-modules.sh --yes)
+  info "AUTO_REBUILD_ON_DEPLOY=1; invoking ./scripts/bash/rebuild-with-modules.sh."
+  local cmd=(./scripts/bash/rebuild-with-modules.sh --yes)
   if [ -n "$rebuild_source" ]; then
     cmd+=(--source "$rebuild_source")
   fi
   if "${cmd[@]}"; then
     info "Module rebuild completed."
   else
-    warn "Automatic rebuild failed; run ./scripts/rebuild-with-modules.sh manually."
+    warn "Automatic rebuild failed; run ./scripts/bash/rebuild-with-modules.sh manually."
   fi
 }
 

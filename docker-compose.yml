@@ -21,7 +21,7 @@ services:
     entrypoint:
       - /usr/local/bin/mysql-entrypoint.sh
     volumes:
-      - ./scripts/mysql-entrypoint.sh:/usr/local/bin/mysql-entrypoint.sh:ro
+      - ./scripts/bash/mysql-entrypoint.sh:/usr/local/bin/mysql-entrypoint.sh:ro
       - ${STORAGE_PATH_LOCAL}/mysql-data:/var/lib/mysql-persistent
       - ${BACKUP_PATH}:/backups
       - ${HOST_ZONEINFO_PATH}:/usr/share/zoneinfo:ro
@@ -65,7 +65,7 @@ services:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
       - ${STORAGE_PATH_LOCAL}/mysql-data:/var/lib/mysql-persistent
-      - ./scripts/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
+      - ./scripts/bash/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
     environment:
       AC_DATA_DIR: "/azerothcore/data"
       AC_LOGS_DIR: "/azerothcore/logs"
@@ -171,9 +171,9 @@ services:
       - |
         microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
         echo "📥 Downloading backup scheduler script (local copy preferred if mounted)..."
-        if [ -f /tmp/scripts/backup-scheduler.sh ]; then
-          chmod +x /tmp/scripts/backup-scheduler.sh 2>/dev/null || true
-          bash /tmp/scripts/backup-scheduler.sh
+        if [ -f /tmp/scripts/bash/backup-scheduler.sh ]; then
+          chmod +x /tmp/scripts/bash/backup-scheduler.sh 2>/dev/null || true
+          bash /tmp/scripts/bash/backup-scheduler.sh
         else
           echo "No local scheduler provided"
         fi
@@ -269,9 +269,9 @@ services:
       - -c
       - |
         mkdir -p /cache
-        if [ -f /tmp/scripts/download-client-data.sh ]; then
-          chmod +x /tmp/scripts/download-client-data.sh 2>/dev/null || true
-          bash /tmp/scripts/download-client-data.sh
+        if [ -f /tmp/scripts/bash/download-client-data.sh ]; then
+          chmod +x /tmp/scripts/bash/download-client-data.sh 2>/dev/null || true
+          bash /tmp/scripts/bash/download-client-data.sh
         else
           echo "No local client-data script"
         fi
@@ -302,9 +302,9 @@ services:
         echo "📦 Installing 7z for faster extraction..."
         apt-get update -qq && apt-get install -y p7zip-full
         mkdir -p /cache
-        if [ -f /tmp/scripts/download-client-data.sh ]; then
-          chmod +x /tmp/scripts/download-client-data.sh 2>/dev/null || true
-          bash /tmp/scripts/download-client-data.sh
+        if [ -f /tmp/scripts/bash/download-client-data.sh ]; then
+          chmod +x /tmp/scripts/bash/download-client-data.sh 2>/dev/null || true
+          bash /tmp/scripts/bash/download-client-data.sh
           echo "🔧 Fixing ownership of extracted files..."
           chown -R ${CONTAINER_USER} /azerothcore/data
           echo "✅ Client data extraction and ownership setup complete"
@@ -607,7 +607,7 @@ services:
       - -c
       - |
         apk add --no-cache curl bash git python3
-        (chmod +x /tmp/scripts/manage-modules.sh /tmp/scripts/manage-modules-sql.sh 2>/dev/null || true) && /tmp/scripts/manage-modules.sh
+        (chmod +x /tmp/scripts/bash/manage-modules.sh /tmp/scripts/bash/manage-modules-sql.sh 2>/dev/null || true) && /tmp/scripts/bash/manage-modules.sh
         # Fix permissions after module operations
         chown -R ${CONTAINER_USER} /modules /azerothcore/env/dist/etc 2>/dev/null || true
         chmod -R 755 /modules /azerothcore/env/dist/etc 2>/dev/null || true
@@ -659,7 +659,7 @@ services:
         chown -R ${CONTAINER_USER} /azerothcore/config /install-markers 2>/dev/null || true
         chmod -R 755 /azerothcore/config /install-markers 2>/dev/null || true
         echo "📥 Running local auto-post-install script..."
-        (chmod +x /tmp/scripts/auto-post-install.sh 2>/dev/null || true) && bash /tmp/scripts/auto-post-install.sh
+        (chmod +x /tmp/scripts/bash/auto-post-install.sh 2>/dev/null || true) && bash /tmp/scripts/bash/auto-post-install.sh
         # Fix permissions for all files created during post-install
         chown -R ${CONTAINER_USER} /azerothcore/config /install-markers 2>/dev/null || true
         chmod -R 755 /azerothcore/config /install-markers 2>/dev/null || true

@@ -1,13 +1,18 @@
 #!/bin/bash
 
-# ac-compose helper to deploy phpMyAdmin and Keira3 tooling.
+# azerothcore-rm helper to deploy phpMyAdmin and Keira3 tooling.
 
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
 DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_FILE="$ROOT_DIR/.env"
-source "$ROOT_DIR/scripts/lib/compose_overrides.sh"
+TEMPLATE_FILE="$ROOT_DIR/.env.template"
+source "$ROOT_DIR/scripts/bash/project_name.sh"
+
+# Default project name (read from .env or template)
+DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
+source "$ROOT_DIR/scripts/bash/compose_overrides.sh"
 declare -a COMPOSE_FILE_ARGS=()
 
 BLUE='\033[0;34m'
@@ -34,16 +39,8 @@ read_env(){
 
 resolve_project_name(){
   local raw_name sanitized
-  raw_name="$(read_env COMPOSE_PROJECT_NAME "azerothcore-realmmaster")"
-  sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
-  sanitized="${sanitized// /-}"
-  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
-  if [[ -z "$sanitized" ]]; then
-    sanitized="azerothcore-realmmaster"
-  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
-    sanitized="ac${sanitized}"
-  fi
-  echo "$sanitized"
+  raw_name="$(read_env COMPOSE_PROJECT_NAME "$DEFAULT_PROJECT_NAME")"
+  project_name::sanitize "$raw_name"
 }
 
 init_compose_files(){

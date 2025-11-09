@@ -429,6 +429,8 @@
       "name": "StatBooster",
       "repo": "https://github.com/AnchyDev/StatBooster.git",
       "type": "cpp",
+      "status": "blocked",
+      "block_reason": "Override signature mismatch on OnLootItem",
       "post_install_hooks": [
         "fix-statbooster-api"
       ],

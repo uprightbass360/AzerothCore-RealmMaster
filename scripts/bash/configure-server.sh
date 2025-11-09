@@ -49,7 +49,7 @@ edit_config() {
         # Create a minimal template if it doesn't exist
         cat > "$config_file" << 'EOF'
 # AzerothCore Server Configuration Overrides
-# Edit this file and run './scripts/configure-server.sh apply' to update settings
+# Edit this file and run './scripts/bash/configure-server.sh apply' to update settings
 
 [worldserver.conf]
 # Example settings - uncomment and modify as needed

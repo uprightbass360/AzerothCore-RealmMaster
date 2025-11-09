@@ -9,10 +9,10 @@ set -euo pipefail
 
 print_usage() {
   cat <<'EOF'
-Usage: scripts/detect-client-data-version.sh [--no-header] <repo-path> [...]
+Usage: scripts/bash/detect-client-data-version.sh [--no-header] <repo-path> [...]
 
 Outputs a tab-separated list of repository path, raw version token found in the
-source tree, and a normalized CLIENT_DATA_VERSION (e.g., v18).
+source tree, and a normalized CLIENT_DATA_VERSION (e.g., v18.0).
 EOF
 }
 

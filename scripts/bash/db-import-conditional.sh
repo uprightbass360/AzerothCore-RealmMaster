@@ -1,5 +1,5 @@
 #!/bin/bash
-# ac-compose
+# azerothcore-rm
 set -e
 
 print_help() {

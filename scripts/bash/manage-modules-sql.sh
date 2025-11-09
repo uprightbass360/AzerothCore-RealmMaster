@@ -1,5 +1,5 @@
 #!/bin/bash
-# ac-compose
+# azerothcore-rm
 set -e
 trap 'echo "    ❌ SQL helper error (line ${LINENO}): ${BASH_COMMAND}" >&2' ERR
 
@@ -117,8 +117,8 @@ ensure_module_metadata(){
   local -a module_py_candidates=(
     "${MODULE_HELPER:-}"
     "${HELPER_DIR%/*}/modules.py"
-    "/tmp/scripts/modules.py"
-    "/scripts/modules.py"
+    "/tmp/scripts/python/modules.py"
+    "/scripts/python/modules.py"
   )
 
   local module_py=""

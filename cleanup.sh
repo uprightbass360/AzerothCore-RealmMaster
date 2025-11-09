@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ==============================================
-# ac-compose Cleanup Script (project-scoped)
+# AzerothCore RealmMaster Cleanup Script (project-scoped)
 # ==============================================
 # Usage: ./cleanup.sh [--soft] [--hard] [--nuclear] [--dry-run] [--force] [--preserve-backups]
-# Project: ac-compose
+# Project: azerothcore-rm
 
 set -e
 
@@ -13,7 +13,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${SCRIPT_DIR}"
 DEFAULT_COMPOSE_FILE="${PROJECT_DIR}/docker-compose.yml"
 ENV_FILE="${PROJECT_DIR}/.env"
-source "${PROJECT_DIR}/scripts/lib/compose_overrides.sh"
+TEMPLATE_FILE="${PROJECT_DIR}/.env.template"
+source "${PROJECT_DIR}/scripts/bash/project_name.sh"
+
+# Default project name (read from .env or template)
+DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
+source "${PROJECT_DIR}/scripts/bash/compose_overrides.sh"
 declare -a COMPOSE_FILE_ARGS=()
 
 # Colors
@@ -135,23 +140,13 @@ done
 COMPOSE_BASE="docker compose${COMPOSE_FILE_ARGS_STR}"
 STORAGE_PATH="${STORAGE_PATH:-$STORAGE_PATH_DEFAULT}"
 STORAGE_PATH_LOCAL="${STORAGE_PATH_LOCAL:-$STORAGE_PATH_LOCAL_DEFAULT}"
-PROJECT_NAME="${COMPOSE_PROJECT_NAME:-ac-compose}"
+PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$DEFAULT_PROJECT_NAME}"
 
 sanitize_project_name(){
-  local raw="$1"
-  local sanitized
-  sanitized="$(echo "$raw" | tr '[:upper:]' '[:lower:]')"
-  sanitized="${sanitized// /-}"
-  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
-  if [[ -z "$sanitized" ]]; then
-    sanitized="azerothcore-realmmaster"
-  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
-    sanitized="ac${sanitized}"
-  fi
-  echo "$sanitized"
+  project_name::sanitize "$1"
 }
 
-PROJECT_IMAGE_PREFIX="$(sanitize_project_name "${COMPOSE_PROJECT_NAME:-azerothcore-realmmaster}")"
+PROJECT_IMAGE_PREFIX="$(sanitize_project_name "${COMPOSE_PROJECT_NAME:-$DEFAULT_PROJECT_NAME}")"
 
 remove_storage_dir(){
   local path="$1"
@@ -269,7 +264,7 @@ show_summary() {
 }
 
 main(){
-  print_status HEADER "ac-compose CLEANUP"
+  print_status HEADER "${PROJECT_NAME^^} CLEANUP"
 
   if ! command -v docker >/dev/null 2>&1; then
     print_status ERROR "Docker not found"

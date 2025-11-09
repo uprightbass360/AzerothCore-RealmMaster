@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ac-compose helper to automatically stage modules and trigger source builds when needed.
+# azerothcore-rm helper to automatically stage modules and trigger source builds when needed.
 
 set -e
 
@@ -64,8 +64,13 @@ sync_local_staging(){
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="$PROJECT_DIR/.env"
+TEMPLATE_FILE="$PROJECT_DIR/.env.template"
+source "$PROJECT_DIR/scripts/bash/project_name.sh"
+
+# Default project name (read from .env or template)
+DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
 DEFAULT_COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
-source "$PROJECT_DIR/scripts/lib/compose_overrides.sh"
+source "$PROJECT_DIR/scripts/bash/compose_overrides.sh"
 
 usage(){
   cat <<EOF
@@ -101,17 +106,8 @@ read_env(){
 
 resolve_project_name(){
   local raw_name
-  raw_name="$(read_env COMPOSE_PROJECT_NAME "azerothcore-realmmaster")"
-  local sanitized
-  sanitized="$(echo "$raw_name" | tr '[:upper:]' '[:lower:]')"
-  sanitized="${sanitized// /-}"
-  sanitized="$(echo "$sanitized" | tr -cd 'a-z0-9_-')"
-  if [[ -z "$sanitized" ]]; then
-    sanitized="azerothcore-realmmaster"
-  elif [[ ! "$sanitized" =~ ^[a-z0-9] ]]; then
-    sanitized="ac${sanitized}"
-  fi
-  echo "$sanitized"
+  raw_name="$(read_env COMPOSE_PROJECT_NAME "$DEFAULT_PROJECT_NAME")"
+  project_name::sanitize "$raw_name"
 }
 
 if [ -z "${COMPOSE_FILE:-}" ]; then

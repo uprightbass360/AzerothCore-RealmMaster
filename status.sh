@@ -175,23 +175,21 @@ print_service(){
 
 module_summary_list(){
   if [ ! -f "$ENV_FILE" ]; then
-    echo "MODULES: (env not found)"
+    echo "(env not found)"
     return
   fi
   local module_vars
   module_vars="$(grep -E '^MODULE_[A-Z_]+=1' "$ENV_FILE" 2>/dev/null | cut -d'=' -f1)"
   if [ -n "$module_vars" ]; then
-    echo "MODULES:"
     while IFS= read -r mod; do
       [ -z "$mod" ] && continue
       local pretty="${mod#MODULE_}"
       pretty="$(echo "$pretty" | tr '[:upper:]' '[:lower:]' | tr '_' ' ' | sed 's/\b\w/\U&/g')"
-      printf "  • %s\n" "$pretty"
+      printf "%s\n" "$pretty"
     done <<< "$module_vars"
   else
-    echo "MODULES: none"
+    echo "none"
   fi
-  echo ""
   if container_running "ac-worldserver"; then
     local playerbot="disabled"
     local module_playerbots
@@ -199,13 +197,54 @@ module_summary_list(){
     if [ "$module_playerbots" = "1" ]; then
       playerbot="enabled"
       if docker inspect --format='{{.State.Status}}' ac-worldserver 2>/dev/null | grep -q "running"; then
-        playerbot="running"
+      playerbot="running"
       fi
     fi
     local eluna="disabled"
     [ "$ELUNA_ENABLED" = "1" ] && eluna="running"
     # echo "RUNTIME: playerbots $playerbot | eluna $eluna"
   fi
+}
+
+render_module_ports(){
+  local modules_raw="$1" ports_raw="$2" net_line="$3"
+  mapfile -t modules <<< "$modules_raw"
+  mapfile -t ports_lines <<< "$ports_raw"
+
+  local ports=()
+  for idx in "${!ports_lines[@]}"; do
+    local line="${ports_lines[$idx]}"
+    if [ "$idx" -eq 0 ]; then
+      continue
+    fi
+    line="$(echo "$line" | sed 's/^[[:space:]]*//')"
+    [ -z "$line" ] && continue
+    ports+=("• $line")
+  done
+  if [ -n "$net_line" ]; then
+    ports+=("DOCKER NET: ${net_line##*: }")
+  fi
+
+  local rows="${#modules[@]}"
+  if [ "${#ports[@]}" -gt "$rows" ]; then
+    rows="${#ports[@]}"
+  fi
+
+  printf "  %-52s %s\n" "MODULES:" "PORTS:"
+  for ((i=0; i<rows; i++)); do
+    local left="${modules[i]:-}"
+    local right="${ports[i]:-}"
+    if [ -n "$left" ]; then
+      left="• $left"
+    fi
+    local port_column=""
+    if [[ "$right" == DOCKER\ NET:* ]]; then
+      port_column="   $right"
+    elif [ -n "$right" ]; then
+      port_column="      $right"
+    fi
+    printf "    %-50s %s\n" "$left" "$port_column"
+  done
 }
 
 user_stats(){
@@ -310,11 +349,11 @@ render_snapshot(){
   print_service ac-phpmyadmin "phpMyAdmin"
   print_service ac-keira3 "Keira3"
   echo ""
-  module_summary_list
-  echo ""
-  echo "$(ports_summary)"
-  echo ""
-  echo "$(network_summary)"
+  local module_block ports_block net_line
+  module_block="$(module_summary_list)"
+  ports_block="$(ports_summary)"
+  net_line="$(network_summary)"
+  render_module_ports "$module_block" "$ports_block" "$net_line"
 }
 
 display_snapshot(){
