@@ -207,6 +207,14 @@ Automated post-deployment tasks including module configuration, service verifica
 3. Database connectivity testing
 4. Initial realm configuration
 
+#### `scripts/bash/manual-backup.sh` - On-Demand Backup Helper
+Runs the `ac-backup` container's dump logic immediately and stores results under `/backups/<label>_<timestamp>`.
+
+```bash
+./scripts/bash/manual-backup.sh                     # Manual backup with default label
+./scripts/bash/manual-backup.sh --label hotfix      # Custom label for the backup directory
+```
+
 ### Advanced Deployment Tools
 
 #### `scripts/bash/migrate-stack.sh` - Remote Deployment Migration
