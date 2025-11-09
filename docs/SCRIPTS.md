@@ -127,9 +127,13 @@ ExportBackup_YYYYMMDD_HHMMSS/
 Restores user accounts and characters from backup while preserving world data.
 
 ```bash
-./scripts/bash/backup-import.sh                            # Import from ImportBackup/
-./scripts/bash/backup-import.sh /path/to/backup           # Import from specific directory
+./scripts/bash/backup-import.sh --backup-dir storage/backups/ImportBackup --password azerothcore123
+
+# Restore directly from an ExportBackup archive you just unpacked
+./scripts/bash/backup-import.sh --backup-dir ExportBackup_20241029_120000 --password azerothcore123 --all
 ```
+
+> The importer always requires `--backup-dir`. A common workflow is to extract an `ExportBackup_*` archive into `storage/backups/ImportBackup/` and pass that directory to the script, but you can point to any folder that contains the SQL dumps.
 
 **Required Files:**
 - `acore_auth.sql[.gz]` - User accounts (required)

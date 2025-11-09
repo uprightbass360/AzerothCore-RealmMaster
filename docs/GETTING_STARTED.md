@@ -422,8 +422,11 @@ open http://localhost:8081
 docker exec -it ac-mysql mysql -u root -p
 
 # Manual backup operations
-./scripts/bash/backup-export.sh [output_dir]                 # Export user accounts & characters
-./scripts/bash/backup-import.sh [backup_dir]                 # Import user data from backup
+# Export user accounts & characters to a named directory
+./scripts/bash/backup-export.sh storage/backups/ExportBackup_manual_$(date +%Y%m%d_%H%M%S)
+
+# Import data from a directory that contains the SQL dumps
+./scripts/bash/backup-import.sh --backup-dir storage/backups/ImportBackup --password azerothcore123
 
 # View available backups
 ls -la storage/backups/
