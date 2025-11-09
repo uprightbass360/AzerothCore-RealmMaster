@@ -2,7 +2,6 @@ data/
 backups/
 manual-backups/
 V1/
-database-import
 database-import/*.sql
 database-import/*.sql.gz
 source/*
