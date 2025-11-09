@@ -144,6 +144,7 @@ services:
     profiles: ["db"]
     image: ${MYSQL_IMAGE}
     container_name: ${CONTAINER_BACKUP}
+    user: "0:0"
     userns_mode: "keep-id"
     depends_on:
       ac-db-import:
@@ -169,11 +170,19 @@ services:
       - /bin/bash
       - -c
       - |
-        microdnf install -y curl || yum install -y curl || (apt-get update && apt-get install -y curl)
-        echo "📥 Downloading backup scheduler script (local copy preferred if mounted)..."
+        microdnf install -y curl || yum install -y curl || (apt-get update -qq && apt-get install -y curl)
+        echo "📥 Preparing backup scheduler (dropping privileges to ${CONTAINER_USER})..."
+        run_as_user(){
+          if command -v gosu >/dev/null 2>&1; then
+            gosu ${CONTAINER_USER} "$@"
+          else
+            echo "⚠️  gosu not found; running backup scheduler as root."
+            "$@"
+          fi
+        }
         if [ -f /tmp/scripts/bash/backup-scheduler.sh ]; then
           chmod +x /tmp/scripts/bash/backup-scheduler.sh 2>/dev/null || true
-          bash /tmp/scripts/bash/backup-scheduler.sh
+          run_as_user /tmp/scripts/bash/backup-scheduler.sh
         else
           echo "No local scheduler provided"
         fi
