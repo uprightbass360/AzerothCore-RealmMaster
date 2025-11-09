@@ -17,6 +17,7 @@ WATCH_LOGS=1
 KEEP_RUNNING=0
 WORLD_LOG_SINCE=""
 ASSUME_YES=0
+SKIP_CONFIG=0
 
 REMOTE_MODE=0
 REMOTE_HOST=""
@@ -209,6 +210,7 @@ Options:
   --remote-identity PATH                   SSH private key for remote migration
   --remote-project-dir DIR                 Remote project directory (default: ~/AzerothCore-RealmMaster)
   --remote-skip-storage                    Skip syncing the storage directory during migration
+  --skip-config                            Skip applying server configuration preset
   -h, --help                               Show this help
 
 This command automates deployment: sync modules, stage the correct compose profile,
@@ -234,6 +236,7 @@ while [[ $# -gt 0 ]]; do
     --remote-identity) REMOTE_IDENTITY="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-project-dir) REMOTE_PROJECT_DIR="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --skip-config) SKIP_CONFIG=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
   esac
@@ -667,6 +670,59 @@ wait_for_worldserver_ready(){
   done
 }
 
+apply_server_config(){
+  if [ "$SKIP_CONFIG" -eq 1 ]; then
+    info "Skipping server configuration application (--skip-config flag set)"
+    return 0
+  fi
+
+  # Read the SERVER_CONFIG_PRESET from .env
+  local server_config_preset
+  server_config_preset="$(read_env SERVER_CONFIG_PRESET "none")"
+
+  if [ "$server_config_preset" = "none" ] || [ -z "$server_config_preset" ]; then
+    info "No server configuration preset selected - using defaults"
+    return 0
+  fi
+
+  info "Applying server configuration preset: $server_config_preset"
+
+  local config_script="$ROOT_DIR/scripts/apply-config.py"
+  if [ ! -x "$config_script" ]; then
+    warn "Configuration script not found or not executable: $config_script"
+    warn "Server will use default settings"
+    return 0
+  fi
+
+  local storage_path
+  storage_path="$(read_env STORAGE_PATH "./storage")"
+
+  # Check if preset file exists
+  local preset_file="$ROOT_DIR/config/presets/${server_config_preset}.conf"
+  if [ ! -f "$preset_file" ]; then
+    warn "Server configuration preset not found: $preset_file"
+    warn "Server will use default settings"
+    return 0
+  fi
+
+  # Apply the configuration
+  if python3 "$config_script" --storage-path "$storage_path" --preset "$server_config_preset"; then
+    ok "Server configuration preset '$server_config_preset' applied successfully"
+    info "Restart worldserver to apply configuration changes"
+
+    # Restart worldserver if it's running to apply config changes
+    if docker ps --format '{{.Names}}' | grep -q '^ac-worldserver$'; then
+      info "Restarting worldserver to apply configuration changes..."
+      docker restart ac-worldserver
+      info "Waiting for worldserver to become healthy after configuration..."
+      sleep 5  # Brief pause before health check
+    fi
+  else
+    warn "Failed to apply server configuration preset '$server_config_preset'"
+    warn "Server will continue with existing settings"
+  fi
+}
+
 main(){
   if [ "$ASSUME_YES" -ne 1 ]; then
     if [ -t 0 ]; then
@@ -723,11 +779,18 @@ main(){
     stop_runtime_stack
   fi
 
-  show_step 3 4 "Bringing your realm online"
+  show_step 3 5 "Importing user database files"
+  info "Checking for database files in ./database-import/"
+  bash "$ROOT_DIR/scripts/import-database-files.sh"
+
+  show_step 4 6 "Bringing your realm online"
   info "Pulling images and waiting for containers to become healthy; this may take a few minutes on first deploy."
   stage_runtime
 
-  show_step 4 4 "Finalizing deployment"
+  show_step 5 6 "Applying server configuration"
+  apply_server_config
+
+  show_step 6 6 "Finalizing deployment"
   mark_deployment_complete
 
   show_realm_ready
