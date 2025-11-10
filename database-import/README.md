@@ -34,7 +34,7 @@ Place your database backup files here for automatic import during deployment.
 
 ## What Happens
 - Individual `.sql`/`.sql.gz` files are copied to `storage/backups/daily/` with a timestamped name
-- Full backup directories or archives are staged in `storage/backups/ImportBackup/`
+- Full backup directories or archives are staged directly under `storage/backups/` (e.g., `storage/backups/ExportBackup_20241029_120000/`)
 - Database import system automatically restores the most recent matching backup
 - Original files remain here for reference (archives are left untouched)
 

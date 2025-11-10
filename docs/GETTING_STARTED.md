@@ -443,7 +443,7 @@ docker exec -it ac-mysql mysql -u root -p
 ./scripts/bash/backup-export.sh storage/backups/ExportBackup_manual_$(date +%Y%m%d_%H%M%S)
 
 # Import data from a directory that contains the SQL dumps
-./scripts/bash/backup-import.sh --backup-dir storage/backups/ImportBackup --password azerothcore123
+./scripts/bash/backup-import.sh --backup-dir storage/backups/ExportBackup_20241029_120000 --password azerothcore123
 
 # View available backups
 ls -la storage/backups/

@@ -105,12 +105,12 @@ ExportBackup_YYYYMMDD_HHMMSS/     # Created by scripts/bash/backup-export.sh
 ├── acore_characters.sql.gz       # Character data
 └── manifest.json
 
-ImportBackup/                     # Optional staging area (use with --backup-dir)
-├── acore_auth.sql[.gz]           # Required: accounts
-├── acore_characters.sql[.gz]     # Required: characters
-└── acore_world.sql[.gz]          # Optional: world data
+ExportBackup_YYYYMMDD_HHMMSS/     # Optional manual drop-in under storage/backups/
+├── acore_auth.sql.gz
+├── acore_characters.sql.gz
+└── manifest.json
 
-Place extracted dumps from any `ExportBackup_*` archive into this directory (or any other directory you prefer) and pass it to `scripts/bash/backup-import.sh --backup-dir <path>` when performing a manual restore.
+Place extracted dumps from any `ExportBackup_*` archive inside `storage/backups/` (for automatic detection) or pass the directory directly to `scripts/bash/backup-import.sh --backup-dir <path>` when performing a manual restore.
 ```
 
 ---

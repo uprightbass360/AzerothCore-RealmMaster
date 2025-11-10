@@ -96,7 +96,6 @@ BACKUP_SEARCH_PATHS=(
   "/var/lib/mysql-persistent"
   "$PROJECT_ROOT/storage/backups"
   "$PROJECT_ROOT/manual-backups"
-  "$PROJECT_ROOT/storage/backups/ImportBackup"
 )
 
 backup_path=""
@@ -149,7 +148,7 @@ if [ -z "$backup_path" ]; then
           echo "📦 Latest hourly backup found: $latest_hourly"
           for backup_file in "$BACKUP_DIRS/hourly/$latest_hourly"/*.sql.gz; do
             if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
-              if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+              if timeout 10 zcat "$backup_file" >/dev/null 2>&1; then
                 echo "✅ Valid hourly backup file: $(basename "$backup_file")"
                 backup_path="$BACKUP_DIRS/hourly/$latest_hourly"
                 break 2
@@ -171,7 +170,7 @@ if [ -z "$backup_path" ]; then
               echo "🔍 Validating timestamped backup content..."
               for backup_file in "$BACKUP_DIRS/$latest_timestamped"/*.sql.gz; do
                 if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
-                  if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+                  if timeout 10 zcat "$backup_file" >/dev/null 2>&1; then
                     echo "✅ Valid timestamped backup found: $(basename "$backup_file")"
                     backup_path="$BACKUP_DIRS/$latest_timestamped"
                     break 2
@@ -189,7 +188,7 @@ if [ -z "$backup_path" ]; then
         latest_manual=$(ls -1t "$BACKUP_DIRS"/*.sql 2>/dev/null | head -n 1)
         if [ -n "$latest_manual" ] && [ -f "$latest_manual" ]; then
           echo "📦 Found manual backup: $(basename "$latest_manual")"
-          if timeout 10 head -20 "$latest_manual" 2>/dev/null | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+          if timeout 10 head -20 "$latest_manual" >/dev/null 2>&1; then
             echo "✅ Valid manual backup file: $(basename "$latest_manual")"
             backup_path="$latest_manual"
             break
@@ -316,6 +315,15 @@ Updates.EnableDatabases = 7
 Updates.AutoSetup = 1
 TempDir = "${TEMP_DIR}"
 MySQLExecutable = "${MYSQL_EXECUTABLE}"
+Updates.AllowedModules = "all"
+LoginDatabase.WorkerThreads = 1
+LoginDatabase.SynchThreads = 1
+WorldDatabase.WorkerThreads = 1
+WorldDatabase.SynchThreads = 1
+CharacterDatabase.WorkerThreads = 1
+CharacterDatabase.SynchThreads = 1
+SourceDirectory = "/azerothcore"
+Updates.ExceptionShutdownDelay = 10000
 EOF
 
 echo "🚀 Running database import..."

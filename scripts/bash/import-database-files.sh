@@ -12,8 +12,8 @@ fi
 IMPORT_DIR="./database-import"
 STORAGE_PATH="${STORAGE_PATH:-./storage}"
 STORAGE_PATH_LOCAL="${STORAGE_PATH_LOCAL:-./local-storage}"
-BACKUP_DIR="${STORAGE_PATH}/backups/daily"
-FULL_BACKUP_DIR="${STORAGE_PATH}/backups/ImportBackup"
+BACKUP_ROOT="${STORAGE_PATH}/backups"
+BACKUP_DIR="${BACKUP_ROOT}/daily"
 TIMESTAMP=$(date +%Y-%m-%d)
 
 shopt -s nullglob
@@ -47,7 +47,7 @@ echo "📥 Found database files in $IMPORT_DIR"
 echo "📂 Copying to backup system for import..."
 
 # Ensure backup directory exists
-mkdir -p "$BACKUP_DIR" "$FULL_BACKUP_DIR"
+mkdir -p "$BACKUP_DIR" "$BACKUP_ROOT"
 
 generate_unique_path(){
   local target="$1"
@@ -98,9 +98,12 @@ done
 
 stage_backup_directory(){
   local src_dir="$1"
+  if [ -z "$src_dir" ] || [ ! -d "$src_dir" ]; then
+    return
+  fi
   local dirname
   dirname="$(basename "$src_dir")"
-  local dest="$FULL_BACKUP_DIR/$dirname"
+  local dest="$BACKUP_ROOT/$dirname"
   dest="$(generate_unique_path "$dest")"
   echo "📦 Staging full backup directory $(basename "$src_dir") → $(basename "$dest")"
   cp -a "$src_dir" "$dest"
@@ -152,13 +155,13 @@ extract_archive(){
   if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
     local inner_name
     inner_name="$(basename "${entries[0]}")"
-    dest="$FULL_BACKUP_DIR/$inner_name"
+    dest="$BACKUP_ROOT/$inner_name"
     dest="$(generate_unique_path "$dest")"
     mv "${entries[0]}" "$dest"
   else
     local base="${base_name%.*}"
     base="${base%.*}" # handle double extensions like .tar.gz
-    dest="$(generate_unique_path "$FULL_BACKUP_DIR/$base")"
+    dest="$(generate_unique_path "$BACKUP_ROOT/$base")"
     mkdir -p "$dest"
     if [ ${#entries[@]} -gt 0 ]; then
       mv "${entries[@]}" "$dest"/
@@ -183,12 +186,12 @@ fi
 if [ "$staged_dirs" -gt 0 ]; then
   dir_label="directories"
   [ "$staged_dirs" -eq 1 ] && dir_label="directory"
-  echo "✅ $staged_dirs full backup $dir_label staged in $FULL_BACKUP_DIR"
+  echo "✅ $staged_dirs full backup $dir_label staged in $BACKUP_ROOT"
 fi
 if [ "$staged_archives" -gt 0 ]; then
   archive_label="archives"
   [ "$staged_archives" -eq 1 ] && archive_label="archive"
-  echo "✅ $staged_archives backup $archive_label extracted to $FULL_BACKUP_DIR"
+  echo "✅ $staged_archives backup $archive_label extracted to $BACKUP_ROOT"
 fi
 
 if [ "$copied_sql" -eq 0 ] && [ "$staged_dirs" -eq 0 ] && [ "$staged_archives" -eq 0 ]; then
