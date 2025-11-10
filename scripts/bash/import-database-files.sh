@@ -13,29 +13,15 @@ IMPORT_DIR="./database-import"
 STORAGE_PATH="${STORAGE_PATH:-./storage}"
 STORAGE_PATH_LOCAL="${STORAGE_PATH_LOCAL:-./local-storage}"
 BACKUP_ROOT="${STORAGE_PATH}/backups"
-BACKUP_DIR="${BACKUP_ROOT}/daily"
-TIMESTAMP=$(date +%Y-%m-%d)
 
 shopt -s nullglob
-
 sql_files=("$IMPORT_DIR"/*.sql "$IMPORT_DIR"/*.sql.gz)
-archive_files=("$IMPORT_DIR"/*.tar "$IMPORT_DIR"/*.tar.gz "$IMPORT_DIR"/*.tgz "$IMPORT_DIR"/*.zip)
+shopt -u nullglob
 
-declare -a full_backup_dirs=()
-for dir in "$IMPORT_DIR"/*/; do
-  dir="${dir%/}"
-  # Skip if no dump-like files inside
-  if compgen -G "$dir"/*.sql >/dev/null || compgen -G "$dir"/*.sql.gz >/dev/null; then
-    full_backup_dirs+=("$dir")
-  fi
-done
-
-if [ ! -d "$IMPORT_DIR" ] || { [ ${#sql_files[@]} -eq 0 ] && [ ${#archive_files[@]} -eq 0 ] && [ ${#full_backup_dirs[@]} -eq 0 ]; }; then
-  echo "📁 No database files or full backups found in $IMPORT_DIR - skipping import"
+if [ ! -d "$IMPORT_DIR" ] || [ ${#sql_files[@]} -eq 0 ]; then
+  echo "📁 No loose database files found in $IMPORT_DIR - skipping import"
   exit 0
 fi
-
-shopt -u nullglob
 
 # Exit if backup system already has databases restored
 if [ -f "${STORAGE_PATH_LOCAL}/mysql-data/.restore-completed" ]; then
@@ -43,11 +29,11 @@ if [ -f "${STORAGE_PATH_LOCAL}/mysql-data/.restore-completed" ]; then
   exit 0
 fi
 
-echo "📥 Found database files in $IMPORT_DIR"
-echo "📂 Copying to backup system for import..."
+echo "📥 Found ${#sql_files[@]} database files in $IMPORT_DIR"
+echo "📂 Bundling files for backup import..."
 
 # Ensure backup directory exists
-mkdir -p "$BACKUP_DIR" "$BACKUP_ROOT"
+mkdir -p "$BACKUP_ROOT"
 
 generate_unique_path(){
   local target="$1"
@@ -60,142 +46,52 @@ generate_unique_path(){
   printf '%s\n' "$target"
 }
 
-copied_sql=0
-staged_dirs=0
-staged_archives=0
-
-# Copy files with smart naming
-for file in "${sql_files[@]:-}"; do
-  [ -f "$file" ] || continue
-
-  filename=$(basename "$file")
-
-  # Try to detect database type by filename
-  if echo "$filename" | grep -qi "auth"; then
-    target_name="acore_auth_${TIMESTAMP}.sql"
-  elif echo "$filename" | grep -qi "world"; then
-    target_name="acore_world_${TIMESTAMP}.sql"
-  elif echo "$filename" | grep -qi "char"; then
-    target_name="acore_characters_${TIMESTAMP}.sql"
-  else
-    # Fallback - use original name with timestamp
-    base_name="${filename%.*}"
-    ext="${filename##*.}"
-    target_name="${base_name}_${TIMESTAMP}.${ext}"
-  fi
-
-  # Add .gz extension if source is compressed
-  if [[ "$filename" == *.sql.gz ]]; then
-    target_name="${target_name}.gz"
-  fi
-
-  target_path="$BACKUP_DIR/$target_name"
-
-  echo "📋 Copying $filename → $target_name"
-  cp "$file" "$target_path"
-  copied_sql=$((copied_sql + 1))
-done
-
 stage_backup_directory(){
   local src_dir="$1"
   if [ -z "$src_dir" ] || [ ! -d "$src_dir" ]; then
-    return
+    echo "⚠️  Invalid source directory: $src_dir"
+    return 1
   fi
   local dirname
   dirname="$(basename "$src_dir")"
   local dest="$BACKUP_ROOT/$dirname"
   dest="$(generate_unique_path "$dest")"
-  echo "📦 Staging full backup directory $(basename "$src_dir") → $(basename "$dest")"
-  cp -a "$src_dir" "$dest"
-  staged_dirs=$((staged_dirs + 1))
+  echo "📦 Copying backup directory $(basename "$src_dir") → $(basename "$dest")"
+  if ! cp -a "$src_dir" "$dest"; then
+    echo "❌ Failed to copy backup directory"
+    return 1
+  fi
+  printf '%s\n' "$dest"
 }
 
-extract_archive(){
-  local archive="$1"
-  local base_name
-  base_name="$(basename "$archive")"
-  local tmp_dir
-  tmp_dir="$(mktemp -d)"
-  local extracted=0
+bundle_loose_files(){
+  local batch_timestamp
+  batch_timestamp="$(date +%Y%m%d_%H%M%S)"
+  local batch_name="ImportBackup_${batch_timestamp}"
+  local batch_dir="$IMPORT_DIR/$batch_name"
+  local moved=0
 
-  cleanup_tmp(){
-    rm -rf "$tmp_dir"
-  }
-
-  case "$archive" in
-    *.tar.gz|*.tgz)
-      if tar -xzf "$archive" -C "$tmp_dir"; then
-        extracted=1
-      fi
-      ;;
-    *.tar)
-      if tar -xf "$archive" -C "$tmp_dir"; then
-        extracted=1
-      fi
-      ;;
-    *.zip)
-      if ! command -v unzip >/dev/null 2>&1; then
-        echo "⚠️  unzip not found; cannot extract $base_name"
-      elif unzip -q "$archive" -d "$tmp_dir"; then
-        extracted=1
-      fi
-      ;;
-    *)
-      echo "⚠️  Unsupported archive format for $base_name"
-      ;;
-  esac
-
-  if [ "$extracted" -ne 1 ]; then
-    cleanup_tmp
-    return
+  batch_dir="$(generate_unique_path "$batch_dir")"
+  if ! mkdir -p "$batch_dir"; then
+    echo "❌ Failed to create batch directory: $batch_dir"
+    exit 1
   fi
 
-  mapfile -d '' entries < <(find "$tmp_dir" -mindepth 1 -maxdepth 1 -print0) || true
-  local dest=""
-  if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
-    local inner_name
-    inner_name="$(basename "${entries[0]}")"
-    dest="$BACKUP_ROOT/$inner_name"
-    dest="$(generate_unique_path "$dest")"
-    mv "${entries[0]}" "$dest"
-  else
-    local base="${base_name%.*}"
-    base="${base%.*}" # handle double extensions like .tar.gz
-    dest="$(generate_unique_path "$BACKUP_ROOT/$base")"
-    mkdir -p "$dest"
-    if [ ${#entries[@]} -gt 0 ]; then
-      mv "${entries[@]}" "$dest"/
+  for file in "${sql_files[@]}"; do
+    [ -f "$file" ] || continue
+    echo "📦 Moving $(basename "$file") → $(basename "$batch_dir")/"
+    if ! mv "$file" "$batch_dir/"; then
+      echo "❌ Failed to move $file"
+      exit 1
     fi
-  fi
-  echo "🗂️  Extracted $base_name → $(basename "$dest")"
-  staged_archives=$((staged_archives + 1))
-  cleanup_tmp
+    moved=$((moved + 1))
+  done
+
+  echo "🗂️  Created import batch $(basename "$batch_dir") with $moved file(s)"
+  local dest_path
+  dest_path="$(stage_backup_directory "$batch_dir")"
+  echo "✅ Backup batch copied to $(basename "$dest_path")"
+  echo "💡 Files will be automatically imported during deployment"
 }
 
-for dir in "${full_backup_dirs[@]:-}"; do
-  stage_backup_directory "$dir"
-done
-
-for archive in "${archive_files[@]:-}"; do
-  extract_archive "$archive"
-done
-
-if [ "$copied_sql" -gt 0 ]; then
-  echo "✅ $copied_sql database file(s) copied to $BACKUP_DIR"
-fi
-if [ "$staged_dirs" -gt 0 ]; then
-  dir_label="directories"
-  [ "$staged_dirs" -eq 1 ] && dir_label="directory"
-  echo "✅ $staged_dirs full backup $dir_label staged in $BACKUP_ROOT"
-fi
-if [ "$staged_archives" -gt 0 ]; then
-  archive_label="archives"
-  [ "$staged_archives" -eq 1 ] && archive_label="archive"
-  echo "✅ $staged_archives backup $archive_label extracted to $BACKUP_ROOT"
-fi
-
-if [ "$copied_sql" -eq 0 ] && [ "$staged_dirs" -eq 0 ] && [ "$staged_archives" -eq 0 ]; then
-  echo "⚠️  No valid files or backups were staged. Ensure your dumps are .sql/.sql.gz or packaged in directories/archives."
-else
-  echo "💡 Files will be automatically imported during deployment"
-fi
+bundle_loose_files

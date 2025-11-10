@@ -1,13 +1,9 @@
-data/
-backups/
-manual-backups/
-V1/
 database-import/*.sql
 database-import/*.sql.gz
+database-import/ImportBackup*/
 source/*
 local-data-tools/
 storage/
-source/
 local-storage/
 .claude/
 images/
@@ -17,6 +13,4 @@ scripts/__pycache__/
 .env
 package-lock.json
 package.json
-.modules_state
-.modules-meta
 todo.md
