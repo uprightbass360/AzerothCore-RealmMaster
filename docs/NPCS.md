@@ -13,7 +13,7 @@ This guide provides comprehensive documentation for all spawnable custom NPCs av
 
 ## Overview
 
-The AzerothCore server includes 14 custom NPCs through various enabled modules. These NPCs provide enhanced functionality including profession training, enchantments, pet management, arena services, and more.
+The AzerothCore server includes 18 custom NPCs through various modules (14 currently enabled, 4 requiring additional module installation). These NPCs provide enhanced functionality including profession training, enchantments, pet management, arena services, zone difficulty, mini-games, and more.
 
 **All NPCs are designed to:**
 - Be level 80 with neutral faction (35) for universal access
@@ -39,6 +39,10 @@ The AzerothCore server includes 14 custom NPCs through various enabled modules. 
 | Ethereal Warpweaver | 190011 | Transmog | `.npc add 190011` |
 | Arena Battlemaster 1v1 | 999991 | 1v1 Arena | `.npc add 999991` |
 | Gabriella | 9000000 | Assistant | `.npc add 9000000` |
+| Tic Tac Toe Game Host | 100155 | Mini-Game | `.npc add 100155` |
+| Arena Replay NPC | 98500 | Arena Replays | `.npc add 98500` |
+| Mythicmode NPC | 1128001 | Zone Difficulty | `.npc add 1128001` |
+| Mythicmode Rewards NPC | 1128002 | Zone Difficulty Rewards | `.npc add 1128002` |
 
 ## NPC Categories
 
@@ -56,6 +60,9 @@ NPCs for player vs player content and arena management.
 
 ### 👤 Assistant NPCs
 General assistance and administrative NPCs.
+
+### 🎮 Game Enhancement NPCs
+NPCs providing additional gameplay features and zone enhancements.
 
 ## Detailed NPC Information
 
@@ -221,6 +228,44 @@ General assistance and administrative NPCs.
   - Administrative support functions
 - **Module:** mod-assistant
 
+### Game Enhancement NPCs
+
+#### Tic Tac Toe Game Host (Entry: 100155)
+- **Title:** Mini-Game Host
+- **Function:** Provides Tic Tac Toe mini-game functionality
+- **Features:**
+  - Interactive Tic Tac Toe gameplay
+  - Player vs player or player vs NPC matches
+  - Game statistics and scoring
+- **Module:** mod-tic-tac-toe
+
+#### Arena Replay NPC (Entry: 98500)
+- **Title:** Arena Replay Manager
+- **Function:** Arena match replay system
+- **Features:**
+  - View recorded arena matches
+  - Replay previous battles
+  - Arena match statistics
+- **Module:** mod-arena-replay
+
+#### Mythicmode NPC (Entry: 1128001)
+- **Title:** Zone Difficulty Manager
+- **Function:** Manages dynamic zone difficulty scaling
+- **Features:**
+  - Adjusts raid and heroic dungeon difficulty
+  - Custom difficulty scaling options
+  - Enhanced challenge modes
+- **Module:** mod-zone-difficulty
+
+#### Mythicmode Rewards NPC (Entry: 1128002)
+- **Title:** Mythic Rewards Distributor
+- **Function:** Distributes rewards for mythic difficulty completion
+- **Features:**
+  - Enhanced loot for mythic mode completion
+  - Custom reward tiers
+  - Achievement tracking
+- **Module:** mod-zone-difficulty
+
 ## Spawn Commands
 
 ### Basic Spawning
@@ -349,6 +394,9 @@ To spawn any NPC, use the following command format:
 | Arena Battlemaster | mod-1v1-arena | [Module Config] |
 | Transmog NPCs | mod-transmog | [Module Config] |
 | Gabriella | mod-assistant | [Module Config] |
+| Tic Tac Toe Game Host | mod-tic-tac-toe | [Module Config] |
+| Arena Replay NPC | mod-arena-replay | [Module Config] |
+| Mythicmode NPCs | mod-zone-difficulty | [Module Config] |
 
 ## Notes
 
@@ -357,6 +405,7 @@ To spawn any NPC, use the following command format:
 - **Some NPCs may require specific client-side files for full functionality**
 - **Module configurations can be found in the respective module directories**
 - **Always test NPC functionality after spawning**
+- **NPCs require their corresponding modules to be enabled and installed**
 
 ## Support
 
