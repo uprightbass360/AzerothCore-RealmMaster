@@ -452,10 +452,10 @@ else
   log "No conflicts detected"
 fi
 
-# Calculate ID offsets
+# Calculate ID offsets with proper spacing
 ACCOUNT_OFFSET=$CURRENT_MAX_ACCOUNT_ID
 CHAR_OFFSET=$CURRENT_MAX_CHAR_GUID
-ITEM_OFFSET=$CURRENT_MAX_ITEM_GUID
+ITEM_OFFSET=$((CURRENT_MAX_ITEM_GUID + 10000))
 
 info ""
 info "ID remapping offsets:"

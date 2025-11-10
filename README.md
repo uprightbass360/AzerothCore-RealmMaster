@@ -14,6 +14,7 @@ A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich
 - [Complete Module Catalog](#complete-module-catalog) → **[docs/MODULES.md](docs/MODULES.md)**
 - [Management & Operations](#management--operations) → **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**
 - [Advanced Configuration](#advanced-configuration) → **[docs/ADVANCED.md](docs/ADVANCED.md)**
+- [Custom NPCs Guide](#custom-npcs-guide) → **[docs/NPCS.md](docs/NPCS.md)**
 - [Script Reference](#script-reference) → **[docs/SCRIPTS.md](docs/SCRIPTS.md)**
 - [Troubleshooting](#troubleshooting) → **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**
 - [Credits & Next Steps](#credits--next-steps)
@@ -87,6 +88,22 @@ Choose from **93+ enhanced modules** spanning automation, quality-of-life improv
 - **Services** - Transmog, profession NPCs, talent templates
 
 Browse the complete catalog with descriptions at **[docs/MODULES.md](docs/MODULES.md)**.
+
+---
+
+## Custom NPCs Guide
+
+The server includes **14 custom NPCs** providing enhanced functionality including profession training, enchantments, arena services, and more. All NPCs are spawnable through GM commands and designed for permanent placement.
+
+**Available NPCs:**
+- **Service NPCs** - Profession training, reagent banking, instance resets
+- **Enhancement NPCs** - Enchanting, buffing, pet management, transmog
+- **PvP NPCs** - 1v1 arena battlemaster
+- **Guild House NPCs** - Property management and services
+
+For complete spawn commands, coordinates, and functionality details, see **[docs/NPCS.md](docs/NPCS.md)**.
+
+---
 
 ## Management & Operations
 

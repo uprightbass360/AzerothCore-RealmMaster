@@ -128,6 +128,13 @@ resolve_project_image(){
   echo "${project_name}:${tag}"
 }
 
+is_project_local_image(){
+  local image="$1"
+  local project_name
+  project_name="$(resolve_project_name)"
+  [[ "$image" == "${project_name}:"* ]]
+}
+
 canonical_path(){
   local path="$1"
   if command -v realpath >/dev/null 2>&1; then
@@ -300,8 +307,12 @@ TARGET_WORLDSERVER_IMAGE_MODULES="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(res
 if [ "$TARGET_PROFILE" = "modules" ]; then
   # Check if source image exists
   if ! docker image inspect "$TARGET_WORLDSERVER_IMAGE_MODULES" >/dev/null 2>&1; then
-    echo "📦 Modules image $TARGET_WORLDSERVER_IMAGE_MODULES not found - rebuild needed"
-    REBUILD_NEEDED=1
+    if is_project_local_image "$TARGET_WORLDSERVER_IMAGE_MODULES"; then
+      echo "📦 Modules image $TARGET_WORLDSERVER_IMAGE_MODULES not found - rebuild needed"
+      REBUILD_NEEDED=1
+    else
+      echo "ℹ️  Modules image $TARGET_WORLDSERVER_IMAGE_MODULES missing locally but not tagged with the project prefix; assuming compose will pull from your registry."
+    fi
   elif [ -f "$SENTINEL_FILE" ]; then
     echo "🔄 Modules changed since last build - rebuild needed"
     REBUILD_NEEDED=1

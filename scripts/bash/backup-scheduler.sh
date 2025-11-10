@@ -2,7 +2,7 @@
 # azerothcore-rm
 set -e
 
-BACKUP_DIR_BASE="/backups"
+BACKUP_DIR_BASE="${BACKUP_DIR_BASE:-/backups}"
 HOURLY_DIR="$BACKUP_DIR_BASE/hourly"
 DAILY_DIR="$BACKUP_DIR_BASE/daily"
 RETENTION_HOURS=${BACKUP_RETENTION_HOURS:-6}
@@ -14,15 +14,55 @@ mkdir -p "$HOURLY_DIR" "$DAILY_DIR"
 
 log() { echo "[$(date '+%F %T')] $*"; }
 
+db_exists() {
+  local name="$1"
+  [ -z "$name" ] && return 1
+  local sanitized="${name//\`/}"
+  if mysql -h"${MYSQL_HOST}" -P"${MYSQL_PORT}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -e "USE \`${sanitized}\`;" >/dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
+
 # Build database list from env (include optional acore_playerbots if present)
 database_list() {
   local dbs=("${DB_AUTH_NAME}" "${DB_WORLD_NAME}" "${DB_CHARACTERS_NAME}")
-  if mysql -h"${MYSQL_HOST}" -P"${MYSQL_PORT}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -e "USE acore_playerbots;" >/dev/null 2>&1; then
+  declare -A seen=()
+  for base in "${dbs[@]}"; do
+    [ -n "$base" ] && seen["$base"]=1
+  done
+
+  if db_exists "acore_playerbots" && [ -z "${seen[acore_playerbots]}" ]; then
     dbs+=("acore_playerbots")
+    seen["acore_playerbots"]=1
     log "Detected optional database: acore_playerbots (will be backed up)" >&2
   fi
+
+  if [ -n "${BACKUP_EXTRA_DATABASES:-}" ]; then
+    local normalized="${BACKUP_EXTRA_DATABASES//,/ }"
+    for extra in $normalized; do
+      [ -z "$extra" ] && continue
+      if [ -n "${seen[$extra]}" ]; then
+        continue
+      fi
+      if db_exists "$extra"; then
+        dbs+=("$extra")
+        seen["$extra"]=1
+        log "Configured extra database '${extra}' added to backup rotation" >&2
+      else
+        log "⚠️  Configured extra database '${extra}' not found (skipping)" >&2
+      fi
+    done
+  fi
+
   printf '%s\n' "${dbs[@]}"
 }
+
+if [ "${BACKUP_SCHEDULER_LIST_ONLY:-0}" = "1" ]; then
+  mapfile -t _dbs < <(database_list)
+  printf '%s\n' "${_dbs[@]}"
+  exit 0
+fi
 
 run_backup() {
   local tier_dir="$1"    # hourly or daily dir

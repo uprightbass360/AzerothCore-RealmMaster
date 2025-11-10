@@ -379,6 +379,13 @@ resolve_project_image(){
   echo "${project_name}:${tag}"
 }
 
+is_project_local_image(){
+  local image="$1"
+  local project_name
+  project_name="$(resolve_project_name)"
+  [[ "$image" == "${project_name}:"* ]]
+}
+
 filter_empty_lines(){
   awk '
     /^[[:space:]]*$/ {
@@ -423,10 +430,18 @@ detect_build_needed(){
     worldserver_modules_image="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(resolve_project_image "worldserver-modules-latest")")"
 
     if ! docker image inspect "$authserver_modules_image" >/dev/null 2>&1; then
-      reasons+=("C++ modules enabled but authserver modules image $authserver_modules_image is missing")
+      if is_project_local_image "$authserver_modules_image"; then
+        reasons+=("C++ modules enabled but authserver modules image $authserver_modules_image is missing")
+      else
+        info "Authserver modules image $authserver_modules_image missing locally but not tagged with project prefix; assuming compose will pull from registry."
+      fi
     fi
     if ! docker image inspect "$worldserver_modules_image" >/dev/null 2>&1; then
-      reasons+=("C++ modules enabled but worldserver modules image $worldserver_modules_image is missing")
+      if is_project_local_image "$worldserver_modules_image"; then
+        reasons+=("C++ modules enabled but worldserver modules image $worldserver_modules_image is missing")
+      else
+        info "Worldserver modules image $worldserver_modules_image missing locally but not tagged with project prefix; assuming compose will pull from registry."
+      fi
     fi
   fi
 

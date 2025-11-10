@@ -258,6 +258,23 @@ SET address = 'your-public-ip', port = 8215
 WHERE id = 1;
 ```
 
+### Spawn Custom NPCs
+
+The server includes 14 custom NPCs providing enhanced functionality. Use GM commands to spawn them at appropriate locations:
+
+```bash
+# Quick reference - spawn essential NPCs
+.npc add 199999    # Kaylub - Free Professions
+.npc add 601015    # Beauregard - Enchanter
+.npc add 601016    # Buffmaster - Player Buffs
+.npc add 601026    # White Fang - BeastMaster
+.npc add 190010    # Warpweaver - Transmog
+
+# See complete guide with coordinates and functions
+```
+
+**📖 For complete spawn commands, coordinates, and NPC functionality details, see [docs/NPCS.md](docs/NPCS.md)**
+
 ---
 
 ## Management & Operations

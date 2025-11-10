@@ -305,12 +305,17 @@ echo "✅ Fresh databases created - proceeding with schema import"
 
 echo "📝 Creating dbimport configuration..."
 mkdir -p /azerothcore/env/dist/etc
+TEMP_DIR="/azerothcore/env/dist/temp"
+mkdir -p "$TEMP_DIR"
+MYSQL_EXECUTABLE="$(command -v mysql || echo '/usr/bin/mysql')"
 cat > /azerothcore/env/dist/etc/dbimport.conf <<EOF
 LoginDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
 WorldDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}"
 CharacterDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_CHARACTERS_NAME}"
 Updates.EnableDatabases = 7
 Updates.AutoSetup = 1
+TempDir = "${TEMP_DIR}"
+MySQLExecutable = "${MYSQL_EXECUTABLE}"
 EOF
 
 echo "🚀 Running database import..."

@@ -156,6 +156,8 @@ storage/
 
 `storage/client-data` is bind-mounted into every world/auth/client-data container. Drop patched `dbc`, `maps`, `vmaps`, or `mmaps` files directly into that folder (e.g., `storage/client-data/dbc/SkillLine.dbc`) and the containers will read them immediately—perfect for modules like Individual Progression or mod-worgoblin that need to overwrite Blizzard data.
 
+Need to capture more than the default `auth/world/characters` schemas? Set `BACKUP_EXTRA_DATABASES` in `.env` (comma or space separated) and the `ac-backup` scheduler will validate each schema before adding it to the hourly/daily dump rotation. The long-standing auto-detection for `acore_playerbots` still works, and any missing optional schemas are logged and skipped instead of breaking the backup run.
+
 To tweak MySQL settings, place `.cnf` snippets in `storage/config/mysql/conf.d`. Files in this directory map straight to `/etc/mysql/conf.d` inside `ac-mysql`, so you can re-enable binary logs or tune buffers without rebuilding images.
 
 **Local Storage** (`STORAGE_PATH_LOCAL` - default: `./local-storage`)

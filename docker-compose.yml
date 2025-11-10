@@ -18,6 +18,7 @@ services:
       MYSQL_MAX_CONNECTIONS: ${MYSQL_MAX_CONNECTIONS}
       MYSQL_INNODB_BUFFER_POOL_SIZE: ${MYSQL_INNODB_BUFFER_POOL_SIZE}
       MYSQL_INNODB_LOG_FILE_SIZE: ${MYSQL_INNODB_LOG_FILE_SIZE}
+      TZ: "${TZ}"
     entrypoint:
       - /usr/local/bin/mysql-entrypoint.sh
     volumes:
@@ -65,6 +66,7 @@ services:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
       - ${STORAGE_PATH_LOCAL}/mysql-data:/var/lib/mysql-persistent
+      - ${BACKUP_PATH}:/backups
       - ./scripts/bash/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
     environment:
       AC_DATA_DIR: "/azerothcore/data"
@@ -160,6 +162,7 @@ services:
       DB_AUTH_NAME: ${DB_AUTH_NAME}
       DB_WORLD_NAME: ${DB_WORLD_NAME}
       DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
+      BACKUP_EXTRA_DATABASES: ${BACKUP_EXTRA_DATABASES}
       TZ: ${TZ}
       CONTAINER_USER: ${CONTAINER_USER}
     volumes:
@@ -449,6 +452,7 @@ services:
       AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
       AC_UPDATES_ENABLE_DATABASES: "0"
       AC_BIND_IP: "0.0.0.0"
+      TZ: "${TZ}"
       AC_LOG_LEVEL: "1"
       AC_LOGGER_ROOT_CONFIG: "1,Console"
       AC_LOGGER_SERVER_CONFIG: "1,Console"
@@ -527,6 +531,7 @@ services:
       AC_ELUNA_AUTO_RELOAD: "${AC_ELUNA_AUTO_RELOAD}"
       AC_ELUNA_BYTECODE_CACHE: "${AC_ELUNA_BYTECODE_CACHE}"
       AC_ELUNA_SCRIPT_PATH: "${AC_ELUNA_SCRIPT_PATH}"
+      TZ: "${TZ}"
       AC_ELUNA_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS}"
       AC_ELUNA_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS}"
       AC_ELUNA_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL}"
