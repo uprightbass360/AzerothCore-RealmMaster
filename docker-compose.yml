@@ -391,8 +391,10 @@ services:
     stdin_open: true
     tty: true
     depends_on:
-      - ac-authserver-standard
-      - ac-client-data-standard
+      ac-authserver-standard:
+        condition: service_healthy
+      ac-client-data-standard:
+        condition: service_completed_successfully
     environment:
       AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
       AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}"
@@ -515,8 +517,10 @@ services:
     stdin_open: true
     tty: true
     depends_on:
-      - ac-authserver-playerbots
-      - ac-client-data-playerbots
+      ac-authserver-playerbots:
+        condition: service_healthy
+      ac-client-data-playerbots:
+        condition: service_completed_successfully
     environment:
       AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
       AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}"
@@ -566,8 +570,10 @@ services:
     stdin_open: true
     tty: true
     depends_on:
-      - ac-authserver-modules
-      - ac-client-data-standard
+      ac-authserver-modules:
+        condition: service_healthy
+      ac-client-data-standard:
+        condition: service_completed_successfully
     environment:
       AC_LOGIN_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
       AC_WORLD_DATABASE_INFO: "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}"
