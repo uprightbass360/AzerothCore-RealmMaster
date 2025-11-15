@@ -330,9 +330,16 @@ else
 fi
 
 echo "🚀 Building AzerothCore with modules..."
-docker compose build --no-cache
 
-echo "🔖 Tagging modules-latest images"
+# Generate build metadata
+BUILD_TIMESTAMP=$(date -Iseconds)
+BUILD_SOURCE_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+BUILD_SOURCE_DATE=$(git log -1 --format=%cd --date=iso-strict 2>/dev/null || echo "unknown")
+
+echo "📝 Build metadata:"
+echo "   • Timestamp: $BUILD_TIMESTAMP"
+echo "   • Source commit: $BUILD_SOURCE_COMMIT"
+echo "   • Source date: $BUILD_SOURCE_DATE"
 
 # Get image names and tags from .env.template
 TEMPLATE_FILE="$PROJECT_DIR/.env.template"
@@ -358,6 +365,30 @@ strip_tag(){
   else
     echo "$image"
   fi
+}
+
+add_build_labels(){
+  local image="$1"
+  local timestamp="$2"
+  local commit="$3"
+  local date="$4"
+
+  if [ -z "$image" ] || ! docker image inspect "$image" >/dev/null 2>&1; then
+    return 1
+  fi
+
+  # Create a temporary container to add labels
+  local temp_id
+  temp_id=$(docker create "$image")
+  docker commit \
+    --change "LABEL build.timestamp=\"$timestamp\"" \
+    --change "LABEL build.source_commit=\"$commit\"" \
+    --change "LABEL build.source_date=\"$date\"" \
+    "$temp_id" "$image"
+  docker rm "$temp_id" >/dev/null 2>&1
+
+  echo "📝 Added build metadata to $image"
+  return 0
 }
 
 tag_if_exists(){
@@ -389,6 +420,15 @@ BUILT_AUTHSERVER_IMAGE="$AUTHSERVER_BASE_REPO:$SOURCE_IMAGE_TAG"
 BUILT_WORLDSERVER_IMAGE="$WORLDSERVER_BASE_REPO:$SOURCE_IMAGE_TAG"
 BUILT_DB_IMPORT_IMAGE="$DB_IMPORT_BASE_REPO:$SOURCE_IMAGE_TAG"
 BUILT_CLIENT_DATA_IMAGE="$CLIENT_DATA_BASE_REPO:$SOURCE_IMAGE_TAG"
+
+# Build images normally
+docker compose build --no-cache
+
+echo "📝 Adding build metadata to images..."
+add_build_labels "$BUILT_AUTHSERVER_IMAGE" "$BUILD_TIMESTAMP" "$BUILD_SOURCE_COMMIT" "$BUILD_SOURCE_DATE" || true
+add_build_labels "$BUILT_WORLDSERVER_IMAGE" "$BUILD_TIMESTAMP" "$BUILD_SOURCE_COMMIT" "$BUILD_SOURCE_DATE" || true
+add_build_labels "$BUILT_DB_IMPORT_IMAGE" "$BUILD_TIMESTAMP" "$BUILD_SOURCE_COMMIT" "$BUILD_SOURCE_DATE" || true
+add_build_labels "$BUILT_CLIENT_DATA_IMAGE" "$BUILD_TIMESTAMP" "$BUILD_SOURCE_COMMIT" "$BUILD_SOURCE_DATE" || true
 
 TARGET_AUTHSERVER_IMAGE="$(read_env AC_AUTHSERVER_IMAGE_MODULES "$(get_template_value "AC_AUTHSERVER_IMAGE_MODULES")")"
 TARGET_WORLDSERVER_IMAGE="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(get_template_value "AC_WORLDSERVER_IMAGE_MODULES")")"

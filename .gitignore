@@ -1,8 +1,10 @@
 database-import/*.sql
 database-import/*.sql.gz
+database-import/*/
 database-import/ImportBackup*/
 source/*
 local-data-tools/
+changelogs/
 storage/
 local-storage/
 .claude/
