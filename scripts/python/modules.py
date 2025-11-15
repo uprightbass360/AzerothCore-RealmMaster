@@ -198,7 +198,7 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
         )
 
         if module.blocked and enabled_raw:
-            module.errors.append(
+            module.warnings.append(
                 f"{module.key} is blocked: {module.block_reason or 'blocked in manifest'}"
             )
 

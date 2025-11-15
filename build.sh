@@ -119,10 +119,63 @@ generate_module_state(){
   storage_root="$(resolve_local_storage_path)"
   local output_dir="${storage_root}/modules"
   ensure_modules_dir_writable "$storage_root"
-  if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/module-manifest.json" generate --output-dir "$output_dir"; then
+
+  # Capture output and exit code from module validation
+  local validation_output
+  local validation_exit_code
+  validation_output=$(python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/module-manifest.json" generate --output-dir "$output_dir" 2>&1)
+  validation_exit_code=$?
+
+  # Display the validation output
+  echo "$validation_output"
+
+  # Check for validation errors (not warnings)
+  if [ $validation_exit_code -ne 0 ]; then
     err "Module manifest validation failed. See errors above."
     exit 1
   fi
+
+  # Check if blocked modules were detected in warnings
+  if echo "$validation_output" | grep -q "is blocked:"; then
+    # Blocked modules detected - show warning and ask for confirmation
+    echo
+    warn "════════════════════════════════════════════════════════════════"
+    warn "⚠️  BLOCKED MODULES DETECTED ⚠️"
+    warn "════════════════════════════════════════════════════════════════"
+    warn "Some enabled modules are marked as blocked due to compatibility"
+    warn "issues. These modules will be SKIPPED during the build process."
+    warn ""
+    warn "To permanently fix this, disable these modules in your .env file"
+    warn "by setting them to 0 (e.g., MODULE_POCKET_PORTAL=0)"
+    warn ""
+    warn "If you believe this is an error, please file an issue on GitHub:"
+    warn "https://github.com/uprightbass360/AzerothCore-RealmMaster/issues"
+    warn "════════════════════════════════════════════════════════════════"
+    echo
+
+    if [ "$ASSUME_YES" -eq 1 ]; then
+      warn "Auto-confirming due to --yes flag. Continuing with blocked modules skipped..."
+    else
+      if [ -t 0 ]; then
+        local reply
+        read -r -p "Continue with build (blocked modules will be skipped)? [y/N]: " reply
+        reply="${reply:-n}"
+        case "$reply" in
+          [Yy]*)
+            info "Continuing with build, blocked modules will be skipped..."
+            ;;
+          *)
+            info "Build cancelled."
+            exit 1
+            ;;
+        esac
+      else
+        err "Non-interactive mode requires --yes flag to proceed with blocked modules."
+        exit 1
+      fi
+    fi
+  fi
+
   if [ ! -f "${output_dir}/modules.env" ]; then
     err "modules.env not produced by helper at ${output_dir}/modules.env"
     exit 1
