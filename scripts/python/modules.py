@@ -82,6 +82,64 @@ def load_manifest(manifest_path: Path) -> List[Dict[str, object]]:
     return validated
 
 
+def discover_sql_files(module_path: Path, module_name: str) -> Dict[str, List[str]]:
+    """
+    Scan module for SQL files.
+
+    Returns:
+        Dict mapping database type to list of SQL file paths
+        Example: {
+            'db_auth': [Path('file1.sql'), ...],
+            'db_world': [Path('file2.sql'), ...],
+            'db_characters': [Path('file3.sql'), ...]
+        }
+    """
+    sql_files: Dict[str, List[str]] = {}
+    sql_base = module_path / 'data' / 'sql'
+
+    if not sql_base.exists():
+        return sql_files
+
+    # Map to support both underscore and hyphen naming conventions
+    db_types = {
+        'db_auth': ['db_auth', 'db-auth'],
+        'db_world': ['db_world', 'db-world'],
+        'db_characters': ['db_characters', 'db-characters'],
+        'db_playerbots': ['db_playerbots', 'db-playerbots']
+    }
+
+    for canonical_name, variants in db_types.items():
+        # Check base/ with all variants
+        for variant in variants:
+            base_dir = sql_base / 'base' / variant
+            if base_dir.exists():
+                for sql_file in base_dir.glob('*.sql'):
+                    sql_files.setdefault(canonical_name, []).append(str(sql_file.relative_to(module_path)))
+
+        # Check updates/ with all variants
+        for variant in variants:
+            updates_dir = sql_base / 'updates' / variant
+            if updates_dir.exists():
+                for sql_file in updates_dir.glob('*.sql'):
+                    sql_files.setdefault(canonical_name, []).append(str(sql_file.relative_to(module_path)))
+
+        # Check custom/ with all variants
+        for variant in variants:
+            custom_dir = sql_base / 'custom' / variant
+            if custom_dir.exists():
+                for sql_file in custom_dir.glob('*.sql'):
+                    sql_files.setdefault(canonical_name, []).append(str(sql_file.relative_to(module_path)))
+
+        # ALSO check direct db-type directories (legacy format used by many modules)
+        for variant in variants:
+            direct_dir = sql_base / variant
+            if direct_dir.exists():
+                for sql_file in direct_dir.glob('*.sql'):
+                    sql_files.setdefault(canonical_name, []).append(str(sql_file.relative_to(module_path)))
+
+    return sql_files
+
+
 @dataclass
 class ModuleState:
     key: str
@@ -103,6 +161,7 @@ class ModuleState:
     dependency_issues: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
+    sql_files: Dict[str, List[str]] = field(default_factory=dict)
 
     @property
     def blocked(self) -> bool:
@@ -337,6 +396,30 @@ def write_outputs(state: ModuleCollectionState, output_dir: Path) -> None:
     enabled_list_path = meta_dir / "modules-enabled.txt"
     enabled_list_path.write_text(
         "\n".join(state_payload["enabled_modules"]) + ("\n" if enabled_names else ""),
+        encoding="utf-8",
+    )
+
+    # Discover SQL files for all modules in output directory
+    for module in state.modules:
+        module_path = output_dir / module.name
+        if module_path.exists():
+            module.sql_files = discover_sql_files(module_path, module.name)
+
+    # Generate SQL manifest for enabled modules with SQL files
+    sql_manifest = {
+        "modules": [
+            {
+                "name": module.name,
+                "key": module.key,
+                "sql_files": module.sql_files
+            }
+            for module in state.enabled_modules()
+            if module.sql_files
+        ]
+    }
+    sql_manifest_path = output_dir / ".sql-manifest.json"
+    sql_manifest_path.write_text(
+        json.dumps(sql_manifest, indent=2) + "\n",
         encoding="utf-8",
     )
 

@@ -100,7 +100,14 @@ else
 
       # Skip core config files (already handled)
       case "$filename" in
-        authserver.conf|worldserver.conf|dbimport.conf)
+        authserver.conf|worldserver.conf)
+          continue
+          ;;
+        dbimport.conf)
+          if [ ! -f "$conffile" ] || grep -q "Updates.ExceptionShutdownDelay" "$conffile"; then
+            echo "   📝 Creating/refreshing $filename from $(basename "$file")"
+            cp "$file" "$conffile"
+          fi
           continue
           ;;
       esac
@@ -140,6 +147,28 @@ else
   sed -i "s|^LoginDatabaseInfo *=.*|LoginDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}\"|" /azerothcore/config/worldserver.conf || true
   sed -i "s|^WorldDatabaseInfo *=.*|WorldDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}\"|" /azerothcore/config/worldserver.conf || true
   sed -i "s|^CharacterDatabaseInfo *=.*|CharacterDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_CHARACTERS_NAME}\"|" /azerothcore/config/worldserver.conf || true
+  if [ -f "/azerothcore/config/dbimport.conf" ]; then
+    sed -i "s|^LoginDatabaseInfo *=.*|LoginDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}\"|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^WorldDatabaseInfo *=.*|WorldDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}\"|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^CharacterDatabaseInfo *=.*|CharacterDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_CHARACTERS_NAME}\"|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^PlayerbotsDatabaseInfo *=.*|PlayerbotsDatabaseInfo = \"${MYSQL_HOST};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_PLAYERBOTS_NAME}\"|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^MySQLExecutable *=.*|MySQLExecutable = \"/usr/bin/mysql\"|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^TempDir *=.*|TempDir = \"/azerothcore/env/dist/temp\"|" /azerothcore/config/dbimport.conf || true
+    # Database reconnection settings
+    sed -i "s|^Database\.Reconnect\.Seconds *=.*|Database.Reconnect.Seconds = ${DB_RECONNECT_SECONDS:-5}|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^Database\.Reconnect\.Attempts *=.*|Database.Reconnect.Attempts = ${DB_RECONNECT_ATTEMPTS:-5}|" /azerothcore/config/dbimport.conf || true
+    # Update settings
+    sed -i "s|^Updates\.AllowedModules *=.*|Updates.AllowedModules = \"${DB_UPDATES_ALLOWED_MODULES:-all}\"|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^Updates\.Redundancy *=.*|Updates.Redundancy = ${DB_UPDATES_REDUNDANCY:-1}|" /azerothcore/config/dbimport.conf || true
+    # Worker thread settings
+    sed -i "s|^LoginDatabase\.WorkerThreads *=.*|LoginDatabase.WorkerThreads = ${DB_LOGIN_WORKER_THREADS:-1}|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^WorldDatabase\.WorkerThreads *=.*|WorldDatabase.WorkerThreads = ${DB_WORLD_WORKER_THREADS:-1}|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^CharacterDatabase\.WorkerThreads *=.*|CharacterDatabase.WorkerThreads = ${DB_CHARACTER_WORKER_THREADS:-1}|" /azerothcore/config/dbimport.conf || true
+    # Synch thread settings
+    sed -i "s|^LoginDatabase\.SynchThreads *=.*|LoginDatabase.SynchThreads = ${DB_LOGIN_SYNCH_THREADS:-1}|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^WorldDatabase\.SynchThreads *=.*|WorldDatabase.SynchThreads = ${DB_WORLD_SYNCH_THREADS:-1}|" /azerothcore/config/dbimport.conf || true
+    sed -i "s|^CharacterDatabase\.SynchThreads *=.*|CharacterDatabase.SynchThreads = ${DB_CHARACTER_SYNCH_THREADS:-1}|" /azerothcore/config/dbimport.conf || true
+  fi
   update_playerbots_conf /azerothcore/config/modules/playerbots.conf
   update_playerbots_conf /azerothcore/config/modules/playerbots.conf.dist
 

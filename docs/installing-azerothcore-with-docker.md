@@ -44,7 +44,7 @@ services:
     image: ${MYSQL_IMAGE}
     container_name: ac-mysql
     volumes:
-      - ${STORAGE_PATH_LOCAL}/mysql-data:/var/lib/mysql-persistent
+      - mysql-data:/var/lib/mysql-persistent
       - ${HOST_ZONEINFO_PATH}:/usr/share/zoneinfo:ro
     command:
       - mysqld
@@ -65,6 +65,7 @@ services:
     volumes:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
+      - mysql-data:/var/lib/mysql-persistent
 ```
 
 > **Tip:** Need custom bind mounts for DBC overrides like in the upstream doc? Add them to `${STORAGE_PATH}/client-data` or mount extra read-only paths under the `ac-worldserver-*` service. RealmMaster already downloads `data.zip` via `ac-client-data-*` containers, so you can drop additional files beside the cached dataset.
@@ -82,6 +83,23 @@ services:
 
 For a full architecture diagram, cross-reference [README → Architecture Overview](../README.md#architecture-overview).
 
+### Storage / Bind Mount Map
+
+| Host Path | Mounted In | Purpose / Notes |
+|-----------|------------|-----------------|
+| `${STORAGE_PATH}/config` | `ac-authserver-*`, `ac-worldserver-*`, `ac-db-import`, `ac-db-guard`, `ac-post-install` | Holds `authserver.conf`, `worldserver.conf`, `dbimport.conf`, and module configs. Generated from the `.dist` templates during `setup.sh` / `auto-post-install.sh`. |
+| `${STORAGE_PATH}/logs` | `ac-worldserver-*`, `ac-authserver-*`, `ac-db-import`, `ac-db-guard` | Persistent server logs (mirrors upstream `logs/` bind mount). |
+| `${STORAGE_PATH}/modules` | `ac-worldserver-*`, `ac-db-import`, `ac-db-guard`, `ac-modules` | Cloned module repositories live here. `ac-modules` / `stage-modules.sh` sync this tree. |
+| `${STORAGE_PATH}/lua_scripts` | `ac-worldserver-*` | Custom Lua scripts (same structure as upstream `lua_scripts`). |
+| `${STORAGE_PATH}/backups` | `ac-db-import`, `ac-backup`, `ac-mysql` (via `mysql-data` volume) | Automatic hourly/daily SQL dumps. `ac-db-import` restores from here on cold start. |
+| `${STORAGE_PATH}/client-data` | `ac-client-data-*`, `ac-worldserver-*`, `ac-authserver-*` | Cached `Data.zip` plus optional DBC/maps/vmaps overrides. Equivalent to mounting `data` in the original instructions. |
+| `${STORAGE_PATH}/module-sql-updates` *(host literal path only used when you override the default)* | *(legacy, see below)* | Prior to this update, this path stayed under `storage/`. It now defaults to `${STORAGE_PATH_LOCAL}/module-sql-updates` so it can sit on a writable share even if `storage/` is NFS read-only. |
+| `${STORAGE_PATH_LOCAL}/module-sql-updates` | `ac-db-import`, `ac-db-guard` (mounted as `/modules-sql`) | **New:** `stage-modules.sh` copies every staged `MODULE_*.sql` into this directory. The guard and importer copy from `/modules-sql` into `/azerothcore/data/sql/updates/*` before running `dbimport`, so historical module SQL is preserved across container rebuilds. |
+| `${STORAGE_PATH_LOCAL}/client-data-cache` | `ac-client-data-*` | Download cache for `Data.zip`. Keeps the upstream client-data instructions intact. |
+| `${STORAGE_PATH_LOCAL}/source/azerothcore-playerbots/data/sql` | `ac-db-import`, `ac-db-guard` | Mounted read-only so dbimport always sees the checked-out SQL (matches the upstream “mount the source tree” advice). |
+| `mysql-data` (named volume) | `ac-mysql`, `ac-db-import`, `ac-db-init`, `ac-backup` | Stores the persistent InnoDB files. Runtime tmpfs lives inside the container, just like the original guide’s “tmpfs + bind mount” pattern. |
+
+> Hosting storage over NFS/SMB? Point `STORAGE_PATH` at your read-only export and keep `STORAGE_PATH_LOCAL` on a writable tier for caches (`client-data-cache`, `module-sql-updates`, etc.). `stage-modules.sh` and `repair-storage-permissions.sh` respect those split paths.
 
 ## Familiar Workflow Using RealmMaster Commands
 

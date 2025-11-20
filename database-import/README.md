@@ -1,5 +1,8 @@
 # Database Import
 
+> **📌 Note:** This directory is maintained for backward compatibility.
+> **New location:** `import/db/` - See [import/README.md](../import/README.md) for the new unified import system.
+
 Place your database backup files here for automatic import during deployment.
 
 ## Supported Imports

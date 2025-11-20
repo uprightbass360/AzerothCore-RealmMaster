@@ -122,6 +122,11 @@ flowchart TB
 - **Worldserver debug logging** – Need extra verbosity temporarily? Flip `COMPOSE_OVERRIDE_WORLDSERVER_DEBUG_LOGGING_ENABLED=1` to include `compose-overrides/worldserver-debug-logging.yml`, which bumps `AC_LOG_LEVEL` across all worldserver profiles. Turn it back off once you're done to avoid noisy logs.
 - **Binary logging toggle** – `MYSQL_DISABLE_BINLOG=1` appends `--skip-log-bin` via the MySQL wrapper entrypoint to keep disk churn low (and match Playerbot guidance). Flip the flag to `0` to re-enable binlogs for debugging or replication.
 - **Drop-in configs** – Any `.cnf` placed in `${STORAGE_PATH}/config/mysql/conf.d` (exposed via `MYSQL_CONFIG_DIR`) is mounted into `/etc/mysql/conf.d`. Use this to add custom tunables or temporarily override the binlog setting without touching the image.
+- **Forcing a fresh database import** – MySQL’s persistent files (and the `.restore-*` sentinels) now live inside the Docker volume `mysql-data` at `/var/lib/mysql-persistent`. The import workflow still double-checks the live runtime before trusting those markers, logging `Restoration marker found, but databases are empty - forcing re-import` if the tmpfs is empty. When you intentionally need to rerun the import, delete the sentinel with `docker run --rm -v mysql-data:/var/lib/mysql-persistent alpine sh -c 'rm -f /var/lib/mysql-persistent/.restore-completed'` and then execute `docker compose run --rm ac-db-import` or `./scripts/bash/stage-modules.sh`. Leave the sentinel alone during normal operations so the import job doesn’t wipe existing data on every start.
+- **Module-driven SQL migration** – Module code is staged through the `ac-modules` service and `scripts/bash/manage-modules.sh`, while SQL payloads are copied into the running `ac-worldserver` container by `scripts/bash/stage-modules.sh`. Every run clears `/azerothcore/data/sql/updates/{db_world,db_characters,db_auth}` and recopies all enabled module SQL files with deterministic names, letting AzerothCore’s built-in updater decide what to apply. Always trigger module/deploy workflows via these scripts rather than copying repositories manually; this keeps C++ builds, Lua assets, and SQL migrations synchronized with the database state.
+
+### Restore-aware module SQL
+When a backup successfully restores, the `ac-db-import` container automatically executes `scripts/bash/restore-and-stage.sh`, which simply drops `storage/modules/.modules-meta/.restore-prestaged`. The next `./scripts/bash/stage-modules.sh --yes` clears any previously staged files and recopies every enabled module SQL file before the worldserver boots. AzerothCore’s auto-updater then scans `/azerothcore/data/sql/updates/*`, applies any scripts that aren’t recorded in the `updates` tables yet, and skips the rest—without ever complaining about missing history files.
 
 ## Compose Overrides
 
@@ -163,15 +168,16 @@ To tweak MySQL settings, place `.cnf` snippets in `storage/config/mysql/conf.d`.
 **Local Storage** (`STORAGE_PATH_LOCAL` - default: `./local-storage`)
 ```
 local-storage/
-├── mysql-data/           # MySQL persistent data (tmpfs runtime + persistent snapshot)
 ├── client-data-cache/    # Downloaded WoW client data archives
 ├── source/               # AzerothCore source repository (created during builds)
 │   └── azerothcore-playerbots/  # Playerbot fork (when playerbots enabled)
 └── images/               # Exported Docker images for remote deployment
 ```
+Local storage now only hosts build artifacts, cached downloads, and helper images; the database files have moved into a dedicated Docker volume.
 
-**Docker Volume**
-- `client-data-cache` - Temporary storage for client data downloads
+**Docker Volumes**
+- `client-data-cache` – Temporary storage for client data downloads
+- `mysql-data` – MySQL persistent data + `.restore-*` sentinels (`/var/lib/mysql-persistent`)
 
 This separation ensures database and build artifacts stay on fast local storage while configuration, modules, and backups can be shared across hosts via NFS.
 

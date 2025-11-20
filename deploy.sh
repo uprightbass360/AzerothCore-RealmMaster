@@ -838,7 +838,7 @@ main(){
   fi
 
   show_step 3 5 "Importing user database files"
-  info "Checking for database files in ./database-import/"
+  info "Checking for database files in ./import/db/ and ./database-import/"
   bash "$ROOT_DIR/scripts/bash/import-database-files.sh"
 
   show_step 4 6 "Bringing your realm online"

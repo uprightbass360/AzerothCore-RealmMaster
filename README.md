@@ -47,8 +47,6 @@ cd AzerothCore-RealmMaster
 
 See [Getting Started](#getting-started) for detailed walkthrough.
 
----
-
 ## What You Get
 
 ### ✅ Core Server Components
@@ -60,7 +58,9 @@ See [Getting Started](#getting-started) for detailed walkthrough.
 
 ### ✅ Automated Configuration
 - **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import
+- **Restore Safety Checks** - The import job now validates the live MySQL runtime before honoring restore markers so stale tmpfs volumes can’t trick automation into skipping a needed restore (see [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md))
 - **Backup Management** - Automated hourly/daily backups with intelligent restoration
+- **Restore-Aware Module SQL** - After a backup restore the ledger snapshot from that backup is synced into shared storage and `stage-modules.sh` recopies every enabled SQL file into `/azerothcore/data/sql/updates/*` so the worldserver’s built-in updater reapplies anything the database still needs (see [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md))
 - **Module Integration** - Automatic source builds when C++ modules are enabled
 - **Service Orchestration** - Profile-based deployment (standard/playerbots/modules)
 
@@ -108,6 +108,8 @@ For complete spawn commands, coordinates, and functionality details, see **[docs
 ## Management & Operations
 
 For common workflows, management commands, and database operations, see **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**.
+
+- Keep the module catalog current with `scripts/python/update_module_manifest.py` or trigger the scheduled **Sync Module Manifest** GitHub Action to auto-open a PR with the latest AzerothCore topic repos.
 
 ---
 

@@ -1,0 +1,35 @@
+name: Sync Module Manifest
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * 1'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Update manifest from GitHub topics
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/python/update_module_manifest.py --log
+
+      - name: Create Pull Request with changes
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: 'chore: sync module manifest'
+          branch: chore/update-module-manifest
+          title: 'chore: sync module manifest'
+          body: |
+            Automated manifest refresh via GitHub topic sync.
+          labels: modules
+          delete-branch: true

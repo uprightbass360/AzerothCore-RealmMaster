@@ -73,7 +73,9 @@
       "config_cleanup": [
         "mod_ahbot.conf*"
       ],
-      "category": "economy"
+      "category": "economy",
+      "status": "blocked",
+      "block_reason": "Linker error: Missing Addmod_ahbotScripts() function (use MODULE_LUA_AH_BOT instead)"
     },
     {
       "key": "MODULE_AUTOBALANCE",
@@ -343,6 +345,8 @@
       "name": "mod-quest-count-level",
       "repo": "https://github.com/michaeldelago/mod-quest-count-level.git",
       "type": "cpp",
+      "status": "blocked",
+      "block_reason": "Uses removed ConfigMgr::GetBoolDefault API; fails to compile on modern cores",
       "post_install_hooks": [],
       "config_cleanup": [
         "levelGrant.conf*"
@@ -360,7 +364,8 @@
         "arac.conf*"
       ],
       "description": "Unlocks every race/class pairing so players can roll any combination",
-      "category": "customization"
+      "category": "customization",
+      "server_dbc_path": "patch-contents/DBFilesContent"
     },
     {
       "key": "MODULE_ASSISTANT",
@@ -399,9 +404,11 @@
       "name": "mod-challenge-modes",
       "repo": "https://github.com/ZhengPeiRu21/mod-challenge-modes.git",
       "type": "cpp",
+      "block_reason": "Compilation error: Override signature mismatch on OnGiveXP",
       "post_install_hooks": [],
       "description": "Implements keystone-style timed runs with leaderboards and scaling modifiers",
-      "category": "gameplay-enhancement"
+      "category": "gameplay-enhancement",
+      "status": "blocked"
     },
     {
       "key": "MODULE_OLLAMA_CHAT",
@@ -467,7 +474,8 @@
       "requires": [
         "MODULE_ELUNA"
       ],
-      "category": "content"
+      "category": "content",
+      "notes": "DBC files in client-side/DBFilesClient are CLIENT-ONLY. Server data must be downloaded separately from releases."
     },
     {
       "key": "MODULE_AZEROTHSHARD",
@@ -475,8 +483,10 @@
       "repo": "https://github.com/azerothcore/mod-azerothshard.git",
       "type": "cpp",
       "post_install_hooks": [],
+      "block_reason": "Compilation error: Method name mismatch (getLevel vs GetLevel)",
       "description": "Bundles AzerothShard tweaks: utility NPCs, scripted events, and gameplay improvements",
-      "category": "content"
+      "category": "content",
+      "status": "blocked"
     },
     {
       "key": "MODULE_WORGOBLIN",
@@ -488,7 +498,9 @@
       "requires": [
         "MODULE_ELUNA"
       ],
-      "category": "customization"
+      "category": "customization",
+      "server_dbc_path": "data/patch/DBFilesClient",
+      "notes": "Requires client patch installation; server DBC files must be deployed to /azerothcore/data/dbc/"
     },
     {
       "key": "MODULE_ELUNA_TS",
@@ -680,7 +692,9 @@
         "copy-standard-lua"
       ],
       "description": "Enables multiple NPC merchants with database integration",
-      "category": "npc-service"
+      "category": "npc-service",
+      "status": "blocked",
+      "block_reason": "Linker error: Missing script loader function"
     },
     {
       "key": "MODULE_TREASURE_CHEST_SYSTEM",

@@ -182,6 +182,22 @@ Central module registry and management system:
 
 This centralized approach eliminates duplicate module definitions across scripts.
 
+#### `scripts/python/update_module_manifest.py` - GitHub Topic Sync
+Automates manifest population directly from the official AzerothCore GitHub topics.
+
+```bash
+# Preview new modules across all default topics
+python3 scripts/python/update_module_manifest.py --dry-run --log
+
+# Update config/module-manifest.json with latest repos (requires GITHUB_TOKEN)
+GITHUB_TOKEN=ghp_yourtoken python3 scripts/python/update_module_manifest.py --refresh-existing
+```
+
+- Queries `azerothcore-module`, `azerothcore-lua`, `azerothcore-sql`, `azerothcore-tools`, and `azerothcore-module+ac-premium`
+- Merges new repositories without touching existing customizations
+- Optional `--refresh-existing` flag rehydrates names/descriptions from GitHub
+- Designed for both local execution and the accompanying GitHub Action workflow
+
 #### `scripts/bash/manage-modules-sql.sh` - Module Database Integration
 Executes module-specific SQL scripts for database schema updates.
 

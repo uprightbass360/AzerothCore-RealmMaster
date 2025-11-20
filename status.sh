@@ -1,375 +1,79 @@
 #!/bin/bash
-# ac-compose condensed realm status view
+# Wrapper that ensures the statusdash TUI is built before running.
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$SCRIPT_DIR"
-ENV_FILE="$PROJECT_DIR/.env"
+BINARY_PATH="$PROJECT_DIR/statusdash"
+SOURCE_DIR="$PROJECT_DIR/scripts/go"
+CACHE_DIR="$PROJECT_DIR/.gocache"
 
-cd "$PROJECT_DIR"
+usage() {
+  cat <<EOF
+statusdash wrapper
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BLUE='\033[0;34m'; NC='\033[0m'
+Usage: $0 [options] [-- statusdash-args]
 
-WATCH_MODE=true
-LOG_LINES=5
-SHOW_LOGS=false
+Options:
+  --rebuild         Force rebuilding the statusdash binary
+  -h, --help        Show this help text
 
+All arguments after '--' are passed directly to the statusdash binary.
+Go must be installed locally to build statusdash (https://go.dev/doc/install).
+EOF
+}
+
+force_rebuild=0
+statusdash_args=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --watch|-w) WATCH_MODE=true; shift;;
-    --once) WATCH_MODE=false; shift;;
-    --logs|-l) SHOW_LOGS=true; shift;;
-    --lines) LOG_LINES="$2"; shift 2;;
+    --rebuild)
+      force_rebuild=1
+      shift
+      ;;
     -h|--help)
-      cat <<EOF
-ac-compose realm status
-
-Usage: $0 [options]
-  -w, --watch        Continuously refresh every 3s (default)
-      --once         Show a single snapshot then exit
-  -l, --logs         Show trailing logs for each service
-      --lines N      Number of log lines when --logs is used (default 5)
-EOF
-      exit 0;;
-    *) echo "Unknown option: $1" >&2; exit 1;;
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      statusdash_args+=("$@")
+      break
+      ;;
+    *)
+      statusdash_args+=("$1")
+      shift
+      ;;
   esac
 done
 
-command -v docker >/dev/null 2>&1 || { echo "Docker CLI not found" >&2; exit 1; }
-docker info >/dev/null 2>&1 || { echo "Docker daemon unavailable" >&2; exit 1; }
-
-read_env(){
-  local key="$1" value=""
-  if [ -f "$ENV_FILE" ]; then
-    value="$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r' | sed 's/[[:space:]]*#.*//' | sed 's/[[:space:]]*$//')"
-  fi
-  echo "$value"
-}
-
-PROJECT_NAME="$(read_env COMPOSE_PROJECT_NAME)"
-NETWORK_NAME="$(read_env NETWORK_NAME)"
-AUTH_PORT="$(read_env AUTH_EXTERNAL_PORT)"
-WORLD_PORT="$(read_env WORLD_EXTERNAL_PORT)"
-SOAP_PORT="$(read_env SOAP_EXTERNAL_PORT)"
-MYSQL_PORT="$(read_env MYSQL_EXTERNAL_PORT)"
-MYSQL_EXPOSE_OVERRIDE="$(read_env COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED "$(read_env MYSQL_EXPOSE_PORT "0")")"
-PMA_PORT="$(read_env PMA_EXTERNAL_PORT)"
-KEIRA_PORT="$(read_env KEIRA3_EXTERNAL_PORT)"
-ELUNA_ENABLED="$(read_env AC_ELUNA_ENABLED)"
-
-container_exists(){
-  docker ps -a --format '{{.Names}}' | grep -qx "$1"
-}
-
-container_running(){
-  docker ps --format '{{.Names}}' | grep -qx "$1"
-}
-
-is_one_shot(){
-  case "$1" in
-    ac-db-import|ac-db-init|ac-modules|ac-post-install|ac-client-data|ac-client-data-playerbots)
-      return 0;;
-    *)
-      return 1;;
-  esac
-}
-
-format_state(){
-  local status="$1" health="$2" started="$3" exit_code="$4"
-  local started_fmt
-  if [ -n "$started" ] && [[ "$started" != "--:--:--" ]]; then
-    started_fmt="$(date -d "$started" '+%H:%M:%S' 2>/dev/null || echo "")"
-    if [ -z "$started_fmt" ]; then
-      started_fmt="$(echo "$started" | cut -c12-19)"
-    fi
-    [ -z "$started_fmt" ] && started_fmt="--:--:--"
-  else
-    started_fmt="--:--:--"
-  fi
-  case "$status" in
-    running)
-      local desc="running (since $started_fmt)" colour="$GREEN"
-      if [ "$health" = "healthy" ]; then
-        desc="healthy (since $started_fmt)"
-      elif [ "$health" = "none" ]; then
-        desc="running (since $started_fmt)"
-      else
-        desc="$health (since $started_fmt)"; colour="$YELLOW"
-        [ "$health" = "unhealthy" ] && colour="$RED"
-      fi
-      echo "${colour}|● ${desc}"
-      ;;
-    exited)
-      local colour="$YELLOW"
-      [ "$exit_code" != "0" ] && colour="$RED"
-      echo "${colour}|○ exited (code $exit_code)"
-      ;;
-    restarting)
-      echo "${YELLOW}|● restarting"
-      ;;
-    created)
-      echo "${CYAN}|○ created"
-      ;;
-    *)
-      echo "${RED}|○ $status"
-      ;;
-  esac
-}
-
-short_image(){
-  local img="$1"
-  if [[ "$img" != */* ]]; then
-    echo "$img"
-    return
-  fi
-  local repo="${img%%/*}"
-  local rest="${img#*/}"
-  local name="${rest%%:*}"
-  local tag="${img##*:}"
-  local has_tag="true"
-  [[ "$img" != *":"* ]] && has_tag="false"
-  local last="${name##*/}"
-  if [ "$has_tag" = "true" ]; then
-    if [[ "$tag" =~ ^[0-9] ]] || [ "$tag" = "latest" ]; then
-      echo "$repo/$last"
-    else
-      echo "$repo/$tag"
-    fi
-  else
-    echo "$repo/$last"
+ensure_go() {
+  if ! command -v go >/dev/null 2>&1; then
+    cat >&2 <<'ERR'
+Go toolchain not found.
+statusdash requires Go to build. Install Go from https://go.dev/doc/install and retry.
+ERR
+    exit 1
   fi
 }
 
-print_service(){
-  local container="$1" label="$2"
-  if container_exists "$container"; then
-    local status health started exit_code image
-    status="$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")"
-    health="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container" 2>/dev/null || echo "none")"
-    started="$(docker inspect --format='{{.State.StartedAt}}' "$container" 2>/dev/null | cut -c12-19 2>/dev/null || echo "--:--:--")"
-    exit_code="$(docker inspect --format='{{.State.ExitCode}}' "$container" 2>/dev/null || echo "?")"
-    image="$(docker inspect --format='{{.Config.Image}}' "$container" 2>/dev/null || echo "-")"
-    local state_info colour text
-    if [ "$status" = "exited" ] && is_one_shot "$container"; then
-      local finished
-      finished="$(docker inspect --format='{{.State.FinishedAt}}' "$container" 2>/dev/null | cut -c12-19 2>/dev/null || echo "--:--:--")"
-      if [ "$exit_code" = "0" ]; then
-        state_info="${GREEN}|○ completed (at $finished)"
-      else
-        state_info="${RED}|○ failed (code $exit_code)"
-      fi
-    else
-      state_info="$(format_state "$status" "$health" "$started" "$exit_code")"
-    fi
-    colour="${state_info%%|*}"
-    text="${state_info#*|}"
-    printf "%-20s %-15s %b%-30s%b %s\n" "$label" "$container" "$colour" "$text" "$NC" "$(short_image "$image")"
-    if [ "$SHOW_LOGS" = true ]; then
-      docker logs "$container" --tail "$LOG_LINES" 2>/dev/null | sed 's/^/    /' || printf "    (no logs available)\n"
-    fi
-  else
-    printf "%-20s %-15s %b%-30s%b %s\n" "$label" "$container" "$RED" "○ missing" "$NC" "-"
-  fi
+build_statusdash() {
+  ensure_go
+  mkdir -p "$CACHE_DIR"
+  echo "Building statusdash..."
+  (
+    cd "$SOURCE_DIR"
+    GOCACHE="$CACHE_DIR" go build -o "$BINARY_PATH" .
+  )
 }
 
-module_summary_list(){
-  if [ ! -f "$ENV_FILE" ]; then
-    echo "(env not found)"
-    return
-  fi
-  local module_vars
-  module_vars="$(grep -E '^MODULE_[A-Z_]+=1' "$ENV_FILE" 2>/dev/null | cut -d'=' -f1)"
-  if [ -n "$module_vars" ]; then
-    while IFS= read -r mod; do
-      [ -z "$mod" ] && continue
-      local pretty="${mod#MODULE_}"
-      pretty="$(echo "$pretty" | tr '[:upper:]' '[:lower:]' | tr '_' ' ' | sed 's/\b\w/\U&/g')"
-      printf "%s\n" "$pretty"
-    done <<< "$module_vars"
-  else
-    echo "none"
-  fi
-  if container_running "ac-worldserver"; then
-    local playerbot="disabled"
-    local module_playerbots
-    module_playerbots="$(read_env MODULE_PLAYERBOTS)"
-    if [ "$module_playerbots" = "1" ]; then
-      playerbot="enabled"
-      if docker inspect --format='{{.State.Status}}' ac-worldserver 2>/dev/null | grep -q "running"; then
-      playerbot="running"
-      fi
-    fi
-    local eluna="disabled"
-    [ "$ELUNA_ENABLED" = "1" ] && eluna="running"
-    # echo "RUNTIME: playerbots $playerbot | eluna $eluna"
-  fi
-}
-
-render_module_ports(){
-  local modules_raw="$1" ports_raw="$2" net_line="$3"
-  mapfile -t modules <<< "$modules_raw"
-  mapfile -t ports_lines <<< "$ports_raw"
-
-  local ports=()
-  for idx in "${!ports_lines[@]}"; do
-    local line="${ports_lines[$idx]}"
-    if [ "$idx" -eq 0 ]; then
-      continue
-    fi
-    line="$(echo "$line" | sed 's/^[[:space:]]*//')"
-    [ -z "$line" ] && continue
-    ports+=("• $line")
-  done
-  if [ -n "$net_line" ]; then
-    ports+=("DOCKER NET: ${net_line##*: }")
-  fi
-
-  local rows="${#modules[@]}"
-  if [ "${#ports[@]}" -gt "$rows" ]; then
-    rows="${#ports[@]}"
-  fi
-
-  printf "  %-52s %s\n" "MODULES:" "PORTS:"
-  for ((i=0; i<rows; i++)); do
-    local left="${modules[i]:-}"
-    local right="${ports[i]:-}"
-    if [ -n "$left" ]; then
-      left="• $left"
-    fi
-    local port_column=""
-    if [[ "$right" == DOCKER\ NET:* ]]; then
-      port_column="   $right"
-    elif [ -n "$right" ]; then
-      port_column="      $right"
-    fi
-    printf "    %-50s %s\n" "$left" "$port_column"
-  done
-}
-
-user_stats(){
-  if ! container_running "ac-mysql"; then
-    echo -e "USERS: ${RED}Database offline${NC}"
-    return
-  fi
-
-  local mysql_pw db_auth db_characters
-  mysql_pw="$(read_env MYSQL_ROOT_PASSWORD)"
-  db_auth="$(read_env DB_AUTH_NAME)"
-  db_characters="$(read_env DB_CHARACTERS_NAME)"
-
-  if [ -z "$mysql_pw" ] || [ -z "$db_auth" ] || [ -z "$db_characters" ]; then
-    echo -e "USERS: ${YELLOW}Missing MySQL configuration in .env${NC}"
-    return
-  fi
-
-  local exec_mysql
-  exec_mysql(){
-    local database="$1" query="$2"
-    docker exec ac-mysql mysql -N -B -u root -p"${mysql_pw}" "$database" -e "$query" 2>/dev/null | tail -n1
-  }
-
-  local account_total account_online character_total last_week
-  account_total="$(exec_mysql "$db_auth" "SELECT COUNT(*) FROM account;")"
-  account_online="$(exec_mysql "$db_auth" "SELECT COUNT(*) FROM account WHERE online = 1;")"
-  character_total="$(exec_mysql "$db_characters" "SELECT COUNT(*) FROM characters;")"
-  last_week="$(exec_mysql "$db_auth" "SELECT COUNT(*) FROM account WHERE last_login >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY);")"
-
-  [[ -z "$account_total" ]] && account_total="0"
-  [[ -z "$account_online" ]] && account_online="0"
-  [[ -z "$character_total" ]] && character_total="0"
-  [[ -z "$last_week" ]] && last_week="0"
-
-  printf "USERS: Accounts %b%s%b | Online %b%s%b | Characters %b%s%b | Active 7d %b%s%b\n" \
-    "$GREEN" "$account_total" "$NC" \
-    "$YELLOW" "$account_online" "$NC" \
-    "$CYAN" "$character_total" "$NC" \
-    "$BLUE" "$last_week" "$NC"
-}
-
-ports_summary(){
-  local names=("Auth" "World" "SOAP" "MySQL" "phpMyAdmin" "Keira3")
-  local ports=("$AUTH_PORT" "$WORLD_PORT" "$SOAP_PORT" "$MYSQL_PORT" "$PMA_PORT" "$KEIRA_PORT")
-  printf "PORTS:\n"
-  for i in "${!names[@]}"; do
-    local svc="${names[$i]}"
-    local port="${ports[$i]}"
-    if [ "$svc" = "MySQL" ] && [ "${MYSQL_EXPOSE_OVERRIDE}" != "1" ]; then
-      printf "  %-10s %-6s %b○%b not exposed\n" "$svc" "--" "$CYAN" "$NC"
-      continue
-    fi
-    if [ -z "$port" ]; then
-      printf "  %-10s %-6s %b○%b not set\n" "$svc" "--" "$YELLOW" "$NC"
-      continue
-    fi
-    if timeout 1 bash -c "</dev/tcp/127.0.0.1/${port}" >/dev/null 2>&1; then
-      if [ "$svc" = "MySQL" ]; then
-        printf "  %-10s %-6s %b●%b reachable %b!note%b exposed\n" "$svc" "$port" "$GREEN" "$NC" "$YELLOW" "$NC"
-      else
-        printf "  %-10s %-6s %b●%b reachable\n" "$svc" "$port" "$GREEN" "$NC"
-      fi
-    else
-      printf "  %-10s %-6s %b○%b unreachable\n" "$svc" "$port" "$RED" "$NC"
-    fi
-  done
-}
-
-network_summary(){
-  if [ -z "$NETWORK_NAME" ]; then
-    echo "DOCKER NET: not set"
-    return
-  fi
-  if docker network ls --format '{{.Name}}' | grep -qx "$NETWORK_NAME"; then
-    echo "DOCKER NET: $NETWORK_NAME"
-  else
-    echo "DOCKER NET: missing ($NETWORK_NAME)"
-  fi
-}
-
-show_realm_status_header(){
-  echo -e "${BLUE}🏰 REALM STATUS DASHBOARD 🏰${NC}"
-  echo -e "${BLUE}═══════════════════════════${NC}"
-}
-
-render_snapshot(){
-  #show_realm_status_header
-  printf "TIME %s  PROJECT %s\n\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$PROJECT_NAME"
-  user_stats
-  printf "%-20s %-15s %-28s %s\n" "SERVICE" "CONTAINER" "STATE" "IMAGE"
-  printf "%-20s %-15s %-28s %s\n" "--------------------" "---------------" "----------------------------" "------------------------------"
-  print_service ac-mysql "MySQL"
-  print_service ac-backup "Backup"
-  print_service ac-db-init "DB Init"
-  print_service ac-db-import "DB Import"
-  print_service ac-authserver "Auth Server"
-  print_service ac-worldserver "World Server"
-  print_service ac-client-data "Client Data"
-  print_service ac-modules "Module Manager"
-  print_service ac-post-install "Post Install"
-  print_service ac-phpmyadmin "phpMyAdmin"
-  print_service ac-keira3 "Keira3"
-  echo ""
-  local module_block ports_block net_line
-  module_block="$(module_summary_list)"
-  ports_block="$(ports_summary)"
-  net_line="$(network_summary)"
-  render_module_ports "$module_block" "$ports_block" "$net_line"
-}
-
-display_snapshot(){
-  local tmp
-  tmp="$(mktemp)"
-  render_snapshot >"$tmp"
-  clear 2>/dev/null || printf '\033[2J\033[H'
-  cat "$tmp"
-  rm -f "$tmp"
-}
-
-if [ "$WATCH_MODE" = true ]; then
-  while true; do
-    display_snapshot
-    sleep 3
-  done
-else
-  display_snapshot
+if [[ $force_rebuild -eq 1 ]]; then
+  rm -f "$BINARY_PATH"
 fi
+
+if [[ ! -x "$BINARY_PATH" ]]; then
+  build_statusdash
+fi
+
+exec "$BINARY_PATH" "${statusdash_args[@]}"

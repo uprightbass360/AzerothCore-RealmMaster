@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copy user database files or full backup archives from database-import/ to backup system
+# Copy user database files or full backup archives from import/db/ or database-import/ to backup system
 set -euo pipefail
 
 # Source environment variables
@@ -9,10 +9,20 @@ if [ -f ".env" ]; then
   set +a
 fi
 
-IMPORT_DIR="./database-import"
+# Support both new (import/db) and legacy (database-import) directories
+IMPORT_DIR_NEW="./import/db"
+IMPORT_DIR_LEGACY="./database-import"
+
+# Prefer new directory if it has files, otherwise fall back to legacy
+IMPORT_DIR="$IMPORT_DIR_NEW"
+if [ ! -d "$IMPORT_DIR" ] || [ -z "$(ls -A "$IMPORT_DIR" 2>/dev/null)" ]; then
+  IMPORT_DIR="$IMPORT_DIR_LEGACY"
+fi
 STORAGE_PATH="${STORAGE_PATH:-./storage}"
 STORAGE_PATH_LOCAL="${STORAGE_PATH_LOCAL:-./local-storage}"
 BACKUP_ROOT="${STORAGE_PATH}/backups"
+MYSQL_DATA_VOLUME_NAME="${MYSQL_DATA_VOLUME_NAME:-mysql-data}"
+ALPINE_IMAGE="${ALPINE_IMAGE:-alpine:latest}"
 
 shopt -s nullglob
 sql_files=("$IMPORT_DIR"/*.sql "$IMPORT_DIR"/*.sql.gz)
@@ -24,7 +34,25 @@ if [ ! -d "$IMPORT_DIR" ] || [ ${#sql_files[@]} -eq 0 ]; then
 fi
 
 # Exit if backup system already has databases restored
-if [ -f "${STORAGE_PATH_LOCAL}/mysql-data/.restore-completed" ]; then
+has_restore_marker(){
+  # Prefer Docker volume marker (post-migration), fall back to legacy host path
+  if command -v docker >/dev/null 2>&1; then
+    if docker volume inspect "$MYSQL_DATA_VOLUME_NAME" >/dev/null 2>&1; then
+      if docker run --rm \
+          -v "${MYSQL_DATA_VOLUME_NAME}:/var/lib/mysql-persistent" \
+          "$ALPINE_IMAGE" \
+          sh -c 'test -f /var/lib/mysql-persistent/.restore-completed' >/dev/null 2>&1; then
+        return 0
+      fi
+    fi
+  fi
+  if [ -f "${STORAGE_PATH_LOCAL}/mysql-data/.restore-completed" ]; then
+    return 0
+  fi
+  return 1
+}
+
+if has_restore_marker; then
   echo "✅ Database already restored - skipping import"
   exit 0
 fi

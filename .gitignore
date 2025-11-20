@@ -16,3 +16,5 @@ scripts/__pycache__/
 package-lock.json
 package.json
 todo.md
+.gocache/
+.module-ledger/

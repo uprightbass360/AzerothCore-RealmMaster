@@ -200,8 +200,9 @@ cleanup_old() {
 
 log "Backup scheduler starting: interval(${BACKUP_INTERVAL_MINUTES}m), daily($RETENTION_DAYS d at ${DAILY_TIME}:00)"
 
-# Initialize last backup time
-last_backup=0
+# Initialize last backup time to current time to prevent immediate backup on startup
+last_backup=$(date +%s)
+log "ℹ️  First backup will run in ${BACKUP_INTERVAL_MINUTES} minutes"
 
 while true; do
   current_time=$(date +%s)

@@ -1,0 +1,11 @@
+# Ignore all files in import directories by default
+db/*
+conf/*
+
+# But keep the directory structure and examples
+!db/examples/
+!db/examples/**
+!conf/examples/
+!conf/examples/**
+!.gitignore
+!README.md

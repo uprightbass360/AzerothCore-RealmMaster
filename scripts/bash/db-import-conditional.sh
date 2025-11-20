@@ -34,6 +34,62 @@ Notes:
 EOF
 }
 
+verify_databases_populated() {
+  local mysql_host="${CONTAINER_MYSQL:-ac-mysql}"
+  local mysql_port="${MYSQL_PORT:-3306}"
+  local mysql_user="${MYSQL_USER:-root}"
+  local mysql_pass="${MYSQL_ROOT_PASSWORD:-root}"
+  local db_auth="${DB_AUTH_NAME:-acore_auth}"
+  local db_world="${DB_WORLD_NAME:-acore_world}"
+  local db_characters="${DB_CHARACTERS_NAME:-acore_characters}"
+
+  if ! command -v mysql >/dev/null 2>&1; then
+    echo "⚠️  mysql client is not available to verify restoration status"
+    return 1
+  fi
+
+  local query="SELECT COUNT(*) FROM information_schema.tables WHERE table_schema IN ('$db_auth','$db_world','$db_characters');"
+  local table_count
+  if ! table_count=$(MYSQL_PWD="$mysql_pass" mysql -h "$mysql_host" -P "$mysql_port" -u "$mysql_user" -N -B -e "$query" 2>/dev/null); then
+    echo "⚠️  Unable to query MySQL at ${mysql_host}:${mysql_port} to verify restoration status"
+    return 1
+  fi
+
+  if [ "${table_count:-0}" -gt 0 ]; then
+    return 0
+  fi
+
+  echo "⚠️  MySQL is reachable but no AzerothCore tables were found"
+  return 1
+}
+
+wait_for_mysql(){
+  local mysql_host="${CONTAINER_MYSQL:-ac-mysql}"
+  local mysql_port="${MYSQL_PORT:-3306}"
+  local mysql_user="${MYSQL_USER:-root}"
+  local mysql_pass="${MYSQL_ROOT_PASSWORD:-root}"
+  local max_attempts=30
+  local delay=2
+  while [ $max_attempts -gt 0 ]; do
+    if MYSQL_PWD="$mysql_pass" mysql -h "$mysql_host" -P "$mysql_port" -u "$mysql_user" -e "SELECT 1" >/dev/null 2>&1; then
+      return 0
+    fi
+    max_attempts=$((max_attempts - 1))
+    sleep "$delay"
+  done
+  echo "❌ Unable to connect to MySQL at ${mysql_host}:${mysql_port} after multiple attempts"
+  return 1
+}
+
+ensure_dbimport_conf(){
+  local conf="/azerothcore/env/dist/etc/dbimport.conf"
+  local dist="${conf}.dist"
+  if [ ! -f "$conf" ] && [ -f "$dist" ]; then
+    cp "$dist" "$conf"
+  fi
+  mkdir -p /azerothcore/env/dist/temp
+}
+
 case "${1:-}" in
   -h|--help)
     print_help
@@ -49,6 +105,11 @@ esac
 
 echo "🔧 Conditional AzerothCore Database Import"
 echo "========================================"
+
+if ! wait_for_mysql; then
+  echo "❌ MySQL service is unavailable; aborting database import"
+  exit 1
+fi
 
 # Restoration status markers - use writable location
 RESTORE_STATUS_DIR="/var/lib/mysql-persistent"
@@ -70,10 +131,17 @@ fi
 echo "🔍 Checking restoration status..."
 
 if [ -f "$RESTORE_SUCCESS_MARKER" ]; then
-  echo "✅ Backup restoration completed successfully"
-  cat "$RESTORE_SUCCESS_MARKER" || true
-  echo "🚫 Skipping database import - data already restored from backup"
-  exit 0
+  if verify_databases_populated; then
+    echo "✅ Backup restoration completed successfully"
+    cat "$RESTORE_SUCCESS_MARKER" || true
+    echo "🚫 Skipping database import - data already restored from backup"
+    exit 0
+  fi
+
+  echo "⚠️  Restoration marker found, but databases are empty - forcing re-import"
+  rm -f "$RESTORE_SUCCESS_MARKER" 2>/dev/null || true
+  rm -f "$RESTORE_SUCCESS_MARKER_TMP" 2>/dev/null || true
+  rm -f "$RESTORE_FAILED_MARKER" 2>/dev/null || true
 fi
 
 if [ -f "$RESTORE_FAILED_MARKER" ]; then
@@ -280,9 +348,70 @@ if [ -n "$backup_path" ]; then
     return $([ "$restore_success" = true ] && echo 0 || echo 1)
   }
 
+  verify_and_update_restored_databases() {
+    echo "🔍 Verifying restored database integrity..."
+
+    # Check if dbimport is available
+    if [ ! -f "/azerothcore/env/dist/bin/dbimport" ]; then
+      echo "⚠️  dbimport not available, skipping verification"
+      return 0
+    fi
+
+    ensure_dbimport_conf
+
+    cd /azerothcore/env/dist/bin
+    echo "🔄 Running dbimport to apply any missing updates..."
+    if ./dbimport; then
+      echo "✅ Database verification complete - all updates current"
+    else
+      echo "⚠️  dbimport reported issues - check logs"
+      return 1
+    fi
+
+    # Verify critical tables exist
+    echo "🔍 Checking critical tables..."
+    local critical_tables=("account" "characters" "creature" "quest_template")
+    local missing_tables=0
+
+    for table in "${critical_tables[@]}"; do
+      local db_name="$DB_WORLD_NAME"
+      case "$table" in
+        account) db_name="$DB_AUTH_NAME" ;;
+        characters) db_name="$DB_CHARACTERS_NAME" ;;
+      esac
+
+      if ! mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} \
+              -e "SELECT 1 FROM ${db_name}.${table} LIMIT 1" >/dev/null 2>&1; then
+        echo "⚠️  Critical table missing: ${db_name}.${table}"
+        missing_tables=$((missing_tables + 1))
+      fi
+    done
+
+    if [ "$missing_tables" -gt 0 ]; then
+      echo "⚠️  ${missing_tables} critical tables missing after restore"
+      return 1
+    fi
+
+    echo "✅ All critical tables verified"
+    return 0
+  }
+
   if restore_backup "$backup_path"; then
     echo "$(date): Backup successfully restored from $backup_path" > "$RESTORE_SUCCESS_MARKER"
     echo "🎉 Backup restoration completed successfully!"
+
+    # Verify and apply missing updates
+    verify_and_update_restored_databases
+
+    if [ -x "/tmp/restore-and-stage.sh" ]; then
+      echo "🔧 Running restore-time module SQL staging..."
+      MODULES_DIR="/modules" \
+      RESTORE_SOURCE_DIR="$backup_path" \
+      /tmp/restore-and-stage.sh
+    else
+      echo "ℹ️  restore-and-stage helper not available; skipping automatic module SQL staging"
+    fi
+
     exit 0
   else
     echo "$(date): Backup restoration failed - proceeding with fresh setup" > "$RESTORE_FAILED_MARKER"
@@ -302,29 +431,7 @@ CREATE DATABASE IF NOT EXISTS acore_playerbots DEFAULT CHARACTER SET utf8mb4 COL
 SHOW DATABASES;" || { echo "❌ Failed to create databases"; exit 1; }
 echo "✅ Fresh databases created - proceeding with schema import"
 
-echo "📝 Creating dbimport configuration..."
-mkdir -p /azerothcore/env/dist/etc
-TEMP_DIR="/azerothcore/env/dist/temp"
-mkdir -p "$TEMP_DIR"
-MYSQL_EXECUTABLE="$(command -v mysql || echo '/usr/bin/mysql')"
-cat > /azerothcore/env/dist/etc/dbimport.conf <<EOF
-LoginDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_AUTH_NAME}"
-WorldDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_WORLD_NAME}"
-CharacterDatabaseInfo = "${CONTAINER_MYSQL};${MYSQL_PORT};${MYSQL_USER};${MYSQL_ROOT_PASSWORD};${DB_CHARACTERS_NAME}"
-Updates.EnableDatabases = 7
-Updates.AutoSetup = 1
-TempDir = "${TEMP_DIR}"
-MySQLExecutable = "${MYSQL_EXECUTABLE}"
-Updates.AllowedModules = "all"
-LoginDatabase.WorkerThreads = 1
-LoginDatabase.SynchThreads = 1
-WorldDatabase.WorkerThreads = 1
-WorldDatabase.SynchThreads = 1
-CharacterDatabase.WorkerThreads = 1
-CharacterDatabase.SynchThreads = 1
-SourceDirectory = "/azerothcore"
-Updates.ExceptionShutdownDelay = 10000
-EOF
+ensure_dbimport_conf
 
 echo "🚀 Running database import..."
 cd /azerothcore/env/dist/bin

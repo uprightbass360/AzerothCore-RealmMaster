@@ -477,20 +477,11 @@ load_sql_helper(){
   err "SQL helper not found; expected manage-modules-sql.sh to be available"
 }
 
-execute_module_sql(){
-  SQL_EXECUTION_FAILED=0
-  if declare -f execute_module_sql_scripts >/dev/null 2>&1; then
-    echo 'Executing module SQL scripts...'
-    if execute_module_sql_scripts; then
-      echo 'SQL execution complete.'
-    else
-      echo '⚠️  Module SQL scripts reported errors'
-      SQL_EXECUTION_FAILED=1
-    fi
-  else
-    info "SQL helper did not expose execute_module_sql_scripts; skipping module SQL execution"
-  fi
-}
+# REMOVED: stage_module_sql_files() and execute_module_sql()
+# These functions were part of build-time SQL staging that created files in
+# /azerothcore/modules/*/data/sql/updates/ which are NEVER scanned by AzerothCore's DBUpdater.
+# Module SQL is now staged at runtime by stage-modules.sh which copies files to
+# /azerothcore/data/sql/updates/ (core directory) where they ARE scanned and processed.
 
 track_module_state(){
   echo 'Checking for module changes that require rebuild...'
@@ -591,20 +582,11 @@ main(){
   remove_disabled_modules
   install_enabled_modules
   manage_configuration_files
-  info "SQL execution gate: MODULES_SKIP_SQL=${MODULES_SKIP_SQL:-0}"
-  if [ "${MODULES_SKIP_SQL:-0}" = "1" ]; then
-    info "Skipping module SQL execution (MODULES_SKIP_SQL=1)"
-  else
-    info "Initiating module SQL helper"
-    load_sql_helper
-    info "SQL helper loaded from ${SQL_HELPER_PATH:-unknown}"
-    execute_module_sql
-  fi
-  track_module_state
+  # NOTE: Module SQL staging is now handled at runtime by stage-modules.sh
+  # which copies SQL files to /azerothcore/data/sql/updates/ after containers start.
+  # Build-time SQL staging has been removed as it created files that were never processed.
 
-  if [ "${SQL_EXECUTION_FAILED:-0}" = "1" ]; then
-    warn "Module SQL execution reported issues; review logs above."
-  fi
+  track_module_state
 
   echo 'Module management complete.'
 

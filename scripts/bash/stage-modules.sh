@@ -17,6 +17,32 @@ show_staging_step(){
   printf '%b\n' "${YELLOW}🔧 ${step}: ${message}...${NC}"
 }
 
+ensure_host_writable(){
+  local target="$1"
+  [ -n "$target" ] || return 0
+  if [ -d "$target" ] || mkdir -p "$target" 2>/dev/null; then
+    local uid gid
+    uid="$(id -u)"
+    gid="$(id -g)"
+    if ! chown -R "$uid":"$gid" "$target" 2>/dev/null; then
+      if command -v docker >/dev/null 2>&1; then
+        local helper_image
+        helper_image="$(read_env ALPINE_IMAGE "alpine:latest")"
+        docker run --rm \
+          -u 0:0 \
+          -v "$target":/workspace \
+          "$helper_image" \
+          sh -c "chown -R ${uid}:${gid} /workspace" >/dev/null 2>&1 || true
+      fi
+    fi
+    chmod -R u+rwX "$target" 2>/dev/null || true
+  fi
+}
+
+seed_sql_ledger_if_needed(){
+  : # No-op; ledger removed
+}
+
 sync_local_staging(){
   local src_root="$LOCAL_STORAGE_PATH"
   local dest_root="$STORAGE_PATH"
@@ -53,8 +79,21 @@ sync_local_staging(){
     return
   fi
 
+  # Ensure both source and destination trees are writable by the host user.
+  ensure_host_writable "$src_modules"
+  ensure_host_writable "$dest_modules"
+
   if command -v rsync >/dev/null 2>&1; then
-    rsync -a --delete "$src_modules"/ "$dest_modules"/
+    # rsync may return exit code 23 (permission warnings) in WSL2 - these are harmless
+    rsync -a --delete "$src_modules"/ "$dest_modules"/ || {
+      local rsync_exit=$?
+      if [ $rsync_exit -eq 23 ]; then
+        echo "ℹ️  rsync completed with permission warnings (normal in WSL2)"
+      else
+        echo "⚠️  rsync failed with exit code $rsync_exit"
+        return $rsync_exit
+      fi
+    }
   else
     find "$dest_modules" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
     (cd "$src_modules" && tar cf - .) | (cd "$dest_modules" && tar xf -)
@@ -219,7 +258,47 @@ if [[ "$LOCAL_STORAGE_PATH" != /* ]]; then
   LOCAL_STORAGE_PATH="$PROJECT_DIR/$LOCAL_STORAGE_PATH"
 fi
 LOCAL_STORAGE_PATH="$(canonical_path "$LOCAL_STORAGE_PATH")"
+STORAGE_PATH_LOCAL="$LOCAL_STORAGE_PATH"
 SENTINEL_FILE="$LOCAL_STORAGE_PATH/modules/.requires_rebuild"
+MODULES_META_DIR="$STORAGE_PATH/modules/.modules-meta"
+RESTORE_PRESTAGED_FLAG="$MODULES_META_DIR/.restore-prestaged"
+MODULES_ENABLED_FILE="$MODULES_META_DIR/modules-enabled.txt"
+MODULE_SQL_STAGE_PATH="$(read_env MODULE_SQL_STAGE_PATH "$STORAGE_PATH/module-sql-updates")"
+MODULE_SQL_STAGE_PATH="$(eval "echo \"$MODULE_SQL_STAGE_PATH\"")"
+if [[ "$MODULE_SQL_STAGE_PATH" != /* ]]; then
+  MODULE_SQL_STAGE_PATH="$PROJECT_DIR/$MODULE_SQL_STAGE_PATH"
+fi
+MODULE_SQL_STAGE_PATH="$(canonical_path "$MODULE_SQL_STAGE_PATH")"
+mkdir -p "$MODULE_SQL_STAGE_PATH"
+ensure_host_writable "$MODULE_SQL_STAGE_PATH"
+HOST_STAGE_HELPER_IMAGE="$(read_env ALPINE_IMAGE "alpine:latest")"
+
+declare -A ENABLED_MODULES=()
+
+load_enabled_modules(){
+  ENABLED_MODULES=()
+  if [ -f "$MODULES_ENABLED_FILE" ]; then
+    while IFS= read -r enabled_module; do
+      enabled_module="$(echo "$enabled_module" | tr -d '\r')"
+      [ -n "$enabled_module" ] || continue
+      ENABLED_MODULES["$enabled_module"]=1
+    done < "$MODULES_ENABLED_FILE"
+  fi
+}
+
+module_is_enabled(){
+  local module_dir="$1"
+  if [ ${#ENABLED_MODULES[@]} -eq 0 ]; then
+    return 0
+  fi
+  if [ -n "${ENABLED_MODULES[$module_dir]:-}" ]; then
+    return 0
+  fi
+  return 1
+}
+
+# Load the enabled module list (if present) so staging respects disabled modules.
+load_enabled_modules
 
 # Define module mappings (from rebuild-with-modules.sh)
 declare -A MODULE_REPO_MAP=(
@@ -338,6 +417,7 @@ fi
 # Stage the services
 show_staging_step "Service Orchestration" "Preparing realm services"
 sync_local_staging
+
 echo "🎬 Staging services with profile: services-$TARGET_PROFILE"
 echo "⏳ Pulling images and starting containers; this can take several minutes on first run."
 
@@ -360,10 +440,278 @@ case "$TARGET_PROFILE" in
   modules) PROFILE_ARGS+=(--profile client-data) ;;
 esac
 
-# Start the target profile
-show_staging_step "Realm Activation" "Bringing services online"
-echo "🟢 Starting services-$TARGET_PROFILE profile..."
-docker compose "${PROFILE_ARGS[@]}" up -d
+# Stage module SQL to core updates directory (after containers start)
+host_stage_clear(){
+  docker run --rm \
+    -v "$MODULE_SQL_STAGE_PATH":/host-stage \
+    "$HOST_STAGE_HELPER_IMAGE" \
+    sh -c 'find /host-stage -type f -name "MODULE_*.sql" -delete' >/dev/null 2>&1 || true
+}
+
+host_stage_reset_dir(){
+  local dir="$1"
+  docker run --rm \
+    -v "$MODULE_SQL_STAGE_PATH":/host-stage \
+    "$HOST_STAGE_HELPER_IMAGE" \
+    sh -c "mkdir -p /host-stage/$dir && rm -f /host-stage/$dir/MODULE_*.sql" >/dev/null 2>&1 || true
+}
+
+copy_to_host_stage(){
+  local file_path="$1"
+  local core_dir="$2"
+  local target_name="$3"
+  local src_dir
+  src_dir="$(dirname "$file_path")"
+  local base_name
+  base_name="$(basename "$file_path")"
+  docker run --rm \
+    -v "$MODULE_SQL_STAGE_PATH":/host-stage \
+    -v "$src_dir":/src \
+    "$HOST_STAGE_HELPER_IMAGE" \
+    sh -c "mkdir -p /host-stage/$core_dir && cp \"/src/$base_name\" \"/host-stage/$core_dir/$target_name\"" >/dev/null 2>&1
+}
+
+stage_module_sql_to_core() {
+  show_staging_step "Module SQL Staging" "Preparing module database updates"
+
+  # Start containers first to get access to worldserver container
+  show_staging_step "Realm Activation" "Bringing services online"
+  echo "🟢 Starting services-$TARGET_PROFILE profile..."
+  docker compose "${PROFILE_ARGS[@]}" up -d
+
+  # Wait for worldserver container to be running
+  echo "⏳ Waiting for worldserver container..."
+  local max_wait=60
+  local waited=0
+  while ! docker ps --format '{{.Names}}' | grep -q "ac-worldserver" && [ $waited -lt $max_wait ]; do
+    sleep 2
+    waited=$((waited + 2))
+  done
+
+  if ! docker ps --format '{{.Names}}' | grep -q "ac-worldserver"; then
+    echo "⚠️  Worldserver container not found, skipping module SQL staging"
+    return 0
+  fi
+
+  if [ -f "$RESTORE_PRESTAGED_FLAG" ]; then
+    echo "↻ Restore pipeline detected (flag: $RESTORE_PRESTAGED_FLAG); re-staging module SQL so worldserver can apply updates."
+    rm -f "$RESTORE_PRESTAGED_FLAG" 2>/dev/null || true
+  fi
+
+  echo "📦 Staging module SQL files to core updates directory..."
+  host_stage_clear
+
+  # Create core updates directories inside container
+  docker exec ac-worldserver bash -c "
+    mkdir -p /azerothcore/data/sql/updates/db_world \
+             /azerothcore/data/sql/updates/db_characters \
+             /azerothcore/data/sql/updates/db_auth
+  " 2>/dev/null || true
+
+  # Stage SQL from all modules
+  local staged_count=0
+  local total_skipped=0
+  local total_failed=0
+  docker exec ac-worldserver bash -c "find /azerothcore/data/sql/updates -name '*_MODULE_*.sql' -delete" >/dev/null 2>&1 || true
+
+  shopt -s nullglob
+  for db_type in db-world db-characters db-auth db-playerbots; do
+    local core_dir=""
+    local legacy_name=""
+    case "$db_type" in
+      db-world)
+        core_dir="db_world"
+        legacy_name="world"  # Some modules use 'world' instead of 'db-world'
+        ;;
+      db-characters)
+        core_dir="db_characters"
+        legacy_name="characters"
+        ;;
+      db-auth)
+        core_dir="db_auth"
+        legacy_name="auth"
+        ;;
+      db-playerbots)
+        core_dir="db_playerbots"
+        legacy_name="playerbots"
+        ;;
+    esac
+
+    docker exec ac-worldserver bash -c "mkdir -p /azerothcore/data/sql/updates/$core_dir" >/dev/null 2>&1 || true
+    host_stage_reset_dir "$core_dir"
+
+    local counter=0
+    local skipped=0
+    local failed=0
+
+    local search_paths=(
+      "$MODULES_DIR"/*/data/sql/"$db_type"
+      "$MODULES_DIR"/*/data/sql/"$db_type"/base
+      "$MODULES_DIR"/*/data/sql/"$db_type"/updates
+      "$MODULES_DIR"/*/data/sql/"$legacy_name"
+      "$MODULES_DIR"/*/data/sql/"$legacy_name"/base
+    )
+
+    for module_dir in "${search_paths[@]}"; do
+      for sql_file in "$module_dir"/*.sql; do
+        [ -e "$sql_file" ] || continue
+
+        if [ ! -f "$sql_file" ] || [ ! -s "$sql_file" ]; then
+          echo "  ⚠️  Skipped empty or invalid: $(basename "$sql_file")"
+          skipped=$((skipped + 1))
+          continue
+        fi
+
+        if grep -qE '^[[:space:]]*(system|exec|shell|!)' "$sql_file" 2>/dev/null; then
+          echo "  ❌ Security: Rejected $(basename "$(dirname "$module_dir")")/$(basename "$sql_file") (contains shell commands)"
+          failed=$((failed + 1))
+          continue
+        fi
+
+        local module_name
+        module_name="$(echo "$sql_file" | sed 's|.*/modules/||' | cut -d'/' -f1)"
+        local base_name
+        base_name="$(basename "$sql_file" .sql)"
+        local update_identifier="MODULE_${module_name}_${base_name}"
+
+        if ! module_is_enabled "$module_name"; then
+          echo "  ⏭️  Skipped $module_name/$db_type/$(basename "$sql_file") (module disabled)"
+          skipped=$((skipped + 1))
+          continue
+        fi
+
+        local target_name="MODULE_${module_name}_${base_name}.sql"
+        if ! copy_to_host_stage "$sql_file" "$core_dir" "$target_name"; then
+          echo "  ❌ Failed to copy to host staging: $module_name/$db_type/$(basename "$sql_file")"
+          failed=$((failed + 1))
+          continue
+        fi
+        if docker cp "$sql_file" "ac-worldserver:/azerothcore/data/sql/updates/$core_dir/$target_name" >/dev/null; then
+          echo "  ✓ Staged $module_name/$db_type/$(basename "$sql_file")"
+          counter=$((counter + 1))
+        else
+          echo "  ❌ Failed to copy: $module_name/$(basename "$sql_file")"
+          failed=$((failed + 1))
+        fi
+      done
+    done
+
+    staged_count=$((staged_count + counter))
+    total_skipped=$((total_skipped + skipped))
+    total_failed=$((total_failed + failed))
+
+  done
+  shopt -u nullglob
+
+  echo ""
+  if [ "$staged_count" -gt 0 ]; then
+    echo "✅ Staged $staged_count module SQL files to core updates directory"
+    [ "$total_skipped" -gt 0 ] && echo "⚠️  Skipped $total_skipped empty/invalid file(s)"
+    [ "$total_failed" -gt 0 ] && echo "❌ Failed to stage $total_failed file(s)"
+    echo "🔄 Restart worldserver to apply: docker restart ac-worldserver"
+  else
+    echo "ℹ️  No module SQL files found to stage"
+  fi
+}
+
+get_module_dbc_path(){
+  local module_name="$1"
+  local manifest_file="$PROJECT_DIR/config/module-manifest.json"
+
+  if [ ! -f "$manifest_file" ]; then
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    local dbc_path
+    dbc_path=$(jq -r ".modules[] | select(.name == \"$module_name\") | .server_dbc_path // empty" "$manifest_file" 2>/dev/null)
+    if [ -n "$dbc_path" ]; then
+      echo "$dbc_path"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+stage_module_dbc_files(){
+  show_staging_step "Module DBC Staging" "Deploying binary DBC files to server"
+
+  if ! docker ps --format '{{.Names}}' | grep -q "ac-worldserver"; then
+    echo "⚠️  Worldserver container not found, skipping module DBC staging"
+    return 0
+  fi
+
+  echo "📦 Staging module DBC files to server data directory..."
+  echo "   (Using manifest 'server_dbc_path' field to locate server-side DBC files)"
+
+  local staged_count=0
+  local skipped=0
+  local failed=0
+
+  shopt -s nullglob
+  for module_path in "$MODULES_DIR"/*; do
+    [ -d "$module_path" ] || continue
+    local module_name="$(basename "$module_path")"
+
+    # Skip disabled modules
+    if ! module_is_enabled "$module_name"; then
+      continue
+    fi
+
+    # Get DBC path from manifest
+    local dbc_path
+    if ! dbc_path=$(get_module_dbc_path "$module_name"); then
+      # No server_dbc_path defined in manifest - skip this module
+      continue
+    fi
+
+    local dbc_dir="$module_path/$dbc_path"
+    if [ ! -d "$dbc_dir" ]; then
+      echo "  ⚠️  $module_name: DBC directory not found at $dbc_path"
+      skipped=$((skipped + 1))
+      continue
+    fi
+
+    for dbc_file in "$dbc_dir"/*.dbc; do
+      [ -e "$dbc_file" ] || continue
+
+      if [ ! -f "$dbc_file" ] || [ ! -s "$dbc_file" ]; then
+        echo "  ⚠️  Skipped empty or invalid: $module_name/$(basename "$dbc_file")"
+        skipped=$((skipped + 1))
+        continue
+      fi
+
+      local dbc_filename="$(basename "$dbc_file")"
+
+      # Copy to worldserver DBC directory
+      if docker cp "$dbc_file" "ac-worldserver:/azerothcore/data/dbc/$dbc_filename" >/dev/null 2>&1; then
+        echo "  ✓ Staged $module_name → $dbc_filename"
+        staged_count=$((staged_count + 1))
+      else
+        echo "  ❌ Failed to copy: $module_name/$dbc_filename"
+        failed=$((failed + 1))
+      fi
+    done
+  done
+  shopt -u nullglob
+
+  echo ""
+  if [ "$staged_count" -gt 0 ]; then
+    echo "✅ Staged $staged_count module DBC files to server data directory"
+    [ "$skipped" -gt 0 ] && echo "⚠️  Skipped $skipped file(s) (no server_dbc_path in manifest)"
+    [ "$failed" -gt 0 ] && echo "❌ Failed to stage $failed file(s)"
+    echo "🔄 Restart worldserver to load new DBC data: docker restart ac-worldserver"
+  else
+    echo "ℹ️  No module DBC files found to stage (use 'server_dbc_path' in manifest to enable)"
+  fi
+}
+
+# Stage module SQL (this will also start the containers)
+stage_module_sql_to_core
+
+# Stage module DBC files
+stage_module_dbc_files
 
 printf '\n%b\n' "${GREEN}⚔️ Realm staging completed successfully! ⚔️${NC}"
 printf '%b\n' "${GREEN}🏰 Profile: services-$TARGET_PROFILE${NC}"

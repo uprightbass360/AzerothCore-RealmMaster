@@ -41,10 +41,64 @@ ls storage/config/mod_*.conf*
 # Verify MySQL is running and responsive
 docker exec ac-mysql mysql -u root -p -e "SELECT 1;"
 
+# Starting with the 2025-11-17 release the import job checks if
+# the runtime tables exist before trusting restoration markers. If you see
+# "Restoration marker found, but databases are empty - forcing re-import" in
+# `docker logs ac-db-import`, just let the container finish; it will automatically
+# clear stale markers and replay the latest backup so the services never boot
+# against an empty tmpfs volume. See docs/DATABASE_MANAGEMENT.md#restore-safety-checks--sentinels
+# for full details.
+
+# Forcing a fresh import (if schema missing/invalid)
+# 1. Stop the stack
+docker compose down
+# 2. Remove the sentinel created after a successful restore (inside the docker volume)
+docker run --rm -v mysql-data:/var/lib/mysql-persistent alpine sh -c 'rm -f /var/lib/mysql-persistent/.restore-completed'
+# 3. Re-run the import pipeline (either stand-alone or via stage-modules)
+docker compose run --rm ac-db-import
+#    or
+./scripts/bash/stage-modules.sh --yes
+#
+# See docs/ADVANCED.md#database-hardening for details on the sentinel workflow and why it's required.
+
+**Permission denied writing to local-storage or storage**
+```bash
+# Reset ownership/permissions on the shared directories
+./scripts/bash/repair-storage-permissions.sh
+```
+> This script reuses the same helper container as the staging workflow to `chown`
+> `storage/`, `local-storage/`, and module metadata paths back to the current
+> host UID/GID so tools like `scripts/python/modules.py` can regenerate
+> `modules.env` without manual intervention.
+
 # Check database initialization
 docker logs ac-db-init
 docker logs ac-db-import
 ```
+> Need more context on why the sentinel exists or how the restore-aware SQL stage cooperates with backups? See [docs/ADVANCED.md#database-hardening](ADVANCED.md#database-hardening) for the full architecture notes.
+
+**Worldserver restart loop (duplicate module SQL)**
+> After a backup restore the ledger snapshot is synced and `.restore-prestaged` is set so the next `./scripts/bash/stage-modules.sh` run recopies EVERY module SQL file into `/azerothcore/data/sql/updates/*` with deterministic names. Check `docker logs ac-worldserver` to confirm it sees those files; the `updates` table still prevents reapplication, but the files remain on disk so the server never complains about missing history.
+```bash
+# 1. Inspect the worldserver log for errors like
+#    "Duplicate entry ... MODULE_<module_name>_<file>"
+docker logs ac-worldserver
+
+# 2. Remove the staged SQL file that keeps replaying:
+docker exec ac-worldserver rm /azerothcore/data/sql/updates/<db>/<filename>.sql
+
+# 3. Re-run the staging workflow
+./scripts/bash/stage-modules.sh --yes
+
+# 4. Restart the worldserver container
+docker compose restart ac-worldserver-playerbots  # or the profile you use
+
+# See docs/DATABASE_MANAGEMENT.md#module-sql-management for details on the workflow.
+```
+
+**Legacy backup missing module SQL snapshot**
+
+Legacy backups behave the same as new ones now—just rerun `./scripts/bash/stage-modules.sh --yes` after a restore and the updater will apply whatever the database still needs.
 
 **Source rebuild issues**
 ```bash
