@@ -518,6 +518,39 @@ auto_enable_module_dependencies() {
   done
 }
 
+ensure_module_platforms() {
+  local needs_platform=0
+  local key
+  for key in "${MODULE_KEYS[@]}"; do
+    case "$key" in
+      MODULE_ELUNA|MODULE_AIO) continue ;;
+    esac
+    local value
+    eval "value=\${$key:-0}"
+    if [ "$value" = "1" ]; then
+      needs_platform=1
+      break
+    fi
+  done
+  if [ "$needs_platform" != "1" ]; then
+    return 0
+  fi
+
+  local platform
+  for platform in MODULE_ELUNA MODULE_AIO; do
+    [ -n "${KNOWN_MODULE_LOOKUP[$platform]:-}" ] || continue
+    local platform_value
+    eval "platform_value=\${$platform:-0}"
+    if [ "$platform_value" != "1" ]; then
+      local platform_name="${MODULE_NAME_MAP[$platform]:-${platform#MODULE_}}"
+      say INFO "Automatically enabling ${platform_name} to support selected modules."
+      printf -v "$platform" '%s' "1"
+      MODULE_ENABLE_SET["$platform"]=1
+    fi
+  done
+  return 0
+}
+
 
 show_realm_configured(){
   echo -e "\n${GREEN}⚔️ Your realm configuration has been forged! ⚔️${NC}"
@@ -1160,6 +1193,7 @@ fi
   done
 
   auto_enable_module_dependencies
+  ensure_module_platforms
 
   if [ "${MODULE_OLLAMA_CHAT:-0}" = "1" ] && [ "${MODULE_PLAYERBOTS:-0}" != "1" ]; then
     say INFO "Automatically enabling MODULE_PLAYERBOTS for MODULE_OLLAMA_CHAT."
@@ -1326,6 +1360,7 @@ fi
   fi
 
   auto_enable_module_dependencies
+  ensure_module_platforms
 
   if [ -n "$CLI_PLAYERBOT_ENABLED" ]; then
     if [[ "$CLI_PLAYERBOT_ENABLED" != "0" && "$CLI_PLAYERBOT_ENABLED" != "1" ]]; then

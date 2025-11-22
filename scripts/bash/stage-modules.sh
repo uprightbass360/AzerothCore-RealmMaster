@@ -39,10 +39,6 @@ ensure_host_writable(){
   fi
 }
 
-seed_sql_ledger_if_needed(){
-  : # No-op; ledger removed
-}
-
 sync_local_staging(){
   local src_root="$LOCAL_STORAGE_PATH"
   local dest_root="$STORAGE_PATH"

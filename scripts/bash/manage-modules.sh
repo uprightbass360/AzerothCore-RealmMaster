@@ -7,52 +7,36 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Source common library for shared functions
+if [ -f "$SCRIPT_DIR/lib/common.sh" ]; then
+  source "$SCRIPT_DIR/lib/common.sh"
+else
+  echo "ERROR: Common library not found at $SCRIPT_DIR/lib/common.sh" >&2
+  exit 1
+fi
+
+# Source project name helper
+source "$PROJECT_ROOT/scripts/bash/project_name.sh"
+
+# Module-specific configuration
 MODULE_HELPER="$PROJECT_ROOT/scripts/python/modules.py"
 DEFAULT_ENV_PATH="$PROJECT_ROOT/.env"
 ENV_PATH="${MODULES_ENV_PATH:-$DEFAULT_ENV_PATH}"
 TEMPLATE_FILE="$PROJECT_ROOT/.env.template"
-source "$PROJECT_ROOT/scripts/bash/project_name.sh"
 
 # Default project name (read from .env or template)
 DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_FILE")"
 
-BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
+# Module-specific state
 PLAYERBOTS_DB_UPDATE_LOGGED=0
-info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
-ok(){ printf '%b\n' "${GREEN}✅ $*${NC}"; }
-warn(){ printf '%b\n' "${YELLOW}⚠️  $*${NC}"; }
-err(){ printf '%b\n' "${RED}❌ $*${NC}"; exit 1; }
 
 # Declare module metadata arrays globally at script level
 declare -A MODULE_NAME MODULE_REPO MODULE_REF MODULE_TYPE MODULE_ENABLED MODULE_NEEDS_BUILD MODULE_BLOCKED MODULE_POST_INSTALL MODULE_REQUIRES MODULE_CONFIG_CLEANUP MODULE_NOTES MODULE_STATUS MODULE_BLOCK_REASON
 declare -a MODULE_KEYS
 
-read_env_value(){
-  local key="$1" default="${2:-}" value="${!key:-}"
-  if [ -n "$value" ]; then
-    echo "$value"
-    return
-  fi
-  if [ -f "$ENV_PATH" ]; then
-    value="$(grep -E "^${key}=" "$ENV_PATH" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
-    value="$(echo "$value" | sed 's/[[:space:]]*#.*//' | sed 's/[[:space:]]*$//')"
-    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
-      value="${value:1:-1}"
-    elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
-      value="${value:1:-1}"
-    fi
-  fi
-  if [ -z "${value:-}" ]; then
-    value="$default"
-  fi
-  printf '%s\n' "${value}"
-}
-
-ensure_python(){
-  if ! command -v python3 >/dev/null 2>&1; then
-    err "python3 is required but not installed in PATH"
-  fi
-}
+# Ensure Python is available
+require_cmd python3
 
 resolve_manifest_path(){
   if [ -n "${MODULES_MANIFEST_PATH:-}" ] && [ -f "${MODULES_MANIFEST_PATH}" ]; then
@@ -567,10 +551,10 @@ track_module_state(){
 }
 
 main(){
-  ensure_python
+  # Python is already checked at script start via require_cmd
 
   if [ "${MODULES_LOCAL_RUN:-0}" != "1" ]; then
-    cd /modules || err "Modules directory /modules not found"
+    cd /modules || fatal "Modules directory /modules not found"
   fi
   MODULES_ROOT="$(pwd)"
 

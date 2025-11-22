@@ -40,6 +40,7 @@ services:
       - --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE}
       - --innodb-redo-log-capacity=${MYSQL_INNODB_REDO_LOG_CAPACITY}
     restart: unless-stopped
+    logging:
     healthcheck:
       test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u ${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} --silent || exit 1"]
       interval: ${MYSQL_HEALTHCHECK_INTERVAL}
@@ -477,6 +478,7 @@ services:
     ports:
       - "${AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
     restart: unless-stopped
+    logging:
     networks:
       - azerothcore
     volumes:
@@ -531,6 +533,7 @@ services:
       - ${STORAGE_PATH}/modules:/azerothcore/modules
       - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
     restart: unless-stopped
+    logging:
     networks:
       - azerothcore
     cap_add: ["SYS_NICE"]
@@ -568,6 +571,11 @@ services:
     ports:
       - "${AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - azerothcore
     volumes:
@@ -603,6 +611,7 @@ services:
     ports:
       - "${AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
     restart: unless-stopped
+    logging:
     networks:
       - azerothcore
     volumes:
@@ -660,6 +669,7 @@ services:
       - ${STORAGE_PATH}/modules:/azerothcore/modules
       - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
     restart: unless-stopped
+    logging:
     networks:
       - azerothcore
     cap_add: ["SYS_NICE"]
@@ -716,6 +726,11 @@ services:
       - "${WORLD_EXTERNAL_PORT}:${WORLD_PORT}"
       - "${SOAP_EXTERNAL_PORT}:${SOAP_PORT}"
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     cap_add: ["SYS_NICE"]
     healthcheck:
       test: ["CMD", "sh", "-c", "ps aux | grep '[w]orldserver' | grep -v grep || exit 1"]
@@ -863,10 +878,6 @@ services:
       retries: 3
       start_period: 40s
     logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
     security_opt:
       - no-new-privileges:true
     networks:

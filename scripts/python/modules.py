@@ -31,54 +31,127 @@ def parse_bool(value: str) -> bool:
 
 
 def load_env_file(env_path: Path) -> Dict[str, str]:
+    """
+    Load environment variables from .env file.
+
+    Args:
+        env_path: Path to .env file
+
+    Returns:
+        Dictionary of environment variable key-value pairs
+
+    Note:
+        Returns empty dict if file doesn't exist (not an error).
+        Handles quotes, comments, and export statements.
+    """
     if not env_path.exists():
         return {}
+
     env: Dict[str, str] = {}
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+
+    try:
+        content = env_path.read_text(encoding="utf-8")
+    except Exception as e:
+        print(f"Warning: Failed to read environment file {env_path}: {e}", file=sys.stderr)
+        return {}
+
+    for line_num, raw_line in enumerate(content.splitlines(), start=1):
         line = raw_line.strip()
+
+        # Skip empty lines and comments
         if not line or line.startswith("#"):
             continue
+
+        # Remove 'export' prefix if present
         if line.startswith("export "):
             line = line[len("export ") :].strip()
+
+        # Skip lines without '='
         if "=" not in line:
             continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip()
-        if value.startswith('"') and value.endswith('"'):
-            value = value[1:-1]
-        elif value.startswith("'") and value.endswith("'"):
-            value = value[1:-1]
-        env[key] = value
+
+        try:
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+
+            # Strip quotes
+            if value.startswith('"') and value.endswith('"'):
+                value = value[1:-1]
+            elif value.startswith("'") and value.endswith("'"):
+                value = value[1:-1]
+
+            env[key] = value
+        except Exception as e:
+            print(
+                f"Warning: Failed to parse line {line_num} in {env_path}: {raw_line}\n"
+                f"  Error: {e}",
+                file=sys.stderr
+            )
+            continue
+
     return env
 
 
 def load_manifest(manifest_path: Path) -> List[Dict[str, object]]:
+    """
+    Load and validate module manifest from JSON file.
+
+    Args:
+        manifest_path: Path to module-manifest.json file
+
+    Returns:
+        List of validated module dictionaries
+
+    Raises:
+        FileNotFoundError: If manifest file doesn't exist
+        json.JSONDecodeError: If manifest is not valid JSON
+        ValueError: If manifest structure is invalid
+    """
     if not manifest_path.exists():
         raise FileNotFoundError(f"Manifest file not found: {manifest_path}")
-    with manifest_path.open("r", encoding="utf-8") as fh:
-        manifest = json.load(fh)
+
+    try:
+        with manifest_path.open("r", encoding="utf-8") as fh:
+            manifest = json.load(fh)
+    except json.JSONDecodeError as e:
+        raise ValueError(
+            f"Invalid JSON in manifest file {manifest_path}:\n"
+            f"  Line {e.lineno}, Column {e.colno}: {e.msg}"
+        ) from e
+    except Exception as e:
+        raise ValueError(f"Failed to read manifest file {manifest_path}: {e}") from e
+
     modules = manifest.get("modules")
     if not isinstance(modules, list):
         raise ValueError("Manifest must define a top-level 'modules' array")
+
     validated: List[Dict[str, object]] = []
     seen_keys: set[str] = set()
-    for entry in modules:
+
+    for idx, entry in enumerate(modules):
         if not isinstance(entry, dict):
-            raise ValueError("Each manifest entry must be an object")
+            raise ValueError(f"Manifest entry at index {idx} must be an object")
+
         key = entry.get("key")
         name = entry.get("name")
         repo = entry.get("repo")
+
         if not key or not isinstance(key, str):
-            raise ValueError("Manifest entry missing 'key'")
+            raise ValueError(f"Manifest entry at index {idx} missing 'key'")
+
         if key in seen_keys:
-            raise ValueError(f"Duplicate manifest key detected: {key}")
+            raise ValueError(f"Duplicate manifest key detected: '{key}' (at index {idx})")
         seen_keys.add(key)
+
         if not name or not isinstance(name, str):
-            raise ValueError(f"Manifest entry {key} missing 'name'")
+            raise ValueError(f"Manifest entry '{key}' missing 'name' field")
+
         if not repo or not isinstance(repo, str):
-            raise ValueError(f"Manifest entry {key} missing 'repo'")
+            raise ValueError(f"Manifest entry '{key}' missing 'repo' field")
+
         validated.append(entry)
+
     return validated
 
 
