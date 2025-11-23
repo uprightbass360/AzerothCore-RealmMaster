@@ -213,6 +213,23 @@ ensure_host_writable "$LOCAL_STORAGE_ROOT"
 TARBALL="${TARBALL:-${LOCAL_STORAGE_ROOT}/images/acore-modules-images.tar}"
 ensure_host_writable "$(dirname "$TARBALL")"
 
+# Resolve module SQL staging paths (local and remote)
+resolve_path_relative_to_project(){
+  local path="$1" root="$2"
+  if [[ "$path" != /* ]]; then
+    # drop leading ./ if present
+    path="${path#./}"
+    path="${root%/}/$path"
+  fi
+  echo "${path%/}"
+}
+
+STAGE_SQL_PATH_RAW="$(read_env_value STAGE_PATH_MODULE_SQL "${STORAGE_PATH_LOCAL:-./local-storage}/module-sql-updates")"
+# Expand any env references (e.g., ${STORAGE_PATH_LOCAL})
+STAGE_SQL_PATH_RAW="$(eval "echo \"$STAGE_SQL_PATH_RAW\"")"
+LOCAL_STAGE_SQL_DIR="$(resolve_path_relative_to_project "$STAGE_SQL_PATH_RAW" "$PROJECT_ROOT")"
+REMOTE_STAGE_SQL_DIR="$(resolve_path_relative_to_project "$STAGE_SQL_PATH_RAW" "$PROJECT_DIR")"
+
 SCP_OPTS=(-P "$PORT")
 SSH_OPTS=(-p "$PORT")
 if [[ -n "$IDENTITY" ]]; then
@@ -438,6 +455,18 @@ if [[ $SKIP_STORAGE -eq 0 ]]; then
     run_scp "$modules_tar" "$USER@$HOST:$REMOTE_TEMP_DIR/acore-modules.tar"
     rm -f "$modules_tar"
     run_ssh "tar -xf '$REMOTE_TEMP_DIR/acore-modules.tar' -C '$REMOTE_STORAGE/modules' && rm '$REMOTE_TEMP_DIR/acore-modules.tar'"
+  fi
+
+  # Sync module SQL staging directory (STAGE_PATH_MODULE_SQL)
+  if [[ -d "$LOCAL_STAGE_SQL_DIR" ]]; then
+    echo "⋅ Syncing module SQL staging to remote"
+    run_ssh "rm -rf '$REMOTE_STAGE_SQL_DIR' && mkdir -p '$REMOTE_STAGE_SQL_DIR'"
+    sql_tar=$(mktemp)
+    tar -cf "$sql_tar" -C "$LOCAL_STAGE_SQL_DIR" .
+    ensure_remote_temp_dir
+    run_scp "$sql_tar" "$USER@$HOST:$REMOTE_TEMP_DIR/acore-module-sql.tar"
+    rm -f "$sql_tar"
+    run_ssh "tar -xf '$REMOTE_TEMP_DIR/acore-module-sql.tar' -C '$REMOTE_STAGE_SQL_DIR' && rm '$REMOTE_TEMP_DIR/acore-module-sql.tar'"
   fi
 fi
 

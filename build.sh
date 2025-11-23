@@ -137,11 +137,18 @@ generate_module_state(){
 
   # Check if blocked modules were detected in warnings
   if echo "$validation_output" | grep -q "is blocked:"; then
+    # Gather blocked module keys for display
+    local blocked_modules
+    blocked_modules=$(echo "$validation_output" | grep -oE 'MODULE_[A-Za-z0-9_]+' | sort -u | tr '\n' ' ')
+
     # Blocked modules detected - show warning and ask for confirmation
     echo
     warn "════════════════════════════════════════════════════════════════"
     warn "⚠️  BLOCKED MODULES DETECTED ⚠️"
     warn "════════════════════════════════════════════════════════════════"
+    if [ -n "$blocked_modules" ]; then
+      warn "Affected modules: ${blocked_modules}"
+    fi
     warn "Some enabled modules are marked as blocked due to compatibility"
     warn "issues. These modules will be SKIPPED during the build process."
     warn ""

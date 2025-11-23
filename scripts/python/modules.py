@@ -588,14 +588,16 @@ def handle_generate(args: argparse.Namespace) -> int:
     write_outputs(state, output_dir)
 
     if state.warnings:
-        warning_block = "\n".join(f"- {warning}" for warning in state.warnings)
+        module_keys_with_warnings = sorted(
+            {warning.split()[0].strip(":,") for warning in state.warnings if warning.startswith("MODULE_")}
+        )
+        warning_lines = []
+        if module_keys_with_warnings:
+            warning_lines.append(f"- Modules with warnings: {', '.join(module_keys_with_warnings)}")
+        warning_lines.extend(f"- {warning}" for warning in state.warnings)
+        warning_block = textwrap.indent("\n".join(warning_lines), "  ")
         print(
-            textwrap.dedent(
-                f"""\
-                ⚠️  Module manifest warnings detected:
-                {warning_block}
-                """
-            ),
+            f"⚠️  Module manifest warnings detected:\n{warning_block}\n",
             file=sys.stderr,
         )
     if state.errors:

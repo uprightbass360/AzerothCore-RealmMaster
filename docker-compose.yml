@@ -1,4 +1,11 @@
 name: ${COMPOSE_PROJECT_NAME}
+
+x-logging: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # =====================
   # Database Layer (db)
@@ -40,8 +47,7 @@ services:
       - --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE}
       - --innodb-redo-log-capacity=${MYSQL_INNODB_REDO_LOG_CAPACITY}
     restart: unless-stopped
-    logging:
-      driver: "json-file"
+    logging: *logging-default
     healthcheck:
       test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u ${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} --silent || exit 1"]
       interval: ${MYSQL_HEALTHCHECK_INTERVAL}
@@ -68,11 +74,12 @@ services:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
       - ${AC_SQL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
-      - ${MODULE_SQL_STAGE_PATH:-${STORAGE_PATH}/module-sql-updates}:/modules-sql
+      - ${STAGE_PATH_MODULE_SQL:-${STORAGE_PATH}/module-sql-updates}:/modules-sql
       - mysql-data:/var/lib/mysql-persistent
       - ${STORAGE_PATH}/modules:/modules
       - ${BACKUP_PATH}:/backups
       - ./scripts/bash/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
+      - ./scripts/bash/seed-dbimport-conf.sh:/tmp/seed-dbimport-conf.sh:ro
       - ./scripts/bash/restore-and-stage.sh:/tmp/restore-and-stage.sh:ro
     environment:
       AC_DATA_DIR: "/azerothcore/data"
@@ -132,11 +139,12 @@ services:
       - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
       - ${STORAGE_PATH}/logs:/azerothcore/logs
       - ${AC_SQL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
-      - ${MODULE_SQL_STAGE_PATH:-${STORAGE_PATH}/module-sql-updates}:/modules-sql
+      - ${STAGE_PATH_MODULE_SQL:-${STORAGE_PATH}/module-sql-updates}:/modules-sql
       - mysql-data:/var/lib/mysql-persistent
       - ${STORAGE_PATH}/modules:/modules
       - ${BACKUP_PATH}:/backups
       - ./scripts/bash/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
+      - ./scripts/bash/seed-dbimport-conf.sh:/tmp/seed-dbimport-conf.sh:ro
       - ./scripts/bash/restore-and-stage.sh:/tmp/restore-and-stage.sh:ro
       - ./scripts/bash/db-guard.sh:/tmp/db-guard.sh:ro
     environment:
@@ -326,7 +334,7 @@ services:
     profiles: ["client-data", "client-data-bots"]
     image: ${ALPINE_IMAGE}
     container_name: ac-volume-init
-    user: "${CONTAINER_USER}"
+    user: "0:0"
     volumes:
       - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
       - client-data-cache:/cache
@@ -356,22 +364,66 @@ services:
     volumes:
       - ${STORAGE_PATH}:/storage-root
       - ${STORAGE_PATH_LOCAL}:/local-storage-root
+      - ./scripts/bash/seed-dbimport-conf.sh:/tmp/seed-dbimport-conf.sh:ro
     command:
       - sh
       - -c
       - |
-        echo "🔧 Initializing storage directories with container user ownership..."
+        echo "🔧 Initializing storage directories with proper permissions..."
         mkdir -p /storage-root/config /storage-root/logs /storage-root/modules /storage-root/lua_scripts /storage-root/install-markers
         mkdir -p /storage-root/config/mysql/conf.d
         mkdir -p /storage-root/client-data
         mkdir -p /storage-root/backups
-        mkdir -p /storage-root/module-sql-updates
-        mkdir -p /storage-root/data
-        mkdir -p /storage-root/temp
-        mkdir -p /local-storage-root || true
-        chown -R ${CONTAINER_USER} /storage-root /local-storage-root 2>/dev/null || true
-        chmod -R 755 /storage-root /local-storage-root 2>/dev/null || true
-        echo "✅ Storage directories ready (owned by ${CONTAINER_USER})"
+
+        # Copy core AzerothCore config template files (.dist) to config directory
+        echo "📄 Copying AzerothCore configuration templates..."
+        SOURCE_DIR="${SOURCE_DIR:-/local-storage-root/source/azerothcore-playerbots}"
+        if [ ! -d "$SOURCE_DIR" ] && [ -d "/local-storage-root/source/azerothcore-wotlk" ]; then
+          SOURCE_DIR="/local-storage-root/source/azerothcore-wotlk"
+        fi
+
+        # Seed dbimport.conf with a shared helper (fallback to a simple copy if missing)
+        if [ -f "/tmp/seed-dbimport-conf.sh" ]; then
+          echo "🧩 Seeding dbimport.conf"
+          DBIMPORT_CONF_DIR="/storage-root/config" \
+          DBIMPORT_SOURCE_ROOT="$SOURCE_DIR" \
+          sh -c '. /tmp/seed-dbimport-conf.sh && seed_dbimport_conf' || true
+        else
+          if [ -f "$SOURCE_DIR/src/tools/dbimport/dbimport.conf.dist" ]; then
+            cp -n "$SOURCE_DIR/src/tools/dbimport/dbimport.conf.dist" /storage-root/config/ 2>/dev/null || true
+            if [ ! -f "/storage-root/config/dbimport.conf" ]; then
+              cp "$SOURCE_DIR/src/tools/dbimport/dbimport.conf.dist" /storage-root/config/dbimport.conf
+              echo "   ✓ Created dbimport.conf"
+            fi
+          fi
+        fi
+
+        # Copy authserver.conf.dist
+        if [ -f "$SOURCE_DIR/env/dist/etc/authserver.conf.dist" ]; then
+          cp -n "$SOURCE_DIR/env/dist/etc/authserver.conf.dist" /storage-root/config/ 2>/dev/null || true
+          if [ ! -f "/storage-root/config/authserver.conf" ]; then
+            cp "$SOURCE_DIR/env/dist/etc/authserver.conf.dist" /storage-root/config/authserver.conf
+            echo "   ✓ Created authserver.conf"
+          fi
+        fi
+
+        # Copy worldserver.conf.dist
+        if [ -f "$SOURCE_DIR/env/dist/etc/worldserver.conf.dist" ]; then
+          cp -n "$SOURCE_DIR/env/dist/etc/worldserver.conf.dist" /storage-root/config/ 2>/dev/null || true
+          if [ ! -f "/storage-root/config/worldserver.conf" ]; then
+            cp "$SOURCE_DIR/env/dist/etc/worldserver.conf.dist" /storage-root/config/worldserver.conf
+            echo "   ✓ Created worldserver.conf"
+          fi
+        fi
+        mkdir -p /storage-root/config/temp
+        # Fix ownership of root directories and all contents
+        if [ "$(id -u)" -eq 0 ]; then
+          chown -R ${CONTAINER_USER} /storage-root /local-storage-root
+          chmod -R 755 /storage-root /local-storage-root
+          echo "✅ Storage permissions initialized"
+        else
+          echo "ℹ️ Running as $(id -u):$(id -g); assuming host permissions are already correct."
+        fi
     restart: "no"
     networks:
       - azerothcore
@@ -400,8 +452,6 @@ services:
       - -c
       - |
         mkdir -p /cache
-        chown -R ${CONTAINER_USER} /azerothcore/data /cache 2>/dev/null || true
-        chmod -R 755 /azerothcore/data /cache 2>/dev/null || true
         if [ -f /tmp/scripts/bash/download-client-data.sh ]; then
           chmod +x /tmp/scripts/bash/download-client-data.sh 2>/dev/null || true
           bash /tmp/scripts/bash/download-client-data.sh
@@ -434,9 +484,6 @@ services:
       - |
         echo "📦 Installing 7z + gosu for client data extraction..."
         apt-get update -qq && apt-get install -y p7zip-full gosu
-        echo "🔧 Normalizing client-data/cache ownership..."
-        chown -R ${CONTAINER_USER} /azerothcore/data /cache 2>/dev/null || true
-        chmod -R 755 /azerothcore/data /cache 2>/dev/null || true
         gosu ${CONTAINER_USER} bash -c '
           set -e
           mkdir -p /cache
@@ -478,8 +525,7 @@ services:
     ports:
       - "${AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
     restart: unless-stopped
-    logging:
-      driver: "json-file"
+    logging: *logging-default
     networks:
       - azerothcore
     volumes:
@@ -534,8 +580,7 @@ services:
       - ${STORAGE_PATH}/modules:/azerothcore/modules
       - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
     restart: unless-stopped
-    logging:
-      driver: "json-file"
+    logging: *logging-default
     networks:
       - azerothcore
     cap_add: ["SYS_NICE"]
@@ -573,11 +618,7 @@ services:
     ports:
       - "${AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
     restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *logging-default
     networks:
       - azerothcore
     volumes:
@@ -613,8 +654,7 @@ services:
     ports:
       - "${AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
     restart: unless-stopped
-    logging:
-      driver: "json-file"
+    logging: *logging-default
     networks:
       - azerothcore
     volumes:
@@ -672,8 +712,7 @@ services:
       - ${STORAGE_PATH}/modules:/azerothcore/modules
       - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
     restart: unless-stopped
-    logging:
-      driver: "json-file"
+    logging: *logging-default
     networks:
       - azerothcore
     cap_add: ["SYS_NICE"]
@@ -730,11 +769,7 @@ services:
       - "${WORLD_EXTERNAL_PORT}:${WORLD_PORT}"
       - "${SOAP_EXTERNAL_PORT}:${SOAP_PORT}"
     restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *logging-default
     cap_add: ["SYS_NICE"]
     healthcheck:
       test: ["CMD", "sh", "-c", "ps aux | grep '[w]orldserver' | grep -v grep || exit 1"]
@@ -823,8 +858,10 @@ services:
       - |
         apk add --no-cache bash curl docker-cli su-exec
         chmod +x /tmp/scripts/bash/auto-post-install.sh 2>/dev/null || true
-        echo "📥 Running post-install as ${CONTAINER_USER}"
-        su-exec ${CONTAINER_USER} bash /tmp/scripts/bash/auto-post-install.sh
+        echo "📥 Running post-install as root (testing mode)"
+        mkdir -p /install-markers
+        chown -R ${CONTAINER_USER} /azerothcore/config /install-markers 2>/dev/null || true
+        bash /tmp/scripts/bash/auto-post-install.sh
     restart: "no"
     networks:
       - azerothcore
@@ -881,8 +918,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    logging:
-      driver: "json-file"
+    logging: *logging-default
     security_opt:
       - no-new-privileges:true
     networks:

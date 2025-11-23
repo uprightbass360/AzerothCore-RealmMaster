@@ -81,15 +81,6 @@ wait_for_mysql(){
   return 1
 }
 
-ensure_dbimport_conf(){
-  local conf="/azerothcore/env/dist/etc/dbimport.conf"
-  local dist="${conf}.dist"
-  if [ ! -f "$conf" ] && [ -f "$dist" ]; then
-    cp "$dist" "$conf"
-  fi
-  mkdir -p /azerothcore/env/dist/temp
-}
-
 case "${1:-}" in
   -h|--help)
     print_help
@@ -105,6 +96,34 @@ esac
 
 echo "🔧 Conditional AzerothCore Database Import"
 echo "========================================"
+
+SEED_CONF_SCRIPT="${SEED_DBIMPORT_CONF_SCRIPT:-/tmp/seed-dbimport-conf.sh}"
+if [ -f "$SEED_CONF_SCRIPT" ]; then
+  # shellcheck source=/dev/null
+  . "$SEED_CONF_SCRIPT"
+elif ! command -v seed_dbimport_conf >/dev/null 2>&1; then
+  seed_dbimport_conf(){
+    local conf="/azerothcore/env/dist/etc/dbimport.conf"
+    local dist="${conf}.dist"
+    mkdir -p "$(dirname "$conf")"
+    [ -f "$conf" ] && return 0
+    if [ -f "$dist" ]; then
+      cp "$dist" "$conf"
+    else
+      echo "⚠️  dbimport.conf missing and no dist available; using localhost defaults" >&2
+      cat > "$conf" <<EOF
+LoginDatabaseInfo = "localhost;3306;root;root;acore_auth"
+WorldDatabaseInfo = "localhost;3306;root;root;acore_world"
+CharacterDatabaseInfo = "localhost;3306;root;root;acore_characters"
+PlayerbotsDatabaseInfo = "localhost;3306;root;root;acore_playerbots"
+EnableDatabases = 15
+Updates.AutoSetup = 1
+MySQLExecutable = "/usr/bin/mysql"
+TempDir = "/azerothcore/env/dist/etc/temp"
+EOF
+    fi
+  }
+fi
 
 if ! wait_for_mysql; then
   echo "❌ MySQL service is unavailable; aborting database import"
@@ -158,6 +177,8 @@ echo "🔧 Starting database import process..."
 
 echo "🔍 Checking for backups to restore..."
 
+# Allow tolerant scanning; re-enable -e after search.
+set +e
 # Define backup search paths in priority order
 BACKUP_SEARCH_PATHS=(
   "/backups"
@@ -253,13 +274,16 @@ if [ -z "$backup_path" ]; then
       # Check for manual backups (*.sql files)
       if [ -z "$backup_path" ]; then
         echo "🔍 Checking for manual backup files..."
-        latest_manual=$(ls -1t "$BACKUP_DIRS"/*.sql 2>/dev/null | head -n 1)
-        if [ -n "$latest_manual" ] && [ -f "$latest_manual" ]; then
-          echo "📦 Found manual backup: $(basename "$latest_manual")"
-          if timeout 10 head -20 "$latest_manual" >/dev/null 2>&1; then
-            echo "✅ Valid manual backup file: $(basename "$latest_manual")"
-            backup_path="$latest_manual"
-            break
+        latest_manual=""
+        if ls "$BACKUP_DIRS"/*.sql >/dev/null 2>&1; then
+          latest_manual=$(ls -1t "$BACKUP_DIRS"/*.sql | head -n 1)
+          if [ -n "$latest_manual" ] && [ -f "$latest_manual" ]; then
+            echo "📦 Found manual backup: $(basename "$latest_manual")"
+            if timeout 10 head -20 "$latest_manual" >/dev/null 2>&1; then
+              echo "✅ Valid manual backup file: $(basename "$latest_manual")"
+              backup_path="$latest_manual"
+              break
+            fi
           fi
         fi
       fi
@@ -272,6 +296,7 @@ if [ -z "$backup_path" ]; then
   done
 fi
 
+set -e
 echo "🔄 Final backup path result: '$backup_path'"
 if [ -n "$backup_path" ]; then
   echo "📦 Found backup: $(basename "$backup_path")"
@@ -357,7 +382,7 @@ if [ -n "$backup_path" ]; then
       return 0
     fi
 
-    ensure_dbimport_conf
+    seed_dbimport_conf
 
     cd /azerothcore/env/dist/bin
     echo "🔄 Running dbimport to apply any missing updates..."
@@ -424,23 +449,73 @@ fi
 
 echo "🗄️ Creating fresh AzerothCore databases..."
 mysql -h ${CONTAINER_MYSQL} -u${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -e "
-CREATE DATABASE IF NOT EXISTS ${DB_AUTH_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS ${DB_WORLD_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS ${DB_CHARACTERS_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS acore_playerbots DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+DROP DATABASE IF EXISTS ${DB_AUTH_NAME};
+DROP DATABASE IF EXISTS ${DB_WORLD_NAME};
+DROP DATABASE IF EXISTS ${DB_CHARACTERS_NAME};
+DROP DATABASE IF EXISTS ${DB_PLAYERBOTS_NAME:-acore_playerbots};
+CREATE DATABASE ${DB_AUTH_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE ${DB_WORLD_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE ${DB_CHARACTERS_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE ${DB_PLAYERBOTS_NAME:-acore_playerbots} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 SHOW DATABASES;" || { echo "❌ Failed to create databases"; exit 1; }
 echo "✅ Fresh databases created - proceeding with schema import"
 
-ensure_dbimport_conf
-
 echo "🚀 Running database import..."
 cd /azerothcore/env/dist/bin
+seed_dbimport_conf
+
+maybe_run_base_import(){
+  local mysql_host="${CONTAINER_MYSQL:-ac-mysql}"
+  local mysql_port="${MYSQL_PORT:-3306}"
+  local mysql_user="${MYSQL_USER:-root}"
+  local mysql_pass="${MYSQL_ROOT_PASSWORD:-root}"
+
+  import_dir(){
+    local db="$1" dir="$2"
+    [ -d "$dir" ] || return 0
+    echo "🔧 Importing base schema for ${db} from $(basename "$dir")..."
+    for f in $(ls "$dir"/*.sql 2>/dev/null | LC_ALL=C sort); do
+      MYSQL_PWD="$mysql_pass" mysql -h "$mysql_host" -P "$mysql_port" -u "$mysql_user" "$db" < "$f" >/dev/null 2>&1 || true
+    done
+  }
+
+  needs_import(){
+    local db="$1"
+    local count
+    count="$(MYSQL_PWD="$mysql_pass" mysql -h "$mysql_host" -P "$mysql_port" -u "$mysql_user" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${db}';" 2>/dev/null || echo 0)"
+    [ "${count:-0}" -eq 0 ] && return 0
+    local updates
+    updates="$(MYSQL_PWD="$mysql_pass" mysql -h "$mysql_host" -P "$mysql_port" -u "$mysql_user" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${db}' AND table_name='updates';" 2>/dev/null || echo 0)"
+    [ "${updates:-0}" -eq 0 ]
+  }
+
+  if needs_import "${DB_WORLD_NAME:-acore_world}"; then
+    import_dir "${DB_WORLD_NAME:-acore_world}" "/azerothcore/data/sql/base/db_world"
+  fi
+  if needs_import "${DB_AUTH_NAME:-acore_auth}"; then
+    import_dir "${DB_AUTH_NAME:-acore_auth}" "/azerothcore/data/sql/base/db_auth"
+  fi
+  if needs_import "${DB_CHARACTERS_NAME:-acore_characters}"; then
+    import_dir "${DB_CHARACTERS_NAME:-acore_characters}" "/azerothcore/data/sql/base/db_characters"
+  fi
+}
+
+maybe_run_base_import
 if ./dbimport; then
   echo "✅ Database import completed successfully!"
-  echo "$(date): Database import completed successfully" > "$RESTORE_STATUS_DIR/.import-completed" || echo "$(date): Database import completed successfully" > "$MARKER_STATUS_DIR/.import-completed"
+  import_marker_msg="$(date): Database import completed successfully"
+  if [ -w "$RESTORE_STATUS_DIR" ]; then
+    echo "$import_marker_msg" > "$RESTORE_STATUS_DIR/.import-completed"
+  elif [ -w "$MARKER_STATUS_DIR" ]; then
+    echo "$import_marker_msg" > "$MARKER_STATUS_DIR/.import-completed" 2>/dev/null || true
+  fi
 else
   echo "❌ Database import failed!"
-  echo "$(date): Database import failed" > "$RESTORE_STATUS_DIR/.import-failed" || echo "$(date): Database import failed" > "$MARKER_STATUS_DIR/.import-failed"
+  if [ -w "$RESTORE_STATUS_DIR" ]; then
+    echo "$(date): Database import failed" > "$RESTORE_STATUS_DIR/.import-failed"
+  elif [ -w "$MARKER_STATUS_DIR" ]; then
+    echo "$(date): Database import failed" > "$MARKER_STATUS_DIR/.import-failed" 2>/dev/null || true
+  fi
   exit 1
 fi
 

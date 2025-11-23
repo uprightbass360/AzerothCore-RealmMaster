@@ -259,14 +259,14 @@ SENTINEL_FILE="$LOCAL_STORAGE_PATH/modules/.requires_rebuild"
 MODULES_META_DIR="$STORAGE_PATH/modules/.modules-meta"
 RESTORE_PRESTAGED_FLAG="$MODULES_META_DIR/.restore-prestaged"
 MODULES_ENABLED_FILE="$MODULES_META_DIR/modules-enabled.txt"
-MODULE_SQL_STAGE_PATH="$(read_env MODULE_SQL_STAGE_PATH "$STORAGE_PATH/module-sql-updates")"
-MODULE_SQL_STAGE_PATH="$(eval "echo \"$MODULE_SQL_STAGE_PATH\"")"
-if [[ "$MODULE_SQL_STAGE_PATH" != /* ]]; then
-  MODULE_SQL_STAGE_PATH="$PROJECT_DIR/$MODULE_SQL_STAGE_PATH"
+STAGE_PATH_MODULE_SQL="$(read_env STAGE_PATH_MODULE_SQL "$STORAGE_PATH/module-sql-updates")"
+STAGE_PATH_MODULE_SQL="$(eval "echo \"$STAGE_PATH_MODULE_SQL\"")"
+if [[ "$STAGE_PATH_MODULE_SQL" != /* ]]; then
+  STAGE_PATH_MODULE_SQL="$PROJECT_DIR/$STAGE_PATH_MODULE_SQL"
 fi
-MODULE_SQL_STAGE_PATH="$(canonical_path "$MODULE_SQL_STAGE_PATH")"
-mkdir -p "$MODULE_SQL_STAGE_PATH"
-ensure_host_writable "$MODULE_SQL_STAGE_PATH"
+STAGE_PATH_MODULE_SQL="$(canonical_path "$STAGE_PATH_MODULE_SQL")"
+mkdir -p "$STAGE_PATH_MODULE_SQL"
+ensure_host_writable "$STAGE_PATH_MODULE_SQL"
 HOST_STAGE_HELPER_IMAGE="$(read_env ALPINE_IMAGE "alpine:latest")"
 
 declare -A ENABLED_MODULES=()
@@ -439,7 +439,7 @@ esac
 # Stage module SQL to core updates directory (after containers start)
 host_stage_clear(){
   docker run --rm \
-    -v "$MODULE_SQL_STAGE_PATH":/host-stage \
+    -v "$STAGE_PATH_MODULE_SQL":/host-stage \
     "$HOST_STAGE_HELPER_IMAGE" \
     sh -c 'find /host-stage -type f -name "MODULE_*.sql" -delete' >/dev/null 2>&1 || true
 }
@@ -447,7 +447,7 @@ host_stage_clear(){
 host_stage_reset_dir(){
   local dir="$1"
   docker run --rm \
-    -v "$MODULE_SQL_STAGE_PATH":/host-stage \
+    -v "$STAGE_PATH_MODULE_SQL":/host-stage \
     "$HOST_STAGE_HELPER_IMAGE" \
     sh -c "mkdir -p /host-stage/$dir && rm -f /host-stage/$dir/MODULE_*.sql" >/dev/null 2>&1 || true
 }
@@ -461,7 +461,7 @@ copy_to_host_stage(){
   local base_name
   base_name="$(basename "$file_path")"
   docker run --rm \
-    -v "$MODULE_SQL_STAGE_PATH":/host-stage \
+    -v "$STAGE_PATH_MODULE_SQL":/host-stage \
     -v "$src_dir":/src \
     "$HOST_STAGE_HELPER_IMAGE" \
     sh -c "mkdir -p /host-stage/$core_dir && cp \"/src/$base_name\" \"/host-stage/$core_dir/$target_name\"" >/dev/null 2>&1

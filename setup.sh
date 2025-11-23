@@ -1529,8 +1529,24 @@ fi
     # Set build sentinel to indicate rebuild is needed
     local sentinel="$LOCAL_STORAGE_ROOT_ABS/modules/.requires_rebuild"
     mkdir -p "$(dirname "$sentinel")"
-    touch "$sentinel"
-    say INFO "Build sentinel created at $sentinel"
+    if touch "$sentinel" 2>/dev/null; then
+      say INFO "Build sentinel created at $sentinel"
+    else
+      say WARNING "Could not create build sentinel at $sentinel (permissions/ownership); forcing with sudo..."
+      if command -v sudo >/dev/null 2>&1; then
+        if sudo mkdir -p "$(dirname "$sentinel")" \
+          && sudo chown -R "$(id -u):$(id -g)" "$(dirname "$sentinel")" \
+          && sudo touch "$sentinel"; then
+          say INFO "Build sentinel created at $sentinel (after fixing ownership)"
+        else
+          say ERROR "Failed to force build sentinel creation at $sentinel. Fix permissions and rerun setup."
+          exit 1
+        fi
+      else
+        say ERROR "Cannot force build sentinel creation (sudo unavailable). Fix permissions on $(dirname "$sentinel") and rerun setup."
+        exit 1
+      fi
+    fi
   fi
 
   local default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore"

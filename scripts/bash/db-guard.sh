@@ -24,6 +24,34 @@ STATUS_FILE="${DB_GUARD_STATUS_FILE:-/tmp/db-guard.status}"
 ERROR_FILE="${DB_GUARD_ERROR_FILE:-/tmp/db-guard.error}"
 MODULE_SQL_HOST_PATH="${MODULE_SQL_HOST_PATH:-/modules-sql}"
 
+SEED_CONF_SCRIPT="${SEED_DBIMPORT_CONF_SCRIPT:-/tmp/seed-dbimport-conf.sh}"
+if [ -f "$SEED_CONF_SCRIPT" ]; then
+  # shellcheck source=/dev/null
+  . "$SEED_CONF_SCRIPT"
+elif ! command -v seed_dbimport_conf >/dev/null 2>&1; then
+  seed_dbimport_conf(){
+    local conf="/azerothcore/env/dist/etc/dbimport.conf"
+    local dist="${conf}.dist"
+    mkdir -p "$(dirname "$conf")"
+    [ -f "$conf" ] && return 0
+    if [ -f "$dist" ]; then
+      cp "$dist" "$conf"
+    else
+      warn "dbimport.conf missing and no dist available; writing minimal defaults"
+      cat > "$conf" <<EOF
+LoginDatabaseInfo = "localhost;3306;root;root;acore_auth"
+WorldDatabaseInfo = "localhost;3306;root;root;acore_world"
+CharacterDatabaseInfo = "localhost;3306;root;root;acore_characters"
+PlayerbotsDatabaseInfo = "localhost;3306;root;root;acore_playerbots"
+EnableDatabases = 15
+Updates.AutoSetup = 1
+MySQLExecutable = "/usr/bin/mysql"
+TempDir = "/azerothcore/env/dist/etc/temp"
+EOF
+    fi
+  }
+fi
+
 declare -a DB_SCHEMAS=()
 for var in DB_AUTH_NAME DB_WORLD_NAME DB_CHARACTERS_NAME DB_PLAYERBOTS_NAME; do
   value="${!var:-}"
@@ -85,15 +113,6 @@ rehydrate(){
   "$IMPORT_SCRIPT"
 }
 
-ensure_dbimport_conf(){
-  local conf="/azerothcore/env/dist/etc/dbimport.conf"
-  local dist="${conf}.dist"
-  if [ ! -f "$conf" ] && [ -f "$dist" ]; then
-    cp "$dist" "$conf"
-  fi
-  mkdir -p /azerothcore/env/dist/temp
-}
-
 sync_host_stage_files(){
   local host_root="${MODULE_SQL_HOST_PATH}"
   [ -d "$host_root" ] || return 0
@@ -110,7 +129,7 @@ sync_host_stage_files(){
 
 dbimport_verify(){
   local bin_dir="/azerothcore/env/dist/bin"
-  ensure_dbimport_conf
+  seed_dbimport_conf
   sync_host_stage_files
   if [ ! -x "${bin_dir}/dbimport" ]; then
     warn "dbimport binary not found at ${bin_dir}/dbimport"
