@@ -62,16 +62,26 @@ type Module struct {
 }
 
 type Snapshot struct {
-	Timestamp string                     `json:"timestamp"`
-	Project   string                     `json:"project"`
-	Network   string                     `json:"network"`
-	Services  []Service                  `json:"services"`
-	Ports     []Port                     `json:"ports"`
-	Modules   []Module                   `json:"modules"`
-	Storage   map[string]DirInfo         `json:"storage"`
-	Volumes   map[string]VolumeInfo      `json:"volumes"`
-	Users     UserStats                  `json:"users"`
-	Stats     map[string]ContainerStats  `json:"stats"`
+	Timestamp string                    `json:"timestamp"`
+	Project   string                    `json:"project"`
+	Network   string                    `json:"network"`
+	Services  []Service                 `json:"services"`
+	Ports     []Port                    `json:"ports"`
+	Modules   []Module                  `json:"modules"`
+	Storage   map[string]DirInfo        `json:"storage"`
+	Volumes   map[string]VolumeInfo     `json:"volumes"`
+	Users     UserStats                 `json:"users"`
+	Stats     map[string]ContainerStats `json:"stats"`
+}
+
+var persistentServiceOrder = []string{
+	"ac-mysql",
+	"ac-db-guard",
+	"ac-authserver",
+	"ac-worldserver",
+	"ac-phpmyadmin",
+	"ac-keira3",
+	"ac-backup",
 }
 
 func runSnapshot() (*Snapshot, error) {
@@ -87,27 +97,76 @@ func runSnapshot() (*Snapshot, error) {
 	return snap, nil
 }
 
-func buildServicesTable(s *Snapshot) *TableNoCol {
-	table := NewTableNoCol()
-	rows := [][]string{{"Service", "Status", "Health", "CPU%", "Memory"}}
-	for _, svc := range s.Services {
-		cpu := "-"
-		mem := "-"
-		if stats, ok := s.Stats[svc.Name]; ok {
-			cpu = fmt.Sprintf("%.1f", stats.CPU)
-			mem = strings.Split(stats.Memory, " / ")[0] // Just show used, not total
-		}
-		// Combine health with exit code for stopped containers
-		health := svc.Health
-		if svc.Status != "running" && svc.ExitCode != "0" && svc.ExitCode != "" {
-			health = fmt.Sprintf("%s (%s)", svc.Health, svc.ExitCode)
-		}
-		rows = append(rows, []string{svc.Label, svc.Status, health, cpu, mem})
+func partitionServices(all []Service) ([]Service, []Service) {
+	byName := make(map[string]Service)
+	for _, svc := range all {
+		byName[svc.Name] = svc
 	}
+
+	seen := make(map[string]bool)
+	persistent := make([]Service, 0, len(persistentServiceOrder))
+	for _, name := range persistentServiceOrder {
+		if svc, ok := byName[name]; ok {
+			persistent = append(persistent, svc)
+			seen[name] = true
+		}
+	}
+
+	setups := make([]Service, 0, len(all))
+	for _, svc := range all {
+		if seen[svc.Name] {
+			continue
+		}
+		setups = append(setups, svc)
+	}
+	return persistent, setups
+}
+
+func buildServicesTable(s *Snapshot) *TableNoCol {
+	runningServices, setupServices := partitionServices(s.Services)
+
+	table := NewTableNoCol()
+	rows := [][]string{{"Group", "Service", "Status", "Health", "CPU%", "Memory"}}
+	appendRows := func(groupLabel string, services []Service) {
+		for _, svc := range services {
+			cpu := "-"
+			mem := "-"
+			if svcStats, ok := s.Stats[svc.Name]; ok {
+				cpu = fmt.Sprintf("%.1f", svcStats.CPU)
+				mem = strings.Split(svcStats.Memory, " / ")[0] // Just show used, not total
+			}
+			health := svc.Health
+			if svc.Status != "running" && svc.ExitCode != "0" && svc.ExitCode != "" {
+				health = fmt.Sprintf("%s (%s)", svc.Health, svc.ExitCode)
+			}
+			rows = append(rows, []string{groupLabel, svc.Label, svc.Status, health, cpu, mem})
+		}
+	}
+
+	appendRows("Persistent", runningServices)
+	appendRows("Setup", setupServices)
+
 	table.Rows = rows
 	table.RowSeparator = false
 	table.Border = true
 	table.Title = "Services"
+
+	for i := 1; i < len(table.Rows); i++ {
+		if table.RowStyles == nil {
+			table.RowStyles = make(map[int]ui.Style)
+		}
+		state := strings.ToLower(table.Rows[i][2])
+		switch state {
+		case "running", "healthy":
+			table.RowStyles[i] = ui.NewStyle(ui.ColorGreen)
+		case "restarting", "unhealthy":
+			table.RowStyles[i] = ui.NewStyle(ui.ColorRed)
+		case "exited":
+			table.RowStyles[i] = ui.NewStyle(ui.ColorYellow)
+		default:
+			table.RowStyles[i] = ui.NewStyle(ui.ColorWhite)
+		}
+	}
 	return table
 }
 
@@ -145,7 +204,6 @@ func buildModulesList(s *Snapshot) *widgets.List {
 
 func buildStorageParagraph(s *Snapshot) *widgets.Paragraph {
 	var b strings.Builder
-	fmt.Fprintf(&b, "STORAGE:\n")
 	entries := []struct {
 		Key   string
 		Label string
@@ -161,11 +219,7 @@ func buildStorageParagraph(s *Snapshot) *widgets.Paragraph {
 		if !ok {
 			continue
 		}
-		mark := "○"
-		if info.Exists {
-			mark = "●"
-		}
-		fmt.Fprintf(&b, "  %-15s %s %s (%s)\n", item.Label, mark, info.Path, info.Size)
+		fmt.Fprintf(&b, "  %-15s %s (%s)\n", item.Label, info.Path, info.Size)
 	}
 	par := widgets.NewParagraph()
 	par.Title = "Storage"
@@ -177,7 +231,6 @@ func buildStorageParagraph(s *Snapshot) *widgets.Paragraph {
 
 func buildVolumesParagraph(s *Snapshot) *widgets.Paragraph {
 	var b strings.Builder
-	fmt.Fprintf(&b, "VOLUMES:\n")
 	entries := []struct {
 		Key   string
 		Label string
@@ -190,11 +243,7 @@ func buildVolumesParagraph(s *Snapshot) *widgets.Paragraph {
 		if !ok {
 			continue
 		}
-		mark := "○"
-		if info.Exists {
-			mark = "●"
-		}
-		fmt.Fprintf(&b, "  %-13s %s %s\n", item.Label, mark, info.Mountpoint)
+		fmt.Fprintf(&b, "  %-13s %s\n", item.Label, info.Mountpoint)
 	}
 	par := widgets.NewParagraph()
 	par.Title = "Volumes"
@@ -206,22 +255,6 @@ func buildVolumesParagraph(s *Snapshot) *widgets.Paragraph {
 
 func renderSnapshot(s *Snapshot, selectedModule int) (*widgets.List, *ui.Grid) {
 	servicesTable := buildServicesTable(s)
-	for i := 1; i < len(servicesTable.Rows); i++ {
-		if servicesTable.RowStyles == nil {
-			servicesTable.RowStyles = make(map[int]ui.Style)
-		}
-		state := strings.ToLower(servicesTable.Rows[i][1])
-		switch state {
-		case "running", "healthy":
-			servicesTable.RowStyles[i] = ui.NewStyle(ui.ColorGreen)
-		case "restarting", "unhealthy":
-			servicesTable.RowStyles[i] = ui.NewStyle(ui.ColorRed)
-		case "exited":
-			servicesTable.RowStyles[i] = ui.NewStyle(ui.ColorYellow)
-		default:
-			servicesTable.RowStyles[i] = ui.NewStyle(ui.ColorWhite)
-		}
-	}
 	portsTable := buildPortsTable(s)
 	for i := 1; i < len(portsTable.Rows); i++ {
 		if portsTable.RowStyles == nil {
@@ -247,7 +280,7 @@ func renderSnapshot(s *Snapshot, selectedModule int) (*widgets.List, *ui.Grid) {
 	moduleInfoPar.Title = "Module Info"
 	if selectedModule >= 0 && selectedModule < len(s.Modules) {
 		mod := s.Modules[selectedModule]
-		moduleInfoPar.Text = fmt.Sprintf("%s\n\nCategory: %s\nType: %s", mod.Description, mod.Category, mod.Type)
+		moduleInfoPar.Text = fmt.Sprintf("%s\nCategory: %s\nType: %s", mod.Description, mod.Category, mod.Type)
 	} else {
 		moduleInfoPar.Text = "Select a module to view info"
 	}
@@ -272,15 +305,15 @@ func renderSnapshot(s *Snapshot, selectedModule int) (*widgets.List, *ui.Grid) {
 	termWidth, termHeight := ui.TerminalDimensions()
 	grid.SetRect(0, 0, termWidth, termHeight)
 	grid.Set(
-		ui.NewRow(0.18,
+		ui.NewRow(0.15,
 			ui.NewCol(0.6, header),
 			ui.NewCol(0.4, usersPar),
 		),
-		ui.NewRow(0.42,
+		ui.NewRow(0.46,
 			ui.NewCol(0.6, servicesTable),
 			ui.NewCol(0.4, portsTable),
 		),
-		ui.NewRow(0.40,
+		ui.NewRow(0.39,
 			ui.NewCol(0.25, modulesList),
 			ui.NewCol(0.15,
 				ui.NewRow(0.30, helpPar),
