@@ -144,6 +144,7 @@ Options:
   --port PORT           SSH port (default: 22)
   --identity PATH       SSH private key (passed to scp/ssh)
   --project-dir DIR     Remote project directory (default: ~/<project-name>)
+  --env-file PATH       Use this env file for image lookup and upload (default: ./.env)
   --tarball PATH        Output path for the image tar (default: ./local-storage/images/acore-modules-images.tar)
   --storage PATH        Remote storage directory (default: <project-dir>/storage)
   --skip-storage        Do not sync the storage directory
@@ -171,6 +172,7 @@ while [[ $# -gt 0 ]]; do
     --port) PORT="$2"; shift 2;;
     --identity) IDENTITY="$2"; shift 2;;
     --project-dir) PROJECT_DIR="$2"; shift 2;;
+    --env-file) ENV_FILE="$2"; shift 2;;
     --tarball) TARBALL="$2"; shift 2;;
     --storage) REMOTE_STORAGE="$2"; shift 2;;
     --skip-storage) SKIP_STORAGE=1; shift;;
@@ -186,6 +188,14 @@ if [[ -z "$HOST" || -z "$USER" ]]; then
   usage
   exit 1
 fi
+
+# Normalize env file path if provided and recompute defaults
+if [ -n "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then
+  ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd)/$(basename "$ENV_FILE")"
+else
+  ENV_FILE="$PROJECT_ROOT/.env"
+fi
+DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
 
 expand_remote_path(){
   local path="$1"
@@ -224,7 +234,11 @@ resolve_path_relative_to_project(){
   echo "${path%/}"
 }
 
-STAGE_SQL_PATH_RAW="$(read_env_value STAGE_PATH_MODULE_SQL "${STORAGE_PATH_LOCAL:-./local-storage}/module-sql-updates")"
+STAGE_SQL_PATH_RAW="$(read_env_value STAGE_PATH_MODULE_SQL "${LOCAL_STORAGE_ROOT:-./local-storage}/module-sql-updates")"
+# Ensure STORAGE_PATH_LOCAL is defined to avoid set -u failures during expansion
+if [ -z "${STORAGE_PATH_LOCAL:-}" ]; then
+  STORAGE_PATH_LOCAL="$LOCAL_STORAGE_ROOT"
+fi
 # Expand any env references (e.g., ${STORAGE_PATH_LOCAL})
 STAGE_SQL_PATH_RAW="$(eval "echo \"$STAGE_SQL_PATH_RAW\"")"
 LOCAL_STAGE_SQL_DIR="$(resolve_path_relative_to_project "$STAGE_SQL_PATH_RAW" "$PROJECT_ROOT")"
@@ -396,6 +410,9 @@ validate_remote_environment
 collect_deploy_image_refs
 
 echo "⋅ Exporting deployment images to $TARBALL"
+# Ensure destination directory exists
+ensure_host_writable "$(dirname "$TARBALL")"
+
 # Check which images are available and collect them
 IMAGES_TO_SAVE=()
 MISSING_IMAGES=()
@@ -487,9 +504,9 @@ ensure_remote_temp_dir
 run_scp "$TARBALL" "$USER@$HOST:$REMOTE_TEMP_DIR/acore-modules-images.tar"
 run_ssh "docker load < '$REMOTE_TEMP_DIR/acore-modules-images.tar' && rm '$REMOTE_TEMP_DIR/acore-modules-images.tar'"
 
-if [[ -f .env ]]; then
+if [[ -f "$ENV_FILE" ]]; then
   echo "⋅ Uploading .env"
-  run_scp .env "$USER@$HOST:$PROJECT_DIR/.env"
+  run_scp "$ENV_FILE" "$USER@$HOST:$PROJECT_DIR/.env"
 fi
 
 echo "⋅ Remote prepares completed"

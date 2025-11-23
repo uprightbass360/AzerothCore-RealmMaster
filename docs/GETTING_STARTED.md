@@ -170,6 +170,8 @@ Optional flags:
 - `--remote-port 2222` - Custom SSH port
 - `--remote-identity ~/.ssh/custom_key` - Specific SSH key
 - `--remote-skip-storage` - Don't sync storage directory (fresh install on remote)
+- `--remote-storage-path /mnt/acore-storage` - Override STORAGE_PATH on the remote host (local-storage stays per .env)
+- `--remote-container-user 1001:1001` - Override CONTAINER_USER on the remote host (uid:gid)
 
 ### Step 3: Deploy on Remote Host
 ```bash

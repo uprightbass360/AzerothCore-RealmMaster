@@ -35,6 +35,9 @@ REMOTE_COPY_SOURCE=0
 REMOTE_ARGS_PROVIDED=0
 REMOTE_AUTO_DEPLOY=0
 REMOTE_AUTO_DEPLOY=0
+REMOTE_STORAGE_OVERRIDE=""
+REMOTE_CONTAINER_USER_OVERRIDE=""
+REMOTE_ENV_FILE=""
 
 MODULE_HELPER="$ROOT_DIR/scripts/python/modules.py"
 MODULE_STATE_INITIALIZED=0
@@ -164,6 +167,23 @@ collect_remote_details(){
       *) REMOTE_SKIP_STORAGE=0 ;;
     esac
   fi
+
+  # Optional remote env overrides (default to current values)
+  local storage_default container_user_default
+  storage_default="$(read_env STORAGE_PATH "./storage")"
+  container_user_default="$(read_env CONTAINER_USER "$(id -u):$(id -g)")"
+
+  if [ -z "$REMOTE_STORAGE_OVERRIDE" ] && [ "$interactive" -eq 1 ]; then
+    local storage_input
+    read -rp "Remote storage path (STORAGE_PATH) [${storage_default}]: " storage_input
+    REMOTE_STORAGE_OVERRIDE="${storage_input:-$storage_default}"
+  fi
+
+  if [ -z "$REMOTE_CONTAINER_USER_OVERRIDE" ] && [ "$interactive" -eq 1 ]; then
+    local cu_input
+    read -rp "Remote container user (CONTAINER_USER) [${container_user_default}]: " cu_input
+    REMOTE_CONTAINER_USER_OVERRIDE="${cu_input:-$container_user_default}"
+  fi
 }
 
 validate_remote_configuration(){
@@ -220,6 +240,8 @@ Options:
   --remote-skip-storage                    Skip syncing the storage directory during migration
   --remote-copy-source                     Copy the local project directory to remote instead of relying on git
   --remote-auto-deploy                     Run './deploy.sh --yes --no-watch' on the remote host after migration
+  --remote-storage-path PATH               Override STORAGE_PATH/STORAGE_PATH_LOCAL in the remote .env
+  --remote-container-user USER[:GROUP]     Override CONTAINER_USER in the remote .env
   --skip-config                            Skip applying server configuration preset
   -h, --help                               Show this help
 
@@ -248,6 +270,8 @@ while [[ $# -gt 0 ]]; do
     --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-copy-source) REMOTE_COPY_SOURCE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-auto-deploy) REMOTE_AUTO_DEPLOY=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --remote-storage-path) REMOTE_STORAGE_OVERRIDE="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
+    --remote-container-user) REMOTE_CONTAINER_USER_OVERRIDE="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --skip-config) SKIP_CONFIG=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
@@ -607,6 +631,33 @@ determine_profile(){
 }
 
 run_remote_migration(){
+  if [ -z "$REMOTE_ENV_FILE" ] && { [ -n "$REMOTE_STORAGE_OVERRIDE" ] || [ -n "$REMOTE_CONTAINER_USER_OVERRIDE" ]; }; then
+    local base_env=""
+    if [ -f "$ENV_PATH" ]; then
+      base_env="$ENV_PATH"
+    elif [ -f "$TEMPLATE_PATH" ]; then
+      base_env="$TEMPLATE_PATH"
+    fi
+    REMOTE_ENV_FILE="$(mktemp)"
+    if [ -n "$base_env" ]; then
+      cp "$base_env" "$REMOTE_ENV_FILE"
+    else
+      : > "$REMOTE_ENV_FILE"
+    fi
+    if [ -n "$REMOTE_STORAGE_OVERRIDE" ]; then
+      {
+        echo
+        echo "STORAGE_PATH=$REMOTE_STORAGE_OVERRIDE"
+      } >>"$REMOTE_ENV_FILE"
+    fi
+    if [ -n "$REMOTE_CONTAINER_USER_OVERRIDE" ]; then
+      {
+        echo
+        echo "CONTAINER_USER=$REMOTE_CONTAINER_USER_OVERRIDE"
+      } >>"$REMOTE_ENV_FILE"
+    fi
+  fi
+
   local args=(--host "$REMOTE_HOST" --user "$REMOTE_USER")
 
   if [ -n "$REMOTE_PORT" ] && [ "$REMOTE_PORT" != "22" ]; then
@@ -631,6 +682,10 @@ run_remote_migration(){
 
   if [ "$ASSUME_YES" -eq 1 ]; then
     args+=(--yes)
+  fi
+
+  if [ -n "$REMOTE_ENV_FILE" ]; then
+    args+=(--env-file "$REMOTE_ENV_FILE")
   fi
 
   (cd "$ROOT_DIR" && ./scripts/bash/migrate-stack.sh "${args[@]}")
