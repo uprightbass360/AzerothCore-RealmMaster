@@ -1241,7 +1241,7 @@ fi
       "automation" "quality-of-life" "gameplay-enhancement" "npc-service"
       "pvp" "progression" "economy" "social" "account-wide"
       "customization" "scripting" "admin" "premium" "minigame"
-      "content" "rewards" "developer"
+      "content" "rewards" "developer" "database" "tooling" "uncategorized"
     )
     declare -A category_titles=(
       ["automation"]="🤖 Automation"
@@ -1261,30 +1261,18 @@ fi
       ["content"]="🏰 Content"
       ["rewards"]="🎁 Rewards"
       ["developer"]="🛠️ Developer Tools"
+      ["database"]="🗄️ Database"
+      ["tooling"]="🔨 Tooling"
+      ["uncategorized"]="📦 Miscellaneous"
     )
+    declare -A processed_categories=()
 
-    # Group modules by category using arrays
-    declare -A modules_by_category
-    local key
-    for key in "${selection_keys[@]}"; do
-      [ -n "${KNOWN_MODULE_LOOKUP[$key]:-}" ] || continue
-      local category="${MODULE_CATEGORY_MAP[$key]:-uncategorized}"
-      if [ -z "${modules_by_category[$category]:-}" ]; then
-        modules_by_category[$category]="$key"
-      else
-        modules_by_category[$category]="${modules_by_category[$category]} $key"
-      fi
-    done
-
-    # Process modules by category
-    local cat
-    for cat in "${category_order[@]}"; do
+    render_category() {
+      local cat="$1"
       local module_list="${modules_by_category[$cat]:-}"
-      [ -n "$module_list" ] || continue
+      [ -n "$module_list" ] || return 0
 
-      # Check if this category has any valid modules before showing header
       local has_valid_modules=0
-      # Split the space-separated string properly
       local -a module_array
       IFS=' ' read -ra module_array <<< "$module_list"
       for key in "${module_array[@]}"; do
@@ -1296,14 +1284,12 @@ fi
         fi
       done
 
-      # Skip category if no valid modules
-      [ "$has_valid_modules" = "1" ] || continue
+      [ "$has_valid_modules" = "1" ] || return 0
 
-      # Display category header only when we have valid modules
       local cat_title="${category_titles[$cat]:-$cat}"
       printf '\n%b\n' "${BOLD}${CYAN}═══ ${cat_title} ═══${NC}"
 
-      # Process modules in this category
+      local first_in_cat=1
       for key in "${module_array[@]}"; do
         [ -n "${KNOWN_MODULE_LOOKUP[$key]:-}" ] || continue
         local status_lc="${MODULE_STATUS_MAP[$key],,}"
@@ -1313,6 +1299,10 @@ fi
           printf -v "$key" '%s' "0"
           continue
         fi
+        if [ "$first_in_cat" -ne 1 ]; then
+          printf '\n'
+        fi
+        first_in_cat=0
         local prompt_label
         prompt_label="$(module_display_name "$key")"
         if [ "${MODULE_NEEDS_BUILD_MAP[$key]}" = "1" ]; then
@@ -1340,6 +1330,30 @@ fi
           printf -v "$key" '%s' "0"
         fi
       done
+      processed_categories["$cat"]=1
+    }
+
+    # Group modules by category using arrays
+    declare -A modules_by_category
+    local key
+    for key in "${selection_keys[@]}"; do
+      [ -n "${KNOWN_MODULE_LOOKUP[$key]:-}" ] || continue
+      local category="${MODULE_CATEGORY_MAP[$key]:-uncategorized}"
+      if [ -z "${modules_by_category[$category]:-}" ]; then
+        modules_by_category[$category]="$key"
+      else
+        modules_by_category[$category]="${modules_by_category[$category]} $key"
+      fi
+    done
+
+    # Process modules by category (ordered, then any new categories)
+    local cat
+    for cat in "${category_order[@]}"; do
+      render_category "$cat"
+    done
+    for cat in "${!modules_by_category[@]}"; do
+      [ -n "${processed_categories[$cat]:-}" ] && continue
+      render_category "$cat"
     done
     module_mode_label="preset 3 (Manual)"
   elif [ "$MODE_SELECTION" = "4" ]; then

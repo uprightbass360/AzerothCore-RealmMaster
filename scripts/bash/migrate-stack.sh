@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Utility to migrate module images (and optionally storage) to a remote host.
-# Assumes module images have already been rebuilt locally.
+# Utility to migrate deployment images (and optionally storage) to a remote host.
+# Assumes your runtime images have already been built or pulled locally.
 
 set -euo pipefail
 
@@ -39,6 +39,74 @@ resolve_project_image(){
   local project_name
   project_name="$(resolve_project_name)"
   echo "${project_name}:${tag}"
+}
+
+declare -a DEPLOY_IMAGE_REFS=()
+declare -a CLEANUP_IMAGE_REFS=()
+declare -A DEPLOY_IMAGE_SET=()
+declare -A CLEANUP_IMAGE_SET=()
+
+add_deploy_image_ref(){
+  local image="$1"
+  [ -z "$image" ] && return
+  if [[ -z "${DEPLOY_IMAGE_SET[$image]:-}" ]]; then
+    DEPLOY_IMAGE_SET["$image"]=1
+    DEPLOY_IMAGE_REFS+=("$image")
+  fi
+  add_cleanup_image_ref "$image"
+}
+
+add_cleanup_image_ref(){
+  local image="$1"
+  [ -z "$image" ] && return
+  if [[ -z "${CLEANUP_IMAGE_SET[$image]:-}" ]]; then
+    CLEANUP_IMAGE_SET["$image"]=1
+    CLEANUP_IMAGE_REFS+=("$image")
+  fi
+}
+
+collect_deploy_image_refs(){
+  local auth_modules world_modules auth_playerbots world_playerbots db_import client_data bots_client_data
+  local auth_standard world_standard client_data_standard
+
+  auth_modules="$(read_env_value AC_AUTHSERVER_IMAGE_MODULES "$(resolve_project_image "authserver-modules-latest")")"
+  world_modules="$(read_env_value AC_WORLDSERVER_IMAGE_MODULES "$(resolve_project_image "worldserver-modules-latest")")"
+  auth_playerbots="$(read_env_value AC_AUTHSERVER_IMAGE_PLAYERBOTS "$(resolve_project_image "authserver-playerbots")")"
+  world_playerbots="$(read_env_value AC_WORLDSERVER_IMAGE_PLAYERBOTS "$(resolve_project_image "worldserver-playerbots")")"
+  db_import="$(read_env_value AC_DB_IMPORT_IMAGE "$(resolve_project_image "db-import-playerbots")")"
+  client_data="$(read_env_value AC_CLIENT_DATA_IMAGE_PLAYERBOTS "$(resolve_project_image "client-data-playerbots")")"
+
+  auth_standard="$(read_env_value AC_AUTHSERVER_IMAGE "acore/ac-wotlk-authserver:master")"
+  world_standard="$(read_env_value AC_WORLDSERVER_IMAGE "acore/ac-wotlk-worldserver:master")"
+  client_data_standard="$(read_env_value AC_CLIENT_DATA_IMAGE "acore/ac-wotlk-client-data:master")"
+
+  local refs=(
+    "$auth_modules"
+    "$world_modules"
+    "$auth_playerbots"
+    "$world_playerbots"
+    "$db_import"
+    "$client_data"
+    "$auth_standard"
+    "$world_standard"
+    "$client_data_standard"
+  )
+  for ref in "${refs[@]}"; do
+    add_deploy_image_ref "$ref"
+  done
+
+  # Include default project-tagged images for cleanup even if env moved to custom tags
+  local fallback_refs=(
+    "$(resolve_project_image "authserver-modules-latest")"
+    "$(resolve_project_image "worldserver-modules-latest")"
+    "$(resolve_project_image "authserver-playerbots")"
+    "$(resolve_project_image "worldserver-playerbots")"
+    "$(resolve_project_image "db-import-playerbots")"
+    "$(resolve_project_image "client-data-playerbots")"
+  )
+  for ref in "${fallback_refs[@]}"; do
+    add_cleanup_image_ref "$ref"
+  done
 }
 
 ensure_host_writable(){
@@ -288,25 +356,13 @@ setup_remote_repository(){
 cleanup_stale_docker_resources(){
   echo "⋅ Cleaning up stale Docker resources on remote..."
 
-  # Get project name to target our containers/images specifically
-  local project_name
-  project_name="$(resolve_project_name)"
-
   # Stop and remove old containers
   echo "  • Removing old containers..."
   run_ssh "docker ps -a --filter 'name=ac-' --format '{{.Names}}' | xargs -r docker rm -f 2>/dev/null || true"
 
   # Remove old project images to force fresh load
   echo "  • Removing old project images..."
-  local images_to_remove=(
-    "${project_name}:authserver-modules-latest"
-    "${project_name}:worldserver-modules-latest"
-    "${project_name}:authserver-playerbots"
-    "${project_name}:worldserver-playerbots"
-    "${project_name}:db-import-playerbots"
-    "${project_name}:client-data-playerbots"
-  )
-  for img in "${images_to_remove[@]}"; do
+  for img in "${CLEANUP_IMAGE_REFS[@]}"; do
     run_ssh "docker rmi '$img' 2>/dev/null || true"
   done
 
@@ -320,37 +376,33 @@ cleanup_stale_docker_resources(){
 
 validate_remote_environment
 
-echo "⋅ Exporting module images to $TARBALL"
+collect_deploy_image_refs
+
+echo "⋅ Exporting deployment images to $TARBALL"
 # Check which images are available and collect them
 IMAGES_TO_SAVE=()
-
-project_auth_modules="$(resolve_project_image "authserver-modules-latest")"
-project_world_modules="$(resolve_project_image "worldserver-modules-latest")"
-project_auth_playerbots="$(resolve_project_image "authserver-playerbots")"
-project_world_playerbots="$(resolve_project_image "worldserver-playerbots")"
-project_db_import="$(resolve_project_image "db-import-playerbots")"
-project_client_data="$(resolve_project_image "client-data-playerbots")"
-
-for image in \
-  "$project_auth_modules" \
-  "$project_world_modules" \
-  "$project_auth_playerbots" \
-  "$project_world_playerbots" \
-  "$project_db_import" \
-  "$project_client_data"; do
+MISSING_IMAGES=()
+for image in "${DEPLOY_IMAGE_REFS[@]}"; do
   if docker image inspect "$image" >/dev/null 2>&1; then
     IMAGES_TO_SAVE+=("$image")
+  else
+    MISSING_IMAGES+=("$image")
   fi
 done
 
 if [ ${#IMAGES_TO_SAVE[@]} -eq 0 ]; then
-  echo "❌ No AzerothCore images found to migrate. Run './build.sh' first or pull standard images."
+  echo "❌ No AzerothCore images found to migrate. Run './build.sh' first or pull the images defined in your .env."
   exit 1
 fi
 
 echo "⋅ Found ${#IMAGES_TO_SAVE[@]} images to migrate:"
 printf '  • %s\n' "${IMAGES_TO_SAVE[@]}"
 docker image save "${IMAGES_TO_SAVE[@]}" > "$TARBALL"
+
+if [ ${#MISSING_IMAGES[@]} -gt 0 ]; then
+  echo "⚠️  Skipping ${#MISSING_IMAGES[@]} images not present locally (will need to pull on remote if required):"
+  printf '  • %s\n' "${MISSING_IMAGES[@]}"
+fi
 
 if [[ $SKIP_STORAGE -eq 0 ]]; then
   if [[ -d storage ]]; then
