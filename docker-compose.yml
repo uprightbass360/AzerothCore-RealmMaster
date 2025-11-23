@@ -41,6 +41,7 @@ services:
       - --innodb-redo-log-capacity=${MYSQL_INNODB_REDO_LOG_CAPACITY}
     restart: unless-stopped
     logging:
+      driver: "json-file"
     healthcheck:
       test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u ${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} --silent || exit 1"]
       interval: ${MYSQL_HEALTHCHECK_INTERVAL}
@@ -351,7 +352,7 @@ services:
     profiles: ["db", "modules"]
     image: ${ALPINE_IMAGE}
     container_name: ac-storage-init
-    user: "${CONTAINER_USER}"
+    user: "0:0"
     volumes:
       - ${STORAGE_PATH}:/storage-root
       - ${STORAGE_PATH_LOCAL}:/local-storage-root
@@ -359,24 +360,18 @@ services:
       - sh
       - -c
       - |
-        echo "🔧 Initializing storage directories with proper permissions..."
+        echo "🔧 Initializing storage directories with container user ownership..."
         mkdir -p /storage-root/config /storage-root/logs /storage-root/modules /storage-root/lua_scripts /storage-root/install-markers
         mkdir -p /storage-root/config/mysql/conf.d
         mkdir -p /storage-root/client-data
         mkdir -p /storage-root/backups
-        # Copy core config files if they don't exist
-        if [ -f "/local-storage-root/source/azerothcore-playerbots/src/tools/dbimport/dbimport.conf.dist" ] && [ ! -f "/storage-root/config/dbimport.conf.dist" ]; then
-          echo "📄 Copying dbimport.conf.dist..."
-          cp /local-storage-root/source/azerothcore-playerbots/src/tools/dbimport/dbimport.conf.dist /storage-root/config/
-        fi
-        # Fix ownership of root directories and all contents
-        if [ "$(id -u)" -eq 0 ]; then
-          chown -R ${CONTAINER_USER} /storage-root /local-storage-root
-          chmod -R 755 /storage-root /local-storage-root
-          echo "✅ Storage permissions initialized"
-        else
-          echo "ℹ️ Running as $(id -u):$(id -g); assuming host permissions are already correct."
-        fi
+        mkdir -p /storage-root/module-sql-updates
+        mkdir -p /storage-root/data
+        mkdir -p /storage-root/temp
+        mkdir -p /local-storage-root || true
+        chown -R ${CONTAINER_USER} /storage-root /local-storage-root 2>/dev/null || true
+        chmod -R 755 /storage-root /local-storage-root 2>/dev/null || true
+        echo "✅ Storage directories ready (owned by ${CONTAINER_USER})"
     restart: "no"
     networks:
       - azerothcore
@@ -405,6 +400,8 @@ services:
       - -c
       - |
         mkdir -p /cache
+        chown -R ${CONTAINER_USER} /azerothcore/data /cache 2>/dev/null || true
+        chmod -R 755 /azerothcore/data /cache 2>/dev/null || true
         if [ -f /tmp/scripts/bash/download-client-data.sh ]; then
           chmod +x /tmp/scripts/bash/download-client-data.sh 2>/dev/null || true
           bash /tmp/scripts/bash/download-client-data.sh
@@ -437,6 +434,9 @@ services:
       - |
         echo "📦 Installing 7z + gosu for client data extraction..."
         apt-get update -qq && apt-get install -y p7zip-full gosu
+        echo "🔧 Normalizing client-data/cache ownership..."
+        chown -R ${CONTAINER_USER} /azerothcore/data /cache 2>/dev/null || true
+        chmod -R 755 /azerothcore/data /cache 2>/dev/null || true
         gosu ${CONTAINER_USER} bash -c '
           set -e
           mkdir -p /cache
@@ -479,6 +479,7 @@ services:
       - "${AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
     restart: unless-stopped
     logging:
+      driver: "json-file"
     networks:
       - azerothcore
     volumes:
@@ -534,6 +535,7 @@ services:
       - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
     restart: unless-stopped
     logging:
+      driver: "json-file"
     networks:
       - azerothcore
     cap_add: ["SYS_NICE"]
@@ -612,6 +614,7 @@ services:
       - "${AUTH_EXTERNAL_PORT}:${AUTH_PORT}"
     restart: unless-stopped
     logging:
+      driver: "json-file"
     networks:
       - azerothcore
     volumes:
@@ -670,6 +673,7 @@ services:
       - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
     restart: unless-stopped
     logging:
+      driver: "json-file"
     networks:
       - azerothcore
     cap_add: ["SYS_NICE"]
@@ -878,6 +882,7 @@ services:
       retries: 3
       start_period: 40s
     logging:
+      driver: "json-file"
     security_opt:
       - no-new-privileges:true
     networks:

@@ -20,3 +20,4 @@ todo.md
 .gocache/
 .module-ledger/
 deploy.log
+statusdash
