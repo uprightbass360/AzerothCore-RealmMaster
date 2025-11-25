@@ -6,6 +6,8 @@ This document tracks all modules that have been disabled due to compilation fail
 
 **Total Blocked Modules:** 93
 
+**Note:** Historical snapshot from 2025-11-22 validation. The current authoritative count lives in `config/module-manifest.json` (94 modules marked `status: "blocked"`). Update this file when reconciling the manifest.
+
 ---
 
 ## Compilation Errors

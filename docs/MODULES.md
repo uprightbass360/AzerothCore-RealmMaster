@@ -4,7 +4,7 @@ This document provides a comprehensive overview of all available modules in the 
 
 ## Overview
 
-AzerothCore RealmMaster includes **93 modules** that are automatically downloaded, configured, and SQL scripts executed when enabled. All modules are organized into logical categories for easy browsing and selection.
+AzerothCore RealmMaster currently ships a manifest of **348 modules** (221 marked supported/active). The default RealmMaster preset enables 33 of these for day-to-day testing. All modules are automatically downloaded, configured, and SQL scripts executed when enabled. Modules are organized into logical categories for easy browsing and selection.
 
 ## How Modules Work
 

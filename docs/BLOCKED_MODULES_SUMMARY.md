@@ -3,6 +3,8 @@
 **Last Updated:** 2025-11-14
 **Status:** ✅ All blocked modules properly disabled
 
+**Note:** This summary is historical. The authoritative block list lives in `config/module-manifest.json` (currently 94 modules marked `status: "blocked"`). This file and `docs/DISABLED_MODULES.md` should be reconciled during the next blocklist refresh.
+
 ---
 
 ## Summary

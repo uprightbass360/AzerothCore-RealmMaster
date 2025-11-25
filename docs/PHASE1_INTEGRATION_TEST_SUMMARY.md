@@ -3,6 +3,8 @@
 **Date:** 2025-11-14
 **Status:** ✅ PRE-DEPLOYMENT TESTS PASSED
 
+**Note:** Historical record for the 2025-11-14 run. Counts here reflect that test set (93 modules). The current manifest contains 348 modules, 221 marked supported/active, and the RealmMaster preset exercises 33 modules.
+
 ---
 
 ## Test Execution Summary
@@ -31,7 +33,7 @@
 **Verified:**
 - Environment file present
 - Module configuration loaded
-- 93 modules enabled for testing
+- 93 modules enabled for testing in this run (current manifest: 348 total / 221 supported; RealmMaster preset: 33)
 
 ### Test 2: Module Manifest Validation ✅
 ```bash
@@ -139,7 +141,7 @@ MODULES_ENABLED="mod-playerbots mod-aoe-loot ..."
 
 **What Gets Built:**
 - AzerothCore with playerbots branch
-- 93 modules compiled and integrated
+- 93 modules compiled and integrated in this run (current manifest: 348 total / 221 supported)
 - Custom Docker images: `acore-compose:worldserver-modules-latest` etc.
 
 ### Deployment Status: READY TO DEPLOY 🚀
@@ -261,7 +263,7 @@ docker exec ac-mysql mysql -uroot -p[password] acore_world \
 - **Bash:** 5.0+
 - **Python:** 3.x
 - **Docker:** Available
-- **Modules Enabled:** 93
+- **Modules Enabled:** 93 (historical run)
 - **Test Date:** 2025-11-14
 
 ---

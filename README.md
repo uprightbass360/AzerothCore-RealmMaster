@@ -4,7 +4,7 @@
 
 # AzerothCore RealmMaster
 
-A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with 93+ enhanced modules and intelligent automation.
+A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with **hundreds** of supported modules and intelligent automations to allow for easy setup, deployment and management.
 
 ## Table of Contents
 
@@ -23,10 +23,10 @@ A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich
 
 ## Quick Start
 
-### Prerequisites
-- **Docker** with Docker Compose
-- **16GB+ RAM** and **32GB+ storage**
-- **Linux/macOS/WSL2** (Windows with WSL2 recommended)
+### Reccomendations
+- **Docker** with Docker Compose 2
+- **16GB+ RAM** and **64GB+ storage**
+- **Linux/macOS/WSL2** Fully tested with Ubuntu 24.04 and Debian 12
 
 ### Three Simple Steps
 
@@ -50,17 +50,15 @@ See [Getting Started](#getting-started) for detailed walkthrough.
 ## What You Get
 
 ### ✅ Core Server Components
-- **AzerothCore 3.3.5a** - WotLK server application with 93+ enhanced modules
+- **AzerothCore 3.3.5a** - WotLK server application with 348 modules in the manifest (221 currently supported)
 - **MySQL 8.0** - Database with intelligent initialization and restoration
 - **Smart Module System** - Automated module management and source builds
 - **phpMyAdmin** - Web-based database administration
 - **Keira3** - Game content editor and developer tools
 
 ### ✅ Automated Configuration
-- **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import
-- **Restore Safety Checks** - The import job now validates the live MySQL runtime before honoring restore markers so stale tmpfs volumes can’t trick automation into skipping a needed restore (see [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md))
-- **Backup Management** - Automated hourly/daily backups with intelligent restoration
-- **Restore-Aware Module SQL** - After a backup restore the ledger snapshot from that backup is synced into shared storage and `stage-modules.sh` recopies every enabled SQL file into `/azerothcore/data/sql/updates/*` so the worldserver’s built-in updater reapplies anything the database still needs (see [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md))
+- **Intelligent Database Setup** - Smart backup detection, restoration, and conditional schema import (details in [docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md))
+- **Restore-Aware Backups & SQL** - Restore-aware SQL staging and snapshot safety checks keep modules in sync after restores ([docs/DATABASE_MANAGEMENT.md](docs/DATABASE_MANAGEMENT.md))
 - **Module Integration** - Automatic source builds when C++ modules are enabled
 - **Service Orchestration** - Profile-based deployment (standard/playerbots/modules)
 
@@ -79,7 +77,9 @@ For complete local and remote deployment guides, see **[docs/GETTING_STARTED.md]
 
 ## Complete Module Catalog
 
-Choose from **93+ enhanced modules** spanning automation, quality-of-life improvements, gameplay enhancements, PvP features, and more. All modules are automatically downloaded, configured, and integrated during deployment.
+Choose from **hundreds of enhanced modules** spanning automation, quality-of-life improvements, gameplay enhancements, PvP features, and more. The manifest contains 348 modules (221 marked supported/active); the default RealmMaster preset enables 33 that are exercised in testing. All modules are automatically downloaded, configured, and integrated during deployment when selected.
+
+Want a shortcut? Use a preset (RealmMaster, suggested QoL, playerbot variants, all-modules) from `config/module-profiles/`—see [docs/GETTING_STARTED.md#module-presets](docs/GETTING_STARTED.md#module-presets).
 
 **Popular Categories:**
 - **Automation** - Playerbots, AI chat, level management
@@ -93,23 +93,13 @@ Browse the complete catalog with descriptions at **[docs/MODULES.md](docs/MODULE
 
 ## Custom NPCs Guide
 
-The server includes **14 custom NPCs** providing enhanced functionality including profession training, enchantments, arena services, and more. All NPCs are spawnable through GM commands and designed for permanent placement.
-
-**Available NPCs:**
-- **Service NPCs** - Profession training, reagent banking, instance resets
-- **Enhancement NPCs** - Enchanting, buffing, pet management, transmog
-- **PvP NPCs** - 1v1 arena battlemaster
-- **Guild House NPCs** - Property management and services
-
-For complete spawn commands, coordinates, and functionality details, see **[docs/NPCS.md](docs/NPCS.md)**.
+The server includes **14 custom NPCs** spanning services, buffs, PvP, and guild support. Full spawn commands, coordinates, and functions are in **[docs/NPCS.md](docs/NPCS.md)**.
 
 ---
 
 ## Management & Operations
 
-For common workflows, management commands, and database operations, see **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**.
-
-- Keep the module catalog current with `scripts/python/update_module_manifest.py` or trigger the scheduled **Sync Module Manifest** GitHub Action to auto-open a PR with the latest AzerothCore topic repos.
+For common workflows, management commands, and database operations, see **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**. For script details (including module manifest auto-sync), see **[docs/SCRIPTS.md](docs/SCRIPTS.md)**.
 
 ---
 
@@ -149,10 +139,8 @@ This project builds upon:
 - ✅ **Comprehensive Documentation** - Clear setup and troubleshooting guides
 
 ### Next Steps After Installation
-
-**Essential First Steps:**
-1. **Create admin account**: `docker attach ac-worldserver` → `account create admin password` → `account set gmlevel admin 3 -1`
-2. **Test your setup**: Connect with WoW 3.3.5a client using `set realmlist 127.0.0.1`
-3. **Access web tools**: phpMyAdmin (port 8081) and Keira3 (port 4201)
-
 **For detailed server administration, monitoring, backup configuration, and performance tuning, see [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).**
+
+- **Create admin account** - Attach to worldserver and create a GM user (commands in **[docs/GETTING_STARTED.md#post-installation-steps](docs/GETTING_STARTED.md#post-installation-steps)**).
+- **Point your client** - Update `realmlist.wtf` to your host/ports (defaults in the same section above).
+- **Open services** - phpMyAdmin and Keira3 URLs/ports are listed in **[docs/GETTING_STARTED.md#post-installation-steps](docs/GETTING_STARTED.md#post-installation-steps)**.

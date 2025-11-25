@@ -9,7 +9,7 @@ This guide provides a complete walkthrough for deploying AzerothCore RealmMaster
 
 Before you begin, ensure you have:
 - **Docker** with Docker Compose
-- **16GB+ RAM** and **32GB+ storage**
+- **16GB+ RAM** and **64GB+ storage**
 - **Linux/macOS/WSL2** (Windows with WSL2 recommended)
 
 ## Quick Overview
@@ -40,7 +40,7 @@ cd AzerothCore-RealmMaster
 
 The setup wizard will guide you through:
 - **Server Configuration**: IP address, ports, timezone
-- **Module Selection**: Choose from 30+ available modules or use presets
+- **Module Selection**: Choose from hundreds of official modules (348 in manifest; 221 currently supported) or use presets
 - **Module Definitions**: Customize defaults in `config/module-manifest.json` and optional presets under `config/module-profiles/`
 - **Storage Paths**: Configure NFS/local storage locations
 - **Playerbot Settings**: Max bots, account limits (if enabled)
@@ -199,8 +199,6 @@ The remote deployment process transfers:
 
 ### Module Presets
 
-> **⚠️ Warning:** Module preset support is still in progress. The bundled presets have not been fully tested yet—please share issues or suggestions via Discord (`uprightbass360`).
-
 - Define JSON presets in `config/module-profiles/*.json`. Each file contains:
   - `modules` (array, required) – list of `MODULE_*` identifiers to enable.
   - `label` (string, optional) – text shown in the setup menu (emoji welcome).
@@ -218,11 +216,11 @@ The remote deployment process transfers:
   ```
 - `setup.sh` automatically adds these presets to the module menu and enables the listed modules when selected or when `--module-config <name>` is provided.
 - Built-in presets:
-  - `config/module-profiles/suggested-modules.json` – default solo-friendly QoL stack.
-  - `config/module-profiles/playerbots-suggested-modules.json` – suggested stack plus playerbots.
-  - `config/module-profiles/playerbots-only.json` – playerbot-focused profile (adjust `--playerbot-max-bots`).
-- Custom example:
-  - `config/module-profiles/sam.json` – Sam's playerbot-focused profile (set `--playerbot-max-bots 3000` when using this preset).
+-  - `config/module-profiles/RealmMaster.json` – 33-module baseline used for testing.
+-  - `config/module-profiles/suggested-modules.json` – default solo-friendly QoL stack.
+-  - `config/module-profiles/playerbots-suggested-modules.json` – suggested stack plus playerbots.
+-  - `config/module-profiles/playerbots-only.json` – playerbot-focused profile (adjust `--playerbot-max-bots`).
+-  - `config/module-profiles/all-modules.json` – enable everything currently marked supported/active.
 - Module metadata lives in `config/module-manifest.json`; update that file if you need to add new modules or change repositories/branches.
 
 ---

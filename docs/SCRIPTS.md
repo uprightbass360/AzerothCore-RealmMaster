@@ -23,7 +23,7 @@ Interactive `.env` generator with module selection, server configuration, and de
 
 ```bash
 ./setup.sh                                    # Interactive configuration
-./setup.sh --module-config sam                # Use predefined module profile, check profiles directory
+./setup.sh --module-config RealmMaster        # Use predefined module profile, check profiles directory
 ./setup.sh --playerbot-max-bots 3000          # Set playerbot limits
 ```
 

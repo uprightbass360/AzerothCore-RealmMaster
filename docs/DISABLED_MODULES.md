@@ -4,6 +4,8 @@ This document tracks modules that have been disabled due to compilation errors o
 
 **Last Updated:** 2025-11-14
 
+**Note:** Historical snapshot. The current authoritative status for disabled/blocked modules is `status: "blocked"` in `config/module-manifest.json` (94 entries as of now). Align this file with the manifest during the next maintenance pass.
+
 ---
 
 ## Disabled Modules
@@ -111,7 +113,7 @@ These modules are blocked in the manifest with known issues:
 
 ## Current Working Module Count
 
-**Total in Manifest:** ~93 modules
+**Total in Manifest:** ~93 modules (historical; current manifest: 348 total / 221 supported / 94 blocked)
 **Enabled:** 89 modules
 **Disabled (Build Issues):** 4 modules
 **Blocked (Manifest):** 3 modules
