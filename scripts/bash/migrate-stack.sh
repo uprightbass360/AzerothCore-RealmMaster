@@ -149,6 +149,7 @@ Options:
   --storage PATH        Remote storage directory (default: <project-dir>/storage)
   --skip-storage        Do not sync the storage directory
   --copy-source         Copy the full local project directory instead of syncing via git
+  --cleanup-runtime     Stop/remove existing ac-* containers and project images on remote
   --yes, -y             Auto-confirm prompts (for existing deployments)
   --help                Show this help
 EOF_HELP
@@ -164,6 +165,7 @@ REMOTE_STORAGE=""
 SKIP_STORAGE=0
 ASSUME_YES=0
 COPY_SOURCE=0
+CLEANUP_RUNTIME=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -177,6 +179,7 @@ while [[ $# -gt 0 ]]; do
     --storage) REMOTE_STORAGE="$2"; shift 2;;
     --skip-storage) SKIP_STORAGE=1; shift;;
     --copy-source) COPY_SOURCE=1; shift;;
+    --cleanup-runtime) CLEANUP_RUNTIME=1; shift;;
     --yes|-y) ASSUME_YES=1; shift;;
     --help|-h) usage; exit 0;;
     *) echo "Unknown option: $1" >&2; usage; exit 1;;
@@ -385,6 +388,11 @@ setup_remote_repository(){
 }
 
 cleanup_stale_docker_resources(){
+  if [ "$CLEANUP_RUNTIME" -ne 1 ]; then
+    echo "⋅ Skipping remote runtime cleanup (containers and images preserved)."
+    return
+  fi
+
   echo "⋅ Cleaning up stale Docker resources on remote..."
 
   # Stop and remove old containers

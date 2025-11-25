@@ -4,7 +4,16 @@ set -euo pipefail
 
 INVOCATION_DIR="$PWD"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$SCRIPT_DIR"
+
+# Load environment defaults if present
+if [ -f "$PROJECT_ROOT/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$PROJECT_ROOT/.env"
+  set +a
+fi
 
 SUPPORTED_DBS=(auth characters world)
 declare -A SUPPORTED_SET=()
@@ -16,10 +25,12 @@ declare -A DB_NAMES=([auth]="" [characters]="" [world]="")
 declare -a INCLUDE_DBS=()
 declare -a SKIP_DBS=()
 
-MYSQL_PW=""
+MYSQL_PW="${MYSQL_ROOT_PASSWORD:-}"
 DEST_PARENT=""
 DEST_PROVIDED=false
 EXPLICIT_SELECTION=false
+MYSQL_CONTAINER="${CONTAINER_MYSQL:-ac-mysql}"
+DEFAULT_BACKUP_DIR="${BACKUP_PATH:-${STORAGE_PATH:-./storage}/backups}"
 
 usage(){
   cat <<'EOF'
@@ -28,7 +39,7 @@ Usage: ./backup-export.sh [options]
 Creates a timestamped backup of one or more ACore databases.
 
 Options:
-  -o, --output DIR          Destination directory (default: storage/backups)
+  -o, --output DIR          Destination directory (default: BACKUP_PATH from .env, fallback: ./storage/backups)
   -p, --password PASS       MySQL root password
       --auth-db NAME        Auth database schema name
       --characters-db NAME  Characters database schema name
@@ -224,13 +235,9 @@ done
 if $DEST_PROVIDED; then
   DEST_PARENT="$(resolve_relative "$INVOCATION_DIR" "$DEST_PARENT")"
 else
-  # Use storage/backups as default to align with existing backup structure
-  if [ -d "$SCRIPT_DIR/storage" ]; then
-    DEST_PARENT="$SCRIPT_DIR/storage/backups"
-    mkdir -p "$DEST_PARENT"
-  else
-    DEST_PARENT="$SCRIPT_DIR"
-  fi
+  DEFAULT_BACKUP_DIR="$(resolve_relative "$PROJECT_ROOT" "$DEFAULT_BACKUP_DIR")"
+  DEST_PARENT="$DEFAULT_BACKUP_DIR"
+  mkdir -p "$DEST_PARENT"
 fi
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
@@ -241,7 +248,7 @@ generated_at="$(date --iso-8601=seconds)"
 dump_db(){
   local schema="$1" outfile="$2"
   echo "Dumping ${schema} -> ${outfile}"
-  docker exec ac-mysql mysqldump -uroot -p"$MYSQL_PW" "$schema" | gzip > "$outfile"
+  docker exec "$MYSQL_CONTAINER" mysqldump -uroot -p"$MYSQL_PW" "$schema" | gzip > "$outfile"
 }
 
 for db in "${ACTIVE_DBS[@]}"; do

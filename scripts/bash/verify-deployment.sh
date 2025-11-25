@@ -98,11 +98,22 @@ read_env_value(){
   if [ -f "$env_path" ]; then
     value="$(grep -E "^${key}=" "$env_path" | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
   fi
+  # Fallback to template defaults if not set in the chosen env file
+  if [ -z "$value" ] && [ -f "$TEMPLATE_FILE" ]; then
+    value="$(grep -E "^${key}=" "$TEMPLATE_FILE" | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
+  fi
   if [ -z "$value" ]; then
     value="$default"
   fi
   echo "$value"
 }
+
+MYSQL_EXTERNAL_PORT="$(read_env_value MYSQL_EXTERNAL_PORT 64306)"
+AUTH_EXTERNAL_PORT="$(read_env_value AUTH_EXTERNAL_PORT 3784)"
+WORLD_EXTERNAL_PORT="$(read_env_value WORLD_EXTERNAL_PORT 8215)"
+SOAP_EXTERNAL_PORT="$(read_env_value SOAP_EXTERNAL_PORT 7778)"
+PMA_EXTERNAL_PORT="$(read_env_value PMA_EXTERNAL_PORT 8081)"
+KEIRA3_EXTERNAL_PORT="$(read_env_value KEIRA3_EXTERNAL_PORT 4201)"
 
 handle_auto_rebuild(){
   local storage_path
@@ -171,7 +182,7 @@ health_checks(){
   check_health ac-worldserver || ((failures++))
   if [ "$QUICK" = false ]; then
     info "Port checks"
-    for port in 64306 3784 8215 7778 8081 4201; do
+    for port in "$MYSQL_EXTERNAL_PORT" "$AUTH_EXTERNAL_PORT" "$WORLD_EXTERNAL_PORT" "$SOAP_EXTERNAL_PORT" "$PMA_EXTERNAL_PORT" "$KEIRA3_EXTERNAL_PORT"; do
       if timeout 3 bash -c "</dev/tcp/127.0.0.1/$port" 2>/dev/null; then ok "port $port: open"; else warn "port $port: closed"; fi
     done
   fi
@@ -190,7 +201,7 @@ main(){
   fi
   health_checks
   handle_auto_rebuild
-  info "Endpoints: MySQL:64306, Auth:3784, World:8215, SOAP:7778, phpMyAdmin:8081, Keira3:4201"
+  info "Endpoints: MySQL:${MYSQL_EXTERNAL_PORT}, Auth:${AUTH_EXTERNAL_PORT}, World:${WORLD_EXTERNAL_PORT}, SOAP:${SOAP_EXTERNAL_PORT}, phpMyAdmin:${PMA_EXTERNAL_PORT}, Keira3:${KEIRA3_EXTERNAL_PORT}"
 }
 
 main "$@"

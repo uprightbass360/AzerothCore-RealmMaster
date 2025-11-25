@@ -35,6 +35,7 @@ REMOTE_COPY_SOURCE=0
 REMOTE_ARGS_PROVIDED=0
 REMOTE_AUTO_DEPLOY=0
 REMOTE_AUTO_DEPLOY=0
+REMOTE_CLEAN_RUNTIME=0
 REMOTE_STORAGE_OVERRIDE=""
 REMOTE_CONTAINER_USER_OVERRIDE=""
 REMOTE_ENV_FILE=""
@@ -168,6 +169,16 @@ collect_remote_details(){
     esac
   fi
 
+  if [ "$interactive" -eq 1 ] && [ "$REMOTE_ARGS_PROVIDED" -eq 0 ]; then
+    local cleanup_answer
+    read -rp "Stop/remove remote containers & project images during migration? [y/N]: " cleanup_answer
+    cleanup_answer="${cleanup_answer:-n}"
+    case "${cleanup_answer,,}" in
+      y|yes) REMOTE_CLEAN_RUNTIME=1 ;;
+      *) REMOTE_CLEAN_RUNTIME=0 ;;
+    esac
+  fi
+
   # Optional remote env overrides (default to current values)
   local storage_default container_user_default
   storage_default="$(read_env STORAGE_PATH "./storage")"
@@ -240,6 +251,7 @@ Options:
   --remote-skip-storage                    Skip syncing the storage directory during migration
   --remote-copy-source                     Copy the local project directory to remote instead of relying on git
   --remote-auto-deploy                     Run './deploy.sh --yes --no-watch' on the remote host after migration
+  --remote-clean-runtime                   Stop/remove remote containers & project images during migration
   --remote-storage-path PATH               Override STORAGE_PATH/STORAGE_PATH_LOCAL in the remote .env
   --remote-container-user USER[:GROUP]     Override CONTAINER_USER in the remote .env
   --skip-config                            Skip applying server configuration preset
@@ -270,6 +282,7 @@ while [[ $# -gt 0 ]]; do
     --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-copy-source) REMOTE_COPY_SOURCE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-auto-deploy) REMOTE_AUTO_DEPLOY=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --remote-clean-runtime) REMOTE_CLEAN_RUNTIME=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-storage-path) REMOTE_STORAGE_OVERRIDE="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-container-user) REMOTE_CONTAINER_USER_OVERRIDE="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --skip-config) SKIP_CONFIG=1; shift;;
@@ -678,6 +691,10 @@ run_remote_migration(){
 
   if [ "$REMOTE_COPY_SOURCE" -eq 1 ]; then
     args+=(--copy-source)
+  fi
+
+  if [ "$REMOTE_CLEAN_RUNTIME" -eq 1 ]; then
+    args+=(--cleanup-runtime)
   fi
 
   if [ "$ASSUME_YES" -eq 1 ]; then

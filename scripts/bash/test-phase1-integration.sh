@@ -22,6 +22,32 @@ ICON_ERROR="❌"
 ICON_INFO="ℹ️"
 ICON_TEST="🧪"
 
+resolve_path(){
+  local base="$1" path="$2"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$base" "$path" <<'PY'
+import os, sys
+base, path = sys.argv[1:3]
+if os.path.isabs(path):
+    print(os.path.normpath(path))
+else:
+    print(os.path.normpath(os.path.join(base, path)))
+PY
+  else
+    (cd "$base" && realpath -m "$path")
+  fi
+}
+
+if [ -f "$PROJECT_ROOT/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$PROJECT_ROOT/.env"
+  set +a
+fi
+
+LOCAL_MODULES_DIR_RAW="${STORAGE_PATH_LOCAL:-./local-storage}/modules"
+LOCAL_MODULES_DIR="$(resolve_path "$PROJECT_ROOT" "$LOCAL_MODULES_DIR_RAW")"
+
 # Counters
 TESTS_TOTAL=0
 TESTS_PASSED=0
@@ -117,7 +143,7 @@ info "Running: python3 scripts/python/modules.py generate"
 if python3 scripts/python/modules.py \
     --env-path .env \
     --manifest config/module-manifest.json \
-    generate --output-dir local-storage/modules > /tmp/phase1-modules-generate.log 2>&1; then
+    generate --output-dir "$LOCAL_MODULES_DIR" > /tmp/phase1-modules-generate.log 2>&1; then
   ok "Module state generation successful"
 else
   # Check if it's just warnings
@@ -130,11 +156,11 @@ fi
 
 # Test 4: Verify SQL manifest created
 test_header "SQL Manifest Verification"
-if [ -f local-storage/modules/.sql-manifest.json ]; then
-  ok "SQL manifest created: local-storage/modules/.sql-manifest.json"
+if [ -f "$LOCAL_MODULES_DIR/.sql-manifest.json" ]; then
+  ok "SQL manifest created: $LOCAL_MODULES_DIR/.sql-manifest.json"
 
   # Check manifest structure
-  module_count=$(python3 -c "import json; data=json.load(open('local-storage/modules/.sql-manifest.json')); print(len(data.get('modules', [])))" 2>/dev/null || echo "0")
+  module_count=$(python3 -c "import json; data=json.load(open('$LOCAL_MODULES_DIR/.sql-manifest.json')); print(len(data.get('modules', [])))" 2>/dev/null || echo "0")
   info "Modules with SQL: $module_count"
 
   if [ "$module_count" -gt 0 ]; then
@@ -142,7 +168,7 @@ if [ -f local-storage/modules/.sql-manifest.json ]; then
 
     # Show first module
     info "Sample module SQL info:"
-    python3 -c "import json; data=json.load(open('local-storage/modules/.sql-manifest.json')); m=data['modules'][0] if data['modules'] else {}; print(f\"  Name: {m.get('name', 'N/A')}\n  SQL files: {len(m.get('sql_files', {}))}\") " 2>/dev/null || true
+    python3 -c "import json; data=json.load(open('$LOCAL_MODULES_DIR/.sql-manifest.json')); m=data['modules'][0] if data['modules'] else {}; print(f\"  Name: {m.get('name', 'N/A')}\n  SQL files: {len(m.get('sql_files', {}))}\") " 2>/dev/null || true
   else
     warn "No modules with SQL files (expected if modules not yet staged)"
   fi
@@ -152,19 +178,19 @@ fi
 
 # Test 5: Verify modules.env created
 test_header "Module Environment File Check"
-if [ -f local-storage/modules/modules.env ]; then
+if [ -f "$LOCAL_MODULES_DIR/modules.env" ]; then
   ok "modules.env created"
 
   # Check for key exports
-  if grep -q "MODULES_ENABLED=" local-storage/modules/modules.env; then
+  if grep -q "MODULES_ENABLED=" "$LOCAL_MODULES_DIR/modules.env"; then
     ok "MODULES_ENABLED variable present"
   fi
 
-  if grep -q "MODULES_REQUIRES_CUSTOM_BUILD=" local-storage/modules/modules.env; then
+  if grep -q "MODULES_REQUIRES_CUSTOM_BUILD=" "$LOCAL_MODULES_DIR/modules.env"; then
     ok "Build requirement flags present"
 
     # Check if build required
-    source local-storage/modules/modules.env
+    source "$LOCAL_MODULES_DIR/modules.env"
     if [ "${MODULES_REQUIRES_CUSTOM_BUILD:-0}" = "1" ]; then
       info "Custom build required (C++ modules enabled)"
     else
@@ -177,8 +203,8 @@ fi
 
 # Test 6: Check build requirement
 test_header "Build Requirement Check"
-if [ -f local-storage/modules/modules.env ]; then
-  source local-storage/modules/modules.env
+if [ -f "$LOCAL_MODULES_DIR/modules.env" ]; then
+  source "$LOCAL_MODULES_DIR/modules.env"
 
   info "MODULES_REQUIRES_CUSTOM_BUILD=${MODULES_REQUIRES_CUSTOM_BUILD:-0}"
   info "MODULES_REQUIRES_PLAYERBOT_SOURCE=${MODULES_REQUIRES_PLAYERBOT_SOURCE:-0}"

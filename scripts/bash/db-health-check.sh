@@ -32,6 +32,22 @@ SHOW_PENDING=0
 SHOW_MODULES=1
 CONTAINER_NAME="ac-mysql"
 
+resolve_path(){
+  local base="$1" path="$2"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$base" "$path" <<'PY'
+import os, sys
+base, path = sys.argv[1:3]
+if os.path.isabs(path):
+    print(os.path.normpath(path))
+else:
+    print(os.path.normpath(os.path.join(base, path)))
+PY
+  else
+    (cd "$base" && realpath -m "$path")
+  fi
+}
+
 usage() {
   cat <<'EOF'
 Usage: ./db-health-check.sh [options]
@@ -72,6 +88,10 @@ if [ -f "$PROJECT_ROOT/.env" ]; then
   source "$PROJECT_ROOT/.env"
   set +a
 fi
+
+BACKUP_PATH_RAW="${BACKUP_PATH:-${STORAGE_PATH:-./storage}/backups}"
+BACKUP_PATH="$(resolve_path "$PROJECT_ROOT" "$BACKUP_PATH_RAW")"
+CONTAINER_NAME="${CONTAINER_MYSQL:-$CONTAINER_NAME}"
 
 MYSQL_HOST="${MYSQL_HOST:-ac-mysql}"
 MYSQL_PORT="${MYSQL_PORT:-3306}"
@@ -263,7 +283,7 @@ show_module_updates() {
 
 # Get backup information
 get_backup_info() {
-  local backup_dir="$PROJECT_ROOT/storage/backups"
+  local backup_dir="$BACKUP_PATH"
 
   if [ ! -d "$backup_dir" ]; then
     printf "  ${ICON_INFO} No backups directory found\n"
