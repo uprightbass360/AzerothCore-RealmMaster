@@ -9,6 +9,10 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 ENV_FILE = PROJECT_DIR / ".env"
+DEFAULT_ACORE_STANDARD_REPO = "https://github.com/azerothcore/azerothcore-wotlk.git"
+DEFAULT_ACORE_PLAYERBOTS_REPO = "https://github.com/mod-playerbots/azerothcore-wotlk.git"
+DEFAULT_ACORE_STANDARD_BRANCH = "master"
+DEFAULT_ACORE_PLAYERBOTS_BRANCH = "Playerbot"
 
 def load_env():
     env = {}
@@ -150,6 +154,195 @@ def volume_info(name, fallback=None):
                 pass
     return {"name": name, "exists": False, "mountpoint": "-"}
 
+def detect_source_variant(env):
+    variant = read_env(env, "STACK_SOURCE_VARIANT", "").strip().lower()
+    if variant in ("playerbots", "playerbot"):
+        return "playerbots"
+    if variant == "core":
+        return "core"
+    if read_env(env, "STACK_IMAGE_MODE", "").strip().lower() == "playerbots":
+        return "playerbots"
+    if read_env(env, "MODULE_PLAYERBOTS", "0") == "1" or read_env(env, "PLAYERBOT_ENABLED", "0") == "1":
+        return "playerbots"
+    return "core"
+
+def repo_config_for_variant(env, variant):
+    if variant == "playerbots":
+        repo = read_env(env, "ACORE_REPO_PLAYERBOTS", DEFAULT_ACORE_PLAYERBOTS_REPO)
+        branch = read_env(env, "ACORE_BRANCH_PLAYERBOTS", DEFAULT_ACORE_PLAYERBOTS_BRANCH)
+    else:
+        repo = read_env(env, "ACORE_REPO_STANDARD", DEFAULT_ACORE_STANDARD_REPO)
+        branch = read_env(env, "ACORE_BRANCH_STANDARD", DEFAULT_ACORE_STANDARD_BRANCH)
+    return repo, branch
+
+def image_labels(image):
+    try:
+        result = subprocess.run(
+            ["docker", "image", "inspect", "--format", "{{json .Config.Labels}}", image],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=3,
+        )
+        labels = json.loads(result.stdout or "{}")
+        if isinstance(labels, dict):
+            return {k: (v or "").strip() for k, v in labels.items()}
+    except Exception:
+        pass
+    return {}
+
+def first_label(labels, keys):
+    for key in keys:
+        value = labels.get(key, "")
+        if value:
+            return value
+    return ""
+
+def short_commit(commit):
+    commit = commit.strip()
+    if re.fullmatch(r"[0-9a-fA-F]{12,}", commit):
+        return commit[:12]
+    return commit
+
+def git_info_from_path(path):
+    repo_path = Path(path)
+    if not (repo_path / ".git").exists():
+        return None
+
+    def run_git(args):
+        try:
+            result = subprocess.run(
+                ["git"] + args,
+                cwd=repo_path,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return result.stdout.strip()
+        except Exception:
+            return ""
+
+    commit = run_git(["rev-parse", "HEAD"])
+    if not commit:
+        return None
+
+    return {
+        "commit": commit,
+        "commit_short": run_git(["rev-parse", "--short", "HEAD"]) or short_commit(commit),
+        "date": run_git(["log", "-1", "--format=%cd", "--date=iso-strict"]),
+        "repo": run_git(["remote", "get-url", "origin"]),
+        "branch": run_git(["rev-parse", "--abbrev-ref", "HEAD"]),
+        "path": str(repo_path),
+    }
+
+def candidate_source_paths(env, variant):
+    paths = []
+    for key in ("MODULES_REBUILD_SOURCE_PATH", "SOURCE_DIR"):
+        value = read_env(env, key, "")
+        if value:
+            paths.append(value)
+
+    local_root = read_env(env, "STORAGE_PATH_LOCAL", "./local-storage")
+    primary_dir = "azerothcore-playerbots" if variant == "playerbots" else "azerothcore"
+    fallback_dir = "azerothcore" if variant == "playerbots" else "azerothcore-playerbots"
+    paths.append(os.path.join(local_root, "source", primary_dir))
+    paths.append(os.path.join(local_root, "source", fallback_dir))
+
+    normalized = []
+    for p in paths:
+        expanded = expand_path(p, env)
+        try:
+            normalized.append(str(Path(expanded).expanduser().resolve()))
+        except Exception:
+            normalized.append(str(Path(expanded).expanduser()))
+    # Deduplicate while preserving order
+    seen = set()
+    unique_paths = []
+    for p in normalized:
+        if p not in seen:
+            seen.add(p)
+            unique_paths.append(p)
+    return unique_paths
+
+def build_info(service_data, env):
+    variant = detect_source_variant(env)
+    repo, branch = repo_config_for_variant(env, variant)
+    info = {
+        "variant": variant,
+        "repo": repo,
+        "branch": branch,
+        "image": "",
+        "commit": "",
+        "commit_date": "",
+        "commit_source": "",
+        "source_path": "",
+    }
+
+    image_candidates = []
+    for svc in service_data:
+        if svc.get("name") in ("ac-worldserver", "ac-authserver", "ac-db-import"):
+            image = svc.get("image") or ""
+            if image:
+                image_candidates.append(image)
+
+    for env_key in (
+        "AC_WORLDSERVER_IMAGE_PLAYERBOTS",
+        "AC_WORLDSERVER_IMAGE_MODULES",
+        "AC_WORLDSERVER_IMAGE",
+        "AC_AUTHSERVER_IMAGE_PLAYERBOTS",
+        "AC_AUTHSERVER_IMAGE_MODULES",
+        "AC_AUTHSERVER_IMAGE",
+    ):
+        value = read_env(env, env_key, "")
+        if value:
+            image_candidates.append(value)
+
+    seen = set()
+    deduped_images = []
+    for img in image_candidates:
+        if img not in seen:
+            seen.add(img)
+            deduped_images.append(img)
+
+    commit_label_keys = [
+        "build.source_commit",
+        "org.opencontainers.image.revision",
+        "org.opencontainers.image.version",
+    ]
+    date_label_keys = [
+        "build.source_date",
+        "org.opencontainers.image.created",
+        "build.timestamp",
+    ]
+
+    for image in deduped_images:
+        labels = image_labels(image)
+        if not info["image"]:
+            info["image"] = image
+        if not labels:
+            continue
+        commit = short_commit(first_label(labels, commit_label_keys))
+        date = first_label(labels, date_label_keys)
+        if commit or date:
+            info["commit"] = commit
+            info["commit_date"] = date
+            info["commit_source"] = "image-label"
+            info["image"] = image
+            return info
+
+    for path in candidate_source_paths(env, variant):
+        git_meta = git_info_from_path(path)
+        if git_meta:
+            info["commit"] = git_meta.get("commit_short") or short_commit(git_meta.get("commit", ""))
+            info["commit_date"] = git_meta.get("date", "")
+            info["commit_source"] = "source-tree"
+            info["source_path"] = git_meta.get("path", "")
+            info["repo"] = git_meta.get("repo") or info["repo"]
+            info["branch"] = git_meta.get("branch") or info["branch"]
+            return info
+
+    return info
+
 def expand_path(value, env):
     storage = read_env(env, "STORAGE_PATH", "./storage")
     local_storage = read_env(env, "STORAGE_PATH_LOCAL", "./local-storage")
@@ -274,6 +467,8 @@ def main():
         "mysql_data": volume_info(f"{project}_mysql-data", "mysql-data"),
     }
 
+    build = build_info(service_data, env)
+
     data = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "project": project,
@@ -285,6 +480,7 @@ def main():
         "volumes": volumes,
         "users": user_stats(env),
         "stats": docker_stats(),
+        "build": build,
     }
 
     print(json.dumps(data))

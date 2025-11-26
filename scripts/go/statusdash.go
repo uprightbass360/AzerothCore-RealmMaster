@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -61,6 +63,17 @@ type Module struct {
 	Type        string `json:"type"`
 }
 
+type BuildInfo struct {
+	Variant      string `json:"variant"`
+	Repo         string `json:"repo"`
+	Branch       string `json:"branch"`
+	Image        string `json:"image"`
+	Commit       string `json:"commit"`
+	CommitDate   string `json:"commit_date"`
+	CommitSource string `json:"commit_source"`
+	SourcePath   string `json:"source_path"`
+}
+
 type Snapshot struct {
 	Timestamp string                    `json:"timestamp"`
 	Project   string                    `json:"project"`
@@ -72,6 +85,7 @@ type Snapshot struct {
 	Volumes   map[string]VolumeInfo     `json:"volumes"`
 	Users     UserStats                 `json:"users"`
 	Stats     map[string]ContainerStats `json:"stats"`
+	Build     BuildInfo                 `json:"build"`
 }
 
 var persistentServiceOrder = []string{
@@ -82,6 +96,81 @@ var persistentServiceOrder = []string{
 	"ac-phpmyadmin",
 	"ac-keira3",
 	"ac-backup",
+}
+
+func humanDuration(d time.Duration) string {
+	if d < time.Minute {
+		return "<1m"
+	}
+	days := d / (24 * time.Hour)
+	d -= days * 24 * time.Hour
+	hours := d / time.Hour
+	d -= hours * time.Hour
+	mins := d / time.Minute
+
+	switch {
+	case days > 0:
+		return fmt.Sprintf("%dd %dh", days, hours)
+	case hours > 0:
+		return fmt.Sprintf("%dh %dm", hours, mins)
+	default:
+		return fmt.Sprintf("%dm", mins)
+	}
+}
+
+func formatUptime(startedAt string) string {
+	if startedAt == "" {
+		return "-"
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, startedAt)
+	if err != nil {
+		parsed, err = time.Parse(time.RFC3339, startedAt)
+		if err != nil {
+			return "-"
+		}
+	}
+	if parsed.IsZero() {
+		return "-"
+	}
+	uptime := time.Since(parsed)
+	if uptime < 0 {
+		uptime = 0
+	}
+	return humanDuration(uptime)
+}
+
+func primaryIPv4() string {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return ""
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+			ip = ip.To4()
+			if ip == nil {
+				continue
+			}
+			return ip.String()
+		}
+	}
+	return ""
 }
 
 func runSnapshot() (*Snapshot, error) {
@@ -126,8 +215,8 @@ func buildServicesTable(s *Snapshot) *TableNoCol {
 	runningServices, setupServices := partitionServices(s.Services)
 
 	table := NewTableNoCol()
-	rows := [][]string{{"Group", "Service", "Status", "Health", "CPU%", "Memory"}}
-	appendRows := func(groupLabel string, services []Service) {
+	rows := [][]string{{"Service", "Status", "Health", "Uptime", "CPU%", "Memory"}}
+	appendRows := func(services []Service) {
 		for _, svc := range services {
 			cpu := "-"
 			mem := "-"
@@ -139,12 +228,12 @@ func buildServicesTable(s *Snapshot) *TableNoCol {
 			if svc.Status != "running" && svc.ExitCode != "0" && svc.ExitCode != "" {
 				health = fmt.Sprintf("%s (%s)", svc.Health, svc.ExitCode)
 			}
-			rows = append(rows, []string{groupLabel, svc.Label, svc.Status, health, cpu, mem})
+			rows = append(rows, []string{svc.Label, svc.Status, health, formatUptime(svc.StartedAt), cpu, mem})
 		}
 	}
 
-	appendRows("Persistent", runningServices)
-	appendRows("Setup", setupServices)
+	appendRows(runningServices)
+	appendRows(setupServices)
 
 	table.Rows = rows
 	table.RowSeparator = false
@@ -223,9 +312,11 @@ func buildStorageParagraph(s *Snapshot) *widgets.Paragraph {
 	}
 	par := widgets.NewParagraph()
 	par.Title = "Storage"
-	par.Text = b.String()
+	par.Text = strings.TrimRight(b.String(), "\n")
 	par.Border = true
 	par.BorderStyle = ui.NewStyle(ui.ColorYellow)
+	par.PaddingLeft = 0
+	par.PaddingRight = 0
 	return par
 }
 
@@ -247,13 +338,75 @@ func buildVolumesParagraph(s *Snapshot) *widgets.Paragraph {
 	}
 	par := widgets.NewParagraph()
 	par.Title = "Volumes"
-	par.Text = b.String()
+	par.Text = strings.TrimRight(b.String(), "\n")
+	par.Border = true
+	par.BorderStyle = ui.NewStyle(ui.ColorYellow)
+	par.PaddingLeft = 0
+	par.PaddingRight = 0
+	return par
+}
+
+func simplifyRepo(repo string) string {
+	repo = strings.TrimSpace(repo)
+	repo = strings.TrimSuffix(repo, ".git")
+	repo = strings.TrimPrefix(repo, "https://")
+	repo = strings.TrimPrefix(repo, "http://")
+	repo = strings.TrimPrefix(repo, "git@")
+	repo = strings.TrimPrefix(repo, "github.com:")
+	repo = strings.TrimPrefix(repo, "gitlab.com:")
+	repo = strings.TrimPrefix(repo, "github.com/")
+	repo = strings.TrimPrefix(repo, "gitlab.com/")
+	return repo
+}
+
+func buildInfoParagraph(s *Snapshot) *widgets.Paragraph {
+	build := s.Build
+	var lines []string
+
+	if build.Branch != "" {
+		lines = append(lines, fmt.Sprintf("Branch: %s", build.Branch))
+	}
+
+	if repo := simplifyRepo(build.Repo); repo != "" {
+		lines = append(lines, fmt.Sprintf("Repo: %s", repo))
+	}
+
+	commitLine := "Git: unknown"
+	if build.Commit != "" {
+		commitLine = fmt.Sprintf("Git: %s", build.Commit)
+		switch build.CommitSource {
+		case "image-label":
+			commitLine += " [image]"
+		case "source-tree":
+			commitLine += " [source]"
+		}
+	}
+	lines = append(lines, commitLine)
+
+	if build.Image != "" {
+		// Skip image line to keep header compact
+	}
+
+	lines = append(lines, fmt.Sprintf("Updated: %s", s.Timestamp))
+
+	par := widgets.NewParagraph()
+	par.Title = "Build"
+	par.Text = strings.Join(lines, "\n")
 	par.Border = true
 	par.BorderStyle = ui.NewStyle(ui.ColorYellow)
 	return par
 }
 
 func renderSnapshot(s *Snapshot, selectedModule int) (*widgets.List, *ui.Grid) {
+	hostname, err := os.Hostname()
+	if err != nil || hostname == "" {
+		hostname = "unknown"
+	}
+	ip := primaryIPv4()
+	if ip == "" {
+		ip = "unknown"
+	}
+
 	servicesTable := buildServicesTable(s)
 	portsTable := buildPortsTable(s)
 	for i := 1; i < len(portsTable.Rows); i++ {
@@ -287,43 +440,43 @@ func renderSnapshot(s *Snapshot, selectedModule int) (*widgets.List, *ui.Grid) {
 	moduleInfoPar.Border = true
 	moduleInfoPar.BorderStyle = ui.NewStyle(ui.ColorMagenta)
 	storagePar := buildStorageParagraph(s)
-	storagePar.Border = true
-	storagePar.BorderStyle = ui.NewStyle(ui.ColorYellow)
-	storagePar.PaddingLeft = 1
-	storagePar.PaddingRight = 1
 	volumesPar := buildVolumesParagraph(s)
 
 	header := widgets.NewParagraph()
-	header.Text = fmt.Sprintf("Project: %s\nNetwork: %s\nUpdated: %s", s.Project, s.Network, s.Timestamp)
+	header.Text = fmt.Sprintf("Host: %s\nIP: %s\nProject: %s\nNetwork: %s", hostname, ip, s.Project, s.Network)
 	header.Border = true
 
+	buildPar := buildInfoParagraph(s)
+
 	usersPar := widgets.NewParagraph()
-	usersPar.Text = fmt.Sprintf("USERS:\n  Accounts: %d\n  Online: %d\n  Characters: %d\n  Active 7d: %d", s.Users.Accounts, s.Users.Online, s.Users.Characters, s.Users.Active7d)
+	usersPar.Title = "Users"
+	usersPar.Text = fmt.Sprintf("  Accounts: %d\n  Online: %d\n  Characters: %d\n  Active 7d: %d", s.Users.Accounts, s.Users.Online, s.Users.Characters, s.Users.Active7d)
 	usersPar.Border = true
 
 	grid := ui.NewGrid()
 	termWidth, termHeight := ui.TerminalDimensions()
 	grid.SetRect(0, 0, termWidth, termHeight)
 	grid.Set(
-		ui.NewRow(0.15,
-			ui.NewCol(0.6, header),
-			ui.NewCol(0.4, usersPar),
+		ui.NewRow(0.18,
+			ui.NewCol(0.34, header),
+			ui.NewCol(0.33, buildPar),
+			ui.NewCol(0.33, usersPar),
 		),
-		ui.NewRow(0.46,
+		ui.NewRow(0.43,
 			ui.NewCol(0.6, servicesTable),
 			ui.NewCol(0.4, portsTable),
 		),
 		ui.NewRow(0.39,
 			ui.NewCol(0.25, modulesList),
 			ui.NewCol(0.15,
-				ui.NewRow(0.30, helpPar),
-				ui.NewRow(0.70, moduleInfoPar),
+				ui.NewRow(0.32, helpPar),
+				ui.NewRow(0.68, moduleInfoPar),
 			),
 			ui.NewCol(0.6,
-				ui.NewRow(0.55,
+				ui.NewRow(0.513,
 					ui.NewCol(1.0, storagePar),
 				),
-				ui.NewRow(0.45,
+				ui.NewRow(0.487,
 					ui.NewCol(1.0, volumesPar),
 				),
 			),
