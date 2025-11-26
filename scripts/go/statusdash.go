@@ -263,9 +263,9 @@ func buildPortsTable(s *Snapshot) *TableNoCol {
 	table := NewTableNoCol()
 	rows := [][]string{{"Port", "Number", "Reachable"}}
 	for _, p := range s.Ports {
-		state := "down"
+		state := "Closed"
 		if p.Reachable {
-			state = "up"
+			state = "Open"
 		}
 		rows = append(rows, []string{p.Name, p.Port, state})
 	}
@@ -413,10 +413,10 @@ func renderSnapshot(s *Snapshot, selectedModule int) (*widgets.List, *ui.Grid) {
 		if portsTable.RowStyles == nil {
 			portsTable.RowStyles = make(map[int]ui.Style)
 		}
-		if portsTable.Rows[i][2] == "up" {
+		if portsTable.Rows[i][2] == "Open" {
 			portsTable.RowStyles[i] = ui.NewStyle(ui.ColorGreen)
 		} else {
-			portsTable.RowStyles[i] = ui.NewStyle(ui.ColorRed)
+			portsTable.RowStyles[i] = ui.NewStyle(ui.ColorYellow)
 		}
 	}
 	modulesList := buildModulesList(s)
