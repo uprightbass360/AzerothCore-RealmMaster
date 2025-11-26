@@ -450,7 +450,7 @@ func renderSnapshot(s *Snapshot, selectedModule int) (*widgets.List, *ui.Grid) {
 
 	usersPar := widgets.NewParagraph()
 	usersPar.Title = "Users"
-	usersPar.Text = fmt.Sprintf("  Accounts: %d\n  Online: %d\n  Characters: %d\n  Active 7d: %d", s.Users.Accounts, s.Users.Online, s.Users.Characters, s.Users.Active7d)
+	usersPar.Text = fmt.Sprintf("  Online: %d\n  Accounts: %d\n  Characters: %d\n  Active 7d: %d", s.Users.Online, s.Users.Accounts, s.Users.Characters, s.Users.Active7d)
 	usersPar.Border = true
 
 	grid := ui.NewGrid()

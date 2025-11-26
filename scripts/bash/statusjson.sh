@@ -368,13 +368,61 @@ def mysql_query(env, database, query):
     except Exception:
         return 0
 
+def escape_like_prefix(prefix):
+    # Basic escape for single quotes in SQL literals
+    return prefix.replace("'", "''")
+
+def bot_prefixes(env):
+    prefixes = []
+    for key in ("PLAYERBOT_ACCOUNT_PREFIXES", "PLAYERBOT_ACCOUNT_PREFIX"):
+        raw = read_env(env, key, "")
+        for part in raw.replace(",", " ").split():
+            part = part.strip()
+            if part:
+                prefixes.append(part)
+    # Default fallback if nothing configured
+    if not prefixes:
+        prefixes.extend(["playerbot", "rndbot", "bot"])
+    return prefixes
+
 def user_stats(env):
     db_auth = read_env(env, "DB_AUTH_NAME", "acore_auth")
     db_characters = read_env(env, "DB_CHARACTERS_NAME", "acore_characters")
-    accounts = mysql_query(env, db_auth, "SELECT COUNT(*) FROM account;")
-    online = mysql_query(env, db_auth, "SELECT COUNT(*) FROM account WHERE online = 1;")
+    prefixes = bot_prefixes(env)
+    account_conditions = []
+    for prefix in prefixes:
+        prefix = escape_like_prefix(prefix)
+        upper_prefix = prefix.upper()
+        account_conditions.append(f"UPPER(username) NOT LIKE '{upper_prefix}%%'")
+    account_query = "SELECT COUNT(*) FROM account"
+    if account_conditions:
+        account_query += " WHERE " + " AND ".join(account_conditions)
+    accounts = mysql_query(env, db_auth, account_query + ";")
+
+    online_conditions = ["c.online = 1"]
+    for prefix in prefixes:
+        prefix = escape_like_prefix(prefix)
+        upper_prefix = prefix.upper()
+        online_conditions.append(f"UPPER(a.username) NOT LIKE '{upper_prefix}%%'")
+    online_query = (
+        f"SELECT COUNT(DISTINCT a.id) FROM `{db_characters}`.characters c "
+        f"JOIN `{db_auth}`.account a ON a.id = c.account "
+        f"WHERE {' AND '.join(online_conditions)};"
+    )
+    online = mysql_query(env, db_characters, online_query)
     active = mysql_query(env, db_auth, "SELECT COUNT(*) FROM account WHERE last_login >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY);")
-    characters = mysql_query(env, db_characters, "SELECT COUNT(*) FROM characters;")
+    character_conditions = []
+    for prefix in prefixes:
+        prefix = escape_like_prefix(prefix)
+        upper_prefix = prefix.upper()
+        character_conditions.append(f"UPPER(a.username) NOT LIKE '{upper_prefix}%%'")
+    characters_query = (
+        f"SELECT COUNT(*) FROM `{db_characters}`.characters c "
+        f"JOIN `{db_auth}`.account a ON a.id = c.account"
+    )
+    if character_conditions:
+        characters_query += " WHERE " + " AND ".join(character_conditions)
+    characters = mysql_query(env, db_characters, characters_query + ";")
     return {
         "accounts": accounts,
         "online": online,
