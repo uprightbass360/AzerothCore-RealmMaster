@@ -34,11 +34,12 @@ REMOTE_SKIP_STORAGE=0
 REMOTE_COPY_SOURCE=0
 REMOTE_ARGS_PROVIDED=0
 REMOTE_AUTO_DEPLOY=0
-REMOTE_AUTO_DEPLOY=0
-REMOTE_CLEAN_RUNTIME=0
+REMOTE_CLEAN_CONTAINERS=0
 REMOTE_STORAGE_OVERRIDE=""
 REMOTE_CONTAINER_USER_OVERRIDE=""
 REMOTE_ENV_FILE=""
+REMOTE_SKIP_ENV=0
+REMOTE_PRESERVE_CONTAINERS=0
 
 MODULE_HELPER="$ROOT_DIR/scripts/python/modules.py"
 MODULE_STATE_INITIALIZED=0
@@ -174,8 +175,18 @@ collect_remote_details(){
     read -rp "Stop/remove remote containers & project images during migration? [y/N]: " cleanup_answer
     cleanup_answer="${cleanup_answer:-n}"
     case "${cleanup_answer,,}" in
-      y|yes) REMOTE_CLEAN_RUNTIME=1 ;;
-      *) REMOTE_CLEAN_RUNTIME=0 ;;
+      y|yes) REMOTE_CLEAN_CONTAINERS=1 ;;
+      *)
+        REMOTE_CLEAN_CONTAINERS=0
+        # Offer explicit preservation when declining cleanup
+        local preserve_answer
+        read -rp "Preserve remote containers/images (skip cleanup)? [Y/n]: " preserve_answer
+        preserve_answer="${preserve_answer:-Y}"
+        case "${preserve_answer,,}" in
+          n|no) REMOTE_PRESERVE_CONTAINERS=0 ;;
+          *) REMOTE_PRESERVE_CONTAINERS=1 ;;
+        esac
+        ;;
     esac
   fi
 
@@ -251,9 +262,11 @@ Options:
   --remote-skip-storage                    Skip syncing the storage directory during migration
   --remote-copy-source                     Copy the local project directory to remote instead of relying on git
   --remote-auto-deploy                     Run './deploy.sh --yes --no-watch' on the remote host after migration
-  --remote-clean-runtime                   Stop/remove remote containers & project images during migration
+  --remote-clean-containers                Stop/remove remote containers & project images during migration
   --remote-storage-path PATH               Override STORAGE_PATH/STORAGE_PATH_LOCAL in the remote .env
   --remote-container-user USER[:GROUP]     Override CONTAINER_USER in the remote .env
+  --remote-skip-env                        Do not upload .env to the remote host
+  --remote-preserve-containers             Skip stopping/removing remote containers during migration
   --skip-config                            Skip applying server configuration preset
   -h, --help                               Show this help
 
@@ -282,14 +295,21 @@ while [[ $# -gt 0 ]]; do
     --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-copy-source) REMOTE_COPY_SOURCE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-auto-deploy) REMOTE_AUTO_DEPLOY=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
-    --remote-clean-runtime) REMOTE_CLEAN_RUNTIME=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --remote-clean-containers) REMOTE_CLEAN_CONTAINERS=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-storage-path) REMOTE_STORAGE_OVERRIDE="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-container-user) REMOTE_CONTAINER_USER_OVERRIDE="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
+    --remote-skip-env) REMOTE_SKIP_ENV=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --remote-preserve-containers) REMOTE_PRESERVE_CONTAINERS=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --skip-config) SKIP_CONFIG=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
   esac
 done
+
+if [ "$REMOTE_CLEAN_CONTAINERS" -eq 1 ] && [ "$REMOTE_PRESERVE_CONTAINERS" -eq 1 ]; then
+  err "Cannot combine --remote-clean-containers with --remote-preserve-containers."
+  exit 1
+fi
 
 require_cmd(){
   command -v "$1" >/dev/null 2>&1 || { err "Missing required command: $1"; exit 1; }
@@ -553,6 +573,27 @@ prompt_build_if_needed(){
   build_reasons_output=$(detect_build_needed)
 
   if [ -z "$build_reasons_output" ]; then
+    # Belt-and-suspenders: if C++ modules are enabled but module images missing, warn
+    ensure_module_state
+    if [ "${#MODULES_COMPILE_LIST[@]}" -gt 0 ]; then
+      local authserver_modules_image
+      local worldserver_modules_image
+      authserver_modules_image="$(read_env AC_AUTHSERVER_IMAGE_MODULES "$(resolve_project_image "authserver-modules-latest")")"
+      worldserver_modules_image="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(resolve_project_image "worldserver-modules-latest")")"
+      local missing_images=()
+      if ! docker image inspect "$authserver_modules_image" >/dev/null 2>&1; then
+        missing_images+=("$authserver_modules_image")
+      fi
+      if ! docker image inspect "$worldserver_modules_image" >/dev/null 2>&1; then
+        missing_images+=("$worldserver_modules_image")
+      fi
+      if [ ${#missing_images[@]} -gt 0 ]; then
+        build_reasons_output=$(printf "C++ modules enabled but module images missing: %s\n" "${missing_images[*]}")
+      fi
+    fi
+  fi
+
+  if [ -z "$build_reasons_output" ]; then
     return 0  # No build needed
   fi
 
@@ -693,12 +734,20 @@ run_remote_migration(){
     args+=(--copy-source)
   fi
 
-  if [ "$REMOTE_CLEAN_RUNTIME" -eq 1 ]; then
-    args+=(--cleanup-runtime)
+  if [ "$REMOTE_CLEAN_CONTAINERS" -eq 1 ]; then
+    args+=(--clean-containers)
   fi
 
   if [ "$ASSUME_YES" -eq 1 ]; then
     args+=(--yes)
+  fi
+
+  if [ "$REMOTE_SKIP_ENV" -eq 1 ]; then
+    args+=(--skip-env)
+  fi
+
+  if [ "$REMOTE_PRESERVE_CONTAINERS" -eq 1 ]; then
+    args+=(--preserve-containers)
   fi
 
   if [ -n "$REMOTE_ENV_FILE" ]; then

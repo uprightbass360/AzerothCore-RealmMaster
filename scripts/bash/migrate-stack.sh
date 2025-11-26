@@ -148,8 +148,10 @@ Options:
   --tarball PATH        Output path for the image tar (default: ./local-storage/images/acore-modules-images.tar)
   --storage PATH        Remote storage directory (default: <project-dir>/storage)
   --skip-storage        Do not sync the storage directory
+  --skip-env            Do not upload .env to the remote host
+  --preserve-containers  Skip stopping/removing existing remote containers and images
+  --clean-containers     Stop/remove existing ac-* containers and project images on remote
   --copy-source         Copy the full local project directory instead of syncing via git
-  --cleanup-runtime     Stop/remove existing ac-* containers and project images on remote
   --yes, -y             Auto-confirm prompts (for existing deployments)
   --help                Show this help
 EOF_HELP
@@ -165,7 +167,9 @@ REMOTE_STORAGE=""
 SKIP_STORAGE=0
 ASSUME_YES=0
 COPY_SOURCE=0
-CLEANUP_RUNTIME=0
+SKIP_ENV=0
+PRESERVE_CONTAINERS=0
+CLEAN_CONTAINERS=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -178,8 +182,10 @@ while [[ $# -gt 0 ]]; do
     --tarball) TARBALL="$2"; shift 2;;
     --storage) REMOTE_STORAGE="$2"; shift 2;;
     --skip-storage) SKIP_STORAGE=1; shift;;
+    --skip-env) SKIP_ENV=1; shift;;
+    --preserve-containers) PRESERVE_CONTAINERS=1; shift;;
+    --clean-containers) CLEAN_CONTAINERS=1; shift;;
     --copy-source) COPY_SOURCE=1; shift;;
-    --cleanup-runtime) CLEANUP_RUNTIME=1; shift;;
     --yes|-y) ASSUME_YES=1; shift;;
     --help|-h) usage; exit 0;;
     *) echo "Unknown option: $1" >&2; usage; exit 1;;
@@ -189,6 +195,11 @@ while [[ $# -gt 0 ]]; do
 if [[ -z "$HOST" || -z "$USER" ]]; then
   echo "--host and --user are required" >&2
   usage
+  exit 1
+fi
+
+if [[ "$CLEAN_CONTAINERS" -eq 1 && "$PRESERVE_CONTAINERS" -eq 1 ]]; then
+  echo "Cannot combine --clean-containers with --preserve-containers." >&2
   exit 1
 fi
 
@@ -302,14 +313,35 @@ validate_remote_environment(){
   local running_containers
   running_containers=$(run_ssh "docker ps --filter 'name=ac-' --format '{{.Names}}' 2>/dev/null | wc -l")
   if [ "$running_containers" -gt 0 ]; then
-    echo "⚠️  Warning: Found $running_containers running AzerothCore containers"
-    echo "   Migration will overwrite existing deployment"
-    if [ "$ASSUME_YES" != "1" ]; then
-      read -r -p "   Continue with migration? [y/N]: " reply
-      case "$reply" in
-        [Yy]*) echo "   Proceeding with migration..." ;;
-        *) echo "   Migration cancelled."; exit 1 ;;
-      esac
+    if [ "$PRESERVE_CONTAINERS" -eq 1 ]; then
+      echo "⚠️  Found $running_containers running AzerothCore containers; --preserve-containers set, leaving them running."
+      if [ "$ASSUME_YES" != "1" ]; then
+        read -r -p "   Continue without stopping containers? [y/N]: " reply
+        case "$reply" in
+          [Yy]*) echo "   Proceeding with migration (containers preserved)..." ;;
+          *) echo "   Migration cancelled."; exit 1 ;;
+        esac
+      fi
+    elif [ "$CLEAN_CONTAINERS" -eq 1 ]; then
+      echo "⚠️  Found $running_containers running AzerothCore containers"
+      echo "   --clean-containers set: they will be stopped/removed during migration."
+      if [ "$ASSUME_YES" != "1" ]; then
+        read -r -p "   Continue with cleanup? [y/N]: " reply
+        case "$reply" in
+          [Yy]*) echo "   Proceeding with cleanup..." ;;
+          *) echo "   Migration cancelled."; exit 1 ;;
+        esac
+      fi
+    else
+      echo "⚠️  Warning: Found $running_containers running AzerothCore containers"
+      echo "   Migration will NOT stop them automatically. Use --clean-containers to stop/remove."
+      if [ "$ASSUME_YES" != "1" ]; then
+        read -r -p "   Continue with migration? [y/N]: " reply
+        case "$reply" in
+          [Yy]*) echo "   Proceeding with migration..." ;;
+          *) echo "   Migration cancelled."; exit 1 ;;
+        esac
+      fi
     fi
   fi
 
@@ -323,6 +355,25 @@ validate_remote_environment(){
 
   ensure_remote_temp_dir
   echo "✅ Remote environment validation complete"
+}
+
+confirm_remote_storage_overwrite(){
+  if [[ $SKIP_STORAGE -ne 0 ]]; then
+    return
+  fi
+  if [[ "$ASSUME_YES" = "1" ]]; then
+    return
+  fi
+  local has_content
+  has_content=$(run_ssh "if [ -d '$REMOTE_STORAGE' ]; then find '$REMOTE_STORAGE' -mindepth 1 -maxdepth 1 -print -quit; fi")
+  if [ -n "$has_content" ]; then
+    echo "⚠️  Remote storage at $REMOTE_STORAGE contains existing data."
+    read -r -p "   Continue and sync local storage over it? [y/N]: " reply
+    case "${reply,,}" in
+      y|yes) echo "   Proceeding with storage sync..." ;;
+      *) echo "   Skipping storage sync for this run."; SKIP_STORAGE=1 ;;
+    esac
+  fi
 }
 
 copy_source_tree(){
@@ -388,11 +439,14 @@ setup_remote_repository(){
 }
 
 cleanup_stale_docker_resources(){
-  if [ "$CLEANUP_RUNTIME" -ne 1 ]; then
+  if [ "$PRESERVE_CONTAINERS" -eq 1 ]; then
+    echo "⋅ Skipping remote container/image cleanup (--preserve-containers)"
+    return
+  fi
+  if [ "$CLEAN_CONTAINERS" -ne 1 ]; then
     echo "⋅ Skipping remote runtime cleanup (containers and images preserved)."
     return
   fi
-
   echo "⋅ Cleaning up stale Docker resources on remote..."
 
   # Stop and remove old containers
@@ -445,6 +499,8 @@ if [ ${#MISSING_IMAGES[@]} -gt 0 ]; then
   echo "⚠️  Skipping ${#MISSING_IMAGES[@]} images not present locally (will need to pull on remote if required):"
   printf '  • %s\n' "${MISSING_IMAGES[@]}"
 fi
+
+confirm_remote_storage_overwrite
 
 if [[ $SKIP_STORAGE -eq 0 ]]; then
   if [[ -d storage ]]; then
@@ -513,8 +569,34 @@ run_scp "$TARBALL" "$USER@$HOST:$REMOTE_TEMP_DIR/acore-modules-images.tar"
 run_ssh "docker load < '$REMOTE_TEMP_DIR/acore-modules-images.tar' && rm '$REMOTE_TEMP_DIR/acore-modules-images.tar'"
 
 if [[ -f "$ENV_FILE" ]]; then
-  echo "⋅ Uploading .env"
-  run_scp "$ENV_FILE" "$USER@$HOST:$PROJECT_DIR/.env"
+  if [[ $SKIP_ENV -eq 1 ]]; then
+    echo "⋅ Skipping .env upload (--skip-env)"
+  else
+    remote_env_path="$PROJECT_DIR/.env"
+    upload_env=1
+
+    if run_ssh "test -f '$remote_env_path'"; then
+      if [ "$ASSUME_YES" = "1" ]; then
+        echo "⋅ Overwriting existing remote .env (auto-confirm)"
+      elif [ -t 0 ]; then
+        read -r -p "⚠️  Remote .env exists at $remote_env_path. Overwrite? [y/N]: " reply
+        case "$reply" in
+          [Yy]*) ;;
+          *) upload_env=0 ;;
+        esac
+      else
+        echo "⚠️  Remote .env exists at $remote_env_path; skipping upload (no confirmation available)"
+        upload_env=0
+      fi
+    fi
+
+    if [[ $upload_env -eq 1 ]]; then
+      echo "⋅ Uploading .env"
+      run_scp "$ENV_FILE" "$USER@$HOST:$remote_env_path"
+    else
+      echo "⋅ Keeping existing remote .env"
+    fi
+  fi
 fi
 
 echo "⋅ Remote prepares completed"

@@ -170,8 +170,12 @@ Optional flags:
 - `--remote-port 2222` - Custom SSH port
 - `--remote-identity ~/.ssh/custom_key` - Specific SSH key
 - `--remote-skip-storage` - Don't sync storage directory (fresh install on remote)
+- `--remote-clean-containers` - Stop/remove existing `ac-*` containers and project images during migration
+- `--remote-skip-env` - Leave the remote `.env` untouched (won't upload local one)
+- `--remote-preserve-containers` - Do not stop/remove existing `ac-*` containers/images during migration
 - `--remote-storage-path /mnt/acore-storage` - Override STORAGE_PATH on the remote host (local-storage stays per .env)
 - `--remote-container-user 1001:1001` - Override CONTAINER_USER on the remote host (uid:gid)
+  - Note: do not combine `--remote-clean-containers` with `--remote-preserve-containers`; the flags are mutually exclusive.
 
 ### Step 3: Deploy on Remote Host
 ```bash

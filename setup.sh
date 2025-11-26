@@ -578,8 +578,6 @@ main(){
   local CLI_PLAYERBOT_ENABLED=""
   local CLI_PLAYERBOT_MIN=""
   local CLI_PLAYERBOT_MAX=""
-  local CLI_AUTO_REBUILD=0
-  local CLI_MODULES_SOURCE=""
   local FORCE_OVERWRITE=0
   local CLI_ENABLE_MODULES_RAW=()
 
@@ -622,9 +620,6 @@ Options:
   --playerbot-enabled 0|1         Override PLAYERBOT_ENABLED flag
     --playerbot-min-bots N          Override PLAYERBOT_MIN_BOTS value
     --playerbot-max-bots N          Override PLAYERBOT_MAX_BOTS value
-  --auto-rebuild-on-deploy        Enable automatic rebuild during deploys
-  --modules-rebuild-source PATH   Source checkout used for module rebuilds
-  --deploy-after                  Run ./deploy.sh automatically after setup completes
   --force                         Overwrite existing .env without prompting
 EOF
         exit 0
@@ -779,23 +774,8 @@ EOF
       --playerbot-max-bots=*)
         CLI_PLAYERBOT_MAX="${1#*=}"; shift
         ;;
-      --auto-rebuild-on-deploy)
-        CLI_AUTO_REBUILD=1
-        shift
-        ;;
-      --modules-rebuild-source)
-        [[ $# -ge 2 ]] || { say ERROR "--modules-rebuild-source requires a value"; exit 1; }
-        CLI_MODULES_SOURCE="$2"; shift 2
-        ;;
-      --modules-rebuild-source=*)
-        CLI_MODULES_SOURCE="${1#*=}"; shift
-        ;;
       --force)
         FORCE_OVERWRITE=1
-        shift
-        ;;
-      --deploy-after)
-        CLI_DEPLOY_AFTER=1
         shift
         ;;
       *)
@@ -1210,8 +1190,6 @@ fi
   local PLAYERBOT_MIN_BOTS="${DEFAULT_PLAYERBOT_MIN:-40}"
   local PLAYERBOT_MAX_BOTS="${DEFAULT_PLAYERBOT_MAX:-40}"
 
-  local AUTO_REBUILD_ON_DEPLOY=$CLI_AUTO_REBUILD
-  local MODULES_REBUILD_SOURCE_PATH_VALUE="${CLI_MODULES_SOURCE}"
   local NEEDS_CXX_REBUILD=0
 
   local module_mode_label=""
@@ -1473,7 +1451,6 @@ fi
   printf "  %-18s %s\n" "Storage Path:" "$STORAGE_PATH"
   printf "  %-18s %s\n" "Container User:" "$CONTAINER_USER"
   printf "  %-18s Daily %s:00 UTC, keep %sd/%sh\n" "Backups:" "$BACKUP_DAILY_TIME" "$BACKUP_RETENTION_DAYS" "$BACKUP_RETENTION_HOURS"
-  printf "  %-18s %s\n" "Source checkout:" "$default_source_rel"
   printf "  %-18s %s\n" "Modules images:" "$AC_AUTHSERVER_IMAGE_MODULES_VALUE | $AC_WORLDSERVER_IMAGE_MODULES_VALUE"
 
   printf "  %-18s %s\n" "Modules preset:" "$SUMMARY_MODE_TEXT"
@@ -1520,11 +1497,6 @@ fi
     echo ""
     say WARNING "These modules require compiling AzerothCore from source."
     say INFO "Run './build.sh' to compile your custom modules before deployment."
-    if [ "$CLI_AUTO_REBUILD" = "1" ]; then
-      AUTO_REBUILD_ON_DEPLOY=1
-    else
-      AUTO_REBUILD_ON_DEPLOY=$(ask_yn "Enable automatic rebuild during future deploys?" "$( [ "$AUTO_REBUILD_ON_DEPLOY" = "1" ] && echo y || echo n )")
-    fi
 
     # Set build sentinel to indicate rebuild is needed
     local sentinel="$LOCAL_STORAGE_ROOT_ABS/modules/.requires_rebuild"
@@ -1554,23 +1526,8 @@ fi
     default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore-playerbots"
   fi
 
-  if [ -n "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
-    local storage_abs="$STORAGE_PATH"
-    if [[ "$storage_abs" != /* ]]; then
-      storage_abs="$(pwd)/${storage_abs#./}"
-    fi
-    local candidate_path="$MODULES_REBUILD_SOURCE_PATH_VALUE"
-    if [[ "$candidate_path" != /* ]]; then
-      candidate_path="$(pwd)/${candidate_path#./}"
-    fi
-    if [[ "$candidate_path" == "$storage_abs"* ]]; then
-      say WARNING "MODULES_REBUILD_SOURCE_PATH is inside shared storage (${candidate_path}). Using local workspace ${default_source_rel} instead."
-      MODULES_REBUILD_SOURCE_PATH_VALUE="$default_source_rel"
-    fi
-  fi
-
-  # Module staging will be handled directly in the rebuild section below
-
+  # Persist rebuild source path for downstream build scripts
+  MODULES_REBUILD_SOURCE_PATH="$default_source_rel"
 
   # Confirm write
 
@@ -1584,10 +1541,6 @@ fi
       cont=$(ask_yn "Continue and overwrite?" n)
     fi
     [ "$cont" = "1" ] || { say ERROR "Aborted"; exit 1; }
-  fi
-
-  if [ -z "$MODULES_REBUILD_SOURCE_PATH_VALUE" ]; then
-    MODULES_REBUILD_SOURCE_PATH_VALUE="$default_source_rel"
   fi
 
   DB_PLAYERBOTS_NAME=${DB_PLAYERBOTS_NAME:-$DEFAULT_DB_PLAYERBOTS_NAME}
@@ -1756,11 +1709,12 @@ BACKUP_HEALTHCHECK_GRACE_SECONDS=$BACKUP_HEALTHCHECK_GRACE_SECONDS
 
 EOF
     echo
-    echo "# Modules"
-    for module_key in "${MODULE_KEYS[@]}"; do
-      printf "%s=%s\n" "$module_key" "${!module_key:-0}"
-    done
-    cat <<EOF
+  echo "# Modules"
+  for module_key in "${MODULE_KEYS[@]}"; do
+    printf "%s=%s\n" "$module_key" "${!module_key:-0}"
+  done
+  cat <<EOF
+MODULES_REBUILD_SOURCE_PATH=$MODULES_REBUILD_SOURCE_PATH
 
 # Client data
 CLIENT_DATA_VERSION=${CLIENT_DATA_VERSION:-$DEFAULT_CLIENT_DATA_VERSION}
@@ -1779,12 +1733,8 @@ MODULES_CPP_LIST=$MODULES_CPP_LIST
 MODULES_REQUIRES_CUSTOM_BUILD=$MODULES_REQUIRES_CUSTOM_BUILD
 MODULES_REQUIRES_PLAYERBOT_SOURCE=$MODULES_REQUIRES_PLAYERBOT_SOURCE
 
-# Rebuild automation
-AUTO_REBUILD_ON_DEPLOY=$AUTO_REBUILD_ON_DEPLOY
-MODULES_REBUILD_SOURCE_PATH=$MODULES_REBUILD_SOURCE_PATH_VALUE
-
-# Eluna
-AC_ELUNA_ENABLED=$DEFAULT_ELUNA_ENABLED
+  # Eluna
+  AC_ELUNA_ENABLED=$DEFAULT_ELUNA_ENABLED
 AC_ELUNA_TRACE_BACK=$DEFAULT_ELUNA_TRACE_BACK
 AC_ELUNA_AUTO_RELOAD=$DEFAULT_ELUNA_AUTO_RELOAD
 AC_ELUNA_BYTECODE_CACHE=$DEFAULT_ELUNA_BYTECODE_CACHE
@@ -1853,16 +1803,6 @@ EOF
     printf '  🚀 Quick deploy: ./deploy.sh\n'
   fi
 
-  if [ "${CLI_DEPLOY_AFTER:-0}" = "1" ]; then
-    local deploy_args=(bash "./deploy.sh" --yes)
-    if [ "$MODULE_PLAYERBOTS" != "1" ]; then
-      deploy_args+=(--profile standard)
-    fi
-    say INFO "Launching deploy after setup (--deploy-after enabled)"
-    if ! "${deploy_args[@]}"; then
-      say WARNING "Automatic deploy failed; please run ./deploy.sh manually."
-    fi
-  fi
 }
 
 main "$@"
