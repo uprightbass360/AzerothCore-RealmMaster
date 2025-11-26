@@ -453,30 +453,68 @@ func renderSnapshot(s *Snapshot, selectedModule int) (*widgets.List, *ui.Grid) {
 	usersPar.Text = fmt.Sprintf("  Online: %d\n  Accounts: %d\n  Characters: %d\n  Active 7d: %d", s.Users.Online, s.Users.Accounts, s.Users.Characters, s.Users.Active7d)
 	usersPar.Border = true
 
+	const headerRowFrac = 0.18
+	const middleRowFrac = 0.43
+	const bottomRowFrac = 0.39
+
+	// Derive inner row ratios from the computed bottom row height so that
+	// internal containers tile their parent with the same spacing behavior
+	// as top-level rows.
 	grid := ui.NewGrid()
 	termWidth, termHeight := ui.TerminalDimensions()
+
+	headerHeight := int(float64(termHeight) * headerRowFrac)
+	middleHeight := int(float64(termHeight) * middleRowFrac)
+	bottomHeight := termHeight - headerHeight - middleHeight
+	if bottomHeight <= 0 {
+		bottomHeight = int(float64(termHeight) * bottomRowFrac)
+	}
+
+	helpHeight := int(float64(bottomHeight) * 0.32)
+	if helpHeight < 1 {
+		helpHeight = 1
+	}
+	moduleInfoHeight := bottomHeight - helpHeight
+	if moduleInfoHeight < 1 {
+		moduleInfoHeight = 1
+	}
+
+	storageHeight := int(float64(bottomHeight) * 0.513)
+	if storageHeight < 1 {
+		storageHeight = 1
+	}
+	volumesHeight := bottomHeight - storageHeight
+	if volumesHeight < 1 {
+		volumesHeight = 1
+	}
+
+	helpRatio := float64(helpHeight) / float64(bottomHeight)
+	moduleInfoRatio := float64(moduleInfoHeight) / float64(bottomHeight)
+	storageRatio := float64(storageHeight) / float64(bottomHeight)
+	volumesRatio := float64(volumesHeight) / float64(bottomHeight)
+
 	grid.SetRect(0, 0, termWidth, termHeight)
 	grid.Set(
-		ui.NewRow(0.18,
+		ui.NewRow(headerRowFrac,
 			ui.NewCol(0.34, header),
 			ui.NewCol(0.33, buildPar),
 			ui.NewCol(0.33, usersPar),
 		),
-		ui.NewRow(0.43,
+		ui.NewRow(middleRowFrac,
 			ui.NewCol(0.6, servicesTable),
 			ui.NewCol(0.4, portsTable),
 		),
-		ui.NewRow(0.39,
+		ui.NewRow(bottomRowFrac,
 			ui.NewCol(0.25, modulesList),
 			ui.NewCol(0.15,
-				ui.NewRow(0.32, helpPar),
-				ui.NewRow(0.68, moduleInfoPar),
+				ui.NewRow(helpRatio, helpPar),
+				ui.NewRow(moduleInfoRatio, moduleInfoPar),
 			),
 			ui.NewCol(0.6,
-				ui.NewRow(0.513,
+				ui.NewRow(storageRatio,
 					ui.NewCol(1.0, storagePar),
 				),
-				ui.NewRow(0.487,
+				ui.NewRow(volumesRatio,
 					ui.NewCol(1.0, volumesPar),
 				),
 			),
