@@ -342,6 +342,6 @@
     "MODULE_CLASSIC_MODE"
   ],
   "label": "\ud83e\udde9 All Modules",
-  "description": "Enable every optional module in the repository",
-  "order": 5
+  "description": "Enable every optional module in the repository - NOT RECOMMENDED",
+  "order": 7
 }

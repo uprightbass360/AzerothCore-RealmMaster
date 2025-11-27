@@ -79,7 +79,7 @@ For complete local and remote deployment guides, see **[docs/GETTING_STARTED.md]
 
 Choose from **hundreds of enhanced modules** spanning automation, quality-of-life improvements, gameplay enhancements, PvP features, and more. The manifest contains 348 modules (221 marked supported/active); the default RealmMaster preset enables 33 that are exercised in testing. All modules are automatically downloaded, configured, and integrated during deployment when selected.
 
-Want a shortcut? Use a preset (RealmMaster, suggested QoL, playerbot variants, all-modules) from `config/module-profiles/`—see [docs/GETTING_STARTED.md#module-presets](docs/GETTING_STARTED.md#module-presets).
+Want a shortcut? Use a preset (`RealmMaster`, `suggested-modules`, `playerbots-suggested-modules`, `azerothcore-vanilla`, `playerbots-only`, `all-modules`) from `config/module-profiles/`—see [docs/GETTING_STARTED.md#module-presets](docs/GETTING_STARTED.md#module-presets).
 
 **Popular Categories:**
 - **Automation** - Playerbots, AI chat, level management

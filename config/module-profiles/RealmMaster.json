@@ -12,7 +12,6 @@
     "MODULE_ACCOUNT_ACHIEVEMENTS",
     "MODULE_AUTO_REVIVE",
     "MODULE_GAIN_HONOR_GUARD",
-    "MODULE_ELUNA",
     "MODULE_TIME_IS_TIME",
     "MODULE_RANDOM_ENCHANTS",
     "MODULE_SOLOCRAFT",
@@ -24,6 +23,7 @@
     "MODULE_REAGENT_BANK",
     "MODULE_BLACK_MARKET_AUCTION_HOUSE",
     "MODULE_ELUNA_TS",
+    "MODULE_ELUNA",
     "MODULE_AIO",
     "MODULE_ELUNA_SCRIPTS",
     "MODULE_EVENT_SCRIPTS",
@@ -34,7 +34,7 @@
     "MODULE_ITEM_LEVEL_UP",
     "MODULE_GLOBAL_CHAT"
   ],
-  "label": "\ud83e\udde9 Sam",
-  "description": "Sam's playerbot-centric preset (use high bot counts)",
-  "order": 7
+  "label": "\ud83e\udde9 RealmMaster",
+  "description": "RealmMaster suggested build (33 enabled modules)",
+  "order": 0
 }

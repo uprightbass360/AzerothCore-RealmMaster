@@ -233,10 +233,13 @@ This will present a menu for selecting individual modules or choosing from prede
 
 Pre-configured module combinations are available in `config/module-profiles/`:
 
-- **Suggested Modules** - Baseline solo-friendly quality of life mix
-- **Playerbots Suggested** - Suggested stack plus playerbots
-- **Playerbots Only** - Playerbot-focused profile
-- **Custom Profiles** - Additional specialized configurations
+- `RealmMaster` - 33-module baseline used for day-to-day testing
+- `suggested-modules` - Light AzerothCore QoL stack without playerbots
+- `playerbots-suggested-modules` - Suggested QoL stack plus playerbots
+- `azerothcore-vanilla` - Pure AzerothCore with no optional modules
+- `playerbots-only` - Playerbot prerequisites only
+- `all-modules` - Everything in the manifest (not recommended)
+- Custom profiles - Drop new JSON files to add your own combinations
 
 ### Manual Configuration
 

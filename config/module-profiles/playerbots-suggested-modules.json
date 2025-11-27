@@ -7,9 +7,12 @@
     "MODULE_TRANSMOG",
     "MODULE_NPC_BUFFER",
     "MODULE_LEARN_SPELLS",
-    "MODULE_FIREWORKS"
+    "MODULE_FIREWORKS",
+    "MODULE_ELUNA_TS",
+    "MODULE_ELUNA",
+    "MODULE_AIO"
   ],
   "label": "\ud83e\udd16 Playerbots + Suggested modules",
   "description": "Suggested stack plus playerbots enabled",
-  "order": 2
+  "order": 1
 }

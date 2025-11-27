@@ -220,11 +220,12 @@ The remote deployment process transfers:
   ```
 - `setup.sh` automatically adds these presets to the module menu and enables the listed modules when selected or when `--module-config <name>` is provided.
 - Built-in presets:
--  - `config/module-profiles/RealmMaster.json` – 33-module baseline used for testing.
--  - `config/module-profiles/suggested-modules.json` – default solo-friendly QoL stack.
--  - `config/module-profiles/playerbots-suggested-modules.json` – suggested stack plus playerbots.
--  - `config/module-profiles/playerbots-only.json` – playerbot-focused profile (adjust `--playerbot-max-bots`).
--  - `config/module-profiles/all-modules.json` – enable everything currently marked supported/active.
+  - `config/module-profiles/RealmMaster.json` – 33-module baseline used for testing.
+  - `config/module-profiles/suggested-modules.json` – light AzerothCore QoL stack without playerbots.
+  - `config/module-profiles/playerbots-suggested-modules.json` – suggested QoL stack plus playerbots.
+  - `config/module-profiles/azerothcore-vanilla.json` – pure AzerothCore (no optional modules).
+  - `config/module-profiles/playerbots-only.json` – playerbot prerequisites only (tune bot counts separately).
+  - `config/module-profiles/all-modules.json` – enable everything currently marked supported/active (not recommended).
 - Module metadata lives in `config/module-manifest.json`; update that file if you need to add new modules or change repositories/branches.
 
 ---
