@@ -33,7 +33,7 @@ services:
       - mysql-data:/var/lib/mysql-persistent
       - ${BACKUP_PATH}:/backups
       - ${HOST_ZONEINFO_PATH}:/usr/share/zoneinfo:ro
-      - ${MYSQL_CONFIG_DIR:-${STORAGE_PATH}/config/mysql/conf.d}:/etc/mysql/conf.d
+      - ${MYSQL_CONFIG_DIR:-${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}/mysql/conf.d}:/etc/mysql/conf.d
     tmpfs:
       - /var/lib/mysql-runtime:size=${MYSQL_RUNTIME_TMPFS_SIZE}
     command:
@@ -71,12 +71,12 @@ services:
     networks:
       - azerothcore
     volumes:
-      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
-      - ${STORAGE_PATH}/logs:/azerothcore/logs
-      - ${AC_SQL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
-      - ${STAGE_PATH_MODULE_SQL:-${STORAGE_PATH}/module-sql-updates}:/modules-sql
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${AC_SQL_SOURCE_PATH:-${STORAGE_LOCAL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source}/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
+      - ${STAGE_PATH_MODULE_SQL:-${STORAGE_MODULE_SQL_PATH:-${STORAGE_PATH}/module-sql-updates}}:/modules-sql
       - mysql-data:/var/lib/mysql-persistent
-      - ${STORAGE_PATH}/modules:/modules
+      - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/modules
       - ${BACKUP_PATH}:/backups
       - ./scripts/bash/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
       - ./scripts/bash/seed-dbimport-conf.sh:/tmp/seed-dbimport-conf.sh:ro
@@ -136,12 +136,12 @@ services:
     networks:
       - azerothcore
     volumes:
-      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
-      - ${STORAGE_PATH}/logs:/azerothcore/logs
-      - ${AC_SQL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
-      - ${STAGE_PATH_MODULE_SQL:-${STORAGE_PATH}/module-sql-updates}:/modules-sql
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${AC_SQL_SOURCE_PATH:-${STORAGE_LOCAL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source}/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
+      - ${STAGE_PATH_MODULE_SQL:-${STORAGE_MODULE_SQL_PATH:-${STORAGE_PATH}/module-sql-updates}}:/modules-sql
       - mysql-data:/var/lib/mysql-persistent
-      - ${STORAGE_PATH}/modules:/modules
+      - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/modules
       - ${BACKUP_PATH}:/backups
       - ./scripts/bash/db-import-conditional.sh:/tmp/db-import-conditional.sh:ro
       - ./scripts/bash/seed-dbimport-conf.sh:/tmp/seed-dbimport-conf.sh:ro
@@ -267,7 +267,7 @@ services:
       CONTAINER_USER: ${CONTAINER_USER}
     volumes:
       - ${BACKUP_PATH}:/backups
-      - ${STORAGE_PATH}/modules/.modules-meta:/modules-meta:ro
+      - ${STORAGE_MODULES_META_PATH:-${STORAGE_PATH}/modules/.modules-meta}:/modules-meta:ro
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
     command:
@@ -336,7 +336,7 @@ services:
     container_name: ac-volume-init
     user: "0:0"
     volumes:
-      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
+      - ${CLIENT_DATA_PATH:-${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}}:/azerothcore/data
       - client-data-cache:/cache
     command:
       - sh
@@ -362,8 +362,17 @@ services:
     container_name: ac-storage-init
     user: "0:0"
     volumes:
-      - ${STORAGE_PATH}:/storage-root
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/storage-root/config
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/storage-root/logs
+      - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/storage-root/modules
+      - ${STORAGE_LUA_SCRIPTS_PATH:-${STORAGE_PATH}/lua_scripts}:/storage-root/lua_scripts
+      - ${STORAGE_INSTALL_MARKERS_PATH:-${STORAGE_PATH}/install-markers}:/storage-root/install-markers
+      - ${STORAGE_MODULE_SQL_PATH:-${STORAGE_PATH}/module-sql-updates}:/storage-root/module-sql-updates
+      - ${STORAGE_MODULES_META_PATH:-${STORAGE_PATH}/modules/.modules-meta}:/storage-root/modules/.modules-meta
+      - ${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/storage-root/client-data
+      - ${BACKUP_PATH}:/storage-root/backups
       - ${STORAGE_PATH_LOCAL}:/local-storage-root
+      - ${STORAGE_LOCAL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source}:/local-storage-root/source
       - ./scripts/bash/seed-dbimport-conf.sh:/tmp/seed-dbimport-conf.sh:ro
     command:
       - sh
@@ -372,6 +381,7 @@ services:
         echo "🔧 Initializing storage directories with proper permissions..."
         mkdir -p /storage-root/config /storage-root/logs /storage-root/modules /storage-root/lua_scripts /storage-root/install-markers
         mkdir -p /storage-root/config/mysql/conf.d
+        mkdir -p /storage-root/module-sql-updates /storage-root/modules/.modules-meta
         mkdir -p /storage-root/client-data
         mkdir -p /storage-root/backups
 
@@ -440,7 +450,7 @@ services:
       ac-volume-init:
         condition: service_completed_successfully
     volumes:
-      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
+      - ${CLIENT_DATA_PATH:-${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}}:/azerothcore/data
       - client-data-cache:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
@@ -471,7 +481,7 @@ services:
       ac-volume-init:
         condition: service_completed_successfully
     volumes:
-      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
+      - ${CLIENT_DATA_PATH:-${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}}:/azerothcore/data
       - client-data-cache:/cache
       - ./scripts:/tmp/scripts:ro
     working_dir: /tmp
@@ -529,7 +539,7 @@ services:
     networks:
       - azerothcore
     volumes:
-      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
     cap_add: ["SYS_NICE"]
     healthcheck:
       test: ["CMD", "sh", "-c", "ps aux | grep '[a]uthserver' | grep -v grep || exit 1"]
@@ -574,11 +584,11 @@ services:
       - "${WORLD_EXTERNAL_PORT}:${WORLD_PORT}"
       - "${SOAP_EXTERNAL_PORT}:${SOAP_PORT}"
     volumes:
-      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
-      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
-      - ${STORAGE_PATH}/logs:/azerothcore/logs
-      - ${STORAGE_PATH}/modules:/azerothcore/modules
-      - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
+      - ${CLIENT_DATA_PATH:-${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}}:/azerothcore/data
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/azerothcore/modules
+      - ${STORAGE_LUA_SCRIPTS_PATH:-${STORAGE_PATH}/lua_scripts}:/azerothcore/lua_scripts
     restart: unless-stopped
     logging: *logging-default
     networks:
@@ -622,7 +632,7 @@ services:
     networks:
       - azerothcore
     volumes:
-      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
     cap_add: ["SYS_NICE"]
     healthcheck:
       test: ["CMD", "sh", "-c", "ps aux | grep '[a]uthserver' | grep -v grep || exit 1"]
@@ -658,7 +668,7 @@ services:
     networks:
       - azerothcore
     volumes:
-      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
     cap_add: ["SYS_NICE"]
     healthcheck:
       test: ["CMD", "sh", "-c", "ps aux | grep '[a]uthserver' | grep -v grep || exit 1"]
@@ -706,11 +716,11 @@ services:
       - "${WORLD_EXTERNAL_PORT}:${WORLD_PORT}"
       - "${SOAP_EXTERNAL_PORT}:${SOAP_PORT}"
     volumes:
-      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
-      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
-      - ${STORAGE_PATH}/logs:/azerothcore/logs
-      - ${STORAGE_PATH}/modules:/azerothcore/modules
-      - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
+      - ${CLIENT_DATA_PATH:-${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}}:/azerothcore/data
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/azerothcore/modules
+      - ${STORAGE_LUA_SCRIPTS_PATH:-${STORAGE_PATH}/lua_scripts}:/azerothcore/lua_scripts
     restart: unless-stopped
     logging: *logging-default
     networks:
@@ -758,11 +768,11 @@ services:
       PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS}"
       AC_LOG_LEVEL: "2"
     volumes:
-      - ${CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}:/azerothcore/data
-      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
-      - ${STORAGE_PATH}/logs:/azerothcore/logs
-      - ${STORAGE_PATH}/modules:/azerothcore/modules
-      - ${STORAGE_PATH}/lua_scripts:/azerothcore/lua_scripts
+      - ${CLIENT_DATA_PATH:-${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}}:/azerothcore/data
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/azerothcore/modules
+      - ${STORAGE_LUA_SCRIPTS_PATH:-${STORAGE_PATH}/lua_scripts}:/azerothcore/lua_scripts
     networks:
       - azerothcore
     ports:
@@ -796,8 +806,8 @@ services:
       ac-storage-init:
         condition: service_completed_successfully
     volumes:
-      - ${STORAGE_PATH}/modules:/modules
-      - ${STORAGE_PATH}/config:/azerothcore/env/dist/etc
+      - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/modules
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
       - ./scripts:/tmp/scripts:ro
       - ./config:/tmp/config:ro
     env_file:
@@ -822,8 +832,8 @@ services:
     container_name: ${CONTAINER_POST_INSTALL}
     user: "0:0"
     volumes:
-      - ${STORAGE_PATH}/config:/azerothcore/config
-      - ${STORAGE_PATH}/install-markers:/install-markers
+      - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/config
+      - ${STORAGE_INSTALL_MARKERS_PATH:-${STORAGE_PATH}/install-markers}:/install-markers
       - ./scripts:/tmp/scripts:ro
       - /var/run/docker.sock:/var/run/docker.sock:rw
     working_dir: /tmp
