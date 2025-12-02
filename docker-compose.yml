@@ -73,6 +73,7 @@ services:
     volumes:
       - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
       - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/env/dist/logs
       - ${AC_SQL_SOURCE_PATH:-${STORAGE_LOCAL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source}/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
       - ${STAGE_PATH_MODULE_SQL:-${STORAGE_MODULE_SQL_PATH:-${STORAGE_PATH}/module-sql-updates}}:/modules-sql
       - mysql-data:/var/lib/mysql-persistent
@@ -138,6 +139,7 @@ services:
     volumes:
       - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
       - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/env/dist/logs
       - ${AC_SQL_SOURCE_PATH:-${STORAGE_LOCAL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source}/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
       - ${STAGE_PATH_MODULE_SQL:-${STORAGE_MODULE_SQL_PATH:-${STORAGE_PATH}/module-sql-updates}}:/modules-sql
       - mysql-data:/var/lib/mysql-persistent
@@ -540,6 +542,8 @@ services:
       - azerothcore
     volumes:
       - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/env/dist/logs
     cap_add: ["SYS_NICE"]
     healthcheck:
       test: ["CMD", "sh", "-c", "ps aux | grep '[a]uthserver' | grep -v grep || exit 1"]
@@ -587,6 +591,7 @@ services:
       - ${CLIENT_DATA_PATH:-${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}}:/azerothcore/data
       - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
       - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/env/dist/logs
       - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/azerothcore/modules
       - ${STORAGE_LUA_SCRIPTS_PATH:-${STORAGE_PATH}/lua_scripts}:/azerothcore/lua_scripts
     restart: unless-stopped
@@ -719,6 +724,7 @@ services:
       - ${CLIENT_DATA_PATH:-${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}}:/azerothcore/data
       - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
       - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/env/dist/logs
       - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/azerothcore/modules
       - ${STORAGE_LUA_SCRIPTS_PATH:-${STORAGE_PATH}/lua_scripts}:/azerothcore/lua_scripts
     restart: unless-stopped
@@ -771,6 +777,7 @@ services:
       - ${CLIENT_DATA_PATH:-${STORAGE_CLIENT_DATA_PATH:-${STORAGE_PATH}/client-data}}:/azerothcore/data
       - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
       - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
+      - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/env/dist/logs
       - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/azerothcore/modules
       - ${STORAGE_LUA_SCRIPTS_PATH:-${STORAGE_PATH}/lua_scripts}:/azerothcore/lua_scripts
     networks:
