@@ -219,10 +219,12 @@ if [ -z "$backup_path" ]; then
           echo "📦 Latest daily backup found: $latest_daily"
           for backup_file in "$BACKUP_DIRS/daily/$latest_daily"/*.sql.gz; do
             if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
-              if timeout 10 zcat "$backup_file" 2>/dev/null | head -20 | grep -q "CREATE DATABASE\|INSERT INTO\|CREATE TABLE"; then
+              if timeout 10 gzip -t "$backup_file" >/dev/null 2>&1; then
                 echo "✅ Valid daily backup file: $(basename "$backup_file")"
                 backup_path="$BACKUP_DIRS/daily/$latest_daily"
                 break 2
+              else
+                echo "⚠️  gzip validation failed for $(basename "$backup_file")"
               fi
             fi
           done
@@ -237,10 +239,12 @@ if [ -z "$backup_path" ]; then
           echo "📦 Latest hourly backup found: $latest_hourly"
           for backup_file in "$BACKUP_DIRS/hourly/$latest_hourly"/*.sql.gz; do
             if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
-              if timeout 10 zcat "$backup_file" >/dev/null 2>&1; then
+              if timeout 10 gzip -t "$backup_file" >/dev/null 2>&1; then
                 echo "✅ Valid hourly backup file: $(basename "$backup_file")"
                 backup_path="$BACKUP_DIRS/hourly/$latest_hourly"
                 break 2
+              else
+                echo "⚠️  gzip validation failed for $(basename "$backup_file")"
               fi
             fi
           done
@@ -259,10 +263,12 @@ if [ -z "$backup_path" ]; then
               echo "🔍 Validating timestamped backup content..."
               for backup_file in "$BACKUP_DIRS/$latest_timestamped"/*.sql.gz; do
                 if [ -f "$backup_file" ] && [ -s "$backup_file" ]; then
-                  if timeout 10 zcat "$backup_file" >/dev/null 2>&1; then
+                  if timeout 10 gzip -t "$backup_file" >/dev/null 2>&1; then
                     echo "✅ Valid timestamped backup found: $(basename "$backup_file")"
                     backup_path="$BACKUP_DIRS/$latest_timestamped"
                     break 2
+                  else
+                    echo "⚠️  gzip validation failed for $(basename "$backup_file")"
                   fi
                 fi
               done
