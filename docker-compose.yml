@@ -25,6 +25,7 @@ services:
       MYSQL_MAX_CONNECTIONS: ${MYSQL_MAX_CONNECTIONS}
       MYSQL_INNODB_BUFFER_POOL_SIZE: ${MYSQL_INNODB_BUFFER_POOL_SIZE}
       MYSQL_INNODB_LOG_FILE_SIZE: ${MYSQL_INNODB_LOG_FILE_SIZE}
+      MYSQL_BINLOG_EXPIRE_LOGS_SECONDS: 86400
       TZ: "${TZ}"
     entrypoint:
       - /usr/local/bin/mysql-entrypoint.sh
@@ -46,6 +47,9 @@ services:
       - --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE}
       - --innodb-log-file-size=${MYSQL_INNODB_LOG_FILE_SIZE}
       - --innodb-redo-log-capacity=${MYSQL_INNODB_REDO_LOG_CAPACITY}
+      - --expire_logs_days=0
+      - --binlog_expire_logs_seconds=86400
+      - --binlog_expire_logs_auto_purge=ON
     restart: unless-stopped
     logging: *logging-default
     healthcheck:

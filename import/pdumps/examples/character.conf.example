@@ -1,0 +1,20 @@
+# Example character import configuration
+# Copy this file to configs/yourcharacter.conf and modify as needed
+
+# Target account (required if DEFAULT_IMPORT_ACCOUNT is not set)
+# Can be account name or account ID
+account=testuser
+
+# Rename character during import (optional)
+# Must follow WoW naming rules: 2-12 letters, no numbers/special chars
+name=NewCharacterName
+
+# Force specific character GUID (optional)
+# If not specified, next available GUID will be used automatically
+# guid=5000
+
+# Additional notes:
+# - Account must exist in auth database before import
+# - Character names must be unique across the server
+# - GUID conflicts will cause import to fail
+# - Use dry-run mode to test before actual import

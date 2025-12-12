@@ -1,0 +1,43 @@
+#!/bin/bash
+# Example batch import script
+# This shows how to import multiple characters with different configurations
+
+set -euo pipefail
+
+MYSQL_PASSWORD="your_mysql_password_here"
+
+echo "Setting up character import batch..."
+
+# Create character-specific configurations
+mkdir -p ../configs
+
+# Character 1: Import to specific account
+cat > ../configs/warrior.conf <<EOF
+account=player1
+EOF
+
+# Character 2: Import with rename
+cat > ../configs/mage.conf <<EOF
+account=player2
+name=NewMageName
+EOF
+
+# Character 3: Import with forced GUID
+cat > ../configs/priest.conf <<EOF
+account=player3
+name=HolyPriest
+guid=5000
+EOF
+
+echo "Configuration files created!"
+echo ""
+echo "Now place your pdump files:"
+echo "  warrior.pdump -> ../warrior.pdump"
+echo "  mage.pdump    -> ../mage.pdump"
+echo "  priest.pdump  -> ../priest.pdump"
+echo ""
+echo "Then run the import:"
+echo "  ../../../scripts/bash/import-pdumps.sh --password $MYSQL_PASSWORD"
+echo ""
+echo "Or import individually:"
+echo "  ../../../scripts/bash/pdump-import.sh --file ../warrior.pdump --account player1 --password $MYSQL_PASSWORD"

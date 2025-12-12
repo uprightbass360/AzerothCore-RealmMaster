@@ -7,7 +7,8 @@ This directory allows you to easily import custom database files and configurati
 ```
 import/
 ├── db/          # Database SQL files to import
-└── conf/        # Configuration file overrides
+├── conf/        # Configuration file overrides
+└── pdumps/      # Character dump files to import
 ```
 
 ## 🗄️ Database Import (`import/db/`)
@@ -93,6 +94,31 @@ AiPlayerbot.MaxRandomBots = 200
 
 See `config/CONFIG_MANAGEMENT.md` for detailed preset documentation.
 
+## 🎮 Character Import (`import/pdumps/`)
+
+Import character dump files from other AzerothCore servers.
+
+### Supported Formats
+- **`.pdump`** - Character dump files from `.pdump write` command
+- **`.sql`** - SQL character dump files
+
+### Quick Start
+1. Place character dump files in `import/pdumps/`
+2. Run the import script:
+   ```bash
+   ./scripts/bash/import-pdumps.sh --password your_mysql_password --account target_account
+   ```
+
+### Advanced Configuration
+Create `import/pdumps/configs/filename.conf` for per-character settings:
+```ini
+account=target_account
+name=NewCharacterName  # Optional: rename
+guid=5000             # Optional: force GUID
+```
+
+**📖 For complete character import documentation, see [import/pdumps/README.md](pdumps/README.md)**
+
 ## 🔄 Automated Import
 
 Both database and configuration imports are automatically handled during:
@@ -118,6 +144,7 @@ Both database and configuration imports are automatically handled during:
 
 ## 📚 Related Documentation
 
+- [Character Import Guide](pdumps/README.md) - Complete pdump import documentation
 - [Database Management](../docs/DATABASE_MANAGEMENT.md)
 - [Configuration Management](../config/CONFIG_MANAGEMENT.md)
 - [Module Management](../docs/ADVANCED.md#module-management)

@@ -140,6 +140,127 @@ Restores user accounts and characters from backup while preserving world data.
 - `acore_characters.sql[.gz]` - Character data (required)
 - `acore_world.sql[.gz]` - World data (optional)
 
+#### `scripts/bash/pdump-import.sh` - Character Import
+Imports individual character dump files into the database.
+
+```bash
+# Import character from pdump file
+./scripts/bash/pdump-import.sh --file character.pdump --account testuser --password azerothcore123
+
+# Import with character rename
+./scripts/bash/pdump-import.sh --file oldchar.pdump --account newuser --name "NewName" --password azerothcore123
+
+# Validate pdump without importing (dry run)
+./scripts/bash/pdump-import.sh --file character.pdump --account testuser --password azerothcore123 --dry-run
+```
+
+**Features:**
+- Automatic GUID assignment or manual override with `--guid`
+- Character renaming during import with `--name`
+- Account validation and character name uniqueness checks
+- Automatic database backup before import
+- Safe server restart handling
+
+#### `scripts/bash/import-pdumps.sh` - Batch Character Import
+Processes multiple character dump files from the `import/pdumps/` directory.
+
+```bash
+# Import all pdumps with environment settings
+./scripts/bash/import-pdumps.sh --password azerothcore123 --account defaultuser
+
+# Non-interactive batch import
+./scripts/bash/import-pdumps.sh --password azerothcore123 --non-interactive
+```
+
+**Directory Structure:**
+```
+import/pdumps/
+├── character1.pdump      # Character dump files
+├── character2.sql        # SQL dump files also supported
+├── configs/              # Optional per-character configuration
+│   ├── character1.conf   # account=user1, name=NewName
+│   └── character2.conf   # account=user2, guid=5000
+└── processed/            # Successfully imported files moved here
+```
+
+**Configuration Format (`.conf`):**
+```ini
+account=target_account_name_or_id
+name=new_character_name      # Optional: rename character
+guid=force_specific_guid     # Optional: force GUID
+```
+
+### Security Management Scripts
+
+#### `scripts/bash/bulk-2fa-setup.sh` - Bulk 2FA Setup
+Configures TOTP 2FA for multiple AzerothCore accounts using official SOAP API.
+
+```bash
+# Setup 2FA for all accounts without it
+./scripts/bash/bulk-2fa-setup.sh --all
+
+# Setup for specific accounts
+./scripts/bash/bulk-2fa-setup.sh --account user1 --account user2
+
+# Force regenerate with custom issuer
+./scripts/bash/bulk-2fa-setup.sh --all --force --issuer "MyServer"
+
+# Preview what would be done
+./scripts/bash/bulk-2fa-setup.sh --all --dry-run
+
+# Use custom SOAP credentials
+./scripts/bash/bulk-2fa-setup.sh --all --soap-user admin --soap-pass adminpass
+```
+
+**Features:**
+- **Official AzerothCore API Integration**: Uses SOAP commands instead of direct database manipulation
+- Generates AzerothCore-compatible 16-character Base32 TOTP secrets (longer secrets are rejected by SOAP)
+- Automatic account discovery or specific targeting
+- QR code generation for authenticator apps
+- Force regeneration of existing 2FA secrets
+- Comprehensive output with setup instructions
+- Safe dry-run mode for testing
+- SOAP connectivity validation
+- Proper error handling and validation
+
+**Requirements:**
+- AzerothCore worldserver with SOAP enabled (SOAP.Enabled = 1)
+- SOAP port exposed on 7778 (SOAP.Port = 7878, mapped to external 7778)
+- Remote Access enabled (Ra.Enable = 1) in worldserver.conf
+- SOAP.IP = "0.0.0.0" for external connectivity
+- GM account with sufficient privileges (gmlevel 3)
+
+**Output Structure:**
+```
+./2fa-setup-TIMESTAMP/
+├── qr-codes/               # QR code images for each account
+├── setup-report.txt        # Complete setup summary
+├── console-commands.txt    # Manual verification commands
+└── secrets-backup.csv      # Secure backup of all secrets
+```
+
+**Security Notes:**
+- Generated QR codes and backup files contain sensitive TOTP secrets
+- Distribute QR codes securely to users
+- Delete or encrypt backup files after distribution
+- TOTP secrets are also stored in AzerothCore database
+
+#### `scripts/bash/generate-2fa-qr.sh` / `generate-2fa-qr.py` - Individual 2FA Setup
+Generate QR codes for individual account 2FA setup.
+
+```bash
+# Generate QR code for single account
+./scripts/bash/generate-2fa-qr.sh -u username
+
+# Use custom issuer and output path
+./scripts/bash/generate-2fa-qr.sh -u username -i "MyServer" -o /tmp/qr.png
+
+# Use existing secret
+./scripts/bash/generate-2fa-qr.sh -u username -s JBSWY3DPEHPK3PXP
+```
+
+> AzerothCore's SOAP endpoint only accepts 16-character Base32 secrets (A-Z and 2-7). The generators enforce this length to avoid "The provided two-factor authentication secret is not valid" errors.
+
 ### Module Management Scripts
 
 #### `scripts/bash/stage-modules.sh` - Module Staging
