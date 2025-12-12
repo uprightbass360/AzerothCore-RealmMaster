@@ -478,6 +478,12 @@ main() {
     local successful=0
     local failed=0
 
+    # Show help if no arguments were provided
+    if [ $# -eq 0 ]; then
+        show_usage
+        exit 1
+    fi
+
     # Parse arguments
     parse_arguments "$@"
 

@@ -210,6 +210,9 @@ Configures TOTP 2FA for multiple AzerothCore accounts using official SOAP API.
 
 # Use custom SOAP credentials
 ./scripts/bash/bulk-2fa-setup.sh --all --soap-user admin --soap-pass adminpass
+
+# Show help / options
+./scripts/bash/bulk-2fa-setup.sh --help
 ```
 
 **Features:**
@@ -249,6 +252,8 @@ Configures TOTP 2FA for multiple AzerothCore accounts using official SOAP API.
 #### `scripts/bash/generate-2fa-qr.sh` / `generate-2fa-qr.py` - Individual 2FA Setup
 Generate QR codes for individual account 2FA setup.
 
+> Tip: each script supports `-h/--help` to see all options.
+
 ```bash
 # Generate QR code for single account
 ./scripts/bash/generate-2fa-qr.sh -u username
@@ -258,9 +263,23 @@ Generate QR codes for individual account 2FA setup.
 
 # Use existing secret
 ./scripts/bash/generate-2fa-qr.sh -u username -s JBSWY3DPEHPK3PXP
+
+# Show help / options
+./scripts/bash/generate-2fa-qr.sh -h
 ```
 
 > AzerothCore's SOAP endpoint only accepts 16-character Base32 secrets (A-Z and 2-7). The generators enforce this length to avoid "The provided two-factor authentication secret is not valid" errors.
+
+#### `scripts/bash/test-2fa-token.py` - Generate TOTP Test Codes
+Quickly verify a 16-character Base32 secret produces valid 6-digit codes.
+
+```bash
+# Show help
+./scripts/bash/test-2fa-token.py --help
+
+# Generate two consecutive codes for a secret
+./scripts/bash/test-2fa-token.py -s JBSWY3DPEHPK3PXP -c 2
+```
 
 ### Module Management Scripts
 
