@@ -229,6 +229,7 @@ Configures TOTP 2FA for multiple AzerothCore accounts using official SOAP API.
 - Remote Access enabled (Ra.Enable = 1) in worldserver.conf
 - SOAP.IP = "0.0.0.0" for external connectivity
 - GM account with sufficient privileges (gmlevel 3)
+- Provide SOAP credentials explicitly via `--soap-user` and `--soap-pass` (these are required; no env fallback)
 
 **Output Structure:**
 ```

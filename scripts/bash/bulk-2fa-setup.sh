@@ -67,8 +67,8 @@ show_usage() {
     echo "  --dry-run                Show what would be done without executing"
     echo "  --issuer NAME            Issuer name for TOTP (default: AzerothCore)"
     echo "  --format [qr|manual]     Output QR codes or manual setup info"
-    echo "  --soap-user USERNAME     SOAP API username (default: from .env)"
-    echo "  --soap-pass PASSWORD     SOAP API password (default: from .env)"
+    echo "  --soap-user USERNAME     SOAP API username (required)"
+    echo "  --soap-pass PASSWORD     SOAP API password (required)"
     echo "  -h, --help               Show this help message"
     echo ""
     echo "Examples:"
@@ -496,17 +496,9 @@ main() {
         fatal "MYSQL_ROOT_PASSWORD not found in environment"
     fi
 
-    # Initialize SOAP credentials from environment if not provided via CLI
-    if [ -z "$SOAP_USERNAME" ]; then
-        SOAP_USERNAME=$(read_env "SOAP_USERNAME" "GM")
-    fi
-    if [ -z "$SOAP_PASSWORD" ]; then
-        SOAP_PASSWORD=$(read_env "SOAP_PASSWORD" "pass")
-    fi
-
-    # Validate SOAP credentials
+    # Require SOAP credentials via CLI flags
     if [ -z "$SOAP_USERNAME" ] || [ -z "$SOAP_PASSWORD" ]; then
-        fatal "SOAP credentials required. Set via --soap-user/--soap-pass or SOAP_USERNAME/SOAP_PASSWORD in .env"
+        fatal "SOAP credentials required. Provide --soap-user and --soap-pass."
     fi
 
     # Check container health
