@@ -5484,7 +5484,7 @@
       "type": "tool",
       "category": "tooling",
       "notes": "Discovered via GitHub topic 'azerothcore-tools'",
-      "status": "active",
+      "status": "blocked",
       "order": 5000,
       "requires": [],
       "post_install_hooks": [],
