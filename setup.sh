@@ -1724,7 +1724,11 @@ EOF
     echo
   echo "# Modules"
   for module_key in "${MODULE_KEYS[@]}"; do
-    printf "%s=%s\n" "$module_key" "${!module_key:-0}"
+    local module_value="${!module_key:-0}"
+    # Only write enabled modules (value=1) to .env
+    if [ "$module_value" = "1" ]; then
+      printf "%s=%s\n" "$module_key" "$module_value"
+    fi
   done
   cat <<EOF
 MODULES_REBUILD_SOURCE_PATH=$MODULES_REBUILD_SOURCE_PATH
