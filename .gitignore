@@ -2,6 +2,7 @@ database-import/*.sql
 database-import/*.sql.gz
 database-import/*/
 database-import/ImportBackup*/
+db_*/
 source/*
 local-data-tools/
 changelogs/
