@@ -285,7 +285,7 @@ def collect_repositories(
 
 
 def update_env_template(manifest_path: str, template_path: str) -> bool:
-    """Update .env.template with missing module variables.
+    """Update .env.template with module variables for active modules only.
 
     Args:
         manifest_path: Path to the module manifest JSON file
@@ -300,14 +300,19 @@ def update_env_template(manifest_path: str, template_path: str) -> bool:
     if not modules:
         return False
 
-    # Extract all module keys
-    module_keys = set()
+    # Extract only active module keys
+    active_module_keys = set()
+    disabled_module_keys = set()
     for module in modules:
         key = module.get("key")
+        status = module.get("status", "active")
         if key:
-            module_keys.add(key)
+            if status == "active":
+                active_module_keys.add(key)
+            else:
+                disabled_module_keys.add(key)
 
-    if not module_keys:
+    if not active_module_keys and not disabled_module_keys:
         return False
 
     # Check if template file exists
@@ -324,36 +329,66 @@ def update_env_template(manifest_path: str, template_path: str) -> bool:
         print(f"Error reading .env.template: {exc}")
         return False
 
-    # Find which module variables are missing
+    # Find which module variables are currently in the template
     existing_vars = set()
-    for line in current_lines:
-        line = line.strip()
-        if "=" in line and not line.startswith("#"):
-            var_name = line.split("=", 1)[0].strip()
-            existing_vars.add(var_name)
+    current_module_lines = []
+    non_module_lines = []
 
-    missing_vars = module_keys - existing_vars
-    if not missing_vars:
-        print("✅ All module variables present in .env.template")
+    for line in current_lines:
+        stripped = line.strip()
+        if "=" in stripped and not stripped.startswith("#"):
+            var_name = stripped.split("=", 1)[0].strip()
+            if var_name.startswith("MODULE_"):
+                existing_vars.add(var_name)
+                current_module_lines.append((var_name, line))
+            else:
+                non_module_lines.append(line)
+        else:
+            non_module_lines.append(line)
+
+    # Determine what needs to change
+    missing_vars = active_module_keys - existing_vars
+    vars_to_remove = disabled_module_keys & existing_vars
+    vars_to_keep = active_module_keys & existing_vars
+
+    changes_made = False
+
+    # Report what will be done
+    if missing_vars:
+        print(f"📝 Adding {len(missing_vars)} active module variable(s) to .env.template:")
+        for var in sorted(missing_vars):
+            print(f"   + {var}=0")
+        changes_made = True
+
+    if vars_to_remove:
+        print(f"🗑️  Removing {len(vars_to_remove)} disabled module variable(s) from .env.template:")
+        for var in sorted(vars_to_remove):
+            print(f"   - {var}")
+        changes_made = True
+
+    if not changes_made:
+        print("✅ .env.template is up to date with active modules")
         return False
 
-    # Add missing variables to the end of the file
-    print(f"📝 Adding {len(missing_vars)} missing module variable(s) to .env.template:")
+    # Build new content: non-module lines + active module lines
+    new_lines = non_module_lines[:]
 
-    # Sort missing vars for consistent output
-    sorted_missing = sorted(missing_vars)
+    # Add existing active module variables (preserve their current values)
+    for var_name, original_line in current_module_lines:
+        if var_name in vars_to_keep:
+            new_lines.append(original_line)
 
-    # Prepare new content
-    new_lines = current_lines[:]
-    for var in sorted_missing:
+    # Add new active module variables
+    for var in sorted(missing_vars):
         new_lines.append(f"{var}=0")
-        print(f"   • {var}=0")
 
     # Write updated content
     try:
         new_content = "\n".join(new_lines) + "\n"
         template_file.write_text(new_content, encoding="utf-8")
         print("✅ .env.template updated successfully")
+        print(f"   Active modules: {len(active_module_keys)}")
+        print(f"   Disabled modules removed: {len(vars_to_remove)}")
         return True
     except Exception as exc:
         print(f"Error writing .env.template: {exc}")
@@ -379,11 +414,11 @@ def main(argv: Sequence[str]) -> int:
 
     print(f"Updated manifest {args.manifest}: added {added}, refreshed {updated}")
 
-    # Update .env.template if requested and we have changes
-    if not args.skip_template and (added > 0 or updated > 0):
+    # Update .env.template if requested (always run to clean up disabled modules)
+    if not args.skip_template:
         template_updated = update_env_template(args.manifest, args.update_template)
         if template_updated:
-            print(f"Updated {args.update_template} with new module variables")
+            print(f"Updated {args.update_template} with active modules only")
 
     return 0
 

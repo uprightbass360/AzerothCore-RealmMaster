@@ -50,6 +50,9 @@ def clean(value: str) -> str:
 def cmd_keys(manifest_path: str) -> None:
     manifest = load_manifest(manifest_path)
     for entry in iter_modules(manifest):
+        # Skip blocked modules
+        if entry.get("status") == "blocked":
+            continue
         print(entry["key"])
 
 
@@ -96,7 +99,7 @@ def cmd_metadata(manifest_path: str) -> None:
 
 def cmd_sorted_keys(manifest_path: str) -> None:
     manifest = load_manifest(manifest_path)
-    modules = list(iter_modules(manifest))
+    modules = [entry for entry in iter_modules(manifest) if entry.get("status") != "blocked"]
     modules.sort(
         key=lambda item: (
             # Primary sort by order (default to 5000 if not specified)

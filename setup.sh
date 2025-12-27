@@ -17,6 +17,12 @@ source "$SCRIPT_DIR/scripts/bash/project_name.sh"
 DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
 
 # ==============================================
+# Feature Flags
+# ==============================================
+# Set to 0 to disable server configuration preset selection
+ENABLE_CONFIG_PRESETS="${ENABLE_CONFIG_PRESETS:-0}"
+
+# ==============================================
 # Constants (auto-loaded from .env.template)
 # ==============================================
 
@@ -963,58 +969,65 @@ fi
   BACKUP_DAILY_TIME=$(ask "Daily backup hour (00-23, UTC)" "${CLI_BACKUP_TIME:-$DEFAULT_BACKUP_TIME}" validate_number)
 
   # Server configuration
-  say HEADER "SERVER CONFIGURATION PRESET"
   local SERVER_CONFIG_PRESET
 
-  if [ -n "$CLI_CONFIG_PRESET" ]; then
-    SERVER_CONFIG_PRESET="$CLI_CONFIG_PRESET"
-    say INFO "Using preset from command line: $SERVER_CONFIG_PRESET"
+  if [ "$ENABLE_CONFIG_PRESETS" = "1" ]; then
+    say HEADER "SERVER CONFIGURATION PRESET"
+
+    if [ -n "$CLI_CONFIG_PRESET" ]; then
+      SERVER_CONFIG_PRESET="$CLI_CONFIG_PRESET"
+      say INFO "Using preset from command line: $SERVER_CONFIG_PRESET"
+    else
+      declare -A CONFIG_PRESET_NAMES=()
+      declare -A CONFIG_PRESET_DESCRIPTIONS=()
+      declare -A CONFIG_MENU_INDEX=()
+      local config_dir="$SCRIPT_DIR/config/presets"
+      local menu_index=1
+
+      echo "Choose a server configuration preset:"
+
+      if [ -x "$SCRIPT_DIR/scripts/python/parse-config-presets.py" ] && [ -d "$config_dir" ]; then
+        while IFS=$'\t' read -r preset_key preset_name preset_desc; do
+          [ -n "$preset_key" ] || continue
+          CONFIG_PRESET_NAMES["$preset_key"]="$preset_name"
+          CONFIG_PRESET_DESCRIPTIONS["$preset_key"]="$preset_desc"
+          CONFIG_MENU_INDEX[$menu_index]="$preset_key"
+          echo "$menu_index) $preset_name"
+          echo "   $preset_desc"
+          menu_index=$((menu_index + 1))
+        done < <(python3 "$SCRIPT_DIR/scripts/python/parse-config-presets.py" list --presets-dir "$config_dir")
+      else
+        # Fallback if parser script not available
+        CONFIG_MENU_INDEX[1]="none"
+        CONFIG_PRESET_NAMES["none"]="Default (No Preset)"
+        CONFIG_PRESET_DESCRIPTIONS["none"]="Use default AzerothCore settings"
+        echo "1) Default (No Preset)"
+        echo "   Use default AzerothCore settings without any modifications"
+      fi
+
+      local max_config_option=$((menu_index - 1))
+
+      if [ "$NON_INTERACTIVE" = "1" ]; then
+        SERVER_CONFIG_PRESET="none"
+        say INFO "Non-interactive mode: Using default configuration preset"
+      else
+        while true; do
+          read -p "$(echo -e "${YELLOW}🎯 Select server configuration [1-$max_config_option]: ${NC}")" choice
+          if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$max_config_option" ]; then
+            SERVER_CONFIG_PRESET="${CONFIG_MENU_INDEX[$choice]}"
+            local chosen_name="${CONFIG_PRESET_NAMES[$SERVER_CONFIG_PRESET]}"
+            say INFO "Selected: $chosen_name"
+            break
+          else
+            say ERROR "Please select a number between 1 and $max_config_option"
+          fi
+        done
+      fi
+    fi
   else
-    declare -A CONFIG_PRESET_NAMES=()
-    declare -A CONFIG_PRESET_DESCRIPTIONS=()
-    declare -A CONFIG_MENU_INDEX=()
-    local config_dir="$SCRIPT_DIR/config/presets"
-    local menu_index=1
-
-    echo "Choose a server configuration preset:"
-
-    if [ -x "$SCRIPT_DIR/scripts/python/parse-config-presets.py" ] && [ -d "$config_dir" ]; then
-      while IFS=$'\t' read -r preset_key preset_name preset_desc; do
-        [ -n "$preset_key" ] || continue
-        CONFIG_PRESET_NAMES["$preset_key"]="$preset_name"
-        CONFIG_PRESET_DESCRIPTIONS["$preset_key"]="$preset_desc"
-        CONFIG_MENU_INDEX[$menu_index]="$preset_key"
-        echo "$menu_index) $preset_name"
-        echo "   $preset_desc"
-        menu_index=$((menu_index + 1))
-      done < <(python3 "$SCRIPT_DIR/scripts/python/parse-config-presets.py" list --presets-dir "$config_dir")
-    else
-      # Fallback if parser script not available
-      CONFIG_MENU_INDEX[1]="none"
-      CONFIG_PRESET_NAMES["none"]="Default (No Preset)"
-      CONFIG_PRESET_DESCRIPTIONS["none"]="Use default AzerothCore settings"
-      echo "1) Default (No Preset)"
-      echo "   Use default AzerothCore settings without any modifications"
-    fi
-
-    local max_config_option=$((menu_index - 1))
-
-    if [ "$NON_INTERACTIVE" = "1" ]; then
-      SERVER_CONFIG_PRESET="none"
-      say INFO "Non-interactive mode: Using default configuration preset"
-    else
-      while true; do
-        read -p "$(echo -e "${YELLOW}🎯 Select server configuration [1-$max_config_option]: ${NC}")" choice
-        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$max_config_option" ]; then
-          SERVER_CONFIG_PRESET="${CONFIG_MENU_INDEX[$choice]}"
-          local chosen_name="${CONFIG_PRESET_NAMES[$SERVER_CONFIG_PRESET]}"
-          say INFO "Selected: $chosen_name"
-          break
-        else
-          say ERROR "Please select a number between 1 and $max_config_option"
-        fi
-      done
-    fi
+    # Config presets disabled - use default
+    SERVER_CONFIG_PRESET="none"
+    say INFO "Server configuration presets disabled - using default settings"
   fi
 
   local MODE_SELECTION=""
