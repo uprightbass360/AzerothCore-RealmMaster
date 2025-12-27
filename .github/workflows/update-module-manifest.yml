@@ -17,13 +17,31 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Configure git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
       - name: Update manifest from GitHub topics
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 scripts/python/update_module_manifest.py --log
 
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in manifest or template files"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected:"
+            git diff --name-only
+          fi
+
       - name: Create Pull Request with changes
+        if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
           commit-message: 'chore: sync module manifest'
