@@ -28,8 +28,9 @@ def normalize_modules(raw_modules: Iterable[str], profile: Path) -> List[str]:
         if not value:
             continue
         modules.append(value)
-    if not modules:
-        raise ValueError(f"Profile {profile.name}: modules list cannot be empty")
+    # Allow empty modules list for vanilla/minimal profiles
+    if not modules and "vanilla" not in profile.stem.lower() and "minimal" not in profile.stem.lower():
+        raise ValueError(f"Profile {profile.name}: modules list cannot be empty (except for vanilla/minimal profiles)")
     return modules
 
 

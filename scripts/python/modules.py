@@ -371,9 +371,9 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
     for unknown_key in extra_env_modules:
         warnings.append(f".env defines {unknown_key} but it is missing from the manifest")
 
-    # Warn if manifest entry lacks .env toggle
+    # Warn if manifest entry lacks .env toggle (skip blocked modules)
     for module in modules:
-        if module.key not in env_map and module.key not in os.environ:
+        if not module.blocked and module.key not in env_map and module.key not in os.environ:
             warnings.append(
                 f"Manifest includes {module.key} but .env does not define it (defaulting to 0)"
             )
