@@ -467,6 +467,7 @@ load_sql_helper(){
 # Module SQL is now staged at runtime by stage-modules.sh which copies files to
 # /azerothcore/data/sql/updates/ (core directory) where they ARE scanned and processed.
 
+
 track_module_state(){
   echo 'Checking for module changes that require rebuild...'
 

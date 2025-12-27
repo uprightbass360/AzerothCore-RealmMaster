@@ -18,6 +18,7 @@ import re
 import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence
 from urllib import error, parse, request
 
@@ -86,6 +87,16 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         "--log",
         action="store_true",
         help="Print verbose progress information",
+    )
+    parser.add_argument(
+        "--update-template",
+        default=".env.template",
+        help="Update .env.template with missing module variables (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--skip-template",
+        action="store_true",
+        help="Skip updating .env.template",
     )
     return parser.parse_args(argv)
 
@@ -273,6 +284,82 @@ def collect_repositories(
     return list(seen.values())
 
 
+def update_env_template(manifest_path: str, template_path: str) -> bool:
+    """Update .env.template with missing module variables.
+
+    Args:
+        manifest_path: Path to the module manifest JSON file
+        template_path: Path to .env.template file
+
+    Returns:
+        True if template was updated, False if no changes needed
+    """
+    # Load manifest to get all module keys
+    manifest = load_manifest(manifest_path)
+    modules = manifest.get("modules", [])
+    if not modules:
+        return False
+
+    # Extract all module keys
+    module_keys = set()
+    for module in modules:
+        key = module.get("key")
+        if key:
+            module_keys.add(key)
+
+    if not module_keys:
+        return False
+
+    # Check if template file exists
+    template_file = Path(template_path)
+    if not template_file.exists():
+        print(f"Warning: .env.template not found at {template_path}")
+        return False
+
+    # Read current template content
+    try:
+        current_content = template_file.read_text(encoding="utf-8")
+        current_lines = current_content.splitlines()
+    except Exception as exc:
+        print(f"Error reading .env.template: {exc}")
+        return False
+
+    # Find which module variables are missing
+    existing_vars = set()
+    for line in current_lines:
+        line = line.strip()
+        if "=" in line and not line.startswith("#"):
+            var_name = line.split("=", 1)[0].strip()
+            existing_vars.add(var_name)
+
+    missing_vars = module_keys - existing_vars
+    if not missing_vars:
+        print("✅ All module variables present in .env.template")
+        return False
+
+    # Add missing variables to the end of the file
+    print(f"📝 Adding {len(missing_vars)} missing module variable(s) to .env.template:")
+
+    # Sort missing vars for consistent output
+    sorted_missing = sorted(missing_vars)
+
+    # Prepare new content
+    new_lines = current_lines[:]
+    for var in sorted_missing:
+        new_lines.append(f"{var}=0")
+        print(f"   • {var}=0")
+
+    # Write updated content
+    try:
+        new_content = "\n".join(new_lines) + "\n"
+        template_file.write_text(new_content, encoding="utf-8")
+        print("✅ .env.template updated successfully")
+        return True
+    except Exception as exc:
+        print(f"Error writing .env.template: {exc}")
+        return False
+
+
 def main(argv: Sequence[str]) -> int:
     args = parse_args(argv)
     topics = args.topics or DEFAULT_TOPICS
@@ -291,6 +378,13 @@ def main(argv: Sequence[str]) -> int:
         handle.write("\n")
 
     print(f"Updated manifest {args.manifest}: added {added}, refreshed {updated}")
+
+    # Update .env.template if requested and we have changes
+    if not args.skip_template and (added > 0 or updated > 0):
+        template_updated = update_env_template(args.manifest, args.update_template)
+        if template_updated:
+            print(f"Updated {args.update_template} with new module variables")
+
     return 0
 
 
