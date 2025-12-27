@@ -1757,6 +1757,7 @@ DB_GUARD_VERIFY_INTERVAL_SECONDS=$(get_template_value "DB_GUARD_VERIFY_INTERVAL_
 STAGE_PATH_MODULE_SQL=$(get_template_value "STAGE_PATH_MODULE_SQL")
 
 # SQL Source Overlay
+SOURCE_DIR=$(get_template_value "SOURCE_DIR")
 AC_SQL_SOURCE_PATH=$(get_template_value "AC_SQL_SOURCE_PATH")
 
 # Ports
