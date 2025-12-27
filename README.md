@@ -130,6 +130,13 @@ For diagnostic procedures, common issues, and backup system documentation, see *
 This project builds upon:
 - **[AzerothCore](https://github.com/azerothcore/azerothcore-wotlk)** - Core server application
 - **[AzerothCore Module Community](https://github.com/azerothcore)** - Enhanced gameplay modules
+- **[acore-docker](https://github.com/azerothcore/acore-docker)** - Inspiration for containerized deployment
+- **[mod-playerbots](https://github.com/mod-playerbots/azerothcore-wotlk)** - Advanced playerbot functionality
+- **All module creators** - Making amazing things every day
+
+### Community & Support
+- **[AzerothCore Discord](https://discord.gg/gkt4y2x)** - Join the community for support and discussions
+- **[GitHub Issues](https://github.com/uprightbass360/AzerothCore-RealmMaster/issues)** - Report build or deployment issues here
 
 #### Key Features
 - ✅ **Fully Automated Setup** - Interactive configuration and deployment
