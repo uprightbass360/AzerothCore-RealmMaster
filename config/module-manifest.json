@@ -5475,6 +5475,20 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_AZEROTHCORE_REALMMASTER",
+      "name": "AzerothCore-RealmMaster",
+      "repo": "https://github.com/uprightbass360/AzerothCore-RealmMaster.git",
+      "description": "Automated AzerothCore docker stack with tooling. ",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
