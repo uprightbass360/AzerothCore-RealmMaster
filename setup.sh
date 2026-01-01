@@ -1139,12 +1139,29 @@ fi
     MODE_PRESET_NAME="$CLI_MODULE_PRESET"
   fi
 
+  # Function to determine source branch for a preset
+  get_preset_source_branch() {
+    local preset_name="$1"
+    local preset_modules="${MODULE_PRESET_CONFIGS[$preset_name]:-}"
+
+    # Check if playerbots module is in the preset
+    if [[ "$preset_modules" == *"MODULE_PLAYERBOTS"* ]]; then
+      echo "azerothcore-playerbots"
+    else
+      echo "azerothcore-wotlk"
+    fi
+  }
+
   # Module config
   say HEADER "MODULE PRESET"
-  echo "1) ${MODULE_PRESET_LABELS[$DEFAULT_PRESET_SUGGESTED]:-⭐ Suggested Modules}"
-  echo "2) ${MODULE_PRESET_LABELS[$DEFAULT_PRESET_PLAYERBOTS]:-🤖 Playerbots + Suggested modules}"
-  echo "3) ⚙️  Manual selection"
-  echo "4) 🚫 No modules"
+  printf " %s) %s\n" "1" "⭐ Suggested Modules"
+  printf "    %s (%s)\n" "Baseline solo-friendly quality of life mix" "azerothcore-wotlk"
+  printf " %s) %s\n" "2" "🤖 Playerbots + Suggested modules"
+  printf "    %s (%s)\n" "Suggested stack plus playerbots enabled" "azerothcore-playerbots"
+  printf " %s) %s\n" "3" "⚙️ Manual selection"
+  printf "    %s (%s)\n" "Choose individual modules manually" "(depends on modules)"
+  printf " %s) %s\n" "4" "🚫 No modules"
+  printf "    %s (%s)\n" "Pure AzerothCore with no modules" "azerothcore-wotlk"
 
   local menu_index=5
   declare -A MENU_PRESET_INDEX=()
@@ -1163,13 +1180,16 @@ fi
   for entry in "${ORDERED_PRESETS[@]}"; do
     local preset_name="${entry#*::}"
     [ -n "${MODULE_PRESET_CONFIGS[$preset_name]:-}" ] || continue
-    local pretty_name
+    local pretty_name preset_desc
     if [ -n "${MODULE_PRESET_LABELS[$preset_name]:-}" ]; then
       pretty_name="${MODULE_PRESET_LABELS[$preset_name]}"
     else
       pretty_name=$(echo "$preset_name" | tr '_-' ' ' | awk '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}}1')
     fi
-    echo "${menu_index}) ${pretty_name} (config/module-profiles/${preset_name}.json)"
+    preset_desc="${MODULE_PRESET_DESCRIPTIONS[$preset_name]:-No description available}"
+    local source_branch=$(get_preset_source_branch "$preset_name")
+    printf " %s) %s\n" "$menu_index" "$pretty_name"
+    printf "    %s (%s)\n" "$preset_desc" "$source_branch"
     MENU_PRESET_INDEX[$menu_index]="$preset_name"
     menu_index=$((menu_index + 1))
   done
@@ -1567,7 +1587,7 @@ fi
   fi
 
   local default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore"
-  if [ "$NEEDS_CXX_REBUILD" = "1" ] || [ "$MODULE_PLAYERBOTS" = "1" ]; then
+  if [ "$MODULE_PLAYERBOTS" = "1" ]; then
     default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore-playerbots"
   fi
 
@@ -1756,6 +1776,9 @@ DB_GUARD_VERIFY_INTERVAL_SECONDS=$(get_template_value "DB_GUARD_VERIFY_INTERVAL_
 # Module SQL staging
 STAGE_PATH_MODULE_SQL=$(get_template_value "STAGE_PATH_MODULE_SQL")
 
+# Modules rebuild source path
+MODULES_REBUILD_SOURCE_PATH=$MODULES_REBUILD_SOURCE_PATH
+
 # SQL Source Overlay
 SOURCE_DIR=$(get_template_value "SOURCE_DIR")
 AC_SQL_SOURCE_PATH=$(get_template_value "AC_SQL_SOURCE_PATH")
@@ -1792,7 +1815,6 @@ EOF
     fi
   done
   cat <<EOF
-MODULES_REBUILD_SOURCE_PATH=$MODULES_REBUILD_SOURCE_PATH
 
 # Client data
 CLIENT_DATA_VERSION=${CLIENT_DATA_VERSION:-$DEFAULT_CLIENT_DATA_VERSION}
