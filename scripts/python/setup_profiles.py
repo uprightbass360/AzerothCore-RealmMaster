@@ -80,7 +80,7 @@ def cmd_list(directory: Path) -> int:
     profiles.sort(key=lambda item: item[4])
 
     for name, modules, label, description, order in profiles:
-        modules_csv = ",".join(modules)
+        modules_csv = ",".join(modules) if modules else "-"
         print("\t".join([name, modules_csv, label, description, str(order)]))
     return 0
 
