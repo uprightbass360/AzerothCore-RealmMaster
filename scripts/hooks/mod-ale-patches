@@ -10,11 +10,19 @@ MODULE_NAME="${MODULE_NAME:-}"
 
 # Detect if we're building with playerbots fork
 IS_PLAYERBOTS_FORK=0
-if [ -n "$MODULE_DIR" ]; then
-    # Check if the parent directory structure indicates playerbots fork
-    if echo "$MODULE_DIR" | grep -q "azerothcore-playerbots"; then
-        IS_PLAYERBOTS_FORK=1
-    fi
+
+# Method 1: Check STACK_SOURCE_VARIANT environment variable
+if [ "${STACK_SOURCE_VARIANT:-}" = "playerbots" ]; then
+    IS_PLAYERBOTS_FORK=1
+    echo "   ✅ Playerbots detected via STACK_SOURCE_VARIANT"
+# Method 2: Check MODULES_REBUILD_SOURCE_PATH
+elif [ -n "${MODULES_REBUILD_SOURCE_PATH:-}" ] && echo "${MODULES_REBUILD_SOURCE_PATH}" | grep -q "azerothcore-playerbots"; then
+    IS_PLAYERBOTS_FORK=1
+    echo "   ✅ Playerbots detected via MODULES_REBUILD_SOURCE_PATH"
+else
+    echo "   ❌ Playerbots fork not detected"
+    echo "   🔍 Debug: STACK_SOURCE_VARIANT='${STACK_SOURCE_VARIANT:-}'"
+    echo "   🔍 Debug: MODULES_REBUILD_SOURCE_PATH='${MODULES_REBUILD_SOURCE_PATH:-}'"
 fi
 
 # Feature flags (set to 0 to disable specific patches)
@@ -69,10 +77,10 @@ apply_sendtrainerlist_patch() {
         return 1
     fi
 
-    # Check if the buggy code exists (without GET_GUID())
+    # Check if the buggy code exists (without GetGUID())
     if grep -q 'player->GetSession()->SendTrainerList(obj);' "$target_file"; then
-        # Apply the fix by adding ->GET_GUID()
-        if sed -i 's/player->GetSession()->SendTrainerList(obj);/player->GetSession()->SendTrainerList(obj->GET_GUID());/' "$target_file"; then
+        # Apply the fix by adding ->GetGUID()
+        if sed -i 's/player->GetSession()->SendTrainerList(obj);/player->GetSession()->SendTrainerList(obj->GetGUID());/' "$target_file"; then
             echo "   ✅ Applied SendTrainerList compatibility fix"
             return 0
         else

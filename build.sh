@@ -38,6 +38,7 @@ Build AzerothCore with custom modules and create deployment-ready images.
 Options:
   --yes, -y                    Auto-confirm all prompts
   --force                      Force rebuild even if no changes detected
+  --force-update               Force update source repository to latest commits
   --source-path PATH           Custom source repository path
   --skip-source-setup          Skip automatic source repository setup
   -h, --help                   Show this help
@@ -53,6 +54,7 @@ Examples:
   ./build.sh                   Interactive build
   ./build.sh --yes             Auto-confirm build
   ./build.sh --force           Force rebuild regardless of state
+  ./build.sh --force-update    Update source to latest and build
 EOF
 }
 
@@ -60,6 +62,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --yes|-y) ASSUME_YES=1; shift;;
     --force) FORCE_REBUILD=1; shift;;
+    --force-update) FORCE_UPDATE=1; shift;;
     --source-path) CUSTOM_SOURCE_PATH="$2"; shift 2;;
     --skip-source-setup) SKIP_SOURCE_SETUP=1; shift;;
     -h|--help) usage; exit 0;;
@@ -240,6 +243,13 @@ ensure_source_repo(){
   src_path="${src_path//\/.\//\/}"
 
   if [ -d "$src_path/.git" ]; then
+    if [ "${FORCE_UPDATE:-0}" = "1" ]; then
+      info "Force update requested - updating source repository to latest" >&2
+      if ! (cd "$ROOT_DIR" && ./scripts/bash/setup-source.sh) >&2; then
+        err "Failed to update source repository" >&2
+        exit 1
+      fi
+    fi
     echo "$src_path"
     return
   fi
@@ -539,6 +549,10 @@ stage_modules(){
     mkdir -p "$staging_modules_dir"
     rm -f "$staging_modules_dir/.modules_state" "$staging_modules_dir/.requires_rebuild" 2>/dev/null || true
   fi
+
+  # Export environment variables needed by module hooks
+  export STACK_SOURCE_VARIANT="$(read_env STACK_SOURCE_VARIANT "core")"
+  export MODULES_REBUILD_SOURCE_PATH="$(read_env MODULES_REBUILD_SOURCE_PATH "")"
 
   if ! (cd "$local_modules_dir" && bash "$ROOT_DIR/scripts/bash/manage-modules.sh"); then
     err "Module staging failed; aborting build"
