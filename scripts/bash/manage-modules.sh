@@ -141,6 +141,10 @@ run_post_install_hooks(){
       export MODULES_ROOT="${MODULES_ROOT:-/modules}"
       export LUA_SCRIPTS_TARGET="/azerothcore/lua_scripts"
 
+      # Pass build environment variables to hooks
+      export STACK_SOURCE_VARIANT="${STACK_SOURCE_VARIANT:-}"
+      export MODULES_REBUILD_SOURCE_PATH="${MODULES_REBUILD_SOURCE_PATH:-}"
+
       # Execute the hook script
       if "$hook_script"; then
         ok "Hook '$hook' completed successfully"

@@ -1487,11 +1487,16 @@ fi
     MODULES_CPP_LIST="$(IFS=','; printf '%s' "${enabled_cpp_module_keys[*]}")"
   fi
 
-  local STACK_IMAGE_MODE="standard"
+  # Determine source variant based ONLY on playerbots module
   local STACK_SOURCE_VARIANT="core"
   if [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
-    STACK_IMAGE_MODE="playerbots"
     STACK_SOURCE_VARIANT="playerbots"
+  fi
+
+  # Determine image mode based on source variant and build requirements
+  local STACK_IMAGE_MODE="standard"
+  if [ "$STACK_SOURCE_VARIANT" = "playerbots" ]; then
+    STACK_IMAGE_MODE="playerbots"
   elif [ "$NEEDS_CXX_REBUILD" = "1" ]; then
     STACK_IMAGE_MODE="modules"
   fi
@@ -1587,7 +1592,7 @@ fi
   fi
 
   local default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore"
-  if [ "$MODULE_PLAYERBOTS" = "1" ]; then
+  if [ "$STACK_SOURCE_VARIANT" = "playerbots" ]; then
     default_source_rel="${LOCAL_STORAGE_ROOT}/source/azerothcore-playerbots"
   fi
 
