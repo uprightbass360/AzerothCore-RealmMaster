@@ -1,4 +1,4 @@
-module acore-compose/statusdash
+module azerothcore-realmmaster/statusdash
 
 go 1.22
 
