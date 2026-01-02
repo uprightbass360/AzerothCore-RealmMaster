@@ -99,7 +99,36 @@ done
 # Get last build time from container metadata
 get_last_build_time() {
   local containers=("ac-worldserver" "ac-authserver")
-  local images=("azerothcore-stack:worldserver-playerbots" "azerothcore-stack:authserver-playerbots")
+  local images=()
+
+  # Require COMPOSE_PROJECT_NAME to be set
+  if [[ -z "${COMPOSE_PROJECT_NAME:-}" ]]; then
+    warn "COMPOSE_PROJECT_NAME not set in environment"
+    return 1
+  fi
+
+  # Use actual image names from environment
+  # Detect variant to check appropriate images
+  if [[ "${STACK_IMAGE_MODE:-standard}" == "playerbots" ]] || [[ "${MODULE_PLAYERBOTS:-0}" == "1" ]] || [[ "${PLAYERBOT_ENABLED:-0}" == "1" ]] || [[ "${STACK_SOURCE_VARIANT:-}" == "playerbots" ]]; then
+    if [[ -z "${AC_WORLDSERVER_IMAGE_PLAYERBOTS:-}" ]] || [[ -z "${AC_AUTHSERVER_IMAGE_PLAYERBOTS:-}" ]]; then
+      warn "Playerbots mode detected but AC_WORLDSERVER_IMAGE_PLAYERBOTS or AC_AUTHSERVER_IMAGE_PLAYERBOTS not set"
+      return 1
+    fi
+    images=(
+      "${AC_WORLDSERVER_IMAGE_PLAYERBOTS}"
+      "${AC_AUTHSERVER_IMAGE_PLAYERBOTS}"
+    )
+  else
+    if [[ -z "${AC_WORLDSERVER_IMAGE:-}" ]] || [[ -z "${AC_AUTHSERVER_IMAGE:-}" ]]; then
+      warn "Standard mode detected but AC_WORLDSERVER_IMAGE or AC_AUTHSERVER_IMAGE not set"
+      return 1
+    fi
+    images=(
+      "${AC_WORLDSERVER_IMAGE}"
+      "${AC_AUTHSERVER_IMAGE}"
+    )
+  fi
+
   local latest_date=""
 
   # Try to get build timestamp from containers and images
@@ -143,7 +172,7 @@ if [[ -n "$SINCE_DATE" ]]; then
   DATE_DESC="since $SINCE_DATE"
 else
   # Try to use last build time as default
-  LAST_BUILD_DATE=$(get_last_build_time)
+  LAST_BUILD_DATE=$(get_last_build_time 2>/dev/null) || LAST_BUILD_DATE=""
 
   if [[ -n "$LAST_BUILD_DATE" ]]; then
     SINCE_OPTION="--since=$LAST_BUILD_DATE"
@@ -194,11 +223,17 @@ detect_source_config() {
     $VERBOSE && log "Switched to playerbots variant" >&2
   fi
 
-  # Repository URLs from environment or defaults
-  local standard_repo="${ACORE_REPO_STANDARD:-https://github.com/azerothcore/azerothcore-wotlk.git}"
-  local standard_branch="${ACORE_BRANCH_STANDARD:-master}"
-  local playerbots_repo="${ACORE_REPO_PLAYERBOTS:-https://github.com/mod-playerbots/azerothcore-wotlk.git}"
-  local playerbots_branch="${ACORE_BRANCH_PLAYERBOTS:-Playerbot}"
+  # Repository URLs from environment (required)
+  local standard_repo="${ACORE_REPO_STANDARD}"
+  local standard_branch="${ACORE_BRANCH_STANDARD}"
+  local playerbots_repo="${ACORE_REPO_PLAYERBOTS}"
+  local playerbots_branch="${ACORE_BRANCH_PLAYERBOTS}"
+
+  if [[ -z "$standard_repo" ]] || [[ -z "$standard_branch" ]] || [[ -z "$playerbots_repo" ]] || [[ -z "$playerbots_branch" ]]; then
+    warn "Repository configuration missing from environment"
+    warn "Required: ACORE_REPO_STANDARD, ACORE_BRANCH_STANDARD, ACORE_REPO_PLAYERBOTS, ACORE_BRANCH_PLAYERBOTS"
+    return 1
+  fi
 
   if [[ "$variant" == "playerbots" ]]; then
     echo "$playerbots_repo|$playerbots_branch|$LOCAL_STORAGE_ROOT/source/azerothcore-playerbots"

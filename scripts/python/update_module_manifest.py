@@ -46,7 +46,7 @@ CATEGORY_BY_TYPE = {
     "data": "data",
     "cpp": "uncategorized",
 }
-USER_AGENT = "acore-compose-module-manifest"
+USER_AGENT = "azerothcore-realmmaster-module-manifest"
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:

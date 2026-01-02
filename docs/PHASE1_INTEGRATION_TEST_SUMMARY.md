@@ -142,7 +142,7 @@ MODULES_ENABLED="mod-playerbots mod-aoe-loot ..."
 **What Gets Built:**
 - AzerothCore with playerbots branch
 - 93 modules compiled and integrated in this run (current manifest: 348 total / 221 supported)
-- Custom Docker images: `acore-compose:worldserver-modules-latest` etc.
+- Custom Docker images: `${COMPOSE_PROJECT_NAME}:worldserver-modules-latest` etc.
 
 ### Deployment Status: READY TO DEPLOY 🚀
 

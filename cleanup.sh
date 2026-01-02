@@ -146,8 +146,6 @@ sanitize_project_name(){
   project_name::sanitize "$1"
 }
 
-PROJECT_IMAGE_PREFIX="$(sanitize_project_name "${COMPOSE_PROJECT_NAME:-$DEFAULT_PROJECT_NAME}")"
-
 remove_storage_dir(){
   local path="$1"
   if [ -d "$path" ]; then
@@ -223,8 +221,7 @@ nuclear_cleanup() {
 
   # Remove project images (server/tool images typical to this project)
   execute_command "Remove acore images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^acore/' | xargs -r docker rmi"
-  execute_command "Remove local project images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^${PROJECT_IMAGE_PREFIX}:' | xargs -r docker rmi"
-  execute_command "Remove legacy playerbots images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^uprightbass360/azerothcore-wotlk-playerbots' | xargs -r docker rmi"
+  execute_command "Remove project-specific images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E \"^${PROJECT_NAME}:\" | xargs -r docker rmi"
   execute_command "Remove tool images" "docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'phpmyadmin|uprightbass360/keira3' | xargs -r docker rmi"
 
   # Storage cleanup (preserve backups if requested)
