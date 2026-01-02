@@ -13,6 +13,7 @@ images/
 node_modules/
 .mcp*/
 scripts/__pycache__/*
+scripts/bash/__pycache__/*
 scripts/python/__pycache__/*
 .env
 package-lock.json

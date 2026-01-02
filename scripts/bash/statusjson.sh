@@ -4,6 +4,7 @@ import os
 import re
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -468,8 +469,14 @@ def docker_stats():
 
 def main():
     env = load_env()
-    project = read_env(env, "COMPOSE_PROJECT_NAME", "acore-compose")
-    network = read_env(env, "NETWORK_NAME", "azerothcore")
+    project = read_env(env, "COMPOSE_PROJECT_NAME")
+    if not project:
+        print(json.dumps({"error": "COMPOSE_PROJECT_NAME not set in environment"}), file=sys.stderr)
+        sys.exit(1)
+    network = read_env(env, "NETWORK_NAME")
+    if not network:
+        print(json.dumps({"error": "NETWORK_NAME not set in environment"}), file=sys.stderr)
+        sys.exit(1)
 
     services = [
         ("ac-mysql", "MySQL"),
