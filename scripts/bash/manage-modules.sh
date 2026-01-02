@@ -174,7 +174,18 @@ install_enabled_modules(){
       continue
     fi
     if [ -d "$dir/.git" ]; then
-      info "$dir already present; skipping clone"
+      info "$dir already present; checking for updates"
+      (cd "$dir" && git fetch origin >/dev/null 2>&1 || warn "Failed to fetch updates for $dir")
+      local current_branch
+      current_branch=$(cd "$dir" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+      if (cd "$dir" && git pull origin "$current_branch" 2>&1 | grep -q "Already up to date"); then
+        info "$dir is already up to date"
+      else
+        ok "$dir updated from remote"
+      fi
+      if [ -n "$ref" ]; then
+        (cd "$dir" && git checkout "$ref") || warn "Unable to checkout ref $ref for $dir"
+      fi
     elif [ -d "$dir" ]; then
       warn "$dir exists but is not a git repository; leaving in place"
     else

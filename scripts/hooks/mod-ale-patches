@@ -1,5 +1,6 @@
 #!/bin/bash
 # Module-specific hook for mod-ale compatibility patches
+# NOTE: These patches are primarily needed for the AzerothCore playerbots fork
 set -e
 
 # Hook environment
@@ -7,12 +8,34 @@ MODULE_KEY="${MODULE_KEY:-}"
 MODULE_DIR="${MODULE_DIR:-}"
 MODULE_NAME="${MODULE_NAME:-}"
 
+# Detect if we're building with playerbots fork
+IS_PLAYERBOTS_FORK=0
+if [ -n "$MODULE_DIR" ]; then
+    # Check if the parent directory structure indicates playerbots fork
+    if echo "$MODULE_DIR" | grep -q "azerothcore-playerbots"; then
+        IS_PLAYERBOTS_FORK=1
+    fi
+fi
+
+# Feature flags (set to 0 to disable specific patches)
+APPLY_MOVEPATH_PATCH="${APPLY_MOVEPATH_PATCH:-0}"  # Disabled by default - appears unnecessary
+# SendTrainerList patch: auto-detect based on fork, but can be overridden
+if [ -z "${APPLY_SENDTRAINERLIST_PATCH:-}" ]; then
+    APPLY_SENDTRAINERLIST_PATCH="$IS_PLAYERBOTS_FORK"  # Only needed for playerbots fork
+else
+    APPLY_SENDTRAINERLIST_PATCH="${APPLY_SENDTRAINERLIST_PATCH}"
+fi
+
 if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
     echo "❌ mod-ale-patches: Invalid module directory: $MODULE_DIR"
     exit 2
 fi
 
-echo "🔧 mod-ale-patches: Applying compatibility fixes to $MODULE_NAME"
+if [ "$IS_PLAYERBOTS_FORK" = "1" ]; then
+    echo "🔧 mod-ale-patches: Applying playerbots fork compatibility fixes to $MODULE_NAME"
+else
+    echo "🔧 mod-ale-patches: Checking compatibility fixes for $MODULE_NAME"
+fi
 
 # Apply MovePath compatibility patch
 apply_movepath_patch() {
@@ -37,10 +60,42 @@ apply_movepath_patch() {
     fi
 }
 
+# Apply SendTrainerList compatibility patch
+apply_sendtrainerlist_patch() {
+    local target_file="$MODULE_DIR/src/LuaEngine/methods/PlayerMethods.h"
+
+    if [ ! -f "$target_file" ]; then
+        echo "   ⚠️  SendTrainerList patch target file missing: $target_file"
+        return 1
+    fi
+
+    # Check if the buggy code exists (without GET_GUID())
+    if grep -q 'player->GetSession()->SendTrainerList(obj);' "$target_file"; then
+        # Apply the fix by adding ->GET_GUID()
+        if sed -i 's/player->GetSession()->SendTrainerList(obj);/player->GetSession()->SendTrainerList(obj->GET_GUID());/' "$target_file"; then
+            echo "   ✅ Applied SendTrainerList compatibility fix"
+            return 0
+        else
+            echo "   ❌ Failed to apply SendTrainerList compatibility fix"
+            return 2
+        fi
+    else
+        echo "   ✅ SendTrainerList compatibility fix already present"
+        return 0
+    fi
+}
+
 # Apply all patches
 patch_count=0
-if apply_movepath_patch; then
-    patch_count=$((patch_count + 1))
+if [ "$APPLY_MOVEPATH_PATCH" = "1" ]; then
+    if apply_movepath_patch; then
+        patch_count=$((patch_count + 1))
+    fi
+fi
+if [ "$APPLY_SENDTRAINERLIST_PATCH" = "1" ]; then
+    if apply_sendtrainerlist_patch; then
+        patch_count=$((patch_count + 1))
+    fi
 fi
 
 if [ $patch_count -eq 0 ]; then
