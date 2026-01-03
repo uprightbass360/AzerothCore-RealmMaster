@@ -41,9 +41,68 @@ Reads patch definitions from module metadata.
 
 ## Module-Specific Hooks
 
-Module-specific hooks are named after their primary module:
-- `mod-ale-patches` - Apply mod-ale compatibility fixes
-- `black-market-setup` - Black Market specific setup
+Module-specific hooks are named after their primary module and handle unique setup requirements.
+
+### `mod-ale-patches`
+Applies compatibility patches for mod-ale (Eluna Lua scripting engine) when building with the AzerothCore playerbots fork.
+
+**Auto-Detection:**
+The hook automatically detects if you're building with the playerbots fork by checking:
+1. `STACK_SOURCE_VARIANT=playerbots` environment variable
+2. `MODULES_REBUILD_SOURCE_PATH` contains "azerothcore-playerbots"
+
+**Patches Applied:**
+
+#### SendTrainerList Compatibility Fix
+**When Applied:** Automatically for playerbots fork (or when `APPLY_SENDTRAINERLIST_PATCH=1`)
+**What it fixes:** Adds missing `GetGUID()` call to fix trainer list display
+**File:** `src/LuaEngine/methods/PlayerMethods.h`
+**Change:**
+```cpp
+// Before (broken)
+player->GetSession()->SendTrainerList(obj);
+
+// After (fixed)
+player->GetSession()->SendTrainerList(obj->GetGUID());
+```
+
+#### MovePath Compatibility Fix
+**When Applied:** Only when explicitly enabled with `APPLY_MOVEPATH_PATCH=1` (disabled by default)
+**What it fixes:** Updates deprecated waypoint movement API
+**File:** `src/LuaEngine/methods/CreatureMethods.h`
+**Change:**
+```cpp
+// Before (deprecated)
+MoveWaypoint(creature->GetWaypointPath(), true);
+
+// After (updated API)
+MovePath(creature->GetWaypointPath(), FORCED_MOVEMENT_RUN);
+```
+**Note:** Currently disabled by default as testing shows it's not required for normal operation.
+
+**Feature Flags:**
+```bash
+# Automatically set for playerbots fork
+APPLY_SENDTRAINERLIST_PATCH=1
+
+# Disabled by default - enable if needed
+APPLY_MOVEPATH_PATCH=0
+```
+
+**Debug Output:**
+The hook provides detailed debug information during builds:
+```
+🔧 mod-ale-patches: Applying playerbots fork compatibility fixes to mod-ale
+   ✅ Playerbots detected via MODULES_REBUILD_SOURCE_PATH
+   ✅ Applied SendTrainerList compatibility fix
+   ✅ Applied 1 compatibility patch(es)
+```
+
+**Why This Exists:**
+The playerbots fork has slightly different API signatures in certain WorldSession methods. These patches ensure mod-ale (Eluna) compiles and functions correctly with both standard AzerothCore and the playerbots fork.
+
+### `black-market-setup`
+Black Market specific setup tasks.
 
 ## Usage in Manifest
 
