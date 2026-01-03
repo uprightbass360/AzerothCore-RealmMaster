@@ -185,7 +185,7 @@ readonly DEFAULT_DOMAIN_PLACEHOLDER="your-domain.com"
 
 # Module preset names (not in template)
 readonly DEFAULT_PRESET_SUGGESTED="suggested-modules"
-readonly DEFAULT_PRESET_PLAYERBOTS="playerbots-suggested-modules"
+readonly DEFAULT_PRESET_PLAYERBOTS="suggested-modules-playerbots"
 
 # Health check configuration (loaded via loop)
 readonly -a HEALTHCHECK_KEYS=(
