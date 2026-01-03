@@ -152,7 +152,7 @@ storage/
 ├── client-data/          # Unpacked WoW client data & DBC overrides
 ├── logs/                 # Server log files
 ├── modules/              # Downloaded module source code
-├── lua_scripts/          # Eluna Lua scripts (auto-loaded)
+├── lua_scripts/          # ALE Lua scripts (auto-loaded)
 ├── install-markers/      # Module installation state tracking
 └── backups/              # Automated database backups
     ├── daily/        # Daily backups (retained per BACKUP_RETENTION_DAYS)

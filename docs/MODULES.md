@@ -158,7 +158,7 @@ The module collection is organized into the following categories:
 | **[eluna-scripts](https://github.com/Isidorsson/Eluna-scripts.git)** | Collection of Lua scripts for creating custom gameplay mechanics and features |
 | **[eluna-ts](https://github.com/azerothcore/eluna-ts.git)** | Adds a TS-to-Lua workflow so Eluna scripts can be authored with modern tooling |
 | **[mod-aio](https://github.com/Rochet2/AIO.git)** | Pure Lua server-client communication system for bidirectional data transmission |
-| **[mod-ale](https://github.com/azerothcore/mod-ale.git)** | Adds Eluna Lua scripting engine for creating custom gameplay mechanics |
+| **[mod-ale](https://github.com/azerothcore/mod-ale.git)** | ALE (AzerothCore Lua Engine) - Lua scripting engine for custom gameplay mechanics (formerly Eluna) |
 
 ## Admin Tools
 

@@ -44,7 +44,7 @@ Reads patch definitions from module metadata.
 Module-specific hooks are named after their primary module and handle unique setup requirements.
 
 ### `mod-ale-patches`
-Applies compatibility patches for mod-ale (Eluna Lua scripting engine) when building with the AzerothCore playerbots fork.
+Applies compatibility patches for mod-ale (ALE - AzerothCore Lua Engine, formerly Eluna) when building with the AzerothCore playerbots fork.
 
 **Auto-Detection:**
 The hook automatically detects if you're building with the playerbots fork by checking:
