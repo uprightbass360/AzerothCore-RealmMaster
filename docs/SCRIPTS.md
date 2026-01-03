@@ -415,6 +415,51 @@ Comprehensive deployment verification with health checks and service validation.
 ./scripts/bash/verify-deployment.sh --quick               # Quick health check only
 ```
 
+#### `scripts/bash/validate-env.sh` - Environment Configuration Validator
+Validates `.env` configuration for required and optional variables with detailed reporting.
+
+```bash
+./scripts/bash/validate-env.sh                    # Basic validation (required vars only)
+./scripts/bash/validate-env.sh --strict           # Validate required + optional vars
+./scripts/bash/validate-env.sh --quiet            # Errors only, suppress success messages
+```
+
+**Exit Codes:**
+- `0` - All required variables present (and optional if --strict)
+- `1` - Missing required variables
+- `2` - Missing optional variables (only in --strict mode)
+
+**Validates:**
+- **Project Configuration:** `COMPOSE_PROJECT_NAME`, `NETWORK_NAME`
+- **Repository URLs:** Standard and playerbots AzerothCore repositories
+- **Storage Paths:** `STORAGE_PATH`, `STORAGE_PATH_LOCAL`, `MODULES_REBUILD_SOURCE_PATH`
+- **Database Settings:** MySQL credentials, ports, database names
+- **Container Config:** Container names and user permissions
+- **Build Paths:** Module rebuild source paths (optional)
+- **Performance Tuning:** MySQL buffer pool, InnoDB settings (optional)
+- **Image References:** Docker image tags (optional)
+
+**Use Cases:**
+- Pre-deployment validation
+- Troubleshooting configuration issues
+- CI/CD pipeline checks
+- Documentation of environment requirements
+
+**Example Output:**
+```
+ℹ️  Validating environment configuration...
+✅ Loaded environment from /path/to/.env
+
+ℹ️  Checking required variables...
+✅ COMPOSE_PROJECT_NAME=azerothcore-realmmaster
+✅ NETWORK_NAME=azerothcore
+✅ STORAGE_PATH=./storage
+✅ MYSQL_ROOT_PASSWORD=********
+✅ All required variables are set
+
+✅ Environment validation passed ✨
+```
+
 ### Backup System Scripts
 
 #### `scripts/bash/backup-scheduler.sh` - Automated Backup Service

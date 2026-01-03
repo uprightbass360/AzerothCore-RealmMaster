@@ -190,6 +190,26 @@ The build system is optimized for development and production deployments with Do
 - Build artifact caching for faster rebuilds
 - Support for custom patches and modifications
 
+### Module Build Source Path
+
+**`MODULES_REBUILD_SOURCE_PATH`** - Path to AzerothCore source used for C++ module compilation.
+
+**Default:** `${STORAGE_PATH_LOCAL}/source/azerothcore`
+
+Auto-selects the appropriate fork:
+- Playerbots enabled → `./local-storage/source/azerothcore-playerbots`
+- Standard build → `./local-storage/source/azerothcore`
+
+**Custom Override:**
+```bash
+MODULES_REBUILD_SOURCE_PATH=/path/to/custom/azerothcore
+```
+
+**Notes:**
+- Must be a valid AzerothCore git repository
+- Cannot be inside `STORAGE_PATH` (performance)
+- Auto-managed by `setup-source.sh` and `rebuild-with-modules.sh`
+
 ## Custom Configuration
 Advanced customization options for specialized deployments and development environments.
 
