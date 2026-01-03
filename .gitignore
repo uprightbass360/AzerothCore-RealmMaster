@@ -1,25 +1,27 @@
-database-import/*.sql
-database-import/*.sql.gz
-database-import/*/
-database-import/ImportBackup*/
-db_*/
-source/*
-local-data-tools/
-changelogs/
+# ===================================
+# Environment & Configuration
+# ===================================
+.env
+.claude/
+.mcp*/
+
+# ===================================
+# Storage & Data Directories
+# ===================================
 storage/
 local-storage/
-.claude/
-images/
-node_modules/
-.mcp*/
+db_*/
+
+# ===================================
+# Build Artifacts & Cache
+# ===================================
+.gocache/
+statusdash
 scripts/__pycache__/*
 scripts/bash/__pycache__/*
 scripts/python/__pycache__/*
-.env
-package-lock.json
-package.json
-todo.md
-.gocache/
-.module-ledger/
+
+# ===================================
+# Logs & Runtime State
+# ===================================
 deploy.log
-statusdash
