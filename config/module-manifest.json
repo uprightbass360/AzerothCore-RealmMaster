@@ -5489,6 +5489,34 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_DUELS",
+      "name": "Duels",
+      "repo": "https://github.com/VikasMahajan370/Duels.git",
+      "description": "\u2694\ufe0f Experience engaging duels with a feature-rich plugin for Paper 1.21+ servers, featuring 1.8 Legacy combat, matchmaking, custom kits, and more.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_WOW_CORE",
+      "name": "wow-core",
+      "repo": "https://github.com/Wow-Libre/wow-core.git",
+      "description": "Complete management platform for private World of Warcraft servers.",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
