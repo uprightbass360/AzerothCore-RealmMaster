@@ -1,6 +1,5 @@
 {
   "modules": [
-    "MODULE_ELUNA_TS",
     "MODULE_ELUNA",
     "MODULE_AIO",
     "MODULE_SOLO_LFG",
@@ -11,7 +10,7 @@
     "MODULE_LEARN_SPELLS",
     "MODULE_FIREWORKS"
   ],
-  "label": "\u2b50 Suggested Modules",
+  "label": "\u2b50 Suggested Modules (Main)",
   "description": "Baseline solo-friendly quality of life mix (no playerbots)",
   "order": 2
 }

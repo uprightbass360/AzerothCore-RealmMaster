@@ -8,11 +8,10 @@
     "MODULE_NPC_BUFFER",
     "MODULE_LEARN_SPELLS",
     "MODULE_FIREWORKS",
-    "MODULE_ELUNA_TS",
     "MODULE_ELUNA",
     "MODULE_AIO"
   ],
-  "label": "\ud83e\udd16 Playerbots + Suggested modules",
+  "label": "\ud83e\udd16 Suggested modules (Playerbots)",
   "description": "Suggested stack plus playerbots enabled",
   "order": 1
 }

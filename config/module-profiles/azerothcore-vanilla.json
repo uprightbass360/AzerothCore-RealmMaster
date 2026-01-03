@@ -1,6 +1,6 @@
 {
   "modules": [
-
+    "MODULE_ELUNA"
   ],
   "label": "\ud83d\udd30 AzerothCore Main - Mod Free",
   "description": "Pure AzerothCore with no optional modules enabled",

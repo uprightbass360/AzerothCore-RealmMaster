@@ -1,8 +1,7 @@
 {
   "modules": [
     "MODULE_PLAYERBOTS",
-    "MODULE_ELUNA",
-    "MODULE_ELUNA_TS"
+    "MODULE_ELUNA"
   ],
   "label": "\ud83e\udde9 Playerbots Only",
   "description": "Minimal preset that only enables playerbot prerequisites",
