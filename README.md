@@ -26,7 +26,7 @@ A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich
 ### Reccomendations
 - **Docker** with Docker Compose 2
 - **16GB+ RAM** and **64GB+ storage**
-- **Linux/macOS/WSL2** Fully tested with Ubuntu 24.04 and Debian 12
+- **Linux/macOS/WSL2** Fully tested with Ubuntu 24.04 - Debian 12 might work but permissions can require manual intervention
 
 ### Three Simple Steps
 
