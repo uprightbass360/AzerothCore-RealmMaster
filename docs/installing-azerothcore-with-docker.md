@@ -75,7 +75,7 @@ services:
 
 | Upstream Concept | RealmMaster Equivalent | Notes |
 | ---------------- | ---------------------- | ----- |
-| MySQL container with bind-mounted storage | `ac-mysql` + `ac-storage-init` | Bind mounts live under `storage/` and `local-storage/`; tmpfs keeps runtime data fast and is checkpointed to disk automatically. |
+| MySQL container with bind-mounted storage | `ac-mysql` + `ac-storage-init` | Bind mounts live under `storage/` and `local-storage/`; tmpfs keeps runtime data fast and is synced to disk on graceful shutdown. |
 | Manual DB import container | `ac-db-import` & `ac-db-init` | Automatically imports schemas or restores from backups; disable by skipping the `db` profile if you truly want manual control. |
 | World/Auth servers with optional DBC overrides | `ac-authserver-*` / `ac-worldserver-*` | Profile-based builds cover vanilla, playerbots, and custom module binaries. DBC overrides go into the shared client data mount just like upstream. |
 | Client data bind mounts | `ac-client-data-standard` (or `-playerbots`) | Runs `scripts/bash/download-client-data.sh`, caches releases, and mounts them read-only into the worldserver. |
