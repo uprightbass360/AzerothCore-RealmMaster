@@ -96,7 +96,7 @@ Comprehensive cleanup with multiple destruction levels and safety checks.
 Starts all configured containers using appropriate profiles.
 
 #### `scripts/bash/stop-containers.sh` - Graceful Shutdown
-Stops all containers with proper cleanup and data protection.
+Stops all containers with proper cleanup and data protection. The MySQL container performs a shutdown-time sync from tmpfs to persistent storage.
 
 #### `status.sh` - Service Health Monitoring
 ```bash

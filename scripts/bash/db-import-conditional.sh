@@ -449,7 +449,7 @@ if [ -n "$backup_path" ]; then
     echo "⚠️  Backup restoration failed, will proceed with fresh database setup"
   fi
 else
-  echo "ℹ️  No valid backups found - proceeding with fresh setup"
+  echo "ℹ️  No valid SQL backups found - proceeding with fresh setup"
   echo "$(date): No backup found - fresh setup needed" > "$RESTORE_FAILED_MARKER"
 fi
 

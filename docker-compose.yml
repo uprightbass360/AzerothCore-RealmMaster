@@ -26,6 +26,7 @@ services:
       MYSQL_INNODB_BUFFER_POOL_SIZE: ${MYSQL_INNODB_BUFFER_POOL_SIZE}
       MYSQL_INNODB_LOG_FILE_SIZE: ${MYSQL_INNODB_LOG_FILE_SIZE}
       MYSQL_BINLOG_EXPIRE_LOGS_SECONDS: 86400
+      MYSQL_DISABLE_BINLOG: ${MYSQL_DISABLE_BINLOG}
       TZ: "${TZ}"
     entrypoint:
       - /usr/local/bin/mysql-entrypoint.sh
@@ -50,6 +51,7 @@ services:
       - --expire_logs_days=0
       - --binlog_expire_logs_seconds=86400
       - --binlog_expire_logs_auto_purge=ON
+    stop_grace_period: 2m
     restart: unless-stopped
     logging: *logging-default
     healthcheck:
