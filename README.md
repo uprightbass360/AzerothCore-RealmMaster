@@ -11,11 +11,13 @@ A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich
 - [Quick Start](#quick-start)
 - [What You Get](#what-you-get)
 - [Getting Started](#getting-started) → **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**
+- [Using Pre-Built Images](#using-pre-built-images-no-build-required) → **[docs/PREBUILT_IMAGES.md](docs/PREBUILT_IMAGES.md)**
 - [Complete Module Catalog](#complete-module-catalog) → **[docs/MODULES.md](docs/MODULES.md)**
 - [Management & Operations](#management--operations) → **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**
 - [Advanced Configuration](#advanced-configuration) → **[docs/ADVANCED.md](docs/ADVANCED.md)**
 - [Custom NPCs Guide](#custom-npcs-guide) → **[docs/NPCS.md](docs/NPCS.md)**
 - [Script Reference](#script-reference) → **[docs/SCRIPTS.md](docs/SCRIPTS.md)**
+- [CI/CD & Pre-Built Images](#cicd--pre-built-images) → **[docs/CICD.md](docs/CICD.md)**
 - [Troubleshooting](#troubleshooting) → **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**
 - [Credits & Next Steps](#credits--next-steps)
 
@@ -44,6 +46,25 @@ cd AzerothCore-RealmMaster
 ```
 
 **First deployment takes 30-60 minutes** for database setup and client data download. Subsequent starts are much faster.
+
+### Using Pre-Built Images (No Build Required!)
+
+Skip the build process and deploy with pre-built Docker images:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/uprightbass360/AzerothCore-RealmMaster.git
+cd AzerothCore-RealmMaster
+
+# 2. Use pre-built configuration
+cp .env.prebuilt .env
+
+# 3. Edit .env and set DOCKERHUB_USERNAME
+# 4. Deploy
+./deploy.sh
+```
+
+Pre-built images include the **RealmMaster profile** (32 modules) and are automatically built nightly. See **[docs/PREBUILT_IMAGES.md](docs/PREBUILT_IMAGES.md)** for details.
 
 See [Getting Started](#getting-started) for detailed walkthrough.
 

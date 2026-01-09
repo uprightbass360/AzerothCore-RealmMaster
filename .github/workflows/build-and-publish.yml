@@ -1,0 +1,248 @@
+name: Build and Publish
+
+# This workflow builds AzerothCore with configurable module profiles
+# and publishes profile-tagged Docker images to Docker Hub for easy deployment.
+#
+# Default Profile: RealmMaster (32 modules including playerbots, transmog, solo-lfg, eluna, etc.)
+# Available Profiles: RealmMaster, suggested-modules, all-modules, playerbots-only, or custom
+# Profile Configuration: See config/module-profiles/
+# Documentation: See docs/CICD.md
+#
+# Published Image Tags:
+# - authserver-{profile}-latest (e.g., authserver-realmmaster-latest)
+# - authserver-{profile}-YYYYMMDD (e.g., authserver-realmmaster-20260109)
+# - authserver-latest (generic tag, defaults to RealmMaster)
+# - worldserver-{profile}-latest
+# - worldserver-{profile}-YYYYMMDD
+# - worldserver-latest (generic tag, defaults to RealmMaster)
+
+on:
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      module_profile:
+        description: 'Module profile to build (e.g., RealmMaster, suggested-modules, all-modules)'
+        required: false
+        type: string
+        default: 'RealmMaster'
+      force_rebuild:
+        description: 'Force rebuild even if no changes detected'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Git
+        run: |
+          # Configure git for module repository cloning
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git --version
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Prepare build environment
+        env:
+          TERM: xterm
+        run: |
+          # Determine which module profile to use
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            MODULE_PROFILE="RealmMaster"
+          else
+            MODULE_PROFILE="${{ github.event.inputs.module_profile }}"
+            MODULE_PROFILE="${MODULE_PROFILE:-RealmMaster}"
+          fi
+
+          echo "📋 Using module profile: ${MODULE_PROFILE}"
+          echo "🔧 Running setup.sh to generate proper .env file..."
+
+          # Use setup.sh to generate .env with proper configuration
+          # Benefits of this approach:
+          # - Uses the same setup logic as local builds (consistency)
+          # - Handles all path variables correctly (no manual sed patching needed)
+          # - Automatically determines source variant (standard vs playerbots)
+          # - Applies module profile and dependencies correctly
+          # - Centralizes configuration logic in one place (setup.sh)
+          ./setup.sh \
+            --non-interactive \
+            --module-config "${MODULE_PROFILE}" \
+            --deployment-type local \
+            --force
+
+          echo "✅ Environment configuration generated successfully"
+
+          # Extract values for GitHub environment
+          PROJECT_NAME=$(grep '^COMPOSE_PROJECT_NAME=' .env | cut -d'=' -f2 | tr -d '\r' | sed 's/[[:space:]]*#.*//' | sed 's/[[:space:]]*$//')
+          echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
+
+          # Store profile name for image tagging (lowercase, replace underscores with hyphens)
+          PROFILE_TAG=$(echo "${MODULE_PROFILE}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+          echo "PROFILE_TAG=${PROFILE_TAG}" >> $GITHUB_ENV
+          echo "MODULE_PROFILE=${MODULE_PROFILE}" >> $GITHUB_ENV
+
+          # Count enabled modules
+          MODULE_COUNT=$(grep -c '^MODULE_.*=1' .env || echo "0")
+          echo "MODULE_COUNT=${MODULE_COUNT}" >> $GITHUB_ENV
+
+          # Display configuration summary
+          echo ""
+          echo "📊 Build Configuration Summary:"
+          echo "  Project: ${PROJECT_NAME}"
+          echo "  Profile: ${MODULE_PROFILE}"
+          echo "  Profile Tag: ${PROFILE_TAG}"
+          echo "  Modules: ${MODULE_COUNT} enabled"
+          echo ""
+          echo "Enabled modules (first 10):"
+          grep '^MODULE_.*=1' .env | head -10 || true
+          echo ""
+
+          # Show key paths for verification
+          echo "📂 Key Paths:"
+          grep '^STORAGE_PATH_LOCAL=' .env || echo "  STORAGE_PATH_LOCAL not found"
+          grep '^MODULES_REBUILD_SOURCE_PATH=' .env || echo "  MODULES_REBUILD_SOURCE_PATH not found"
+          grep '^STACK_SOURCE_VARIANT=' .env || echo "  STACK_SOURCE_VARIANT not found"
+          echo ""
+
+          # Verify all Docker images are configured
+          echo "🐳 Docker Images (that we build and push):"
+          grep -E '^AC_AUTHSERVER_IMAGE_PLAYERBOTS=' .env || echo "  AC_AUTHSERVER_IMAGE_PLAYERBOTS not found"
+          grep -E '^AC_WORLDSERVER_IMAGE_PLAYERBOTS=' .env || echo "  AC_WORLDSERVER_IMAGE_PLAYERBOTS not found"
+          grep -E '^AC_AUTHSERVER_IMAGE_MODULES=' .env || echo "  AC_AUTHSERVER_IMAGE_MODULES not found"
+          grep -E '^AC_WORLDSERVER_IMAGE_MODULES=' .env || echo "  AC_WORLDSERVER_IMAGE_MODULES not found"
+
+      - name: Cache Go build cache
+        uses: actions/cache@v4
+        with:
+          path: .gocache
+          key: ${{ runner.os }}-gocache-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-gocache-
+
+      - name: Cache local storage
+        uses: actions/cache@v4
+        with:
+          path: local-storage/source
+          key: ${{ runner.os }}-source-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-source-
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run build
+        run: |
+          # The build.sh script will automatically:
+          # 1. Generate module state from the enabled modules in .env
+          # 2. Set up the AzerothCore source repository
+          # 3. Fetch and clone all enabled module repositories from GitHub
+          # 4. Stage modules to the source directory
+          # 5. Compile AzerothCore with all modules
+          # 6. Tag the resulting Docker images
+
+          BUILD_ARGS="--yes"
+
+          # Add force flag if manually triggered with force_rebuild
+          if [ "${{ github.event.inputs.force_rebuild }}" = "true" ]; then
+            BUILD_ARGS="${BUILD_ARGS} --force"
+          fi
+
+          echo "🔨 Starting build process with ${BUILD_ARGS}..."
+          echo "This will fetch and build all ${MODULE_COUNT} enabled modules from the ${MODULE_PROFILE} profile"
+
+          ./build.sh ${BUILD_ARGS}
+
+      - name: Tag images for Docker Hub
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+
+          # Tag authserver images with profile name
+          docker tag ${PROJECT_NAME}:authserver-modules-latest \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-${PROFILE_TAG}-latest
+          docker tag ${PROJECT_NAME}:authserver-modules-latest \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-${PROFILE_TAG}-${DATE_TAG}
+
+          # Also tag as generic 'latest' for backward compatibility
+          docker tag ${PROJECT_NAME}:authserver-modules-latest \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-latest
+
+          # Tag worldserver images with profile name
+          docker tag ${PROJECT_NAME}:worldserver-modules-latest \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-latest
+          docker tag ${PROJECT_NAME}:worldserver-modules-latest \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-${DATE_TAG}
+
+          # Also tag as generic 'latest' for backward compatibility
+          docker tag ${PROJECT_NAME}:worldserver-modules-latest \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-latest
+
+          echo "Tagged images with profile '${PROFILE_TAG}' and date '${DATE_TAG}'"
+
+      - name: Push images to Docker Hub
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+
+          # Push authserver images (all tags)
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-${PROFILE_TAG}-latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-${PROFILE_TAG}-${DATE_TAG}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-latest
+
+          # Push worldserver images (all tags)
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-${DATE_TAG}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-latest
+
+          echo "✅ Pushed all image tags to Docker Hub"
+
+      - name: Build summary
+        run: |
+          DATE_TAG=$(date +%Y%m%d)
+
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Module Profile**: ${MODULE_PROFILE}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Enabled Modules**: ${MODULE_COUNT}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "<details>" >> $GITHUB_STEP_SUMMARY
+          echo "<summary>View enabled modules</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep '^MODULE_.*=1' .env | sed 's/=1//' || true >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Published Images" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Profile-Specific Tags" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-${PROFILE_TAG}-latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-${PROFILE_TAG}-${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Generic Tags (backward compatibility)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-latest\`" >> $GITHUB_STEP_SUMMARY
