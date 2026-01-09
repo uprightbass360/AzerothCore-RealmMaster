@@ -1,0 +1,246 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      profile:
+        description: 'Module profile for this release'
+        required: false
+        type: string
+        default: 'RealmMaster'
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare release variables
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          PROFILE="${{ github.event.inputs.profile }}"
+          PROFILE_TAG=$(echo "${PROFILE}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
+
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "PROFILE=${PROFILE}" >> $GITHUB_ENV
+          echo "PROFILE_TAG=${PROFILE_TAG}" >> $GITHUB_ENV
+
+          # Get build date from Docker Hub image (or use current date)
+          BUILD_DATE=$(date +%Y%m%d)
+          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_ENV
+
+          # Get AzerothCore commit from local-storage if available
+          if [ -d "local-storage/source/azerothcore-playerbots" ]; then
+            ACORE_COMMIT=$(cd local-storage/source/azerothcore-playerbots && git rev-parse --short HEAD)
+          else
+            ACORE_COMMIT="unknown"
+          fi
+          echo "ACORE_COMMIT=${ACORE_COMMIT}" >> $GITHUB_ENV
+
+      - name: Read module list from profile
+        run: |
+          PROFILE_FILE="config/module-profiles/${PROFILE}.json"
+
+          if [ ! -f "$PROFILE_FILE" ]; then
+            echo "ERROR: Profile file not found: $PROFILE_FILE"
+            exit 1
+          fi
+
+          # Extract module count
+          MODULE_COUNT=$(python3 -c "import json; data=json.load(open('$PROFILE_FILE')); print(len(data.get('modules', [])))")
+          echo "MODULE_COUNT=${MODULE_COUNT}" >> $GITHUB_ENV
+
+          # Extract modules for release notes
+          python3 -c "import json; data=json.load(open('$PROFILE_FILE')); print('\n'.join(['- ' + m for m in data.get('modules', [])]))" > modules.txt
+
+      - name: Create deployment package
+        run: |
+          PACKAGE_NAME="azerothcore-realmmaster-${VERSION}-${PROFILE_TAG}"
+          mkdir -p "${PACKAGE_NAME}"
+
+          # Copy essential deployment files
+          cp .env.prebuilt "${PACKAGE_NAME}/.env.prebuilt"
+          cp docker-compose.yml "${PACKAGE_NAME}/docker-compose.yml"
+          cp deploy.sh "${PACKAGE_NAME}/deploy.sh"
+          cp status.sh "${PACKAGE_NAME}/status.sh"
+          cp cleanup.sh "${PACKAGE_NAME}/cleanup.sh"
+          cp README.md "${PACKAGE_NAME}/README.md"
+
+          # Copy scripts directory
+          cp -r scripts "${PACKAGE_NAME}/scripts"
+
+          # Copy config directory
+          cp -r config "${PACKAGE_NAME}/config"
+
+          # Copy docs directory
+          cp -r docs "${PACKAGE_NAME}/docs"
+
+          # Create a quick start guide specific to this release
+          cat > "${PACKAGE_NAME}/QUICKSTART.md" <<EOF
+# Quick Start - AzerothCore RealmMaster ${VERSION}
+
+## Module Profile: ${PROFILE}
+**${MODULE_COUNT} modules included**
+
+## Docker Images
+This release uses the following pre-built images:
+- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-${BUILD_DATE}\`
+- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-${BUILD_DATE}\`
+
+Or use the latest tags:
+- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-latest\`
+- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-latest\`
+
+## Installation
+
+1. **Edit .env.prebuilt**:
+   \`\`\`bash
+   nano .env.prebuilt
+   # Set: DOCKERHUB_USERNAME=uprightbass360
+   \`\`\`
+
+2. **Rename to .env**:
+   \`\`\`bash
+   mv .env.prebuilt .env
+   \`\`\`
+
+3. **Deploy**:
+   \`\`\`bash
+   chmod +x deploy.sh status.sh cleanup.sh
+   ./deploy.sh
+   \`\`\`
+
+4. **Check status**:
+   \`\`\`bash
+   ./status.sh
+   \`\`\`
+
+## Documentation
+- [Pre-Built Images Guide](docs/PREBUILT_IMAGES.md)
+- [Getting Started](docs/GETTING_STARTED.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+
+## Support
+- GitHub Issues: https://github.com/uprightbass360/AzerothCore-RealmMaster/issues
+- AzerothCore Discord: https://discord.gg/gkt4y2x
+EOF
+
+          # Make scripts executable
+          chmod +x "${PACKAGE_NAME}/deploy.sh"
+          chmod +x "${PACKAGE_NAME}/status.sh"
+          chmod +x "${PACKAGE_NAME}/cleanup.sh"
+
+          # Create zip archive
+          zip -r "${PACKAGE_NAME}.zip" "${PACKAGE_NAME}"
+
+          echo "PACKAGE_NAME=${PACKAGE_NAME}" >> $GITHUB_ENV
+
+      - name: Generate release notes
+        run: |
+          cat > release_notes.md <<EOF
+# AzerothCore RealmMaster ${VERSION} - ${PROFILE} Profile
+
+## 🎯 Module Profile: ${PROFILE}
+**${MODULE_COUNT} modules included**
+
+## 📦 Docker Images
+
+Pull these pre-built images from Docker Hub:
+
+**Date-specific (recommended for production)**:
+\`\`\`bash
+docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-${BUILD_DATE}
+docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-${BUILD_DATE}
+\`\`\`
+
+**Latest (auto-updated nightly)**:
+\`\`\`bash
+docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-latest
+docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-latest
+\`\`\`
+
+## 🚀 Quick Start
+
+\`\`\`bash
+# Download and extract
+wget https://github.com/uprightbass360/AzerothCore-RealmMaster/releases/download/${VERSION}/${PACKAGE_NAME}.zip
+unzip ${PACKAGE_NAME}.zip
+cd ${PACKAGE_NAME}
+
+# Configure Docker Hub username
+nano .env.prebuilt
+# Set: DOCKERHUB_USERNAME=uprightbass360
+
+# Deploy
+mv .env.prebuilt .env
+./deploy.sh
+\`\`\`
+
+Full documentation in \`docs/PREBUILT_IMAGES.md\`
+
+## 📋 Included Modules
+
+$(cat modules.txt)
+
+## 📊 Build Information
+
+- **Built**: ${BUILD_DATE}
+- **AzerothCore Commit**: ${ACORE_COMMIT}
+- **Source Variant**: playerbots (for MODULE_PLAYERBOTS support)
+- **Profile**: ${PROFILE}
+- **Module Count**: ${MODULE_COUNT}
+
+## 📖 Documentation
+
+Full documentation available in the \`docs/\` directory of the release package:
+- [Pre-Built Images Guide](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/PREBUILT_IMAGES.md)
+- [Getting Started Guide](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/GETTING_STARTED.md)
+- [Module Catalog](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/MODULES.md)
+- [Troubleshooting](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/TROUBLESHOOTING.md)
+
+## 🐛 Known Issues
+
+None at this time. Report issues at: https://github.com/uprightbass360/AzerothCore-RealmMaster/issues
+
+## 💬 Support
+
+- **GitHub Issues**: https://github.com/uprightbass360/AzerothCore-RealmMaster/issues
+- **AzerothCore Discord**: https://discord.gg/gkt4y2x
+- **Documentation**: https://github.com/uprightbass360/AzerothCore-RealmMaster/tree/${VERSION}/docs
+EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: "RealmMaster ${{ env.VERSION }} - ${{ env.PROFILE }} Profile"
+          body_path: release_notes.md
+          files: |
+            ${{ env.PACKAGE_NAME }}.zip
+          prerelease: ${{ github.event.inputs.prerelease }}
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        run: |
+          echo "## Release Created Successfully! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Profile**: ${{ env.PROFILE }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Modules**: ${{ env.MODULE_COUNT }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Package**: ${{ env.PACKAGE_NAME }}.zip" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Release available at:" >> $GITHUB_STEP_SUMMARY
+          echo "https://github.com/${{ github.repository }}/releases/tag/${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
