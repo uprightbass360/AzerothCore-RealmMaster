@@ -230,7 +230,7 @@ jobs:
           echo "<summary>View enabled modules</summary>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          grep '^MODULE_.*=1' .env | sed 's/=1//' || true >> $GITHUB_STEP_SUMMARY
+          grep '^MODULE_.*=1' .env | sed 's/=1//' >> $GITHUB_STEP_SUMMARY || true
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "</details>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
