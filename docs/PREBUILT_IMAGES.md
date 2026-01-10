@@ -48,11 +48,8 @@ cp .env.prebuilt .env
 Edit `.env` and set your Docker Hub username:
 
 ```bash
-# Change this line:
+# Change this line to your Docker Hub username:
 DOCKERHUB_USERNAME=your-dockerhub-username
-
-# To (example):
-DOCKERHUB_USERNAME=uprightbass360
 ```
 
 ### 4. Optional: Customize Settings
