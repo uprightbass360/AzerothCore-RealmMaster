@@ -87,54 +87,54 @@ jobs:
           cp -r docs "${PACKAGE_NAME}/docs"
 
           # Create a quick start guide specific to this release
-          cat > "${PACKAGE_NAME}/QUICKSTART.md" <<EOF
-# Quick Start - AzerothCore RealmMaster ${VERSION}
-
-## Module Profile: ${PROFILE}
-**${MODULE_COUNT} modules included**
-
-## Docker Images
-This release uses the following pre-built images:
-- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-${BUILD_DATE}\`
-- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-${BUILD_DATE}\`
-
-Or use the latest tags:
-- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-latest\`
-- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-latest\`
-
-## Installation
-
-1. **Edit .env.prebuilt**:
-   \`\`\`bash
-   nano .env.prebuilt
-   # Set: DOCKERHUB_USERNAME=uprightbass360
-   \`\`\`
-
-2. **Rename to .env**:
-   \`\`\`bash
-   mv .env.prebuilt .env
-   \`\`\`
-
-3. **Deploy**:
-   \`\`\`bash
-   chmod +x deploy.sh status.sh cleanup.sh
-   ./deploy.sh
-   \`\`\`
-
-4. **Check status**:
-   \`\`\`bash
-   ./status.sh
-   \`\`\`
-
-## Documentation
-- [Pre-Built Images Guide](docs/PREBUILT_IMAGES.md)
-- [Getting Started](docs/GETTING_STARTED.md)
-- [Troubleshooting](docs/TROUBLESHOOTING.md)
-
-## Support
-- GitHub Issues: https://github.com/uprightbass360/AzerothCore-RealmMaster/issues
-- AzerothCore Discord: https://discord.gg/gkt4y2x
-EOF
+          {
+            echo "# Quick Start - AzerothCore RealmMaster ${VERSION}"
+            echo ""
+            echo "## Module Profile: ${PROFILE}"
+            echo "${MODULE_COUNT} modules included"
+            echo ""
+            echo "## Docker Images"
+            echo "This release uses the following pre-built images:"
+            echo "- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-${BUILD_DATE}\`"
+            echo "- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-${BUILD_DATE}\`"
+            echo ""
+            echo "Or use the latest tags:"
+            echo "- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-latest\`"
+            echo "- \`\${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-latest\`"
+            echo ""
+            echo "## Installation"
+            echo ""
+            echo "1. **Edit .env.prebuilt**:"
+            echo "   \`\`\`bash"
+            echo "   nano .env.prebuilt"
+            echo "   # Set: DOCKERHUB_USERNAME=your-dockerhub-username"
+            echo "   \`\`\`"
+            echo ""
+            echo "2. **Rename to .env**:"
+            echo "   \`\`\`bash"
+            echo "   mv .env.prebuilt .env"
+            echo "   \`\`\`"
+            echo ""
+            echo "3. **Deploy**:"
+            echo "   \`\`\`bash"
+            echo "   chmod +x deploy.sh status.sh cleanup.sh"
+            echo "   ./deploy.sh"
+            echo "   \`\`\`"
+            echo ""
+            echo "4. **Check status**:"
+            echo "   \`\`\`bash"
+            echo "   ./status.sh"
+            echo "   \`\`\`"
+            echo ""
+            echo "## Documentation"
+            echo "- [Pre-Built Images Guide](docs/PREBUILT_IMAGES.md)"
+            echo "- [Getting Started](docs/GETTING_STARTED.md)"
+            echo "- [Troubleshooting](docs/TROUBLESHOOTING.md)"
+            echo ""
+            echo "## Support"
+            echo "- GitHub Issues: https://github.com/uprightbass360/AzerothCore-RealmMaster/issues"
+            echo "- AzerothCore Discord: https://discord.gg/gkt4y2x"
+          } > "${PACKAGE_NAME}/QUICKSTART.md"
 
           # Make scripts executable
           chmod +x "${PACKAGE_NAME}/deploy.sh"
@@ -148,77 +148,77 @@ EOF
 
       - name: Generate release notes
         run: |
-          cat > release_notes.md <<EOF
-# AzerothCore RealmMaster ${VERSION} - ${PROFILE} Profile
-
-## 🎯 Module Profile: ${PROFILE}
-**${MODULE_COUNT} modules included**
-
-## 📦 Docker Images
-
-Pull these pre-built images from Docker Hub:
-
-**Date-specific (recommended for production)**:
-\`\`\`bash
-docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-${BUILD_DATE}
-docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-${BUILD_DATE}
-\`\`\`
-
-**Latest (auto-updated nightly)**:
-\`\`\`bash
-docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-latest
-docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-latest
-\`\`\`
-
-## 🚀 Quick Start
-
-\`\`\`bash
-# Download and extract
-wget https://github.com/uprightbass360/AzerothCore-RealmMaster/releases/download/${VERSION}/${PACKAGE_NAME}.zip
-unzip ${PACKAGE_NAME}.zip
-cd ${PACKAGE_NAME}
-
-# Configure Docker Hub username
-nano .env.prebuilt
-# Set: DOCKERHUB_USERNAME=uprightbass360
-
-# Deploy
-mv .env.prebuilt .env
-./deploy.sh
-\`\`\`
-
-Full documentation in \`docs/PREBUILT_IMAGES.md\`
-
-## 📋 Included Modules
-
-$(cat modules.txt)
-
-## 📊 Build Information
-
-- **Built**: ${BUILD_DATE}
-- **AzerothCore Commit**: ${ACORE_COMMIT}
-- **Source Variant**: playerbots (for MODULE_PLAYERBOTS support)
-- **Profile**: ${PROFILE}
-- **Module Count**: ${MODULE_COUNT}
-
-## 📖 Documentation
-
-Full documentation available in the \`docs/\` directory of the release package:
-- [Pre-Built Images Guide](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/PREBUILT_IMAGES.md)
-- [Getting Started Guide](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/GETTING_STARTED.md)
-- [Module Catalog](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/MODULES.md)
-- [Troubleshooting](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/TROUBLESHOOTING.md)
-
-## 🐛 Known Issues
-
-None at this time. Report issues at: https://github.com/uprightbass360/AzerothCore-RealmMaster/issues
-
-## 💬 Support
-
-- **GitHub Issues**: https://github.com/uprightbass360/AzerothCore-RealmMaster/issues
-- **AzerothCore Discord**: https://discord.gg/gkt4y2x
-- **Documentation**: https://github.com/uprightbass360/AzerothCore-RealmMaster/tree/${VERSION}/docs
-EOF
+          {
+            echo "# AzerothCore RealmMaster ${VERSION} - ${PROFILE} Profile"
+            echo ""
+            echo "## 🎯 Module Profile: ${PROFILE}"
+            echo "${MODULE_COUNT} modules included"
+            echo ""
+            echo "## 📦 Docker Images"
+            echo ""
+            echo "Pull these pre-built images from Docker Hub:"
+            echo ""
+            echo "**Date-specific (recommended for production)**:"
+            echo "\`\`\`bash"
+            echo "docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-${BUILD_DATE}"
+            echo "docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-${BUILD_DATE}"
+            echo "\`\`\`"
+            echo ""
+            echo "**Latest (auto-updated nightly)**:"
+            echo "\`\`\`bash"
+            echo "docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:authserver-${PROFILE_TAG}-latest"
+            echo "docker pull \${DOCKERHUB_USERNAME}/azerothcore-realmmaster:worldserver-${PROFILE_TAG}-latest"
+            echo "\`\`\`"
+            echo ""
+            echo "## 🚀 Quick Start"
+            echo ""
+            echo "\`\`\`bash"
+            echo "# Download and extract"
+            echo "wget https://github.com/uprightbass360/AzerothCore-RealmMaster/releases/download/${VERSION}/${PACKAGE_NAME}.zip"
+            echo "unzip ${PACKAGE_NAME}.zip"
+            echo "cd ${PACKAGE_NAME}"
+            echo ""
+            echo "# Configure Docker Hub username"
+            echo "nano .env.prebuilt"
+            echo "# Set: DOCKERHUB_USERNAME=your-dockerhub-username"
+            echo ""
+            echo "# Deploy"
+            echo "mv .env.prebuilt .env"
+            echo "./deploy.sh"
+            echo "\`\`\`"
+            echo ""
+            echo "Full documentation in \`docs/PREBUILT_IMAGES.md\`"
+            echo ""
+            echo "## 📋 Included Modules"
+            echo ""
+            cat modules.txt
+            echo ""
+            echo "## 📊 Build Information"
+            echo ""
+            echo "- **Built**: ${BUILD_DATE}"
+            echo "- **AzerothCore Commit**: ${ACORE_COMMIT}"
+            echo "- **Source Variant**: playerbots (for MODULE_PLAYERBOTS support)"
+            echo "- **Profile**: ${PROFILE}"
+            echo "- **Module Count**: ${MODULE_COUNT}"
+            echo ""
+            echo "## 📖 Documentation"
+            echo ""
+            echo "Full documentation available in the \`docs/\` directory of the release package:"
+            echo "- [Pre-Built Images Guide](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/PREBUILT_IMAGES.md)"
+            echo "- [Getting Started Guide](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/GETTING_STARTED.md)"
+            echo "- [Module Catalog](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/MODULES.md)"
+            echo "- [Troubleshooting](https://github.com/uprightbass360/AzerothCore-RealmMaster/blob/${VERSION}/docs/TROUBLESHOOTING.md)"
+            echo ""
+            echo "## 🐛 Known Issues"
+            echo ""
+            echo "None at this time. Report issues at: https://github.com/uprightbass360/AzerothCore-RealmMaster/issues"
+            echo ""
+            echo "## 💬 Support"
+            echo ""
+            echo "- **GitHub Issues**: https://github.com/uprightbass360/AzerothCore-RealmMaster/issues"
+            echo "- **AzerothCore Discord**: https://discord.gg/gkt4y2x"
+            echo "- **Documentation**: https://github.com/uprightbass360/AzerothCore-RealmMaster/tree/${VERSION}/docs"
+          } > release_notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

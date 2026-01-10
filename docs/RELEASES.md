@@ -145,7 +145,7 @@ cd azerothcore-realmmaster-v1.0.0-realmmaster
 
 # 3. Configure
 nano .env.prebuilt
-# Set: DOCKERHUB_USERNAME=uprightbass360
+# Set: DOCKERHUB_USERNAME=your-dockerhub-username
 
 # 4. Deploy
 mv .env.prebuilt .env
