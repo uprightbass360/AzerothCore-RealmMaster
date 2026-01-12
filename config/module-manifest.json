@@ -5517,6 +5517,34 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_DELVES",
+      "name": "Delves",
+      "repo": "https://github.com/araxiaonline/Delves.git",
+      "description": "List of the Custom Made Single Player Delves for Araxia Online",
+      "type": "lua",
+      "category": "scripting",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_CLANCENTAUR",
+      "name": "ClanCentaur",
+      "repo": "https://github.com/araxiaonline/ClanCentaur.git",
+      "description": "Custom SQL modifications and patch notes for new faction rewards, reputation items, and unique vendors on the Araxia WoW 3.3.5a server.",
+      "type": "sql",
+      "category": "database",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
