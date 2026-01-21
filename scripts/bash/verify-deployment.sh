@@ -4,18 +4,13 @@ set -e
 
 # Simple profile-aware deploy + health check for profiles-verify/docker-compose.yml
 
-BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
-info(){ echo -e "${BLUE}ℹ️  $*${NC}"; }
-ok(){ echo -e "${GREEN}✅ $*${NC}"; }
-warn(){ echo -e "${YELLOW}⚠️  $*${NC}"; }
-err(){ echo -e "${RED}❌ $*${NC}"; }
-
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
 ENV_FILE=""
 TEMPLATE_FILE="$PROJECT_DIR/.env.template"
 source "$PROJECT_DIR/scripts/bash/project_name.sh"
 source "$PROJECT_DIR/scripts/bash/compose_overrides.sh"
+source "$PROJECT_DIR/scripts/bash/lib/common.sh"
 PROFILES=(db services-standard client-data modules tools)
 SKIP_DEPLOY=false
 QUICK=false
