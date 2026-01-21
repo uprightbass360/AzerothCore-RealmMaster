@@ -11,8 +11,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_PATH="$ROOT_DIR/.env"
+DEFAULT_ENV_PATH="$ENV_PATH"
 TEMPLATE_PATH="$ROOT_DIR/.env.template"
 source "$ROOT_DIR/scripts/bash/project_name.sh"
+source "$ROOT_DIR/scripts/bash/lib/common.sh"
 
 # Default project name (read from .env or template)
 DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_PATH")"
@@ -45,12 +47,6 @@ MODULE_HELPER="$ROOT_DIR/scripts/python/modules.py"
 MODULE_STATE_INITIALIZED=0
 declare -a MODULES_COMPILE_LIST=()
 declare -a COMPOSE_FILE_ARGS=()
-
-BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
-info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
-ok(){ printf '%b\n' "${GREEN}✅ $*${NC}"; }
-warn(){ printf '%b\n' "${YELLOW}⚠️  $*${NC}"; }
-err(){ printf '%b\n' "${RED}❌ $*${NC}"; }
 
 show_deployment_header(){
   printf '\n%b\n' "${BLUE}⚔️  AZEROTHCORE REALM DEPLOYMENT ⚔️${NC}"
@@ -311,10 +307,6 @@ if [ "$REMOTE_CLEAN_CONTAINERS" -eq 1 ] && [ "$REMOTE_PRESERVE_CONTAINERS" -eq 1
   exit 1
 fi
 
-require_cmd(){
-  command -v "$1" >/dev/null 2>&1 || { err "Missing required command: $1"; exit 1; }
-}
-
 require_cmd docker
 require_cmd python3
 
@@ -339,18 +331,6 @@ if [ "$REMOTE_MODE" -eq 1 ]; then
     exit 1
   fi
 fi
-
-read_env(){
-  local key="$1" default="${2:-}"
-  local value=""
-  if [ -f "$ENV_PATH" ]; then
-    value="$(grep -E "^${key}=" "$ENV_PATH" | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
-  fi
-  if [ -z "$value" ]; then
-    value="$default"
-  fi
-  echo "$value"
-}
 
 init_compose_files(){
   compose_overrides::build_compose_args "$ROOT_DIR" "$ENV_PATH" "$DEFAULT_COMPOSE_FILE" COMPOSE_FILE_ARGS

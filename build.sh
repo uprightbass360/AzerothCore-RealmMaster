@@ -8,8 +8,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_PATH="$ROOT_DIR/.env"
+DEFAULT_ENV_PATH="$ENV_PATH"
 TEMPLATE_PATH="$ROOT_DIR/.env.template"
 source "$ROOT_DIR/scripts/bash/project_name.sh"
+source "$ROOT_DIR/scripts/bash/lib/common.sh"
 
 # Default project name (read from .env or template)
 DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_PATH")"
@@ -17,11 +19,6 @@ ASSUME_YES=0
 FORCE_REBUILD=0
 SKIP_SOURCE_SETUP=0
 CUSTOM_SOURCE_PATH=""
-BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
-info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
-ok(){ printf '%b\n' "${GREEN}✅ $*${NC}"; }
-warn(){ printf '%b\n' "${YELLOW}⚠️  $*${NC}"; }
-err(){ printf '%b\n' "${RED}❌ $*${NC}"; }
 
 show_build_header(){
   printf '\n%b\n' "${BLUE}🔨 AZEROTHCORE BUILD SYSTEM 🔨${NC}"
@@ -70,38 +67,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-require_cmd(){
-  command -v "$1" >/dev/null 2>&1 || { err "Missing required command: $1"; exit 1; }
-}
-
 require_cmd docker
 require_cmd python3
-
-read_env(){
-  local key="$1" default="${2:-}"
-  local value=""
-  if [ -f "$ENV_PATH" ]; then
-    value="$(grep -E "^${key}=" "$ENV_PATH" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r' | sed 's/[[:space:]]*#.*//' | sed 's/[[:space:]]*$//')"
-  fi
-  if [ -z "$value" ]; then
-    value="$default"
-  fi
-  echo "$value"
-}
-
-update_env_value(){
-  local key="$1" value="$2" env_file="$ENV_PATH"
-  [ -n "$env_file" ] || return 0
-  if [ ! -f "$env_file" ]; then
-    printf '%s=%s\n' "$key" "$value" >> "$env_file"
-    return 0
-  fi
-  if grep -q "^${key}=" "$env_file"; then
-    sed -i "s|^${key}=.*|${key}=${value}|" "$env_file"
-  else
-    printf '\n%s=%s\n' "$key" "$value" >> "$env_file"
-  fi
-}
 
 MODULE_HELPER="$ROOT_DIR/scripts/python/modules.py"
 MODULE_STATE_INITIALIZED=0

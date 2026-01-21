@@ -6,15 +6,7 @@ INVOCATION_DIR="$PWD"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[1;33m'
-COLOR_RESET='\033[0m'
-
-log(){ printf '%b\n' "${COLOR_GREEN}$*${COLOR_RESET}"; }
-warn(){ printf '%b\n' "${COLOR_YELLOW}$*${COLOR_RESET}"; }
-err(){ printf '%b\n' "${COLOR_RED}$*${COLOR_RESET}"; }
-fatal(){ err "$*"; exit 1; }
+source "$SCRIPT_DIR/lib/common.sh"
 
 SUPPORTED_DBS=(auth characters world)
 declare -A SUPPORTED_SET=()

@@ -9,34 +9,15 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_FILE="$ROOT_DIR/.env"
 TEMPLATE_FILE="$ROOT_DIR/.env.template"
+ENV_PATH="$ENV_FILE"
+DEFAULT_ENV_PATH="$ENV_FILE"
 source "$ROOT_DIR/scripts/bash/project_name.sh"
+source "$ROOT_DIR/scripts/bash/lib/common.sh"
 
 # Default project name (read from .env or template)
 DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
 source "$ROOT_DIR/scripts/bash/compose_overrides.sh"
 declare -a COMPOSE_FILE_ARGS=()
-
-BLUE='\033[0;34m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-info(){ echo -e "${BLUE}ℹ️  $*${NC}"; }
-ok(){ echo -e "${GREEN}✅ $*${NC}"; }
-warn(){ echo -e "${YELLOW}⚠️  $*${NC}"; }
-err(){ echo -e "${RED}❌ $*${NC}"; }
-
-read_env(){
-  local key="$1" default="${2:-}" value=""
-  if [ -f "$ENV_FILE" ]; then
-    value="$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
-  fi
-  if [ -z "$value" ]; then
-    value="$default"
-  fi
-  echo "$value"
-}
 
 resolve_project_name(){
   local raw_name sanitized
@@ -58,13 +39,6 @@ show_header(){
   echo -e "\n${BLUE}    🛠️  TOOLING DEPLOYMENT  🛠️${NC}"
   echo -e "${BLUE}    ═══════════════════════════${NC}"
   echo -e "${BLUE}        📊 Enabling Management UIs 📊${NC}\n"
-}
-
-ensure_command(){
-  if ! command -v "$1" >/dev/null 2>&1; then
-    err "Required command '$1' not found in PATH."
-    exit 1
-  fi
 }
 
 ensure_mysql_running(){
@@ -108,7 +82,7 @@ EOF
     exit 0
   fi
 
-  ensure_command docker
+  require_cmd docker
   docker info >/dev/null 2>&1 || { err "Docker daemon unavailable."; exit 1; }
 
   PROJECT_NAME="$(resolve_project_name)"

@@ -127,17 +127,23 @@ read_env() {
 }
 
 # Read value from .env.template file (used during setup)
-# This is similar to read_env but specifically for template files
+# This is similar to read_env but specifically for template files.
 #
 # Usage:
-#   get_template_value KEY [TEMPLATE_FILE]
+#   get_template_value KEY [TEMPLATE_FILE] [DEFAULT]
 #   value=$(get_template_value "MYSQL_PASSWORD")
+#   value=$(get_template_value "DOCKER_IMAGE_TAG" ".env.template" "latest")
 #
 get_template_value() {
   local key="$1"
   local template_file="${2:-${TEMPLATE_FILE:-${TEMPLATE_PATH:-.env.template}}}"
+  local fallback="${3:-}"
 
   if [ ! -f "$template_file" ]; then
+    if [ -n "$fallback" ]; then
+      echo "$fallback"
+      return 0
+    fi
     fatal "Template file not found: $template_file"
   fi
 
@@ -147,8 +153,11 @@ get_template_value() {
   raw_line=$(grep "^${key}=" "$template_file" 2>/dev/null | head -1)
 
   if [ -z "$raw_line" ]; then
-    err "Key '$key' not found in template: $template_file"
-    return 1
+    if [ -n "$fallback" ]; then
+      echo "$fallback"
+      return 0
+    fi
+    fatal "Key '$key' not found in template: $template_file"
   fi
 
   value="${raw_line#*=}"
@@ -157,6 +166,10 @@ get_template_value() {
   # Handle ${VAR:-default} syntax by extracting the default value
   if [[ "$value" =~ ^\$\{[^}]*:-([^}]*)\}$ ]]; then
     value="${BASH_REMATCH[1]}"
+  fi
+
+  if [ -z "$value" ] && [ -n "$fallback" ]; then
+    value="$fallback"
   fi
 
   echo "$value"

@@ -6,18 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[1;33m'
-COLOR_BLUE='\033[0;34m'
-COLOR_CYAN='\033[0;36m'
-COLOR_RESET='\033[0m'
-
-log(){ printf '%b\n' "${COLOR_GREEN}$*${COLOR_RESET}"; }
-info(){ printf '%b\n' "${COLOR_CYAN}$*${COLOR_RESET}"; }
-warn(){ printf '%b\n' "${COLOR_YELLOW}$*${COLOR_RESET}"; }
-err(){ printf '%b\n' "${COLOR_RED}$*${COLOR_RESET}"; }
-fatal(){ err "$*"; exit 1; }
+source "$SCRIPT_DIR/lib/common.sh"
 
 MYSQL_PW=""
 BACKUP_DIR=""
