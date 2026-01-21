@@ -6,6 +6,7 @@ INVOCATION_DIR="$PWD"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/lib/common.sh"
 
 # Load environment defaults if present
 if [ -f "$PROJECT_ROOT/.env" ]; then
@@ -63,8 +64,7 @@ Examples:
 EOF
 }
 
-err(){ printf 'Error: %s\n' "$*" >&2; }
-die(){ err "$1"; exit 1; }
+die(){ fatal "$1"; }
 
 normalize_token(){
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]'

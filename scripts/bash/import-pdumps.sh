@@ -6,17 +6,7 @@ INVOCATION_DIR="$PWD"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../.."  # Go to project root
 
-COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[1;33m'
-COLOR_BLUE='\033[0;34m'
-COLOR_RESET='\033[0m'
-
-log(){ printf '%b\n' "${COLOR_GREEN}$*${COLOR_RESET}"; }
-warn(){ printf '%b\n' "${COLOR_YELLOW}$*${COLOR_RESET}"; }
-err(){ printf '%b\n' "${COLOR_RED}$*${COLOR_RESET}"; }
-info(){ printf '%b\n' "${COLOR_BLUE}$*${COLOR_RESET}"; }
-fatal(){ err "$*"; exit 1; }
+source "$SCRIPT_DIR/lib/common.sh"
 
 # Source environment variables
 if [ -f ".env" ]; then

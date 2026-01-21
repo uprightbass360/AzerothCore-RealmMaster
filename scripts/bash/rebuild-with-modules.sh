@@ -8,15 +8,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_FILE="$PROJECT_DIR/.env"
 TEMPLATE_FILE="$PROJECT_DIR/.env.template"
+ENV_PATH="$ENV_FILE"
+DEFAULT_ENV_PATH="$ENV_FILE"
 source "$PROJECT_DIR/scripts/bash/project_name.sh"
+source "$PROJECT_DIR/scripts/bash/lib/common.sh"
 
 # Default project name (read from .env or template)
 DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
 
-BLUE='\033[0;34m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+BLUE="${BLUE:-\033[0;34m}"
+GREEN="${GREEN:-\033[0;32m}"
+YELLOW="${YELLOW:-\033[1;33m}"
+NC="${NC:-\033[0m}"
 
 show_rebuild_step(){
   local step="$1" total="$2" message="$3"
@@ -35,33 +38,6 @@ Options:
 EOF
 }
 
-read_env(){
-  local key="$1" default="$2" env_path="$ENV_FILE" value
-  if [ -f "$env_path" ]; then
-    value="$(grep -E "^${key}=" "$env_path" | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
-  fi
-  if [ -z "$value" ]; then
-    value="${!key:-}"
-  fi
-  if [ -z "$value" ]; then
-    value="$default"
-  fi
-  echo "$value"
-}
-
-update_env_value(){
-  local key="$1" value="$2" env_file="$ENV_FILE"
-  [ -n "$env_file" ] || return 0
-  if [ ! -f "$env_file" ]; then
-    printf '%s=%s\n' "$key" "$value" >> "$env_file"
-    return 0
-  fi
-  if grep -q "^${key}=" "$env_file"; then
-    sed -i "s|^${key}=.*|${key}=${value}|" "$env_file"
-  else
-    printf '\n%s=%s\n' "$key" "$value" >> "$env_file"
-  fi
-}
 
 find_image_with_suffix(){
   local suffix="$1"
@@ -343,20 +319,6 @@ echo "   • Source date: $BUILD_SOURCE_DATE"
 
 # Get image names and tags from .env.template
 TEMPLATE_FILE="$PROJECT_DIR/.env.template"
-get_template_value() {
-  local key="$1"
-  local fallback="$2"
-  if [ -f "$TEMPLATE_FILE" ]; then
-    local value
-    value=$(grep "^${key}=" "$TEMPLATE_FILE" | head -1 | cut -d'=' -f2- | sed 's/^"\(.*\)"$/\1/')
-    if [[ "$value" =~ ^\$\{[^}]*:-([^}]*)\}$ ]]; then
-      value="${BASH_REMATCH[1]}"
-    fi
-    [ -n "$value" ] && echo "$value" || echo "$fallback"
-  else
-    echo "$fallback"
-  fi
-}
 
 strip_tag(){
   local image="$1"
@@ -408,13 +370,13 @@ tag_if_exists(){
   return 1
 }
 
-SOURCE_IMAGE_TAG="$(read_env DOCKER_IMAGE_TAG "$(get_template_value "DOCKER_IMAGE_TAG" "master")")"
+SOURCE_IMAGE_TAG="$(read_env DOCKER_IMAGE_TAG "$(get_template_value "DOCKER_IMAGE_TAG" "$TEMPLATE_FILE" "master")")"
 [ -z "$SOURCE_IMAGE_TAG" ] && SOURCE_IMAGE_TAG="master"
 
-AUTHSERVER_BASE_REPO="$(strip_tag "$(read_env AC_AUTHSERVER_IMAGE_BASE "$(get_template_value "AC_AUTHSERVER_IMAGE_BASE" "acore/ac-wotlk-authserver")")")"
-WORLDSERVER_BASE_REPO="$(strip_tag "$(read_env AC_WORLDSERVER_IMAGE_BASE "$(get_template_value "AC_WORLDSERVER_IMAGE_BASE" "acore/ac-wotlk-worldserver")")")"
-DB_IMPORT_BASE_REPO="$(strip_tag "$(read_env AC_DB_IMPORT_IMAGE_BASE "$(get_template_value "AC_DB_IMPORT_IMAGE_BASE" "acore/ac-wotlk-db-import")")")"
-CLIENT_DATA_BASE_REPO="$(strip_tag "$(read_env AC_CLIENT_DATA_IMAGE_BASE "$(get_template_value "AC_CLIENT_DATA_IMAGE_BASE" "acore/ac-wotlk-client-data")")")"
+AUTHSERVER_BASE_REPO="$(strip_tag "$(read_env AC_AUTHSERVER_IMAGE_BASE "$(get_template_value "AC_AUTHSERVER_IMAGE_BASE" "$TEMPLATE_FILE" "acore/ac-wotlk-authserver")")")"
+WORLDSERVER_BASE_REPO="$(strip_tag "$(read_env AC_WORLDSERVER_IMAGE_BASE "$(get_template_value "AC_WORLDSERVER_IMAGE_BASE" "$TEMPLATE_FILE" "acore/ac-wotlk-worldserver")")")"
+DB_IMPORT_BASE_REPO="$(strip_tag "$(read_env AC_DB_IMPORT_IMAGE_BASE "$(get_template_value "AC_DB_IMPORT_IMAGE_BASE" "$TEMPLATE_FILE" "acore/ac-wotlk-db-import")")")"
+CLIENT_DATA_BASE_REPO="$(strip_tag "$(read_env AC_CLIENT_DATA_IMAGE_BASE "$(get_template_value "AC_CLIENT_DATA_IMAGE_BASE" "$TEMPLATE_FILE" "acore/ac-wotlk-client-data")")")"
 
 BUILT_AUTHSERVER_IMAGE="$AUTHSERVER_BASE_REPO:$SOURCE_IMAGE_TAG"
 BUILT_WORLDSERVER_IMAGE="$WORLDSERVER_BASE_REPO:$SOURCE_IMAGE_TAG"
