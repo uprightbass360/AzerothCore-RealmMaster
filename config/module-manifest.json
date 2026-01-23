@@ -5545,6 +5545,20 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_DISABLE_ACHIEVEMENTS",
+      "name": "mod-disable-achievements",
+      "repo": "https://github.com/olive-spore-734/mod-disable-achievements.git",
+      "description": "SQL with a long list of WotLK Achievements and their IDs, which should make it much easier to find and disable some. Made for AzerothCore.",
+      "type": "sql",
+      "category": "database",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
