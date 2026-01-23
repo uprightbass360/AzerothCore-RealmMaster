@@ -891,6 +891,24 @@ apply_server_config(){
   fi
 }
 
+update_realmlist(){
+  info "Updating realmlist in database with current SERVER_ADDRESS and REALM_PORT..."
+
+  local update_script="$ROOT_DIR/scripts/bash/update-realmlist.sh"
+  if [ ! -x "$update_script" ]; then
+    warn "Realmlist update script not found or not executable: $update_script"
+    return 0
+  fi
+
+  # Run the update script
+  if bash "$update_script"; then
+    ok "Realmlist updated successfully"
+  else
+    warn "Could not update realmlist - this is normal if database is still initializing"
+    info "The realmlist will be updated on next deployment or you can run: ./scripts/bash/update-realmlist.sh"
+  fi
+}
+
 main(){
   if [ "$ASSUME_YES" -ne 1 ]; then
     if [ -t 0 ]; then
@@ -947,29 +965,32 @@ main(){
     fi
   fi
 
-  show_step 1 4 "Checking build requirements"
+  show_step 1 7 "Checking build requirements"
   if ! prompt_build_if_needed; then
     err "Build required but not completed. Deployment cancelled."
     exit 1
   fi
 
   if [ "$KEEP_RUNNING" -ne 1 ]; then
-    show_step 2 4 "Stopping runtime stack"
+    show_step 2 7 "Stopping runtime stack"
     stop_runtime_stack
   fi
 
-  show_step 3 5 "Importing user database files"
+  show_step 3 7 "Importing user database files"
   info "Checking for database files in ./import/db/ and ./database-import/"
   bash "$ROOT_DIR/scripts/bash/import-database-files.sh"
 
-  show_step 4 6 "Bringing your realm online"
+  show_step 4 7 "Bringing your realm online"
   info "Pulling images and waiting for containers to become healthy; this may take a few minutes on first deploy."
   stage_runtime
 
-  show_step 5 6 "Applying server configuration"
+  show_step 5 7 "Applying server configuration"
   apply_server_config
 
-  show_step 6 6 "Finalizing deployment"
+  show_step 6 7 "Updating realmlist"
+  update_realmlist
+
+  show_step 7 7 "Finalizing deployment"
   mark_deployment_complete
 
   show_realm_ready
