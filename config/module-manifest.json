@@ -5559,6 +5559,20 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_LUA_BATTLEPASS",
+      "name": "lua-battlepass",
+      "repo": "https://github.com/Shonik/lua-battlepass.git",
+      "description": "Battle Pass System for AzerothCore",
+      "type": "lua",
+      "category": "scripting",
+      "notes": "Discovered via GitHub topic 'azerothcore-lua'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
