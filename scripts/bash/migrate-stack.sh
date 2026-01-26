@@ -253,7 +253,15 @@ STAGE_SQL_PATH_RAW="$(read_env_value STAGE_PATH_MODULE_SQL "${LOCAL_STORAGE_ROOT
 if [ -z "${STORAGE_PATH_LOCAL:-}" ]; then
   STORAGE_PATH_LOCAL="$LOCAL_STORAGE_ROOT"
 fi
-# Expand any env references (e.g., ${STORAGE_PATH_LOCAL})
+# Ensure STORAGE_PATH is defined to avoid set -u failures during expansion
+if [ -z "${STORAGE_PATH:-}" ]; then
+  STORAGE_PATH="$(read_env_value STORAGE_PATH "./storage")"
+fi
+# Ensure STORAGE_MODULE_SQL_PATH is defined to avoid set -u failures during expansion
+if [ -z "${STORAGE_MODULE_SQL_PATH:-}" ]; then
+  STORAGE_MODULE_SQL_PATH="$(read_env_value STORAGE_MODULE_SQL_PATH "${STORAGE_PATH}/module-sql-updates")"
+fi
+# Expand any env references (e.g., ${STORAGE_PATH_LOCAL}, ${STORAGE_MODULE_SQL_PATH})
 STAGE_SQL_PATH_RAW="$(eval "echo \"$STAGE_SQL_PATH_RAW\"")"
 LOCAL_STAGE_SQL_DIR="$(resolve_path_relative_to_project "$STAGE_SQL_PATH_RAW" "$PROJECT_ROOT")"
 REMOTE_STAGE_SQL_DIR="$(resolve_path_relative_to_project "$STAGE_SQL_PATH_RAW" "$PROJECT_DIR")"
