@@ -199,7 +199,32 @@ The remote deployment process transfers:
 - ✅ Docker images (exported to `local-storage/images/`)
 - ✅ Project files (scripts, configs, docker-compose.yml, .env)
 - ✅ Storage directory (unless `--remote-skip-storage` is used)
-- ❌ Build artifacts (source code, compilation files stay local)
+- ❌ AzerothCore source repository (must be set up separately - see below)
+
+**IMPORTANT: AzerothCore Source Setup**
+
+The AzerothCore source repository (~2GB) is NOT synced during migration to avoid slow transfers. However, it's **required** for database initialization.
+
+**Option 1: Automatic Setup (Recommended)**
+
+Use the `--remote-setup-source` flag to automatically clone the source on the remote host:
+
+```bash
+./deploy.sh --remote-host your-server --remote-user youruser --remote-setup-source
+```
+
+**Option 2: Manual Setup**
+
+After migration completes, SSH to the remote host and run:
+
+```bash
+ssh your-server
+cd ~/AzerothCore-RealmMaster  # or your custom project directory
+./scripts/bash/setup-source.sh
+```
+
+**Without this step, database initialization will fail with:**
+`❌ FATAL: SQL source directory not found`
 
 ### Module Presets
 

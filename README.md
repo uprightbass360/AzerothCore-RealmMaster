@@ -66,6 +66,8 @@ cp .env.prebuilt .env
 
 Pre-built images include the **RealmMaster profile** (32 modules) and are automatically built nightly. See **[docs/PREBUILT_IMAGES.md](docs/PREBUILT_IMAGES.md)** for details.
 
+**Note:** Remote deployments require one additional step after migration - see [Remote Deployment Guide](docs/GETTING_STARTED.md#remote-deployment).
+
 See [Getting Started](#getting-started) for detailed walkthrough.
 
 ## What You Get

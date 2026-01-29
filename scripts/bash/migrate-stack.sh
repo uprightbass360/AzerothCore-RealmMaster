@@ -144,6 +144,7 @@ Options:
   --port PORT           SSH port (default: 22)
   --identity PATH       SSH private key (passed to scp/ssh)
   --project-dir DIR     Remote project directory (default: ~/<project-name>)
+  --setup-source 0|1    Auto-setup AzerothCore source on remote (0=skip, 1=setup, unset=prompt)
   --env-file PATH       Use this env file for image lookup and upload (default: ./.env)
   --tarball PATH        Output path for the image tar (default: ./local-storage/images/acore-modules-images.tar)
   --storage PATH        Remote storage directory (default: <project-dir>/storage)
@@ -168,6 +169,7 @@ SKIP_STORAGE=0
 ASSUME_YES=0
 COPY_SOURCE=0
 SKIP_ENV=0
+REMOTE_SETUP_SOURCE=""
 PRESERVE_CONTAINERS=0
 CLEAN_CONTAINERS=0
 
@@ -181,6 +183,7 @@ while [[ $# -gt 0 ]]; do
     --env-file) ENV_FILE="$2"; shift 2;;
     --tarball) TARBALL="$2"; shift 2;;
     --storage) REMOTE_STORAGE="$2"; shift 2;;
+    --setup-source) REMOTE_SETUP_SOURCE="$2"; shift 2;;
     --skip-storage) SKIP_STORAGE=1; shift;;
     --skip-env) SKIP_ENV=1; shift;;
     --preserve-containers) PRESERVE_CONTAINERS=1; shift;;
@@ -446,6 +449,76 @@ setup_remote_repository(){
   echo "   • Repository synchronized ✓"
 }
 
+setup_source_if_needed(){
+  local should_setup="${REMOTE_SETUP_SOURCE:-}"
+
+  # Check if source already exists and is populated
+  echo "   • Checking for existing AzerothCore source repository..."
+  if run_ssh "[ -d '$PROJECT_DIR/local-storage/source/azerothcore-playerbots/data/sql/base/db_world' ] && [ -n \"\$(ls -A '$PROJECT_DIR/local-storage/source/azerothcore-playerbots/data/sql/base/db_world' 2>/dev/null)\" ]" 2>/dev/null; then
+    echo "   ✅ Source repository already populated on remote"
+    return 0
+  elif run_ssh "[ -d '$PROJECT_DIR/local-storage/source/azerothcore/data/sql/base/db_world' ] && [ -n \"\$(ls -A '$PROJECT_DIR/local-storage/source/azerothcore/data/sql/base/db_world' 2>/dev/null)\" ]" 2>/dev/null; then
+    echo "   ✅ Source repository already populated on remote"
+    return 0
+  fi
+
+  echo "   ⚠️  Source repository not found or empty on remote"
+
+  # If not set, ask user (unless --yes)
+  if [ -z "$should_setup" ]; then
+    if [ "$ASSUME_YES" = "1" ]; then
+      # Auto-yes in non-interactive: default to YES for safety
+      echo "   ℹ️  Auto-confirming source setup (--yes flag)"
+      should_setup=1
+    else
+      echo ""
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "📦 AzerothCore Source Repository Setup"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo ""
+      echo "The remote server needs AzerothCore source code for database schemas."
+      echo "This will clone ~2GB repository (one-time operation, takes 2-5 minutes)."
+      echo ""
+      echo "Without this, database initialization will FAIL."
+      echo ""
+      read -rp "Set up source repository now? [Y/n]: " answer
+      answer="${answer:-Y}"
+      case "${answer,,}" in
+        y|yes) should_setup=1 ;;
+        *) should_setup=0 ;;
+      esac
+    fi
+  fi
+
+  if [ "$should_setup" != "1" ]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "⚠️  WARNING: Source setup skipped"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "You MUST run this manually on the remote host BEFORE starting services:"
+    echo ""
+    echo "  ssh $USER@$HOST"
+    echo "  cd $PROJECT_DIR"
+    echo "  ./scripts/bash/setup-source.sh"
+    echo ""
+    return 0
+  fi
+
+  echo "   🔧 Setting up AzerothCore source repository on remote..."
+  echo "   ⏳ Cloning AzerothCore (this may take 2-5 minutes)..."
+
+  # Run setup-source.sh on remote, capturing output
+  if run_ssh "cd '$PROJECT_DIR' && ./scripts/bash/setup-source.sh" 2>&1 | sed 's/^/      /'; then
+    echo "   ✅ Source repository setup complete"
+    return 0
+  else
+    echo "   ❌ Source setup failed (check output above for details)"
+    echo "   ⚠️  Run manually: ssh $USER@$HOST 'cd $PROJECT_DIR && ./scripts/bash/setup-source.sh'"
+    return 1
+  fi
+}
+
 cleanup_stale_docker_resources(){
   if [ "$PRESERVE_CONTAINERS" -eq 1 ]; then
     echo "⋅ Skipping remote container/image cleanup (--preserve-containers)"
@@ -476,6 +549,9 @@ cleanup_stale_docker_resources(){
 }
 
 validate_remote_environment
+
+# Set up source repository if needed (after project files are synced)
+setup_source_if_needed || true  # Don't fail entire deployment if source setup fails
 
 collect_deploy_image_refs
 
