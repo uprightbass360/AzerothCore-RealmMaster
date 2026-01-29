@@ -38,6 +38,21 @@ ls storage/config/mod_*.conf*
 
 **Database connection issues**
 ```bash
+# Check if source repository is set up (common issue after remote deployment)
+ls -la local-storage/source/azerothcore*/data/sql/base/db_world/
+
+# If empty or missing, set up source:
+./scripts/bash/setup-source.sh
+
+# Then restart database import:
+docker compose run --rm ac-db-import
+
+# Error: "SQL source directory not found"
+# This means the AzerothCore source repository hasn't been cloned.
+# Solution: Run ./scripts/bash/setup-source.sh
+# See docs/GETTING_STARTED.md for details
+
+# Legacy database issues:
 # Verify MySQL is running and responsive
 docker exec ac-mysql mysql -u root -p -e "SELECT 1;"
 

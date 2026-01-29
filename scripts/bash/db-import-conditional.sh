@@ -153,8 +153,33 @@ if [ -f "$RESTORE_SUCCESS_MARKER" ]; then
   if verify_databases_populated; then
     echo "✅ Backup restoration completed successfully"
     cat "$RESTORE_SUCCESS_MARKER" || true
-    echo "🚫 Skipping database import - data already restored from backup"
-    exit 0
+
+    # Check if there are pending module SQL updates to apply
+    echo "🔍 Checking for pending module SQL updates..."
+    local has_pending_updates=0
+
+    # Check if module SQL staging directory has files
+    if [ -d "/azerothcore/data/sql/updates/db_world" ] && [ -n "$(find /azerothcore/data/sql/updates/db_world -name 'MODULE_*.sql' -type f 2>/dev/null)" ]; then
+      echo "   ⚠️  Found staged module SQL updates that may need application"
+      has_pending_updates=1
+    fi
+
+    if [ "$has_pending_updates" -eq 0 ]; then
+      echo "🚫 Skipping database import - data already restored and no pending updates"
+      exit 0
+    fi
+
+    echo "📦 Running dbimport to apply pending module SQL updates..."
+    cd /azerothcore/env/dist/bin
+    seed_dbimport_conf
+
+    if ./dbimport; then
+      echo "✅ Module SQL updates applied successfully!"
+      exit 0
+    else
+      echo "⚠️  dbimport reported issues - check logs for details"
+      exit 1
+    fi
   fi
 
   echo "⚠️  Restoration marker found, but databases are empty - forcing re-import"
@@ -470,6 +495,65 @@ echo "🚀 Running database import..."
 cd /azerothcore/env/dist/bin
 seed_dbimport_conf
 
+validate_sql_source(){
+  local sql_base_dir="/azerothcore/data/sql/base"
+  local required_dirs=("db_auth" "db_world" "db_characters")
+  local missing_dirs=()
+
+  echo "🔍 Validating SQL source availability..."
+
+  if [ ! -d "$sql_base_dir" ]; then
+    cat <<EOF
+
+❌ FATAL: SQL source directory not found at $sql_base_dir
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The AzerothCore source repository is not mounted or doesn't exist.
+This directory should contain SQL schemas for database initialization.
+
+📋 REMEDIATION STEPS:
+
+  1. SSH to this host:
+     ssh $(whoami)@$(hostname)
+
+  2. Navigate to project directory and run source setup:
+     cd $PROJECT_ROOT && ./scripts/bash/setup-source.sh
+
+  3. Restart database import:
+     docker compose run --rm ac-db-import
+
+📦 ALTERNATIVE (Prebuilt Images):
+
+  If using Docker images with bundled SQL schemas:
+  - Set AC_SQL_SOURCE_PATH in .env to point to bundled location
+  - Example: AC_SQL_SOURCE_PATH=/bundled/sql
+
+📚 Documentation: docs/GETTING_STARTED.md#database-setup
+
+EOF
+    exit 1
+  fi
+
+  for dir in "${required_dirs[@]}"; do
+    local full_path="$sql_base_dir/$dir"
+    if [ ! -d "$full_path" ] || [ -z "$(ls -A "$full_path" 2>/dev/null)" ]; then
+      missing_dirs+=("$dir")
+    fi
+  done
+
+  if [ ${#missing_dirs[@]} -gt 0 ]; then
+    echo ""
+    echo "❌ FATAL: SQL source directories are empty or missing:"
+    printf '   - %s\n' "${missing_dirs[@]}"
+    echo ""
+    echo "The AzerothCore source directory exists but hasn't been populated with SQL files."
+    echo "Run './scripts/bash/setup-source.sh' on the host to clone and populate the repository."
+    echo ""
+    exit 1
+  fi
+
+  echo "✅ SQL source validation passed - all required schemas present"
+}
+
 maybe_run_base_import(){
   local mysql_host="${CONTAINER_MYSQL:-ac-mysql}"
   local mysql_port="${MYSQL_PORT:-3306}"
@@ -506,6 +590,8 @@ maybe_run_base_import(){
   fi
 }
 
+# Validate SQL source is available before attempting import
+validate_sql_source
 maybe_run_base_import
 if ./dbimport; then
   echo "✅ Database import completed successfully!"

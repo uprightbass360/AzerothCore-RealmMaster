@@ -32,6 +32,7 @@ REMOTE_IDENTITY=""
 REMOTE_PROJECT_DIR=""
 REMOTE_SKIP_STORAGE=0
 REMOTE_COPY_SOURCE=0
+REMOTE_SETUP_SOURCE=""
 REMOTE_ARGS_PROVIDED=0
 REMOTE_AUTO_DEPLOY=0
 REMOTE_CLEAN_CONTAINERS=0
@@ -261,6 +262,8 @@ Options:
   --remote-project-dir DIR                 Remote project directory (default: ~/<project-name>)
   --remote-skip-storage                    Skip syncing the storage directory during migration
   --remote-copy-source                     Copy the local project directory to remote instead of relying on git
+  --remote-setup-source                    Automatically run setup-source.sh on remote (clone AzerothCore SQL)
+  --remote-skip-source-setup               Skip source repository setup (you'll run manually later)
   --remote-auto-deploy                     Run './deploy.sh --yes --no-watch' on the remote host after migration
   --remote-clean-containers                Stop/remove remote containers & project images during migration
   --remote-storage-path PATH               Override STORAGE_PATH/STORAGE_PATH_LOCAL in the remote .env
@@ -294,6 +297,8 @@ while [[ $# -gt 0 ]]; do
     --remote-project-dir) REMOTE_PROJECT_DIR="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-skip-storage) REMOTE_SKIP_STORAGE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-copy-source) REMOTE_COPY_SOURCE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --remote-setup-source) REMOTE_SETUP_SOURCE=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
+    --remote-skip-source-setup) REMOTE_SETUP_SOURCE=0; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-auto-deploy) REMOTE_AUTO_DEPLOY=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-clean-containers) REMOTE_CLEAN_CONTAINERS=1; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-storage-path) REMOTE_STORAGE_OVERRIDE="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
@@ -752,6 +757,10 @@ run_remote_migration(){
 
   if [ -n "$REMOTE_ENV_FILE" ]; then
     args+=(--env-file "$REMOTE_ENV_FILE")
+  fi
+
+  if [ -n "$REMOTE_SETUP_SOURCE" ]; then
+    args+=(--setup-source "$REMOTE_SETUP_SOURCE")
   fi
 
   (cd "$ROOT_DIR" && ./scripts/bash/migrate-stack.sh "${args[@]}")
