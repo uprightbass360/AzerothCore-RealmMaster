@@ -5811,6 +5811,76 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_FASTFORWARD",
+      "name": "mod-fastforward",
+      "repo": "https://github.com/archaicprose/mod-fastforward.git",
+      "description": "",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_CUSTOM_LOGIN",
+      "name": "mod-custom-login",
+      "repo": "https://github.com/azerothcore/mod-custom-login.git",
+      "description": "An original module for AzerothCore by StygianTheBest http://stygianthebest.github.io",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_TOP_ARENA",
+      "name": "mod-top-arena",
+      "repo": "https://github.com/azerothcore/mod-top-arena.git",
+      "description": "Shows arena statistics in game For Azerothcore 3.3.5a",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_AZEROTHPANEL",
+      "name": "AzerothPanel",
+      "repo": "https://github.com/scarecr0w12/AzerothPanel.git",
+      "description": "A web-based management panel for AzerothCore WoW private servers \u2014 FastAPI backend, React/TypeScript frontend, Docker Compose deployment",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_AZEROTHCORE_DASHBOARD",
+      "name": "azerothcore-dashboard",
+      "repo": "https://github.com/Jslquintero/azerothcore-dashboard.git",
+      "description": "Electron app to manage Azeroth-Core docker images in linux",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
