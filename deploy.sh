@@ -12,6 +12,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_PATH="$ROOT_DIR/.env"
 TEMPLATE_PATH="$ROOT_DIR/.env.template"
+source "$ROOT_DIR/scripts/bash/lib/common.sh"
 source "$ROOT_DIR/scripts/bash/project_name.sh"
 
 # Default project name (read from .env or template)
@@ -46,12 +47,6 @@ MODULE_HELPER="$ROOT_DIR/scripts/python/modules.py"
 MODULE_STATE_INITIALIZED=0
 declare -a MODULES_COMPILE_LIST=()
 declare -a COMPOSE_FILE_ARGS=()
-
-BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
-info(){ printf '%b\n' "${BLUE}ℹ️  $*${NC}"; }
-ok(){ printf '%b\n' "${GREEN}✅ $*${NC}"; }
-warn(){ printf '%b\n' "${YELLOW}⚠️  $*${NC}"; }
-err(){ printf '%b\n' "${RED}❌ $*${NC}"; }
 
 show_deployment_header(){
   printf '\n%b\n' "${BLUE}⚔️  AZEROTHCORE REALM DEPLOYMENT ⚔️${NC}"
@@ -319,10 +314,6 @@ if [ "$REMOTE_CLEAN_CONTAINERS" -eq 1 ] && [ "$REMOTE_PRESERVE_CONTAINERS" -eq 1
   exit 1
 fi
 
-require_cmd(){
-  command -v "$1" >/dev/null 2>&1 || { err "Missing required command: $1"; exit 1; }
-}
-
 require_cmd docker
 require_cmd python3
 
@@ -348,6 +339,8 @@ if [ "$REMOTE_MODE" -eq 1 ]; then
   fi
 fi
 
+# Overrides lib/common.sh read_env deliberately: deploy reads the .env file
+# first (no process-environment precedence) and expands ${VAR} references.
 read_env(){
   local key="$1" default="${2:-}"
   local value=""
@@ -428,12 +421,12 @@ ensure_module_state(){
   ensure_modules_dir_writable "$storage_root"
 
   if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/module-manifest.json" generate --output-dir "$output_dir"; then
-    err "Module manifest validation failed. See errors above." >&2
+    err "Module manifest validation failed. See errors above."
     return 1
   fi
 
   if [ ! -f "$output_dir/modules.env" ]; then
-    err "modules.env not produced at $output_dir/modules.env" >&2
+    err "modules.env not produced at $output_dir/modules.env"
     return 1
   fi
 
@@ -553,14 +546,8 @@ stop_runtime_stack(){
 
 # Deployment sentinel management
 mark_deployment_complete(){
-  local storage_path
-  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
-  if [[ "$storage_path" != /* ]]; then
-    # Remove leading ./ if present
-    storage_path="${storage_path#./}"
-    storage_path="$ROOT_DIR/$storage_path"
-  fi
-  local sentinel="$storage_path/modules/.last_deployed"
+  local sentinel
+  sentinel="$(resolve_local_storage_path)/modules/.last_deployed"
   if ! mkdir -p "$(dirname "$sentinel")" 2>/dev/null; then
     warn "Cannot create local-storage directory. Deployment tracking may not work properly."
     return 0
@@ -587,15 +574,7 @@ mark_deployment_complete(){
 }
 
 modules_need_rebuild(){
-  local storage_path
-  storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
-  if [[ "$storage_path" != /* ]]; then
-    # Remove leading ./ if present
-    storage_path="${storage_path#./}"
-    storage_path="$ROOT_DIR/$storage_path"
-  fi
-  local sentinel="$storage_path/modules/.requires_rebuild"
-  [[ -f "$sentinel" ]]
+  [[ -f "$(resolve_local_storage_path)/modules/.requires_rebuild" ]]
 }
 
 # Build prompting logic
@@ -670,31 +649,6 @@ prompt_build_if_needed(){
     err "Build required but running non-interactively. Run './build.sh'  manually before deploying or re-run this script."
     return 1
   fi
-}
-
-
-determine_profile(){
-  if [ -n "$TARGET_PROFILE" ]; then
-    echo "$TARGET_PROFILE"
-    return
-  fi
-
-  local module_playerbots
-  local playerbot_enabled
-  module_playerbots="$(read_env MODULE_PLAYERBOTS "0")"
-  playerbot_enabled="$(read_env PLAYERBOT_ENABLED "0")"
-  if [ "$module_playerbots" = "1" ] || [ "$playerbot_enabled" = "1" ]; then
-    echo "playerbots"
-    return
-  fi
-
-  ensure_module_state
-  if [ "${#MODULES_COMPILE_LIST[@]}" -gt 0 ]; then
-    echo "modules"
-    return
-  fi
-
-  echo "standard"
 }
 
 run_remote_migration(){
