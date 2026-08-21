@@ -1,3 +1,4 @@
+#!/bin/bash
 # Module metadata and helpers for setup.sh
 
 # setup.sh -> scripts/bash/lib/common.sh (shared helpers)

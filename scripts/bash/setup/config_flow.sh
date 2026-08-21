@@ -1,3 +1,4 @@
+#!/bin/bash
 # Interactive configuration flow for setup.sh
 
 select_deployment_type() {
@@ -216,8 +217,13 @@ select_server_preset() {
       fi
     done
   else
-    # Config presets disabled - use default
-    SERVER_CONFIG_PRESET="none"
-    say INFO "Server configuration presets disabled - using default settings"
+    # Config presets disabled - use default unless one was explicitly requested
+    if [ -n "${CLI_CONFIG_PRESET:-}" ]; then
+      SERVER_CONFIG_PRESET="$CLI_CONFIG_PRESET"
+      say INFO "Using preset from command line: $SERVER_CONFIG_PRESET"
+    else
+      SERVER_CONFIG_PRESET="none"
+      say INFO "Server configuration presets disabled - using default settings"
+    fi
   fi
 }

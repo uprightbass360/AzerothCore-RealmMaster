@@ -1,3 +1,4 @@
+#!/bin/bash
 # Module selection workflow for setup.sh
 
 setup_select_modules() {

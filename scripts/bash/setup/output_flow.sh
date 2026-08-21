@@ -1,3 +1,4 @@
+#!/bin/bash
 # Summary, path setup, and output helpers for setup.sh
 
 print_summary() {
