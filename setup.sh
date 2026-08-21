@@ -244,7 +244,7 @@ ask(){
       fi
     fi
     if [ -z "$v" ] && [ "$NON_INTERACTIVE" = "1" ]; then
-      say ERROR "Non-interactive mode requires a value for '${prompt}'."
+      say ERROR "Non-interactive mode requires a value for '${prompt}'." >&2
       exit 1
     fi
     if [ -z "$validator" ] || $validator "$v"; then
@@ -252,10 +252,12 @@ ask(){
       return 0
     fi
     if [ "$NON_INTERACTIVE" = "1" ]; then
-      say ERROR "Invalid value '${v}' provided for '${prompt}' in non-interactive mode."
+      say ERROR "Invalid value '${v}' provided for '${prompt}' in non-interactive mode." >&2
       exit 1
     fi
-    say ERROR "Invalid input. Please try again."
+    # ask() is always called via $(...): errors must go to stderr or they are
+    # captured into the returned value instead of being shown to the user.
+    say ERROR "Invalid input. Please try again." >&2
   done
 }
 
@@ -279,7 +281,7 @@ ask_yn(){
       [Yy]*) echo 1; return 0;;
       [Nn]*) echo 0; return 0;;
     esac
-    say ERROR "Please answer y or n"
+    say ERROR "Please answer y or n" >&2
   done
 }
 
@@ -1057,9 +1059,14 @@ fi
       fi
     fi
   else
-    # Config presets disabled - use default
-    SERVER_CONFIG_PRESET="none"
-    say INFO "Server configuration presets disabled - using default settings"
+    # Config presets disabled - use default unless one was explicitly requested
+    if [ -n "${CLI_CONFIG_PRESET:-}" ]; then
+      SERVER_CONFIG_PRESET="$CLI_CONFIG_PRESET"
+      say INFO "Using preset from command line: $SERVER_CONFIG_PRESET"
+    else
+      SERVER_CONFIG_PRESET="none"
+      say INFO "Server configuration presets disabled - using default settings"
+    fi
   fi
 
   local MODE_SELECTION=""
@@ -1682,7 +1689,7 @@ fi
 COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED=$COMPOSE_OVERRIDE_MYSQL_EXPOSE_ENABLED
 COMPOSE_OVERRIDE_WORLDSERVER_DEBUG_LOGGING_ENABLED=$COMPOSE_OVERRIDE_WORLDSERVER_DEBUG_LOGGING_ENABLED
 
-COMPOSE_PROJECT_NAME=$DEFAULT_COMPOSE_PROJECT_NAME
+COMPOSE_PROJECT_NAME=$DEFAULT_PROJECT_NAME
 
 STORAGE_PATH=$STORAGE_PATH
 STORAGE_PATH_LOCAL=$LOCAL_STORAGE_ROOT
@@ -1703,8 +1710,8 @@ MYSQL_IMAGE=$DEFAULT_MYSQL_IMAGE
 MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
 MYSQL_ROOT_HOST=$DEFAULT_MYSQL_ROOT_HOST
 MYSQL_USER=$DEFAULT_MYSQL_USER
-  MYSQL_PORT=$DEFAULT_MYSQL_INTERNAL_PORT
-  MYSQL_EXTERNAL_PORT=$MYSQL_EXTERNAL_PORT
+MYSQL_PORT=$DEFAULT_MYSQL_INTERNAL_PORT
+MYSQL_EXTERNAL_PORT=$MYSQL_EXTERNAL_PORT
 MYSQL_DISABLE_BINLOG=${MYSQL_DISABLE_BINLOG:-$DEFAULT_MYSQL_DISABLE_BINLOG}
 MYSQL_CONFIG_DIR=${MYSQL_CONFIG_DIR:-$DEFAULT_MYSQL_CONFIG_DIR}
 MYSQL_CHARACTER_SET=$DEFAULT_MYSQL_CHARACTER_SET
@@ -1839,7 +1846,7 @@ MODULES_REQUIRES_CUSTOM_BUILD=$MODULES_REQUIRES_CUSTOM_BUILD
 MODULES_REQUIRES_PLAYERBOT_SOURCE=$MODULES_REQUIRES_PLAYERBOT_SOURCE
 
   # Eluna
-  AC_ELUNA_ENABLED=$DEFAULT_ELUNA_ENABLED
+AC_ELUNA_ENABLED=$DEFAULT_ELUNA_ENABLED
 AC_ELUNA_TRACE_BACK=$DEFAULT_ELUNA_TRACE_BACK
 AC_ELUNA_AUTO_RELOAD=$DEFAULT_ELUNA_AUTO_RELOAD
 AC_ELUNA_BYTECODE_CACHE=$DEFAULT_ELUNA_BYTECODE_CACHE

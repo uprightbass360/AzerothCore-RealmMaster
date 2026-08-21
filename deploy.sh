@@ -289,6 +289,9 @@ while [[ $# -gt 0 ]]; do
     --no-watch) WATCH_LOGS=0; shift;;
     --keep-running) KEEP_RUNNING=1; shift;;
     --yes|-y) ASSUME_YES=1; shift;;
+    --watch-logs) WATCH_LOGS=1; shift;;
+    --log-tail) WORLD_LOG_TAIL="$2"; shift 2;;
+    --once) WATCH_LOGS=0; shift;;
     --remote) REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift;;
     --remote-host) REMOTE_HOST="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
     --remote-user) REMOTE_USER="$2"; REMOTE_MODE=1; REMOTE_ARGS_PROVIDED=1; shift 2;;
@@ -354,6 +357,25 @@ read_env(){
   if [ -z "$value" ]; then
     value="$default"
   fi
+  # Expand ${VAR} references the way compose interpolation does: from the env
+  # file first, then the process environment. Unresolvable refs stay literal.
+  local depth=0 ref sub pat
+  while [ "$depth" -lt 10 ] && [[ "$value" =~ \$\{([A-Za-z_][A-Za-z0-9_]*)\} ]]; do
+    ref="${BASH_REMATCH[1]}"
+    sub=""
+    if [ -f "$ENV_PATH" ]; then
+      sub="$(grep -E "^${ref}=" "$ENV_PATH" | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
+    fi
+    if [ -z "$sub" ]; then
+      sub="${!ref:-}"
+    fi
+    if [ -z "$sub" ]; then
+      break
+    fi
+    pat='${'"$ref"'}'
+    value="${value//"$pat"/$sub}"
+    depth=$((depth + 1))
+  done
   echo "$value"
 }
 
@@ -406,11 +428,13 @@ ensure_module_state(){
   ensure_modules_dir_writable "$storage_root"
 
   if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/module-manifest.json" generate --output-dir "$output_dir"; then
-    err "Module manifest validation failed. See errors above."
+    err "Module manifest validation failed. See errors above." >&2
+    return 1
   fi
 
   if [ ! -f "$output_dir/modules.env" ]; then
-    err "modules.env not produced at $output_dir/modules.env"
+    err "modules.env not produced at $output_dir/modules.env" >&2
+    return 1
   fi
 
   # shellcheck disable=SC1090
@@ -445,7 +469,9 @@ is_project_local_image(){
   local image="$1"
   local project_name
   project_name="$(resolve_project_name)"
-  [[ "$image" == "${project_name}:"* ]]
+  # Refs without a registry/namespace component (no '/') cannot be pulled for
+  # this project, so treat them as local builds even if the prefix is stale.
+  [[ "$image" == "${project_name}:"* || "$image" != */* ]]
 }
 
 filter_empty_lines(){
@@ -495,14 +521,14 @@ detect_build_needed(){
       if is_project_local_image "$authserver_modules_image"; then
         reasons+=("C++ modules enabled but authserver modules image $authserver_modules_image is missing")
       else
-        info "Authserver modules image $authserver_modules_image missing locally but not tagged with project prefix; assuming compose will pull from registry."
+        info "Authserver modules image $authserver_modules_image missing locally but not tagged with project prefix; assuming compose will pull from registry." >&2
       fi
     fi
     if ! docker image inspect "$worldserver_modules_image" >/dev/null 2>&1; then
       if is_project_local_image "$worldserver_modules_image"; then
         reasons+=("C++ modules enabled but worldserver modules image $worldserver_modules_image is missing")
       else
-        info "Worldserver modules image $worldserver_modules_image missing locally but not tagged with project prefix; assuming compose will pull from registry."
+        info "Worldserver modules image $worldserver_modules_image missing locally but not tagged with project prefix; assuming compose will pull from registry." >&2
       fi
     fi
   fi
@@ -575,28 +601,10 @@ modules_need_rebuild(){
 # Build prompting logic
 prompt_build_if_needed(){
   local build_reasons_output
+  # Initialize module state in the parent shell first so the command
+  # substitution below captures only build reasons, never generator output.
+  ensure_module_state || return 1
   build_reasons_output=$(detect_build_needed)
-
-  if [ -z "$build_reasons_output" ]; then
-    # Belt-and-suspenders: if C++ modules are enabled but module images missing, warn
-    ensure_module_state
-    if [ "${#MODULES_COMPILE_LIST[@]}" -gt 0 ]; then
-      local authserver_modules_image
-      local worldserver_modules_image
-      authserver_modules_image="$(read_env AC_AUTHSERVER_IMAGE_MODULES "$(resolve_project_image "authserver-modules-latest")")"
-      worldserver_modules_image="$(read_env AC_WORLDSERVER_IMAGE_MODULES "$(resolve_project_image "worldserver-modules-latest")")"
-      local missing_images=()
-      if ! docker image inspect "$authserver_modules_image" >/dev/null 2>&1; then
-        missing_images+=("$authserver_modules_image")
-      fi
-      if ! docker image inspect "$worldserver_modules_image" >/dev/null 2>&1; then
-        missing_images+=("$worldserver_modules_image")
-      fi
-      if [ ${#missing_images[@]} -gt 0 ]; then
-        build_reasons_output=$(printf "C++ modules enabled but module images missing: %s\n" "${missing_images[*]}")
-      fi
-    fi
-  fi
 
   if [ -z "$build_reasons_output" ]; then
     return 0  # No build needed
