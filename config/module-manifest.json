@@ -280,9 +280,7 @@
       "category": "scripting",
       "order": 9998,
       "special_message": "\u26a1 Advanced scripting: Required by many Lua-based modules. Enable this first if you plan to use scripted features",
-      "last_modified": "2025-11-14T16:49:36Z",
-      "ref": "4909b17ffa56c20466f2e6562798ba967ad0275c",
-      "notes": "Pinned: mod-ale master tracks upstream AzerothCore and has diverged from the playerbots core (ThreatManager rework, hook signature changes). Bump the ref when the playerbots fork catches up."
+      "last_modified": "2025-11-14T16:49:36Z"
     },
     {
       "key": "MODULE_TIME_IS_TIME",
