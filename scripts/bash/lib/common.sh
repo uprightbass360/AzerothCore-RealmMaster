@@ -82,19 +82,14 @@ fatal() {
 # - Strips leading/trailing whitespace
 # - Removes inline comments (everything after #)
 # - Handles double quotes, single quotes, and unquoted values
-# - Returns default value if key not found
-# - Returns value from environment variable if already set
+# - The .env file is authoritative: a value there wins over an exported
+#   environment variable of the same name. The environment is consulted
+#   only when the file is missing or lacks the key, before the default.
 #
 read_env() {
   local key="$1"
   local default="${2:-}"
   local value=""
-
-  # Check if variable is already set in environment (takes precedence)
-  if [ -n "${!key:-}" ]; then
-    echo "${!key}"
-    return 0
-  fi
 
   # Determine which .env file to use
   local env_file="${ENV_PATH:-${DEFAULT_ENV_PATH:-}}"
@@ -118,7 +113,10 @@ read_env() {
     fi
   fi
 
-  # Use default if still empty
+  # Fall back to an already-set environment variable, then the default
+  if [ -z "${value:-}" ]; then
+    value="${!key:-}"
+  fi
   if [ -z "${value:-}" ]; then
     value="$default"
   fi
