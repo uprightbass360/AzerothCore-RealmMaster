@@ -180,12 +180,36 @@ install_enabled_modules(){
     if [ -d "$dir/.git" ]; then
       info "$dir already present; checking for updates"
       (cd "$dir" && git fetch origin >/dev/null 2>&1 || warn "Failed to fetch updates for $dir")
-      local current_branch
+      local current_branch head_before head_after
       current_branch=$(cd "$dir" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
-      if (cd "$dir" && git pull origin "$current_branch" 2>&1 | grep -q "Already up to date"); then
-        info "$dir is already up to date"
+      head_before=$(cd "$dir" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+      if (cd "$dir" && git pull origin "$current_branch" >/dev/null 2>&1); then
+        head_after=$(cd "$dir" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        if [ "$head_after" = "$head_before" ]; then
+          info "$dir is already up to date"
+        else
+          ok "$dir updated from remote (${head_before} -> ${head_after})"
+        fi
       else
-        ok "$dir updated from remote"
+        warn "Failed to pull updates for $dir (checkout stuck at ${head_before}); re-cloning fresh"
+        local stale_dir="${dir}.stale.$$"
+        if mv "$dir" "$stale_dir" 2>/dev/null; then
+          if git clone "$repo" "$dir"; then
+            ok "$dir re-cloned fresh from remote"
+            if ! rm -rf "$stale_dir" 2>/dev/null && command -v docker >/dev/null 2>&1; then
+              docker run --rm -v "$(pwd)":/work -w /work "${ALPINE_IMAGE:-alpine:latest}" \
+                rm -rf "$stale_dir" >/dev/null 2>&1 || true
+            fi
+            if [ -d "$stale_dir" ]; then
+              warn "Could not remove old checkout at $stale_dir; remove it manually"
+            fi
+          else
+            err "Failed to re-clone $repo; restoring previous checkout"
+            mv "$stale_dir" "$dir" 2>/dev/null || err "Could not restore $dir from $stale_dir"
+          fi
+        else
+          warn "Cannot replace $dir (parent directory not writable); keeping checkout at ${head_before}. Run scripts/bash/repair-storage-permissions.sh"
+        fi
       fi
       if [ -n "$ref" ]; then
         (cd "$dir" && git checkout "$ref") || warn "Unable to checkout ref $ref for $dir"
