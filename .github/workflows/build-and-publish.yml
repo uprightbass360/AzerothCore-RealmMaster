@@ -158,7 +158,11 @@ jobs:
           # 5. Compile AzerothCore with all modules
           # 6. Tag the resulting Docker images
 
-          BUILD_ARGS="--yes"
+          # --force-update: the restored local-storage/source cache can be
+          # arbitrarily old; always advance the core to the branch head so
+          # modules (which sync to their latest) compile against the core
+          # they are developed for.
+          BUILD_ARGS="--yes --force-update"
 
           # Add force flag if manually triggered with force_rebuild
           if [ "${{ github.event.inputs.force_rebuild }}" = "true" ]; then
