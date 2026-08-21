@@ -114,17 +114,21 @@ apply_override_patch() {
 
 # Locate a core header by path relative to the source root.
 # MODULES_REBUILD_SOURCE_PATH may be relative to the project root, which is
-# not our cwd, so also try the standard storage layout relative to the
-# module checkout. Prints the header path, or nothing if not found.
+# not our cwd, so also try layout-derived locations: when the hook runs on a
+# module staged inside the source tree (<source>/modules/<mod>), the module's
+# grandparent IS the core; when it runs on a storage checkout
+# (<storage>/modules/<mod>), the core lives under <storage>/source/.
+# Prints the header path, or nothing if not found.
 find_core_header() {
     local header_rel="$1"
-    local storage_root
-    storage_root="$(cd "$MODULE_DIR/../.." 2>/dev/null && pwd)"
+    local grandparent
+    grandparent="$(cd "$MODULE_DIR/../.." 2>/dev/null && pwd)"
     local candidate
     for candidate in \
         "${MODULES_REBUILD_SOURCE_PATH:-}" \
-        "$storage_root/source/azerothcore-playerbots" \
-        "$storage_root/source/azerothcore"; do
+        "$grandparent" \
+        "$grandparent/source/azerothcore-playerbots" \
+        "$grandparent/source/azerothcore"; do
         if [ -n "$candidate" ] && [ -f "$candidate/$header_rel" ]; then
             echo "$candidate/$header_rel"
             return 0
@@ -163,11 +167,9 @@ apply_resurrect_signature_patch() {
         else
             core_wants_ref=0
         fi
-    elif [ "$IS_PLAYERBOTS_FORK" = "1" ]; then
-        # Playerbots fork lags upstream; it still uses the by-value form
-        core_wants_ref=0
-        echo "   ℹ️  Core header not found; assuming by-value signature (playerbots fork)"
     else
+        # Never guess: patching against an assumed core silently breaks the
+        # build when the fork catches up to upstream signatures.
         echo "   ℹ️  Core header not found; skipping resurrect signature check"
         return 0
     fi
@@ -225,11 +227,9 @@ apply_packet_signature_patch() {
         else
             core_wants_const=0
         fi
-    elif [ "$IS_PLAYERBOTS_FORK" = "1" ]; then
-        # Playerbots fork lags upstream; it still uses the non-const form
-        core_wants_const=0
-        echo "   ℹ️  Core header not found; assuming non-const packet hooks (playerbots fork)"
     else
+        # Never guess: patching against an assumed core silently breaks the
+        # build when the fork catches up to upstream signatures.
         echo "   ℹ️  Core header not found; skipping packet signature check"
         return 0
     fi

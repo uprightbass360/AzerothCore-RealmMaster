@@ -519,7 +519,13 @@ stage_modules(){
 
   # Export environment variables needed by module hooks
   export STACK_SOURCE_VARIANT="$(read_env STACK_SOURCE_VARIANT "core")"
-  export MODULES_REBUILD_SOURCE_PATH="$(read_env MODULES_REBUILD_SOURCE_PATH "")"
+  # Hooks run with a different cwd, so the source path must be absolute
+  local hook_source_path
+  hook_source_path="$(read_env MODULES_REBUILD_SOURCE_PATH "")"
+  if [ -n "$hook_source_path" ] && [[ "$hook_source_path" != /* ]]; then
+    hook_source_path="$ROOT_DIR/${hook_source_path#./}"
+  fi
+  export MODULES_REBUILD_SOURCE_PATH="$hook_source_path"
 
   if ! (cd "$local_modules_dir" && bash "$ROOT_DIR/scripts/bash/manage-modules.sh"); then
     err "Module staging failed; aborting build"
