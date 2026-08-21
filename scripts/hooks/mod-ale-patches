@@ -35,6 +35,8 @@ else
 fi
 # Override keyword patch: always apply (C++11 best practice)
 APPLY_OVERRIDE_PATCH="${APPLY_OVERRIDE_PATCH:-1}"
+# OnPlayerResurrect signature patch: align module with the core being built
+APPLY_RESURRECT_SIGNATURE_PATCH="${APPLY_RESURRECT_SIGNATURE_PATCH:-1}"
 
 if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
     echo "❌ mod-ale-patches: Invalid module directory: $MODULE_DIR"
@@ -108,6 +110,85 @@ apply_override_patch() {
     return 0
 }
 
+# Apply OnPlayerResurrect signature compatibility patch
+# Upstream AzerothCore changed PlayerScript::OnPlayerResurrect's 3rd
+# parameter from `bool` to `bool&`, and mod-ale master followed. Cores that
+# lag upstream (e.g. the playerbots fork) still declare it by value, so a
+# fresh mod-ale checkout fails to compile against them. Align the module's
+# override with whatever signature the core being built actually declares.
+apply_resurrect_signature_patch() {
+    local target_file="$MODULE_DIR/src/ALE_SC.cpp"
+
+    if [ ! -f "$target_file" ]; then
+        echo "   ⚠️  Resurrect signature patch target file missing: $target_file"
+        return 1
+    fi
+    if ! grep -q 'OnPlayerResurrect' "$target_file"; then
+        echo "   ✅ Module has no OnPlayerResurrect override; nothing to do"
+        return 0
+    fi
+
+    # Locate the core's PlayerScript.h. MODULES_REBUILD_SOURCE_PATH may be
+    # relative to the project root, which is not our cwd, so also try the
+    # standard storage layout relative to the module checkout.
+    local header_rel="src/server/game/Scripting/ScriptDefines/PlayerScript.h"
+    local storage_root
+    storage_root="$(cd "$MODULE_DIR/../.." 2>/dev/null && pwd)"
+    local core_header=""
+    local candidate
+    for candidate in \
+        "${MODULES_REBUILD_SOURCE_PATH:-}" \
+        "$storage_root/source/azerothcore-playerbots" \
+        "$storage_root/source/azerothcore"; do
+        if [ -n "$candidate" ] && [ -f "$candidate/$header_rel" ]; then
+            core_header="$candidate/$header_rel"
+            break
+        fi
+    done
+
+    local core_wants_ref=""
+    if [ -n "$core_header" ]; then
+        local core_sig
+        core_sig="$(grep 'OnPlayerResurrect' "$core_header" | head -1)"
+        if echo "$core_sig" | grep -q 'bool&'; then
+            core_wants_ref=1
+        else
+            core_wants_ref=0
+        fi
+    elif [ "$IS_PLAYERBOTS_FORK" = "1" ]; then
+        # Playerbots fork lags upstream; it still uses the by-value form
+        core_wants_ref=0
+        echo "   ℹ️  Core header not found; assuming by-value signature (playerbots fork)"
+    else
+        echo "   ℹ️  Core header not found; skipping resurrect signature check"
+        return 0
+    fi
+
+    local module_has_ref=0
+    if grep 'OnPlayerResurrect' "$target_file" | grep -q 'bool&'; then
+        module_has_ref=1
+    fi
+
+    if [ "$core_wants_ref" = "$module_has_ref" ]; then
+        echo "   ✅ OnPlayerResurrect signature already matches core"
+        return 0
+    fi
+
+    if [ "$core_wants_ref" = "0" ]; then
+        if sed -i '/OnPlayerResurrect/s/bool&/bool/' "$target_file"; then
+            echo "   ✅ Patched OnPlayerResurrect to by-value bool (older core)"
+            return 0
+        fi
+    else
+        if sed -i '/OnPlayerResurrect/s/, bool /, bool\& /' "$target_file"; then
+            echo "   ✅ Patched OnPlayerResurrect to bool& (newer core)"
+            return 0
+        fi
+    fi
+    echo "   ❌ Failed to apply OnPlayerResurrect signature patch"
+    return 2
+}
+
 # Apply SendTrainerList compatibility patch
 apply_sendtrainerlist_patch() {
     local target_file="$MODULE_DIR/src/LuaEngine/methods/PlayerMethods.h"
@@ -147,6 +228,11 @@ if [ "$APPLY_MOVEPATH_PATCH" = "1" ]; then
 fi
 if [ "$APPLY_SENDTRAINERLIST_PATCH" = "1" ]; then
     if apply_sendtrainerlist_patch; then
+        patch_count=$((patch_count + 1))
+    fi
+fi
+if [ "$APPLY_RESURRECT_SIGNATURE_PATCH" = "1" ]; then
+    if apply_resurrect_signature_patch; then
         patch_count=$((patch_count + 1))
     fi
 fi
