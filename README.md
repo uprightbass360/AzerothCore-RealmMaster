@@ -4,6 +4,9 @@
 
 # AzerothCore RealmMaster
 
+[![Nightly Build](https://github.com/uprightbass360/AzerothCore-RealmMaster/actions/workflows/build-and-publish.yml/badge.svg?branch=main)](https://github.com/uprightbass360/AzerothCore-RealmMaster/actions/workflows/build-and-publish.yml)
+[![Module Manifest Sync](https://github.com/uprightbass360/AzerothCore-RealmMaster/actions/workflows/update-module-manifest.yml/badge.svg?branch=main)](https://github.com/uprightbass360/AzerothCore-RealmMaster/actions/workflows/update-module-manifest.yml)
+
 A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich King) private server with **hundreds** of supported modules and intelligent automations to allow for easy setup, deployment and management.
 
 ## Table of Contents
