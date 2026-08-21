@@ -1,3 +1,4 @@
+#!/bin/bash
 # Setup UI and prompting helpers for setup.sh
 
 # setup.sh -> scripts/bash/lib/common.sh (shared colors/logging)
@@ -45,7 +46,7 @@ ask(){
       fi
     fi
     if [ -z "$v" ] && [ "$NON_INTERACTIVE" = "1" ]; then
-      say ERROR "Non-interactive mode requires a value for '${prompt}'."
+      say ERROR "Non-interactive mode requires a value for '${prompt}'." >&2
       exit 1
     fi
     if [ -z "$validator" ] || $validator "$v"; then
@@ -53,10 +54,12 @@ ask(){
       return 0
     fi
     if [ "$NON_INTERACTIVE" = "1" ]; then
-      say ERROR "Invalid value '${v}' provided for '${prompt}' in non-interactive mode."
+      say ERROR "Invalid value '${v}' provided for '${prompt}' in non-interactive mode." >&2
       exit 1
     fi
-    say ERROR "Invalid input. Please try again."
+    # ask() is always called via $(...): errors must go to stderr or they are
+    # captured into the returned value instead of being shown to the user.
+    say ERROR "Invalid input. Please try again." >&2
   done
 }
 
@@ -80,7 +83,7 @@ ask_yn(){
       [Yy]*) echo 1; return 0;;
       [Nn]*) echo 0; return 0;;
     esac
-    say ERROR "Please answer y or n"
+    say ERROR "Please answer y or n" >&2
   done
 }
 

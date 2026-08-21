@@ -1,3 +1,4 @@
+#!/bin/bash
 # Setup defaults and template-backed constants for setup.sh
 
 # setup.sh -> scripts/bash/lib/common.sh (shared helpers)

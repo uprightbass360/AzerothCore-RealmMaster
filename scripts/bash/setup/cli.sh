@@ -1,3 +1,4 @@
+#!/bin/bash
 # CLI parsing for setup.sh
 
 init_cli_defaults() {
