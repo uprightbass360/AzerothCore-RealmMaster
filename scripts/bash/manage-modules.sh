@@ -179,19 +179,38 @@ install_enabled_modules(){
     fi
     if [ -d "$dir/.git" ]; then
       info "$dir already present; checking for updates"
-      (cd "$dir" && git fetch origin >/dev/null 2>&1 || warn "Failed to fetch updates for $dir")
-      local current_branch head_before head_after
-      current_branch=$(cd "$dir" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+      (cd "$dir" && git fetch origin >/dev/null 2>&1) || warn "Failed to fetch updates for $dir"
+      local head_before head_after
       head_before=$(cd "$dir" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-      if (cd "$dir" && git pull origin "$current_branch" >/dev/null 2>&1); then
-        head_after=$(cd "$dir" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-        if [ "$head_after" = "$head_before" ]; then
-          info "$dir is already up to date"
+      local update_failed=0
+      if [ -n "$ref" ]; then
+        # Pinned module: check out the ref directly, never pull a branch
+        if (cd "$dir" && git checkout --quiet "$ref" >/dev/null 2>&1); then
+          head_after=$(cd "$dir" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+          if [ "$head_after" = "$head_before" ]; then
+            info "$dir is already at pinned ref ${head_after}"
+          else
+            ok "$dir moved to pinned ref (${head_before} -> ${head_after})"
+          fi
         else
-          ok "$dir updated from remote (${head_before} -> ${head_after})"
+          update_failed=1
         fi
       else
-        warn "Failed to pull updates for $dir (checkout stuck at ${head_before}); re-cloning fresh"
+        local current_branch
+        current_branch=$(cd "$dir" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+        if (cd "$dir" && git pull origin "$current_branch" >/dev/null 2>&1); then
+          head_after=$(cd "$dir" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+          if [ "$head_after" = "$head_before" ]; then
+            info "$dir is already up to date"
+          else
+            ok "$dir updated from remote (${head_before} -> ${head_after})"
+          fi
+        else
+          update_failed=1
+        fi
+      fi
+      if [ "$update_failed" -eq 1 ]; then
+        warn "Failed to update $dir (checkout stuck at ${head_before}); re-cloning fresh"
         local stale_dir="${dir}.stale.$$"
         if mv "$dir" "$stale_dir" 2>/dev/null; then
           if git clone "$repo" "$dir"; then
@@ -203,6 +222,9 @@ install_enabled_modules(){
             if [ -d "$stale_dir" ]; then
               warn "Could not remove old checkout at $stale_dir; remove it manually"
             fi
+            if [ -n "$ref" ]; then
+              (cd "$dir" && git checkout "$ref") || warn "Unable to checkout ref $ref for $dir"
+            fi
           else
             err "Failed to re-clone $repo; restoring previous checkout"
             mv "$stale_dir" "$dir" 2>/dev/null || err "Could not restore $dir from $stale_dir"
@@ -210,9 +232,6 @@ install_enabled_modules(){
         else
           warn "Cannot replace $dir (parent directory not writable); keeping checkout at ${head_before}. Run scripts/bash/repair-storage-permissions.sh"
         fi
-      fi
-      if [ -n "$ref" ]; then
-        (cd "$dir" && git checkout "$ref") || warn "Unable to checkout ref $ref for $dir"
       fi
     elif [ -d "$dir" ]; then
       warn "$dir exists but is not a git repository; leaving in place"
