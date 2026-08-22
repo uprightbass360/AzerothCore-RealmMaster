@@ -156,7 +156,7 @@ if [ -f "$RESTORE_SUCCESS_MARKER" ]; then
 
     # Check if there are pending module SQL updates to apply
     echo "🔍 Checking for pending module SQL updates..."
-    local has_pending_updates=0
+    has_pending_updates=0
 
     # Check if module SQL staging directory has files
     if [ -d "/azerothcore/data/sql/updates/db_world" ] && [ -n "$(find /azerothcore/data/sql/updates/db_world -name 'MODULE_*.sql' -type f 2>/dev/null)" ]; then
