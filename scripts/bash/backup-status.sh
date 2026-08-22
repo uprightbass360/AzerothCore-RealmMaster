@@ -341,6 +341,10 @@ main() {
 
   show_backup_tier "Hourly Backups" "$BACKUP_PATH/hourly" "${BACKUP_RETENTION_HOURS} hours"
   show_backup_tier "Daily Backups" "$BACKUP_PATH/daily" "${BACKUP_RETENTION_DAYS} days"
+  show_backup_tier "Monthly Backups" "$BACKUP_PATH/monthly" "${BACKUP_RETENTION_MONTHS:-12} months"
+  if [ -d "$BACKUP_PATH/manual" ]; then
+    show_backup_tier "Manual Backups" "$BACKUP_PATH/manual" "kept until removed"
+  fi
 
   # Check for manual backups
   local manual_count=0

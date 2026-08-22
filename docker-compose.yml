@@ -265,8 +265,10 @@ services:
       MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS}
       BACKUP_RETENTION_HOURS: ${BACKUP_RETENTION_HOURS}
+      BACKUP_RETENTION_MONTHS: ${BACKUP_RETENTION_MONTHS:-12}
       BACKUP_DAILY_TIME: ${BACKUP_DAILY_TIME}
       BACKUP_INTERVAL_MINUTES: ${BACKUP_INTERVAL_MINUTES}
+      BACKUP_ALERT_WEBHOOK: ${BACKUP_ALERT_WEBHOOK:-}
       DB_AUTH_NAME: ${DB_AUTH_NAME}
       DB_WORLD_NAME: ${DB_WORLD_NAME}
       DB_CHARACTERS_NAME: ${DB_CHARACTERS_NAME}
@@ -300,14 +302,24 @@ services:
             *) echo "❌ Unsupported architecture for gosu: $${arch}"; exit 1 ;;
           esac
           echo "⬇️  Installing gosu for privilege drop..."
+          case "$${gosu_arch}" in
+            amd64) gosu_sha256="bd8be776e97ec2b911190a82d9ab3fa6c013ae6d3121eea3d0bfd5c82a0eaf8c" ;;
+            arm64) gosu_sha256="73244a858f5514a927a0f2510d533b4b57169b64d2aa3f9d98d92a7a7df80cea" ;;
+          esac
           curl -fsSL "https://github.com/tianon/gosu/releases/download/1.14/gosu-$${gosu_arch}" -o /usr/local/bin/gosu
+          echo "$${gosu_sha256}  /usr/local/bin/gosu" | sha256sum -c - >/dev/null || {
+            echo "❌ gosu checksum mismatch - refusing to run untrusted binary"; rm -f /usr/local/bin/gosu; exit 1; }
           chmod +x /usr/local/bin/gosu
         }
         install_curl
         ensure_gosu
         echo "📥 Preparing backup scheduler (running as ${CONTAINER_USER})..."
-        chown -R ${CONTAINER_USER} /backups 2>/dev/null || true
-        chmod -R 755 /backups 2>/dev/null || true
+        # Fix ownership of the tier roots only; per-backup dirs self-heal in
+        # the scheduler. A recursive pass over months of NFS backups is slow
+        # and churns file modes for no benefit.
+        mkdir -p /backups/hourly /backups/daily /backups/monthly
+        chown ${CONTAINER_USER} /backups /backups/hourly /backups/daily /backups/monthly 2>/dev/null || true
+        chmod u+rwx /backups /backups/hourly /backups/daily /backups/monthly 2>/dev/null || true
         if [ -f /tmp/scripts/bash/backup-scheduler.sh ]; then
           chmod +x /tmp/scripts/bash/backup-scheduler.sh 2>/dev/null || true
           exec gosu ${CONTAINER_USER} /tmp/scripts/bash/backup-scheduler.sh
