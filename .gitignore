@@ -25,4 +25,5 @@ scripts/python/__pycache__/*
 # ===================================
 # Logs & Runtime State
 # ===================================
-deploy.loglocal-backups/
+deploy.log
+local-backups/
