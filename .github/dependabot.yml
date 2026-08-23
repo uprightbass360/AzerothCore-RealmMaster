@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    groups:
+      # One combined PR per week instead of a PR per action
+      actions:
+        patterns:
+          - "*"
+    labels:
+      - "ci"
+    commit-message:
+      prefix: "chore"
