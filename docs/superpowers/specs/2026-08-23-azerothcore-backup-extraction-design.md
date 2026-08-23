@@ -10,10 +10,9 @@ Extract RealmMaster's hardened database backup/restore functionality into a
 standalone tool that any dockerized AzerothCore stack can adopt by adding one
 service block to a compose file. First-class integration targets:
 
-1. Plain/upstream-style AC compose stacks (e.g.
-   [azerothcore-namek](https://github.com/mwgaillardetz/azerothcore-namek),
-   which uses `ac-database` on MySQL 8.4 and the `docker-compose.override.yml`
-   customization pattern)
+1. Plain/upstream-style AC compose stacks (the standard acore docker layout:
+   an `ac-database` MySQL service on a shared network, customized via the
+   `docker-compose.override.yml` pattern)
 2. Any similar stack with a reachable MySQL container
 
 RealmMaster keeps its own inline copy for now; migrating it to consume this
@@ -38,7 +37,7 @@ azerothcore-backup/
 │   └── acbackup                  # CLI: list / verify / now / restore
 ├── examples/
 │   ├── compose.yml               # minimal generic AC service block
-│   └── namek.override.yml        # drop-in docker-compose.override.yml for azerothcore-namek
+│   └── compose.override.yml      # drop-in override for upstream-style AC stacks
 ├── test/                         # e2e compose + assertions (see Testing)
 ├── .github/workflows/ci.yml      # shellcheck + e2e matrix + publish
 └── README.md
@@ -48,7 +47,7 @@ azerothcore-backup/
 
 - **Base `mysql:8.4`** (newest LTS). Rationale: client tools (mysql,
   mysqldump) are guaranteed present and version-compatible dumping both 8.4
-  (Namek) and 8.0 (RealmMaster-era) servers; `gosu` ships in the official
+  and 8.0 servers (the two versions in common AC use); `gosu` ships in the official
   image, eliminating RealmMaster's runtime download of gosu from GitHub
   entirely; the base layer is typically already present on AC hosts.
 - Entrypoint: fix ownership of `/backups` tier roots only (never recursive —
@@ -85,7 +84,7 @@ awareness). All behavior preserved:
 
 | Variable | Default | Notes |
 |---|---|---|
-| `MYSQL_HOST` | `ac-database` | Namek-compatible default |
+| `MYSQL_HOST` | `ac-database` | matches the standard AC compose service name |
 | `MYSQL_PORT` | `3306` | |
 | `MYSQL_USER` | `root` | |
 | `MYSQL_PASSWORD` | — | or `MYSQL_PASSWORD_FILE` for secrets |
@@ -126,10 +125,10 @@ complete backup, log loudly, fire the webhook. Never touches non-empty
 databases; no marker files — the database itself is the state. Enables
 "compose file + backup directory = rebuilt server".
 
-## Namek integration
+## Upstream-style stack integration
 
-`examples/namek.override.yml` — matches their documented
-`docker-compose.override.yml` pattern:
+`examples/compose.override.yml` — matches the `docker-compose.override.yml`
+customization pattern used by standard AC docker stacks:
 
 ```yaml
 services:
@@ -149,9 +148,9 @@ services:
     restart: always
 ```
 
-Defaults are chosen so this block works with zero extra configuration on
-Namek (`ac-database` host default, root user, standard AC database names,
-playerbots auto-detect).
+Defaults are chosen so this block works with zero extra configuration on any
+stack following the standard AC compose conventions (`ac-database` host
+default, root user, standard AC database names, playerbots auto-detect).
 
 ## CI & testing
 
