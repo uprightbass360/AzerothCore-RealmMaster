@@ -1,6 +1,11 @@
 #!/bin/bash
 # Module-specific hook for mod-ale compatibility patches
-# NOTE: These patches are primarily needed for the AzerothCore playerbots fork
+#
+# Only self-guarding patches live here: each one reads the signature the core
+# being built actually declares and aligns the module with it (or skips when
+# they already match). Blind pattern patches (SendTrainerList, override
+# keyword, MovePath) were removed 2026-08 once their targets disappeared from
+# mod-ale master.
 set -e
 
 # Hook environment
@@ -8,33 +13,7 @@ MODULE_KEY="${MODULE_KEY:-}"
 MODULE_DIR="${MODULE_DIR:-}"
 MODULE_NAME="${MODULE_NAME:-}"
 
-# Detect if we're building with playerbots fork
-IS_PLAYERBOTS_FORK=0
-
-# Method 1: Check STACK_SOURCE_VARIANT environment variable
-if [ "${STACK_SOURCE_VARIANT:-}" = "playerbots" ]; then
-    IS_PLAYERBOTS_FORK=1
-    echo "   ✅ Playerbots detected via STACK_SOURCE_VARIANT"
-# Method 2: Check MODULES_REBUILD_SOURCE_PATH
-elif [ -n "${MODULES_REBUILD_SOURCE_PATH:-}" ] && echo "${MODULES_REBUILD_SOURCE_PATH}" | grep -q "azerothcore-playerbots"; then
-    IS_PLAYERBOTS_FORK=1
-    echo "   ✅ Playerbots detected via MODULES_REBUILD_SOURCE_PATH"
-else
-    echo "   ❌ Playerbots fork not detected"
-    echo "   🔍 Debug: STACK_SOURCE_VARIANT='${STACK_SOURCE_VARIANT:-}'"
-    echo "   🔍 Debug: MODULES_REBUILD_SOURCE_PATH='${MODULES_REBUILD_SOURCE_PATH:-}'"
-fi
-
 # Feature flags (set to 0 to disable specific patches)
-APPLY_MOVEPATH_PATCH="${APPLY_MOVEPATH_PATCH:-0}"  # Disabled by default - appears unnecessary
-# SendTrainerList patch: auto-detect based on fork, but can be overridden
-if [ -z "${APPLY_SENDTRAINERLIST_PATCH:-}" ]; then
-    APPLY_SENDTRAINERLIST_PATCH="$IS_PLAYERBOTS_FORK"  # Only needed for playerbots fork
-else
-    APPLY_SENDTRAINERLIST_PATCH="${APPLY_SENDTRAINERLIST_PATCH}"
-fi
-# Override keyword patch: always apply (C++11 best practice)
-APPLY_OVERRIDE_PATCH="${APPLY_OVERRIDE_PATCH:-1}"
 # OnPlayerResurrect signature patch: align module with the core being built
 APPLY_RESURRECT_SIGNATURE_PATCH="${APPLY_RESURRECT_SIGNATURE_PATCH:-1}"
 # CanPacketSend/CanPacketReceive signature patch: align const-ness with core
@@ -45,72 +24,7 @@ if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
     exit 2
 fi
 
-if [ "$IS_PLAYERBOTS_FORK" = "1" ]; then
-    echo "🔧 mod-ale-patches: Applying playerbots fork compatibility fixes to $MODULE_NAME"
-else
-    echo "🔧 mod-ale-patches: Checking compatibility fixes for $MODULE_NAME"
-fi
-
-# Apply MovePath compatibility patch
-apply_movepath_patch() {
-    local target_file="$MODULE_DIR/src/LuaEngine/methods/CreatureMethods.h"
-
-    if [ ! -f "$target_file" ]; then
-        echo "   ⚠️  MovePath patch target file missing: $target_file"
-        return 1
-    fi
-
-    if grep -q 'MoveWaypoint(creature->GetWaypointPath(), true);' "$target_file"; then
-        if sed -i 's/MoveWaypoint(creature->GetWaypointPath(), true);/MovePath(creature->GetWaypointPath(), FORCED_MOVEMENT_RUN);/' "$target_file"; then
-            echo "   ✅ Applied MovePath compatibility fix"
-            return 0
-        else
-            echo "   ❌ Failed to apply MovePath compatibility fix"
-            return 2
-        fi
-    else
-        echo "   ✅ MovePath compatibility fix already present"
-        return 0
-    fi
-}
-
-# Apply override keyword patch
-apply_override_patch() {
-    local found_files=()
-
-    # Search for .cpp and .h files that need override keyword
-    while IFS= read -r -d '' file; do
-        if grep -l 'void OnPlayerLogin(Player\* player)' "$file" >/dev/null 2>&1; then
-            found_files+=("$file")
-        fi
-    done < <(find "$MODULE_DIR" -name "*.cpp" -o -name "*.h" -print0)
-
-    if [ ${#found_files[@]} -eq 0 ]; then
-        echo "   ✅ No files need override keyword fix"
-        return 0
-    fi
-
-    local patch_count=0
-    for file in "${found_files[@]}"; do
-        # Check if OnPlayerLogin exists without override keyword
-        if grep -q 'void OnPlayerLogin(Player\* player) {' "$file" && ! grep -q 'void OnPlayerLogin(Player\* player) override {' "$file"; then
-            if sed -i 's/void OnPlayerLogin(Player\* player) {/void OnPlayerLogin(Player* player) override {/' "$file"; then
-                echo "   ✅ Applied override keyword fix to $(basename "$file")"
-                patch_count=$((patch_count + 1))
-            else
-                echo "   ❌ Failed to apply override keyword fix to $(basename "$file")"
-                return 2
-            fi
-        fi
-    done
-
-    if [ $patch_count -eq 0 ]; then
-        echo "   ✅ Override keyword fix already present"
-    else
-        echo "   ✅ Applied override keyword fix to $patch_count file(s)"
-    fi
-    return 0
-}
+echo "🔧 mod-ale-patches: Checking compatibility fixes for $MODULE_NAME"
 
 # Locate a core header by path relative to the source root.
 # MODULES_REBUILD_SOURCE_PATH may be relative to the project root, which is
@@ -259,48 +173,8 @@ apply_packet_signature_patch() {
     return 2
 }
 
-# Apply SendTrainerList compatibility patch
-apply_sendtrainerlist_patch() {
-    local target_file="$MODULE_DIR/src/LuaEngine/methods/PlayerMethods.h"
-
-    if [ ! -f "$target_file" ]; then
-        echo "   ⚠️  SendTrainerList patch target file missing: $target_file"
-        return 1
-    fi
-
-    # Check if the buggy code exists (with ->GetGUID())
-    if grep -q 'player->GetSession()->SendTrainerList(obj->GetGUID());' "$target_file"; then
-        # Apply the fix by casting to Creature* instead of using GetGUID()
-        if sed -i 's/player->GetSession()->SendTrainerList(obj->GetGUID());/if (Creature* creature = obj->ToCreature()) player->GetSession()->SendTrainerList(creature);/' "$target_file"; then
-            echo "   ✅ Applied SendTrainerList compatibility fix"
-            return 0
-        else
-            echo "   ❌ Failed to apply SendTrainerList compatibility fix"
-            return 2
-        fi
-    else
-        echo "   ✅ SendTrainerList compatibility fix already present"
-        return 0
-    fi
-}
-
 # Apply all patches
 patch_count=0
-if [ "$APPLY_OVERRIDE_PATCH" = "1" ]; then
-    if apply_override_patch; then
-        patch_count=$((patch_count + 1))
-    fi
-fi
-if [ "$APPLY_MOVEPATH_PATCH" = "1" ]; then
-    if apply_movepath_patch; then
-        patch_count=$((patch_count + 1))
-    fi
-fi
-if [ "$APPLY_SENDTRAINERLIST_PATCH" = "1" ]; then
-    if apply_sendtrainerlist_patch; then
-        patch_count=$((patch_count + 1))
-    fi
-fi
 if [ "$APPLY_RESURRECT_SIGNATURE_PATCH" = "1" ]; then
     if apply_resurrect_signature_patch; then
         patch_count=$((patch_count + 1))
