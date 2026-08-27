@@ -44,62 +44,30 @@ Reads patch definitions from module metadata.
 Module-specific hooks are named after their primary module and handle unique setup requirements.
 
 ### `mod-ale-patches`
-Applies compatibility patches for mod-ale (ALE - AzerothCore Lua Engine, formerly Eluna) when building with the AzerothCore playerbots fork.
+Applies signature-compatibility patches for mod-ale (ALE - AzerothCore Lua Engine, formerly Eluna) so a fresh mod-ale checkout compiles against whichever core is being built (upstream AzerothCore or the playerbots fork, which can lag upstream API changes).
 
-**Auto-Detection:**
-The hook automatically detects if you're building with the playerbots fork by checking:
-1. `STACK_SOURCE_VARIANT=playerbots` environment variable
-2. `MODULES_REBUILD_SOURCE_PATH` contains "azerothcore-playerbots"
+Both patches are self-guarding: they read the signature declared by the core's actual header and only rewrite the module when the two disagree. If the core header can't be located, they skip rather than guess.
 
 **Patches Applied:**
 
-#### SendTrainerList Compatibility Fix
-**When Applied:** Automatically for playerbots fork (or when `APPLY_SENDTRAINERLIST_PATCH=1`)
-**What it fixes:** Adds missing `GetGUID()` call to fix trainer list display
-**File:** `src/LuaEngine/methods/PlayerMethods.h`
-**Change:**
-```cpp
-// Before (broken)
-player->GetSession()->SendTrainerList(obj);
+#### OnPlayerResurrect Signature Fix
+**What it fixes:** Upstream changed `PlayerScript::OnPlayerResurrect`'s third parameter from `bool` to `bool&`; the module override must match the core being built.
+**Core header consulted:** `src/server/game/Scripting/ScriptDefines/PlayerScript.h`
+**File patched:** `src/ALE_SC.cpp`
 
-// After (fixed)
-player->GetSession()->SendTrainerList(obj->GetGUID());
-```
-
-#### MovePath Compatibility Fix
-**When Applied:** Only when explicitly enabled with `APPLY_MOVEPATH_PATCH=1` (disabled by default)
-**What it fixes:** Updates deprecated waypoint movement API
-**File:** `src/LuaEngine/methods/CreatureMethods.h`
-**Change:**
-```cpp
-// Before (deprecated)
-MoveWaypoint(creature->GetWaypointPath(), true);
-
-// After (updated API)
-MovePath(creature->GetWaypointPath(), FORCED_MOVEMENT_RUN);
-```
-**Note:** Currently disabled by default as testing shows it's not required for normal operation.
+#### CanPacketSend/CanPacketReceive Signature Fix
+**What it fixes:** Upstream mod-ale (azerothcore/mod-ale#366) changed the packet hooks to take `WorldPacket const&`; older cores still declare non-const `WorldPacket&`.
+**Core header consulted:** `src/server/game/Scripting/ScriptDefines/ServerScript.h`
+**File patched:** `src/ALE_SC.cpp`
 
 **Feature Flags:**
 ```bash
-# Automatically set for playerbots fork
-APPLY_SENDTRAINERLIST_PATCH=1
-
-# Disabled by default - enable if needed
-APPLY_MOVEPATH_PATCH=0
+# Both enabled by default; set to 0 to disable
+APPLY_RESURRECT_SIGNATURE_PATCH=1
+APPLY_PACKET_SIGNATURE_PATCH=1
 ```
 
-**Debug Output:**
-The hook provides detailed debug information during builds:
-```
-🔧 mod-ale-patches: Applying playerbots fork compatibility fixes to mod-ale
-   ✅ Playerbots detected via MODULES_REBUILD_SOURCE_PATH
-   ✅ Applied SendTrainerList compatibility fix
-   ✅ Applied 1 compatibility patch(es)
-```
-
-**Why This Exists:**
-The playerbots fork has slightly different API signatures in certain WorldSession methods. These patches ensure mod-ale (Eluna) compiles and functions correctly with both standard AzerothCore and the playerbots fork.
+**History:** Earlier revisions also carried blind sed patches (SendTrainerList, override keyword, MovePath). They were removed in 2026-08 after their target patterns disappeared from mod-ale master and the playerbots fork caught up to the upstream signatures.
 
 ### `black-market-setup`
 Black Market specific setup tasks.
