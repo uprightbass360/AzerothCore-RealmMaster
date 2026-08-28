@@ -21,6 +21,14 @@ nav { display:flex; gap:6px; margin:12px auto 0; }
 .check { cursor:pointer; user-select:none; }
 label { display:inline-flex; gap:6px; align-items:center; color:var(--dim); }
 input, select, textarea, button { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; }
+select, #module-creator {
+  appearance:none; -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b98a8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 9px center;
+  padding-right:28px;
+}
+#module-creator::-webkit-calendar-picker-indicator { display:none !important; }
 button { cursor:pointer; }
 button:hover { border-color:var(--accent); }
 #module-search { flex:1; min-width:200px; }
