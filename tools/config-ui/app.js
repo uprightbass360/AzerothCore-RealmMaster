@@ -420,4 +420,49 @@ document.addEventListener("configui:import", e => {
   ConfigUI.preset.applyImport(parsed, e.detail.name);
 });
 
+// ---- .env Flags tab ----
+ConfigUI.env = {
+  parseModules(text) {
+    const keys = new Set();
+    for (const m of text.matchAll(/^\s*(MODULE_[A-Z0-9_]+)\s*=\s*1\s*$/gm)) keys.add(m[1]);
+    return keys;
+  },
+
+  serialize() {
+    const sel = ConfigUI.profile.selection;
+    return ConfigUI.data.manifest.map(m => `${m.key}=${sel.has(m.key) ? 1 : 0}`).join("\n") + "\n";
+  },
+
+  render() {
+    document.getElementById("env-output").value = this.serialize();
+  },
+};
+
+document.addEventListener("configui:selection-changed", () => ConfigUI.env.render());
+document.addEventListener("configui:ready", () => ConfigUI.env.render());
+
+document.getElementById("env-copy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(document.getElementById("env-output").value);
+    ConfigUI.setStatus("Module flag block copied to clipboard.");
+  } catch (e) {
+    ConfigUI.setStatus("Clipboard blocked — select the text and copy manually.", true);
+  }
+});
+
+document.addEventListener("configui:import", e => {
+  const looksLikeEnv = e.detail.name === ".env" || e.detail.name.endsWith(".env")
+    || (!e.detail.name.endsWith(".json") && !e.detail.name.endsWith(".conf")
+        && /^\s*MODULE_[A-Z0-9_]+\s*=/m.test(e.detail.text));
+  if (!looksLikeEnv) return;
+  const keys = ConfigUI.env.parseModules(e.detail.text);
+  ConfigUI.profile.applyImport(
+    { modules: [...keys], label: "", description: "", order: 10000 },
+    e.detail.name,
+  );
+  document.getElementById("profile-name").value = "";
+  ConfigUI.emit("configui:selection-changed", {});
+  ConfigUI.setStatus(`Selection set from ${e.detail.name}: ${keys.size} enabled modules.`);
+});
+
 ConfigUI.init();
