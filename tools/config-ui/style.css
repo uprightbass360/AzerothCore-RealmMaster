@@ -42,4 +42,6 @@ a { color:var(--accent); }
 .preset-row input.k { width:340px; font-family:monospace; }
 .preset-row input.v { flex:1; font-family:monospace; }
 #env-output { width:100%; font-family:monospace; margin-top:10px; }
+#env-note { color:var(--warn); }
+#env-note:empty { display:none; }
 textarea { resize:vertical; }

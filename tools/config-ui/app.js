@@ -486,8 +486,12 @@ ConfigUI.env = {
 
   serialize() {
     const sel = ConfigUI.profile.selection;
-    // Only enabled modules are emitted; anything absent is simply off.
-    const lines = ConfigUI.data.manifest.filter(m => sel.has(m.key)).map(m => `${m.key}=1`);
+    // Derived from enabled modules, mirroring modules.py enabled_effective:
+    // selected AND not blocked. A blocked module would be zeroed by the
+    // pipeline anyway, so emitting =1 for it would only mislead.
+    const lines = ConfigUI.data.manifest
+      .filter(m => sel.has(m.key) && m.status !== "blocked")
+      .map(m => `${m.key}=1`);
     const known = new Set(ConfigUI.data.manifest.map(m => m.key));
     for (const key of [...sel].sort()) {
       if (!known.has(key)) lines.push(`${key}=1`); // "keep anyway" unknowns
@@ -495,8 +499,18 @@ ConfigUI.env = {
     return lines.length ? lines.join("\n") + "\n" : "";
   },
 
+  excludedBlocked() {
+    return ConfigUI.data.manifest
+      .filter(m => ConfigUI.profile.selection.has(m.key) && m.status === "blocked")
+      .map(m => m.key);
+  },
+
   render() {
     document.getElementById("env-output").value = this.serialize();
+    const excluded = this.excludedBlocked();
+    document.getElementById("env-note").textContent = excluded.length
+      ? `Excluded ${excluded.length} blocked module${excluded.length > 1 ? "s" : ""} (the pipeline would refuse them): ${excluded.join(", ")}`
+      : "";
   },
 };
 
