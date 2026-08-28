@@ -4,6 +4,7 @@ body { margin:0; font:14px/1.5 system-ui, sans-serif; background:var(--bg); colo
 header, nav, main { max-width:1100px; margin:0 auto; padding:0 16px; }
 header { padding-top:16px; }
 h1 { font-size:20px; margin:0 0 8px; }
+.header-top { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
 #status { color:var(--dim); min-height:1.5em; }
 #status.error { color:var(--err); }
 #drop-zone { border:1px dashed var(--line); border-radius:8px; padding:10px 14px; margin:10px 0; color:var(--dim); }
