@@ -28,8 +28,9 @@ jobs:
 
       - name: Assemble site (no transform — data is byte-identical to main)
         run: |
-          mkdir -p _site/config
+          mkdir -p _site/config _site/img
           cp tools/config-ui/index.html tools/config-ui/app.js tools/config-ui/style.css _site/
+          cp img/config-builder-banner.jpg _site/img/
           cp config/module-manifest.json _site/config/
           cp -r config/module-profiles _site/config/
           cp -r config/presets _site/config/
