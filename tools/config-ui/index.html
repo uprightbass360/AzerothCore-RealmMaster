@@ -48,7 +48,7 @@
     <div id="preset-groups"></div>
   </section>
   <section id="panel-env" class="panel">
-    <p>Derived from the Module Profile tab's current selection. Paste over the <code>MODULE_*</code> block of an existing <code>.env</code>.</p>
+    <p>Derived from the Module Profile tab's current selection — one <code>MODULE_*=1</code> line per enabled module; disabled modules are simply absent. When pasting into an existing <code>.env</code>, replace the whole <code>MODULE_*</code> block so stale <code>=1</code> lines don't linger.</p>
     <button id="env-copy">Copy to clipboard</button>
     <textarea id="env-output" readonly rows="24" spellcheck="false"></textarea>
   </section>

@@ -478,7 +478,13 @@ ConfigUI.env = {
 
   serialize() {
     const sel = ConfigUI.profile.selection;
-    return ConfigUI.data.manifest.map(m => `${m.key}=${sel.has(m.key) ? 1 : 0}`).join("\n") + "\n";
+    // Only enabled modules are emitted; anything absent is simply off.
+    const lines = ConfigUI.data.manifest.filter(m => sel.has(m.key)).map(m => `${m.key}=1`);
+    const known = new Set(ConfigUI.data.manifest.map(m => m.key));
+    for (const key of [...sel].sort()) {
+      if (!known.has(key)) lines.push(`${key}=1`); // "keep anyway" unknowns
+    }
+    return lines.length ? lines.join("\n") + "\n" : "";
   },
 
   render() {
