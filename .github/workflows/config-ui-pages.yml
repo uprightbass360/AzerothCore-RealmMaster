@@ -1,0 +1,45 @@
+name: Publish config UI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Round-trip format check (gates deploy)
+        run: python3 tools/config-ui/check_roundtrip.py
+
+      - name: Assemble site (no transform — data is byte-identical to main)
+        run: |
+          mkdir -p _site/config
+          cp tools/config-ui/index.html tools/config-ui/app.js tools/config-ui/style.css _site/
+          cp config/module-manifest.json _site/config/
+          cp -r config/module-profiles _site/config/
+          cp -r config/presets _site/config/
+          python3 tools/config-ui/gen_index.py _site/config
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
