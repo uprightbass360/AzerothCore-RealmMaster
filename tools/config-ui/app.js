@@ -49,10 +49,10 @@ const ConfigUI = {
     } else {
       try {
         this.data.index = JSON.parse(await this.fetchData("index.json"));
+        this.setStatus(`${this.data.manifest.length} modules loaded from repo data (${this.data.base === "config/" ? "published" : "local checkout"}).`);
       } catch (e) {
         this.setStatus("index.json missing — run tools/config-ui/serve.sh (it generates it). Start-from lists will be empty.", true);
       }
-      this.setStatus(`${this.data.manifest.length} modules loaded from repo data (${this.data.base === "config/" ? "published" : "local checkout"}).`);
     }
     this.data.orderMap = new Map(this.data.manifest.map(m => [m.key, m.order ?? 99999]));
     this.emit("configui:ready", {});
@@ -106,12 +106,15 @@ ConfigUI.profile = {
   serialize() {
     const om = ConfigUI.data.orderMap;
     const modules = [...this.selection].sort((a, b) =>
-      ((om.get(a) ?? 99999) - (om.get(b) ?? 99999)) || a.localeCompare(b));
+      ((om.get(a) ?? 99999) - (om.get(b) ?? 99999)) || (a < b ? -1 : a > b ? 1 : 0));
+    const orderInput = document.getElementById("profile-order").value.trim();
+    const orderNum = Number(orderInput);
+    const order = orderInput === "" || Number.isNaN(orderNum) ? 10000 : orderNum;
     const doc = {
       modules,
       label: document.getElementById("profile-label").value,
       description: document.getElementById("profile-desc").value,
-      order: (n => Number.isNaN(n) ? 10000 : n)(Number(document.getElementById("profile-order").value)),
+      order,
     };
     return JSON.stringify(doc, null, 2) + "\n";
   },
