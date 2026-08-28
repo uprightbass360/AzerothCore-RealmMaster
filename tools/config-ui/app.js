@@ -187,20 +187,21 @@ ConfigUI.profile = {
   render() {
     const list = document.getElementById("module-list");
     const filter = document.getElementById("module-search").value.toLowerCase();
+    const catFilter = document.getElementById("module-category").value;
     list.textContent = "";
-    const byCategory = new Map();
-    for (const mod of ConfigUI.data.manifest) {
-      const hay = `${mod.key} ${mod.name || ""} ${mod.description || ""}`.toLowerCase();
-      if (filter && !hay.includes(filter)) continue;
+    const mods = ConfigUI.data.manifest.filter(mod => {
       const cat = mod.category || "uncategorized";
-      if (!byCategory.has(cat)) byCategory.set(cat, []);
-      byCategory.get(cat).push(mod);
-    }
+      if (catFilter && cat !== catFilter) return false;
+      const hay = `${mod.key} ${mod.name || ""} ${mod.description || ""}`.toLowerCase();
+      return !filter || hay.includes(filter);
+    }).sort((a, b) =>
+      (a.category || "uncategorized").localeCompare(b.category || "uncategorized") ||
+      ((a.order ?? 99999) - (b.order ?? 99999)) || a.key.localeCompare(b.key));
     const table = document.createElement("table");
     table.className = "module-table";
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
-    for (const label of ["", "Module", "Key", "Description", "Link"]) {
+    for (const label of ["", "Module", "Key", "Category", "Description", "Link"]) {
       const th = document.createElement("th");
       th.textContent = label;
       headRow.append(th);
@@ -208,55 +209,47 @@ ConfigUI.profile = {
     thead.append(headRow);
     table.append(thead);
     const tbody = document.createElement("tbody");
-    for (const cat of [...byCategory.keys()].sort()) {
-      const catRow = document.createElement("tr");
-      catRow.className = "category-row";
-      const catCell = document.createElement("td");
-      catCell.colSpan = 5;
-      catCell.textContent = cat;
-      catRow.append(catCell);
-      tbody.append(catRow);
-      const mods = byCategory.get(cat).sort((a, b) =>
-        ((a.order ?? 99999) - (b.order ?? 99999)) || a.key.localeCompare(b.key));
-      for (const mod of mods) {
-        const row = document.createElement("tr");
-        const cbCell = document.createElement("td");
-        cbCell.className = "cb";
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.checked = this.selection.has(mod.key);
-        cb.addEventListener("change", () => this.toggle(mod.key, cb.checked));
-        cbCell.append(cb);
-        const nameCell = document.createElement("td");
-        const name = document.createElement("strong");
-        name.textContent = mod.name || mod.key;
-        nameCell.append(name);
-        if (mod.status && mod.status !== "active") {
-          const badge = document.createElement("span");
-          badge.className = "badge warn";
-          badge.textContent = mod.status;
-          nameCell.append(" ", badge);
-        }
-        const keyCell = document.createElement("td");
-        keyCell.className = "key";
-        keyCell.textContent = mod.key;
-        const descCell = document.createElement("td");
-        descCell.className = "desc";
-        descCell.textContent = mod.description || "";
-        const linkCell = document.createElement("td");
-        linkCell.className = "link";
-        const repoUrl = (mod.repo || "").replace(/\.git$/, "");
-        if (/^https?:\/\//.test(repoUrl)) {
-          const a = document.createElement("a");
-          a.href = repoUrl;
-          a.target = "_blank";
-          a.rel = "noopener";
-          a.textContent = "GitHub ↗";
-          linkCell.append(a);
-        }
-        row.append(cbCell, nameCell, keyCell, descCell, linkCell);
-        tbody.append(row);
+    for (const mod of mods) {
+      const row = document.createElement("tr");
+      const cbCell = document.createElement("td");
+      cbCell.className = "cb";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = this.selection.has(mod.key);
+      cb.addEventListener("change", () => this.toggle(mod.key, cb.checked));
+      cbCell.append(cb);
+      const nameCell = document.createElement("td");
+      const name = document.createElement("strong");
+      name.textContent = mod.name || mod.key;
+      nameCell.append(name);
+      if (mod.status && mod.status !== "active") {
+        const badge = document.createElement("span");
+        badge.className = "badge warn";
+        badge.textContent = mod.status;
+        nameCell.append(" ", badge);
       }
+      const keyCell = document.createElement("td");
+      keyCell.className = "key";
+      keyCell.textContent = mod.key;
+      const catCell = document.createElement("td");
+      catCell.className = "cat";
+      catCell.textContent = mod.category || "uncategorized";
+      const descCell = document.createElement("td");
+      descCell.className = "desc";
+      descCell.textContent = mod.description || "";
+      const linkCell = document.createElement("td");
+      linkCell.className = "link";
+      const repoUrl = (mod.repo || "").replace(/\.git$/, "");
+      if (/^https?:\/\//.test(repoUrl)) {
+        const a = document.createElement("a");
+        a.href = repoUrl;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = "GitHub ↗";
+        linkCell.append(a);
+      }
+      row.append(cbCell, nameCell, keyCell, catCell, descCell, linkCell);
+      tbody.append(row);
     }
     table.append(tbody);
     list.append(table);
@@ -270,9 +263,19 @@ document.addEventListener("configui:ready", () => {
   for (const file of ConfigUI.data.index.profiles) {
     select.append(new Option(file, file));
   }
+  const catSelect = document.getElementById("module-category");
+  const current = catSelect.value;
+  catSelect.length = 1;
+  const cats = [...new Set(ConfigUI.data.manifest.map(m => m.category || "uncategorized"))].sort();
+  for (const cat of cats) {
+    catSelect.append(new Option(cat, cat));
+  }
+  if (cats.includes(current)) catSelect.value = current;
   ConfigUI.profile.render();
   ConfigUI.emit("configui:selection-changed", {});
 });
+
+document.getElementById("module-category").addEventListener("change", () => ConfigUI.profile.render());
 
 document.getElementById("profile-start").addEventListener("change", async e => {
   if (!e.target.value) return;
