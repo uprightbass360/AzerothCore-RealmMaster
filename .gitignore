@@ -27,3 +27,4 @@ scripts/python/__pycache__/*
 # ===================================
 deploy.log
 local-backups/
+config/index.json
