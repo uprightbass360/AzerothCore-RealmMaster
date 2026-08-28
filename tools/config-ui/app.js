@@ -184,12 +184,19 @@ ConfigUI.profile = {
     }
   },
 
+  showBlocked: false,
+
   render() {
     const list = document.getElementById("module-list");
     const filter = document.getElementById("module-search").value.toLowerCase();
     const catFilter = document.getElementById("module-category").value;
     list.textContent = "";
+    const blockedTotal = ConfigUI.data.manifest.filter(m => m.status === "blocked").length;
+    const toggle = document.getElementById("toggle-blocked");
+    toggle.textContent = `${this.showBlocked ? "Hide" : "Show"} incompatible (${blockedTotal})`;
     const mods = ConfigUI.data.manifest.filter(mod => {
+      // Blocked modules are hidden unless toggled on — but a selected one always shows.
+      if (!this.showBlocked && mod.status === "blocked" && !this.selection.has(mod.key)) return false;
       const cat = mod.category || "uncategorized";
       if (catFilter && cat !== catFilter) return false;
       const hay = `${mod.key} ${mod.name || ""} ${mod.description || ""}`.toLowerCase();
@@ -276,6 +283,11 @@ document.addEventListener("configui:ready", () => {
 });
 
 document.getElementById("module-category").addEventListener("change", () => ConfigUI.profile.render());
+
+document.getElementById("toggle-blocked").addEventListener("click", () => {
+  ConfigUI.profile.showBlocked = !ConfigUI.profile.showBlocked;
+  ConfigUI.profile.render();
+});
 
 document.getElementById("profile-start").addEventListener("change", async e => {
   if (!e.target.value) return;
