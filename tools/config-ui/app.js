@@ -186,10 +186,17 @@ ConfigUI.profile = {
 
   showBlocked: false,
 
+  // The manifest has no creator field; the repo URL's owner segment is the creator.
+  creatorOf(mod) {
+    const m = /^https?:\/\/[^/]+\/([^/]+)\//.exec((mod.repo || "") + "/");
+    return m ? m[1] : "other";
+  },
+
   render() {
     const list = document.getElementById("module-list");
     const filter = document.getElementById("module-search").value.toLowerCase();
     const catFilter = document.getElementById("module-category").value;
+    const creatorFilter = document.getElementById("module-creator").value.trim().toLowerCase();
     list.textContent = "";
     const blockedTotal = ConfigUI.data.manifest.filter(m => m.status === "blocked").length;
     const toggle = document.getElementById("toggle-blocked");
@@ -199,6 +206,7 @@ ConfigUI.profile = {
       if (!this.showBlocked && mod.status === "blocked" && !this.selection.has(mod.key)) return false;
       const cat = mod.category || "uncategorized";
       if (catFilter && cat !== catFilter) return false;
+      if (creatorFilter && !this.creatorOf(mod).toLowerCase().includes(creatorFilter)) return false;
       const hay = `${mod.key} ${mod.name || ""} ${mod.description || ""}`.toLowerCase();
       return !filter || hay.includes(filter);
     }).sort((a, b) =>
@@ -278,9 +286,20 @@ document.addEventListener("configui:ready", () => {
     catSelect.append(new Option(cat, cat));
   }
   if (cats.includes(current)) catSelect.value = current;
+  const creatorList = document.getElementById("creator-list");
+  creatorList.textContent = "";
+  const creators = [...new Set(ConfigUI.data.manifest.map(m => ConfigUI.profile.creatorOf(m)))]
+    .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  for (const creator of creators) {
+    const opt = document.createElement("option");
+    opt.value = creator;
+    creatorList.append(opt);
+  }
   ConfigUI.profile.render();
   ConfigUI.emit("configui:selection-changed", {});
 });
+
+document.getElementById("module-creator").addEventListener("input", () => ConfigUI.profile.render());
 
 document.getElementById("module-category").addEventListener("change", () => ConfigUI.profile.render());
 
