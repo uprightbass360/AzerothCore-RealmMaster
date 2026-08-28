@@ -134,7 +134,11 @@ ConfigUI.profile = {
 
   toggle(key, on) {
     if (on) this.selection.add(key); else this.selection.delete(key);
-    this.renderWarnings();
+    if (document.getElementById("hide-disabled").checked) {
+      this.render(); // an unchecked row leaves the filtered view immediately
+    } else {
+      this.renderWarnings();
+    }
     ConfigUI.emit("configui:selection-changed", {});
   },
 
@@ -201,7 +205,9 @@ ConfigUI.profile = {
     list.textContent = "";
     const blockedTotal = ConfigUI.data.manifest.filter(m => m.status === "blocked").length;
     document.getElementById("toggle-blocked-label").textContent = `Show incompatible (${blockedTotal})`;
+    const hideDisabled = document.getElementById("hide-disabled").checked;
     const mods = ConfigUI.data.manifest.filter(mod => {
+      if (hideDisabled && !this.selection.has(mod.key)) return false;
       // Blocked modules are hidden unless toggled on — but a selected one always shows.
       if (!this.showBlocked && mod.status === "blocked" && !this.selection.has(mod.key)) return false;
       const cat = mod.category || "uncategorized";
@@ -307,6 +313,8 @@ document.getElementById("toggle-blocked").addEventListener("change", e => {
   ConfigUI.profile.showBlocked = e.target.checked;
   ConfigUI.profile.render();
 });
+
+document.getElementById("hide-disabled").addEventListener("change", () => ConfigUI.profile.render());
 
 document.getElementById("profile-start").addEventListener("change", async e => {
   if (!e.target.value) return;
