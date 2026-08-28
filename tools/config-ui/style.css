@@ -15,6 +15,10 @@ nav { display:flex; gap:6px; margin:12px auto 0; }
 .panel { display:none; background:var(--panel); border:1px solid var(--line); border-radius:0 8px 8px 8px; padding:16px; margin-bottom:32px; }
 .panel.active { display:block; }
 .toolbar, .meta { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:12px; }
+#selected-count { margin-left:auto; color:var(--dim); }
+.filter-bar { border-top:1px solid var(--line); padding-top:12px; }
+.filter-bar .push-right { margin-left:auto; }
+.check { cursor:pointer; user-select:none; }
 label { display:inline-flex; gap:6px; align-items:center; color:var(--dim); }
 input, select, textarea, button { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; }
 button { cursor:pointer; }
