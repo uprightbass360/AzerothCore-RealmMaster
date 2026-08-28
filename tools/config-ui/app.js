@@ -88,4 +88,186 @@ dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
 dropZone.addEventListener("drop", e => { e.preventDefault(); dropZone.classList.remove("drag"); routeFiles(e.dataTransfer.files); });
 document.getElementById("file-input").addEventListener("change", e => routeFiles(e.target.files));
 
+// ---- Module Profile tab ----
+ConfigUI.profile = {
+  selection: new Set(),
+  pendingUnknown: [],
+
+  parse(text) {
+    const d = JSON.parse(text);
+    return {
+      modules: d.modules || [],
+      label: d.label || "",
+      description: d.description || "",
+      order: d.order ?? 10000,
+    };
+  },
+
+  serialize() {
+    const om = ConfigUI.data.orderMap;
+    const modules = [...this.selection].sort((a, b) =>
+      ((om.get(a) ?? 99999) - (om.get(b) ?? 99999)) || a.localeCompare(b));
+    const doc = {
+      modules,
+      label: document.getElementById("profile-label").value,
+      description: document.getElementById("profile-desc").value,
+      order: (n => Number.isNaN(n) ? 10000 : n)(Number(document.getElementById("profile-order").value)),
+    };
+    return JSON.stringify(doc, null, 2) + "\n";
+  },
+
+  applyImport(profile, sourceName) {
+    const valid = new Set(ConfigUI.data.manifest.map(m => m.key));
+    this.selection = new Set(profile.modules.filter(k => valid.has(k)));
+    this.pendingUnknown = profile.modules.filter(k => !valid.has(k));
+    document.getElementById("profile-label").value = profile.label;
+    document.getElementById("profile-desc").value = profile.description;
+    document.getElementById("profile-order").value = profile.order;
+    if (sourceName) document.getElementById("profile-name").value = sourceName.replace(/\.json$/, "");
+    this.render();
+    ConfigUI.setStatus(`Loaded ${profile.modules.length} modules from ${sourceName || "import"}.`);
+  },
+
+  toggle(key, on) {
+    if (on) this.selection.add(key); else this.selection.delete(key);
+    this.renderWarnings();
+    ConfigUI.emit("configui:selection-changed", {});
+  },
+
+  missingRequires() {
+    const missing = new Map(); // required key -> [dependent names]
+    for (const mod of ConfigUI.data.manifest) {
+      if (!this.selection.has(mod.key)) continue;
+      for (const req of mod.requires || []) {
+        if (!this.selection.has(req)) {
+          if (!missing.has(req)) missing.set(req, []);
+          missing.get(req).push(mod.key);
+        }
+      }
+    }
+    return missing;
+  },
+
+  renderWarnings() {
+    const box = document.getElementById("profile-warnings");
+    box.textContent = "";
+    for (const key of this.pendingUnknown) {
+      const div = document.createElement("div");
+      div.append(`Unknown module key (not in manifest, excluded from export): ${key} `);
+      const keep = document.createElement("button");
+      keep.textContent = "keep anyway";
+      keep.addEventListener("click", () => {
+        this.selection.add(key);
+        this.pendingUnknown = this.pendingUnknown.filter(k => k !== key);
+        this.renderWarnings();
+        ConfigUI.emit("configui:selection-changed", {});
+      });
+      div.append(keep);
+      box.append(div);
+    }
+    for (const [req, dependents] of this.missingRequires()) {
+      const div = document.createElement("div");
+      div.append(`⚠ ${dependents.join(", ")} requires ${req} `);
+      const add = document.createElement("button");
+      add.textContent = "add required";
+      add.addEventListener("click", () => {
+        this.selection.add(req);
+        this.render();
+        ConfigUI.emit("configui:selection-changed", {});
+      });
+      div.append(add);
+      box.append(div);
+    }
+  },
+
+  render() {
+    const list = document.getElementById("module-list");
+    const filter = document.getElementById("module-search").value.toLowerCase();
+    list.textContent = "";
+    const byCategory = new Map();
+    for (const mod of ConfigUI.data.manifest) {
+      const hay = `${mod.key} ${mod.name || ""} ${mod.description || ""}`.toLowerCase();
+      if (filter && !hay.includes(filter)) continue;
+      const cat = mod.category || "uncategorized";
+      if (!byCategory.has(cat)) byCategory.set(cat, []);
+      byCategory.get(cat).push(mod);
+    }
+    for (const cat of [...byCategory.keys()].sort()) {
+      const h = document.createElement("div");
+      h.className = "category";
+      h.textContent = cat;
+      list.append(h);
+      const mods = byCategory.get(cat).sort((a, b) =>
+        ((a.order ?? 99999) - (b.order ?? 99999)) || a.key.localeCompare(b.key));
+      for (const mod of mods) {
+        const row = document.createElement("div");
+        row.className = "module-row";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = this.selection.has(mod.key);
+        cb.addEventListener("change", () => this.toggle(mod.key, cb.checked));
+        const name = document.createElement("strong");
+        name.textContent = mod.name || mod.key;
+        const key = document.createElement("span");
+        key.className = "key";
+        key.textContent = mod.key;
+        const desc = document.createElement("span");
+        desc.className = "desc";
+        desc.textContent = mod.description || "";
+        row.append(cb, name, key, desc);
+        if (mod.status && mod.status !== "active") {
+          const badge = document.createElement("span");
+          badge.className = "badge warn";
+          badge.textContent = mod.status;
+          row.append(badge);
+        }
+        list.append(row);
+      }
+    }
+    this.renderWarnings();
+  },
+};
+
+document.addEventListener("configui:ready", () => {
+  const select = document.getElementById("profile-start");
+  select.length = 1;
+  for (const file of ConfigUI.data.index.profiles) {
+    select.append(new Option(file, file));
+  }
+  ConfigUI.profile.render();
+  ConfigUI.emit("configui:selection-changed", {});
+});
+
+document.getElementById("profile-start").addEventListener("change", async e => {
+  if (!e.target.value) return;
+  try {
+    const text = await ConfigUI.fetchData("module-profiles/" + e.target.value);
+    ConfigUI.profile.applyImport(ConfigUI.profile.parse(text), e.target.value);
+    ConfigUI.emit("configui:selection-changed", {});
+  } catch (err) {
+    ConfigUI.setStatus(`Could not load ${e.target.value}: ${err.message}`, true);
+  }
+});
+
+document.getElementById("module-search").addEventListener("input", () => ConfigUI.profile.render());
+
+document.getElementById("profile-export").addEventListener("click", () => {
+  const name = document.getElementById("profile-name").value.trim();
+  if (!name || !ConfigUI.safeName(name)) {
+    ConfigUI.setStatus("Profile file name is required and may only use letters, digits, dot, dash, underscore.", true);
+    return;
+  }
+  ConfigUI.download(name + ".json", ConfigUI.profile.serialize());
+});
+
+document.addEventListener("configui:import", e => {
+  if (!e.detail.name.endsWith(".json")) return;
+  try {
+    ConfigUI.profile.applyImport(ConfigUI.profile.parse(e.detail.text), e.detail.name);
+    ConfigUI.emit("configui:selection-changed", {});
+  } catch (err) {
+    ConfigUI.setStatus(`Not a valid profile JSON (${e.detail.name}): ${err.message}`, true);
+  }
+});
+
 ConfigUI.init();
