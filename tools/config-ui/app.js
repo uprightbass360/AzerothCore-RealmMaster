@@ -92,6 +92,8 @@ document.getElementById("file-input").addEventListener("change", e => routeFiles
 ConfigUI.profile = {
   selection: new Set(),
   pendingUnknown: [],
+  // Export metadata: populated from an imported/loaded profile, defaults otherwise.
+  meta: { name: "", label: "", description: "", order: 10000 },
 
   parse(text) {
     const d = JSON.parse(text);
@@ -107,14 +109,11 @@ ConfigUI.profile = {
     const om = ConfigUI.data.orderMap;
     const modules = [...this.selection].sort((a, b) =>
       ((om.get(a) ?? 99999) - (om.get(b) ?? 99999)) || (a < b ? -1 : a > b ? 1 : 0));
-    const orderInput = document.getElementById("profile-order").value.trim();
-    const orderNum = Number(orderInput);
-    const order = orderInput === "" || Number.isNaN(orderNum) ? 10000 : orderNum;
     const doc = {
       modules,
-      label: document.getElementById("profile-label").value,
-      description: document.getElementById("profile-desc").value,
-      order,
+      label: this.meta.label,
+      description: this.meta.description,
+      order: this.meta.order,
     };
     return JSON.stringify(doc, null, 2) + "\n";
   },
@@ -123,10 +122,12 @@ ConfigUI.profile = {
     const valid = new Set(ConfigUI.data.manifest.map(m => m.key));
     this.selection = new Set(profile.modules.filter(k => valid.has(k)));
     this.pendingUnknown = profile.modules.filter(k => !valid.has(k));
-    document.getElementById("profile-label").value = profile.label;
-    document.getElementById("profile-desc").value = profile.description;
-    document.getElementById("profile-order").value = profile.order;
-    if (sourceName) document.getElementById("profile-name").value = sourceName.replace(/\.json$/, "");
+    this.meta = {
+      name: sourceName ? sourceName.replace(/\.json$/, "") : this.meta.name,
+      label: profile.label,
+      description: profile.description,
+      order: profile.order,
+    };
     this.render();
     ConfigUI.setStatus(`Loaded ${profile.modules.length} modules from ${sourceName || "import"}.`);
   },
@@ -287,11 +288,8 @@ document.getElementById("profile-start").addEventListener("change", async e => {
 document.getElementById("module-search").addEventListener("input", () => ConfigUI.profile.render());
 
 document.getElementById("profile-export").addEventListener("click", () => {
-  const name = document.getElementById("profile-name").value.trim();
-  if (!name || !ConfigUI.safeName(name)) {
-    ConfigUI.setStatus("Profile file name is required and may only use letters, digits, dot, dash, underscore.", true);
-    return;
-  }
+  const stored = ConfigUI.profile.meta.name.trim();
+  const name = stored && ConfigUI.safeName(stored) ? stored : "module-profile";
   ConfigUI.download(name + ".json", ConfigUI.profile.serialize());
 });
 
@@ -495,7 +493,7 @@ document.addEventListener("configui:import", e => {
     { modules: [...keys], label: "", description: "", order: 10000 },
     e.detail.name,
   );
-  document.getElementById("profile-name").value = "";
+  ConfigUI.profile.meta.name = ""; // .env-derived names shouldn't name a .json export
   ConfigUI.emit("configui:selection-changed", {});
   ConfigUI.setStatus(`Selection set from ${e.detail.name}: ${keys.size} enabled modules.`);
 });
