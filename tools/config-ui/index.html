@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RealmMaster Config Builder</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>RealmMaster Config Builder</h1>
+  <div id="status">Loading repo data…</div>
+  <div id="drop-zone">Drop a profile <code>.json</code>, preset <code>.conf</code>, or <code>.env</code> here — or
+    <label class="picker">choose a file<input id="file-input" type="file" multiple hidden></label>
+  </div>
+</header>
+<nav>
+  <button class="tab-btn active" data-tab="profile">Module Profile</button>
+  <button class="tab-btn" data-tab="preset">Settings Preset</button>
+  <button class="tab-btn" data-tab="env">.env Flags</button>
+</nav>
+<main>
+  <section id="panel-profile" class="panel active">
+    <div class="toolbar">
+      <label>Start from <select id="profile-start"><option value="">— empty —</option></select></label>
+      <input id="module-search" type="search" placeholder="Search modules…">
+    </div>
+    <div class="meta">
+      <label>File name <input id="profile-name" placeholder="my-profile"></label>
+      <label>Label <input id="profile-label" placeholder="🧩 My Profile"></label>
+      <label>Description <input id="profile-desc" placeholder="What this selection is for"></label>
+      <label>Order <input id="profile-order" type="number" value="100"></label>
+      <button id="profile-export">Export profile JSON</button>
+    </div>
+    <div id="profile-warnings"></div>
+    <div id="module-list"></div>
+  </section>
+  <section id="panel-preset" class="panel">
+    <div class="toolbar">
+      <label>Start from <select id="preset-start"><option value="">— empty —</option></select></label>
+    </div>
+    <div class="meta">
+      <label>File name <input id="preset-file" placeholder="my-preset"></label>
+      <label>CONFIG_NAME <input id="preset-cfgname" placeholder="My Server"></label>
+      <label>CONFIG_DESCRIPTION <input id="preset-cfgdesc" placeholder="What this preset tunes"></label>
+      <button id="preset-add-row">Add setting</button>
+      <button id="preset-export">Export preset .conf</button>
+    </div>
+    <div id="preset-groups"></div>
+  </section>
+  <section id="panel-env" class="panel">
+    <p>Derived from the Module Profile tab's current selection. Paste over the <code>MODULE_*</code> block of an existing <code>.env</code>.</p>
+    <button id="env-copy">Copy to clipboard</button>
+    <textarea id="env-output" readonly rows="24" spellcheck="false"></textarea>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
