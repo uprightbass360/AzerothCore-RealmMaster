@@ -270,4 +270,149 @@ document.addEventListener("configui:import", e => {
   }
 });
 
+// ---- Settings Preset tab ----
+ConfigUI.preset = {
+  meta: { name: "", description: "" },
+  entries: [], // {file, key, value} — insertion order is export order
+
+  parse(text) {
+    const out = { name: "", description: "", entries: [] };
+    let section = null;
+    for (const raw of text.split("\n")) {
+      const s = raw.trim();
+      let m = s.match(/^#\s*CONFIG_NAME:\s*(.*)$/);
+      if (m) { out.name = m[1].trim(); continue; }
+      m = s.match(/^#\s*CONFIG_DESCRIPTION:\s*(.*)$/);
+      if (m) { out.description = m[1].trim(); continue; }
+      if (!s || s.startsWith("#")) continue;
+      m = s.match(/^\[(.+)\]$/);
+      if (m) { section = m[1]; continue; }
+      const eq = s.indexOf("=");
+      if (eq > 0) {
+        out.entries.push({
+          file: section || "worldserver.conf",
+          key: s.slice(0, eq).trim(),
+          value: s.slice(eq + 1).trim(),
+        });
+      }
+    }
+    return out;
+  },
+
+  serialize() {
+    const lines = [
+      `# CONFIG_NAME: ${this.meta.name}`,
+      `# CONFIG_DESCRIPTION: ${this.meta.description}`,
+      "",
+    ];
+    let current = null;
+    for (const e of this.entries) {
+      if (!e.key) continue;
+      if (e.file !== current) {
+        if (current !== null) lines.push("");
+        lines.push(`[${e.file}]`);
+        current = e.file;
+      }
+      lines.push(`${e.key} = ${e.value}`);
+    }
+    return lines.join("\n").replace(/\n+$/, "") + "\n";
+  },
+
+  groupOf(key) {
+    if (key.startsWith("Rate.")) return "Rates";
+    if (key.startsWith("AllowTwoSide.")) return "Cross-faction";
+    if (key.startsWith("Death.") || key.startsWith("Corpse.")) return "Death & Corpse";
+    if (key === "MaxPlayerLevel" || key.startsWith("GM.")) return "Player & GM";
+    return "Other";
+  },
+
+  applyImport(parsed, sourceName) {
+    this.meta = { name: parsed.name, description: parsed.description };
+    this.entries = parsed.entries.map(e => ({ ...e }));
+    document.getElementById("preset-cfgname").value = this.meta.name;
+    document.getElementById("preset-cfgdesc").value = this.meta.description;
+    if (sourceName) document.getElementById("preset-file").value = sourceName.replace(/\.conf$/, "");
+    this.render();
+    ConfigUI.setStatus(`Loaded ${this.entries.length} settings from ${sourceName || "import"}.`);
+  },
+
+  render() {
+    const box = document.getElementById("preset-groups");
+    box.textContent = "";
+    const groups = new Map();
+    this.entries.forEach((entry, i) => {
+      const g = this.groupOf(entry.key || "");
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push([entry, i]);
+    });
+    const order = ["Rates", "Player & GM", "Cross-faction", "Death & Corpse", "Other"];
+    for (const g of order) {
+      if (!groups.has(g)) continue;
+      const wrap = document.createElement("div");
+      wrap.className = "preset-group";
+      const h = document.createElement("h3");
+      h.textContent = g;
+      wrap.append(h);
+      for (const [entry, i] of groups.get(g)) {
+        const row = document.createElement("div");
+        row.className = "preset-row";
+        const file = document.createElement("input");
+        file.value = entry.file; file.title = "target file"; file.size = 14;
+        file.addEventListener("input", () => { entry.file = file.value; });
+        const k = document.createElement("input");
+        k.className = "k"; k.value = entry.key; k.placeholder = "Setting.Key";
+        k.addEventListener("change", () => { entry.key = k.value.trim(); this.render(); });
+        const v = document.createElement("input");
+        v.className = "v"; v.value = entry.value; v.placeholder = "value";
+        v.addEventListener("input", () => { entry.value = v.value; });
+        const del = document.createElement("button");
+        del.textContent = "✕"; del.title = "remove";
+        del.addEventListener("click", () => { this.entries.splice(i, 1); this.render(); });
+        row.append(file, k, v, del);
+        wrap.append(row);
+      }
+      box.append(wrap);
+    }
+  },
+};
+
+document.addEventListener("configui:ready", () => {
+  const select = document.getElementById("preset-start");
+  select.length = 1;
+  for (const file of ConfigUI.data.index.presets) {
+    select.append(new Option(file, file));
+  }
+});
+
+document.getElementById("preset-start").addEventListener("change", async e => {
+  if (!e.target.value) return;
+  try {
+    const text = await ConfigUI.fetchData("presets/" + e.target.value);
+    ConfigUI.preset.applyImport(ConfigUI.preset.parse(text), e.target.value);
+  } catch (err) {
+    ConfigUI.setStatus(`Could not load ${e.target.value}: ${err.message}`, true);
+  }
+});
+
+document.getElementById("preset-add-row").addEventListener("click", () => {
+  ConfigUI.preset.entries.push({ file: "worldserver.conf", key: "", value: "" });
+  ConfigUI.preset.render();
+});
+
+document.getElementById("preset-export").addEventListener("click", () => {
+  const name = document.getElementById("preset-file").value.trim();
+  if (!name || !ConfigUI.safeName(name)) {
+    ConfigUI.setStatus("Preset file name is required and may only use letters, digits, dot, dash, underscore.", true);
+    return;
+  }
+  ConfigUI.preset.meta.name = document.getElementById("preset-cfgname").value;
+  ConfigUI.preset.meta.description = document.getElementById("preset-cfgdesc").value;
+  ConfigUI.download(name + ".conf", ConfigUI.preset.serialize());
+});
+
+document.addEventListener("configui:import", e => {
+  if (!e.detail.name.endsWith(".conf")) return;
+  ConfigUI.preset.applyImport(ConfigUI.preset.parse(e.detail.text), e.detail.name);
+});
+
 ConfigUI.init();
