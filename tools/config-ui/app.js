@@ -47,6 +47,11 @@ const ConfigUI = {
     if (!this.data.base) {
       this.setStatus("Could not fetch repo data (opened via file://?). Use the file picker: drop module-manifest.json first, then any files to edit.", true);
     } else {
+      // Banner lives next to the config data: img/ at the published root,
+      // ../../img/ when serving the repo checkout.
+      const banner = document.getElementById("banner");
+      banner.src = this.data.base.replace(/config\/$/, "img/config-builder-banner.jpg");
+      banner.hidden = false;
       try {
         this.data.index = JSON.parse(await this.fetchData("index.json"));
         this.setStatus(`${this.data.manifest.length} modules loaded from repo data (${this.data.base === "config/" ? "published" : "local checkout"}).`);
