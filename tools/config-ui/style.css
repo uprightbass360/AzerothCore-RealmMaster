@@ -48,4 +48,14 @@ a { color:var(--accent); }
 #env-output { width:100%; font-family:monospace; margin-top:10px; }
 #env-note { color:var(--warn); }
 #env-note:empty { display:none; }
+dialog { background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:10px; padding:20px 24px; min-width:440px; }
+dialog::backdrop { background:rgba(0,0,0,.55); }
+#export-form { display:flex; flex-direction:column; gap:10px; }
+#export-form h2 { margin:0 0 4px; font-size:16px; }
+#export-form label { display:flex; gap:8px; align-items:center; }
+#export-form label input { flex:1; }
+#export-form .ext { color:var(--dim); }
+.dialog-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:6px; }
+#export-error { color:var(--err); margin:0; }
+#export-error:empty { display:none; }
 textarea { resize:vertical; }
