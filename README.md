@@ -141,6 +141,22 @@ For architecture details, storage structure, build system, and advanced customiz
 
 For comprehensive documentation of all deployment scripts, management commands, and automation tools, see **[docs/SCRIPTS.md](docs/SCRIPTS.md)**.
 
+### Config Builder UI
+
+A static web UI for building module profiles (`config/module-profiles/`),
+settings presets (`config/presets/`), and `.env` `MODULE_*` flag blocks.
+It authors files only — download the export, drop it into the repo, review
+with `git diff`, and commit; `setup.sh`/`deploy.sh` remain the only things
+that act on configuration.
+
+- **Hosted:** published to GitHub Pages from `main` on every push
+  (`.github/workflows/config-ui-pages.yml`); data shown is always exactly
+  what is on `main`.
+- **Local:** `tools/config-ui/serve.sh`, then open
+  <http://localhost:8321/tools/config-ui/> — reads your working copy.
+- **Formats:** defined by `tools/config-ui/check_roundtrip.py`, which the
+  publish workflow runs as a gate.
+
 ---
 
 ## Troubleshooting
