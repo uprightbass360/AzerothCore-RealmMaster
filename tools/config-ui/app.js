@@ -329,17 +329,45 @@ document.getElementById("profile-start").addEventListener("change", async e => {
 
 document.getElementById("module-search").addEventListener("input", () => ConfigUI.profile.render());
 
+const exportDialog = document.getElementById("export-dialog");
+
 document.getElementById("profile-export").addEventListener("click", () => {
-  const stored = ConfigUI.profile.meta.name.trim();
-  const name = stored && ConfigUI.safeName(stored) ? stored : "module-profile";
+  const meta = ConfigUI.profile.meta;
+  document.getElementById("export-name").value = meta.name;
+  document.getElementById("export-label").value = meta.label;
+  document.getElementById("export-desc").value = meta.description;
+  document.getElementById("export-order").value = meta.order;
+  document.getElementById("export-error").textContent = "";
+  exportDialog.showModal();
+});
+
+document.getElementById("export-cancel").addEventListener("click", () => exportDialog.close());
+
+document.getElementById("export-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const err = document.getElementById("export-error");
+  const name = document.getElementById("export-name").value.trim() || "module-profile";
+  if (!ConfigUI.safeName(name)) {
+    err.textContent = "File name may only use letters, digits, dot, dash, underscore.";
+    return;
+  }
   // setup_profiles.py rejects an empty modules list unless the file name
   // contains "vanilla" or "minimal" — and one bad profile fails setup's
   // whole listing, so refuse to produce one here.
   if (ConfigUI.profile.selection.size === 0 && !/vanilla|minimal/i.test(name)) {
-    ConfigUI.setStatus('Nothing selected — setup rejects an empty profile unless its file name contains "vanilla" or "minimal".', true);
+    err.textContent = 'Nothing selected — setup rejects an empty profile unless the file name contains "vanilla" or "minimal".';
     return;
   }
+  const orderRaw = document.getElementById("export-order").value.trim();
+  const orderNum = Number(orderRaw);
+  ConfigUI.profile.meta = {
+    name,
+    label: document.getElementById("export-label").value,
+    description: document.getElementById("export-desc").value,
+    order: orderRaw === "" || Number.isNaN(orderNum) ? 10000 : orderNum,
+  };
   ConfigUI.download(name + ".json", ConfigUI.profile.serialize());
+  exportDialog.close();
   ConfigUI.setStatus(`Exported ${name}.json (${ConfigUI.profile.selection.size} modules).`);
 });
 

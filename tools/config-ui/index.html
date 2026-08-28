@@ -58,6 +58,20 @@
     <textarea id="env-output" readonly rows="24" spellcheck="false"></textarea>
   </section>
 </main>
+<dialog id="export-dialog">
+  <form id="export-form">
+    <h2>Export profile</h2>
+    <label>File name <input id="export-name" placeholder="my-profile"><span class="ext">.json</span></label>
+    <label>Label <input id="export-label" placeholder="🧩 RealmMaster"></label>
+    <label>Description <input id="export-desc" placeholder="RealmMaster suggested build (33 enabled modules)"></label>
+    <label>Order <input id="export-order" type="number" placeholder="10000"></label>
+    <p id="export-error"></p>
+    <div class="dialog-actions">
+      <button type="button" id="export-cancel">Cancel</button>
+      <button type="submit" id="export-save">Save</button>
+    </div>
+  </form>
+</dialog>
 <script src="app.js"></script>
 </body>
 </html>
