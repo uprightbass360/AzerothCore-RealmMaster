@@ -305,7 +305,15 @@ document.getElementById("module-search").addEventListener("input", () => ConfigU
 document.getElementById("profile-export").addEventListener("click", () => {
   const stored = ConfigUI.profile.meta.name.trim();
   const name = stored && ConfigUI.safeName(stored) ? stored : "module-profile";
+  // setup_profiles.py rejects an empty modules list unless the file name
+  // contains "vanilla" or "minimal" — and one bad profile fails setup's
+  // whole listing, so refuse to produce one here.
+  if (ConfigUI.profile.selection.size === 0 && !/vanilla|minimal/i.test(name)) {
+    ConfigUI.setStatus('Nothing selected — setup rejects an empty profile unless its file name contains "vanilla" or "minimal".', true);
+    return;
+  }
   ConfigUI.download(name + ".json", ConfigUI.profile.serialize());
+  ConfigUI.setStatus(`Exported ${name}.json (${ConfigUI.profile.selection.size} modules).`);
 });
 
 document.addEventListener("configui:import", e => {
