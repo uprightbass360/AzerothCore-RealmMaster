@@ -153,6 +153,7 @@ ConfigUI.profile = {
   },
 
   renderWarnings() {
+    document.getElementById("selected-count").textContent = `${this.selection.size} selected`;
     const box = document.getElementById("profile-warnings");
     box.textContent = "";
     for (const key of this.pendingUnknown) {
@@ -199,8 +200,7 @@ ConfigUI.profile = {
     const creatorFilter = document.getElementById("module-creator").value.trim().toLowerCase();
     list.textContent = "";
     const blockedTotal = ConfigUI.data.manifest.filter(m => m.status === "blocked").length;
-    const toggle = document.getElementById("toggle-blocked");
-    toggle.textContent = `${this.showBlocked ? "Hide" : "Show"} incompatible (${blockedTotal})`;
+    document.getElementById("toggle-blocked-label").textContent = `Show incompatible (${blockedTotal})`;
     const mods = ConfigUI.data.manifest.filter(mod => {
       // Blocked modules are hidden unless toggled on — but a selected one always shows.
       if (!this.showBlocked && mod.status === "blocked" && !this.selection.has(mod.key)) return false;
@@ -303,8 +303,8 @@ document.getElementById("module-creator").addEventListener("input", () => Config
 
 document.getElementById("module-category").addEventListener("change", () => ConfigUI.profile.render());
 
-document.getElementById("toggle-blocked").addEventListener("click", () => {
-  ConfigUI.profile.showBlocked = !ConfigUI.profile.showBlocked;
+document.getElementById("toggle-blocked").addEventListener("change", e => {
+  ConfigUI.profile.showBlocked = e.target.checked;
   ConfigUI.profile.render();
 });
 

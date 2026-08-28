@@ -23,15 +23,16 @@
   <section id="panel-profile" class="panel active">
     <div class="toolbar">
       <label>Start from <select id="profile-start"><option value="">— empty —</option></select></label>
+      <span id="selected-count">0 selected</span>
+      <button id="profile-export">Export profile JSON</button>
+    </div>
+    <div class="toolbar filter-bar">
+      <input id="module-search" type="search" placeholder="Search modules…">
       <label>Category <select id="module-category"><option value="">All categories</option></select></label>
       <label>Creator <input id="module-creator" list="creator-list" type="search" placeholder="any" size="16"></label>
       <datalist id="creator-list"></datalist>
-      <input id="module-search" type="search" placeholder="Search modules…">
-      <button id="toggle-blocked">Show incompatible</button>
-      <a href="https://www.azerothcore.org/catalogue.html" target="_blank" rel="noopener">AzerothCore catalogue ↗</a>
-    </div>
-    <div class="meta">
-      <button id="profile-export">Export profile JSON</button>
+      <label class="check"><input id="toggle-blocked" type="checkbox"> <span id="toggle-blocked-label">Show incompatible</span></label>
+      <a class="push-right" href="https://www.azerothcore.org/catalogue.html" target="_blank" rel="noopener">AzerothCore catalogue ↗</a>
     </div>
     <div id="profile-warnings"></div>
     <div id="module-list"></div>
