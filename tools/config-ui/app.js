@@ -412,7 +412,12 @@ document.getElementById("preset-export").addEventListener("click", () => {
 
 document.addEventListener("configui:import", e => {
   if (!e.detail.name.endsWith(".conf")) return;
-  ConfigUI.preset.applyImport(ConfigUI.preset.parse(e.detail.text), e.detail.name);
+  const parsed = ConfigUI.preset.parse(e.detail.text);
+  if (!parsed.name && !parsed.description && parsed.entries.length === 0) {
+    ConfigUI.setStatus(`Not a valid preset .conf (${e.detail.name}): no CONFIG_NAME/CONFIG_DESCRIPTION or settings found.`, true);
+    return;
+  }
+  ConfigUI.preset.applyImport(parsed, e.detail.name);
 });
 
 ConfigUI.init();
