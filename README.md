@@ -20,6 +20,7 @@ A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich
 - [Advanced Configuration](#advanced-configuration) → **[docs/ADVANCED.md](docs/ADVANCED.md)**
 - [Custom NPCs Guide](#custom-npcs-guide) → **[docs/NPCS.md](docs/NPCS.md)**
 - [Script Reference](#script-reference) → **[docs/SCRIPTS.md](docs/SCRIPTS.md)**
+- [Config Builder UI](#config-builder-ui) → **[live tool](https://uprightbass360.github.io/AzerothCore-RealmMaster/)**
 - [CI/CD & Pre-Built Images](#cicd--pre-built-images) → **[docs/CICD.md](docs/CICD.md)**
 - [Troubleshooting](#troubleshooting) → **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**
 - [Credits & Next Steps](#credits--next-steps)
@@ -149,7 +150,8 @@ It authors files only — download the export, drop it into the repo, review
 with `git diff`, and commit; `setup.sh`/`deploy.sh` remain the only things
 that act on configuration.
 
-- **Hosted:** published to GitHub Pages from `main` on every push
+- **Hosted:** **<https://uprightbass360.github.io/AzerothCore-RealmMaster/>** —
+  published to GitHub Pages from `main` on every push
   (`.github/workflows/config-ui-pages.yml`); data shown is always exactly
   what is on `main`.
 - **Local:** `tools/config-ui/serve.sh`, then open
