@@ -18,6 +18,7 @@ DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_PATH")"
 ASSUME_YES=0
 FORCE_REBUILD=0
 SKIP_SOURCE_SETUP=0
+FRESH_MODULES=0
 CUSTOM_SOURCE_PATH=""
 
 show_build_header(){
@@ -38,6 +39,7 @@ Options:
   --force-update               Force update source repository to latest commits
   --source-path PATH           Custom source repository path
   --skip-source-setup          Skip automatic source repository setup
+  --fresh-modules              Discard and re-clone all enabled module repositories
   -h, --help                   Show this help
 
 This script handles:
@@ -62,6 +64,7 @@ while [[ $# -gt 0 ]]; do
     --force-update) FORCE_UPDATE=1; shift;;
     --source-path) CUSTOM_SOURCE_PATH="$2"; shift 2;;
     --skip-source-setup) SKIP_SOURCE_SETUP=1; shift;;
+    --fresh-modules) FRESH_MODULES=1; shift;;
     -h|--help) usage; exit 0;;
     *) err "Unknown option: $1"; usage; exit 1;;
   esac
@@ -512,6 +515,9 @@ stage_modules(){
   # Run module staging script in local modules directory
   export MODULES_LOCAL_RUN=1
   export MODULES_SKIP_SQL=1
+  if [ "${FRESH_MODULES:-0}" = "1" ]; then
+    export MODULES_FORCE_RECLONE=1
+  fi
   if [ -n "$staging_modules_dir" ]; then
     mkdir -p "$staging_modules_dir"
     rm -f "$staging_modules_dir/.modules_state" "$staging_modules_dir/.requires_rebuild" 2>/dev/null || true
@@ -564,6 +570,7 @@ stage_modules(){
   unset MODULES_LOCAL_RUN
   unset MODULES_SKIP_SQL
   unset MODULES_HOST_DIR
+  unset MODULES_FORCE_RECLONE
   [ -n "$git_temp_config" ] && [ -f "$git_temp_config" ] && rm -f "$git_temp_config"
 }
 
