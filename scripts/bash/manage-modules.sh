@@ -30,6 +30,7 @@ DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_FILE")"
 
 # Module-specific state
 PLAYERBOTS_DB_UPDATE_LOGGED=0
+MODULES_INSTALL_FAILED=0
 
 # Declare module metadata arrays globally at script level
 declare -A MODULE_NAME MODULE_REPO MODULE_REF MODULE_TYPE MODULE_ENABLED MODULE_NEEDS_BUILD MODULE_BLOCKED MODULE_POST_INSTALL MODULE_REQUIRES MODULE_CONFIG_CLEANUP MODULE_NOTES MODULE_STATUS MODULE_BLOCK_REASON
@@ -164,7 +165,45 @@ run_post_install_hooks(){
   done
 }
 
+# Checkout a pinned ref after a clone, warning on failure.
+checkout_module_ref(){
+  local dir="$1"
+  local ref="$2"
+  [ -n "$ref" ] || return 0
+  (cd "$dir" && git checkout "$ref") || warn "Unable to checkout ref $ref for $dir"
+}
+
+# Replace an existing module directory with a fresh clone. The old directory is
+# moved aside first and restored if the clone fails. Returns non-zero when the
+# directory could not be replaced.
+reclone_module_fresh(){
+  local dir="$1"
+  local repo="$2"
+  local ref="$3"
+  local stale_dir="${dir}.stale.$$"
+  if ! mv "$dir" "$stale_dir" 2>/dev/null; then
+    warn "Cannot replace $dir (parent directory not writable); leaving existing directory. Run scripts/bash/repair-storage-permissions.sh"
+    return 1
+  fi
+  if git clone "$repo" "$dir"; then
+    ok "$dir re-cloned fresh from remote"
+    if ! rm -rf "$stale_dir" 2>/dev/null && command -v docker >/dev/null 2>&1; then
+      docker run --rm -v "$(pwd)":/work -w /work "${ALPINE_IMAGE:-alpine:latest}" \
+        rm -rf "$stale_dir" >/dev/null 2>&1 || true
+    fi
+    if [ -d "$stale_dir" ]; then
+      warn "Could not remove old checkout at $stale_dir; remove it manually"
+    fi
+    checkout_module_ref "$dir" "$ref"
+    return 0
+  fi
+  err "Failed to re-clone $repo; restoring previous checkout"
+  mv "$stale_dir" "$dir" 2>/dev/null || err "Could not restore $dir from $stale_dir"
+  return 1
+}
+
 install_enabled_modules(){
+  local -a install_failures=()
   for key in "${MODULE_KEYS[@]}"; do
     if [ "${MODULE_ENABLED[$key]:-0}" != "1" ]; then
       continue
@@ -177,7 +216,10 @@ install_enabled_modules(){
       warn "Missing repository metadata for $key"
       continue
     fi
-    if [ -d "$dir/.git" ]; then
+    if [ "${MODULES_FORCE_RECLONE:-0}" = "1" ] && [ -d "$dir" ]; then
+      info "MODULES_FORCE_RECLONE=1: re-cloning $dir fresh"
+      reclone_module_fresh "$dir" "$repo" "$ref" || install_failures+=("$dir")
+    elif [ -d "$dir/.git" ]; then
       info "$dir already present; checking for updates"
       (cd "$dir" && git fetch origin >/dev/null 2>&1) || warn "Failed to fetch updates for $dir"
       local head_before head_after
@@ -211,41 +253,40 @@ install_enabled_modules(){
       fi
       if [ "$update_failed" -eq 1 ]; then
         warn "Failed to update $dir (checkout stuck at ${head_before}); re-cloning fresh"
-        local stale_dir="${dir}.stale.$$"
-        if mv "$dir" "$stale_dir" 2>/dev/null; then
-          if git clone "$repo" "$dir"; then
-            ok "$dir re-cloned fresh from remote"
-            if ! rm -rf "$stale_dir" 2>/dev/null && command -v docker >/dev/null 2>&1; then
-              docker run --rm -v "$(pwd)":/work -w /work "${ALPINE_IMAGE:-alpine:latest}" \
-                rm -rf "$stale_dir" >/dev/null 2>&1 || true
-            fi
-            if [ -d "$stale_dir" ]; then
-              warn "Could not remove old checkout at $stale_dir; remove it manually"
-            fi
-            if [ -n "$ref" ]; then
-              (cd "$dir" && git checkout "$ref") || warn "Unable to checkout ref $ref for $dir"
-            fi
-          else
-            err "Failed to re-clone $repo; restoring previous checkout"
-            mv "$stale_dir" "$dir" 2>/dev/null || err "Could not restore $dir from $stale_dir"
-          fi
-        else
-          warn "Cannot replace $dir (parent directory not writable); keeping checkout at ${head_before}. Run scripts/bash/repair-storage-permissions.sh"
-        fi
+        reclone_module_fresh "$dir" "$repo" "$ref" || true
       fi
     elif [ -d "$dir" ]; then
-      warn "$dir exists but is not a git repository; leaving in place"
+      # A directory without .git is a leftover from an interrupted clone or
+      # partial sync; recover it instead of leaving the module missing.
+      if [ -z "$(ls -A "$dir" 2>/dev/null)" ]; then
+        info "$dir exists but is empty; cloning ${dir} from ${repo}"
+        if git clone "$repo" "$dir"; then
+          checkout_module_ref "$dir" "$ref"
+        else
+          err "Failed to clone $repo"
+          install_failures+=("$dir")
+        fi
+      else
+        warn "$dir exists but is not a git repository; re-cloning fresh"
+        reclone_module_fresh "$dir" "$repo" "$ref" || install_failures+=("$dir")
+      fi
     else
       info "Cloning ${dir} from ${repo}"
-      if ! git clone "$repo" "$dir"; then
+      if git clone "$repo" "$dir"; then
+        checkout_module_ref "$dir" "$ref"
+      else
         err "Failed to clone $repo"
-      fi
-      if [ -n "$ref" ]; then
-        (cd "$dir" && git checkout "$ref") || warn "Unable to checkout ref $ref for $dir"
+        install_failures+=("$dir")
       fi
     fi
     run_post_install_hooks "$key" "$dir"
   done
+
+  if [ "${#install_failures[@]}" -gt 0 ]; then
+    err "Failed to install ${#install_failures[@]} module(s): ${install_failures[*]}"
+    err "Check network access to github.com and re-run to retry."
+    MODULES_INSTALL_FAILED=1
+  fi
 }
 
 
@@ -630,6 +671,10 @@ main(){
   # Build-time SQL staging has been removed as it created files that were never processed.
 
   track_module_state
+
+  if [ "${MODULES_INSTALL_FAILED:-0}" = "1" ]; then
+    fatal "Module management finished with clone failures; see errors above"
+  fi
 
   echo 'Module management complete.'
 
