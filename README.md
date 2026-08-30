@@ -178,6 +178,16 @@ Requirements on the RealmMaster side:
 - A dedicated SOAP GM account and a read-only MySQL user — see the portal repo's README
   for the one-time setup commands
 
+Two ways to run it:
+- **Standalone** (independent release train): clone the portal repo next to the stack and
+  `docker compose pull && docker compose up -d` there — its backend joins this stack's
+  docker network by name.
+- **As part of this stack**: set `COMPOSE_OVERRIDE_ACCOUNT_PORTAL_ENABLED=1` and fill the
+  `PORTAL_*` block in `.env` — deploys then include
+  [`compose-overrides/account-portal.yml`](compose-overrides/account-portal.yml), running the
+  portal's published Docker Hub images as stack services (`ac-portal-backend`/`ac-portal-frontend`).
+  Pick one mode per host, not both.
+
 ---
 
 ## Troubleshooting
