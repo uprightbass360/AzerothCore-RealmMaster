@@ -21,6 +21,7 @@ A complete containerized deployment of AzerothCore WoW 3.3.5a (Wrath of the Lich
 - [Custom NPCs Guide](#custom-npcs-guide) → **[docs/NPCS.md](docs/NPCS.md)**
 - [Script Reference](#script-reference) → **[docs/SCRIPTS.md](docs/SCRIPTS.md)**
 - [Config Builder UI](#config-builder-ui) → **[live tool](https://uprightbass360.github.io/AzerothCore-RealmMaster/)**
+- [Account Portal](#account-portal) → **[companion repo](https://github.com/uprightbass360/AzerothCore-Account-Portal)**
 - [CI/CD & Pre-Built Images](#cicd--pre-built-images) → **[docs/CICD.md](docs/CICD.md)**
 - [Troubleshooting](#troubleshooting) → **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**
 - [Credits & Next Steps](#credits--next-steps)
@@ -158,6 +159,24 @@ that act on configuration.
   <http://localhost:8321/tools/config-ui/> — reads your working copy.
 - **Formats:** defined by `tools/config-ui/check_roundtrip.py`, which the
   publish workflow runs as a gate.
+
+---
+
+## Account Portal
+
+**[AzerothCore-Account-Portal](https://github.com/uprightbass360/AzerothCore-Account-Portal)** is the
+companion web app for player-facing account management on a RealmMaster realm: invite-only
+registration by email, SRP6 web login with the game credentials, TOTP 2FA self-service, verified
+email changes, and admin tools (invites, account lock/unlock, admin-initiated password resets,
+audit log). It deploys separately with its own `docker compose`, joins the stack's docker network,
+performs all account writes through the worldserver SOAP API, and reads `acore_auth` via a
+dedicated read-only MySQL user — the RealmMaster compose file is never modified.
+
+Requirements on the RealmMaster side:
+- Enable the SOAP API: set `COMPOSE_OVERRIDE_SOAP_ENABLED=1` in `.env`
+  (auto-includes [`compose-overrides/soap-enable.yml`](compose-overrides/soap-enable.yml))
+- A dedicated SOAP GM account and a read-only MySQL user — see the portal repo's README
+  for the one-time setup commands
 
 ---
 
