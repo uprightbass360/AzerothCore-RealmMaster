@@ -1,0 +1,60 @@
+# override-flag: COMPOSE_OVERRIDE_ACCOUNT_PORTAL_ENABLED
+# Optional override that runs the AzerothCore Account Portal as part of this
+# stack, using the prebuilt images published by the companion repo
+# (https://github.com/uprightbass360/AzerothCore-Account-Portal). RealmMaster
+# scripts auto-include this file whenever `COMPOSE_OVERRIDE_ACCOUNT_PORTAL_ENABLED=1`
+# in `.env`. Requires the SOAP API (`COMPOSE_OVERRIDE_SOAP_ENABLED=1`), a
+# dedicated SOAP GM account, and a read-only MySQL user for acore_auth — see
+# the portal repo's README for the one-time setup. Configure the PORTAL_*
+# variables in `.env` (documented in `.env.template`). Do not run this overlay
+# and the portal repo's standalone compose on the same host at once.
+services:
+  portal-backend:
+    image: "${PORTAL_BACKEND_IMAGE:-uprightbass360/azerothcore-account-portal-backend}:${PORTAL_IMAGE_TAG:-latest}"
+    container_name: ac-portal-backend
+    restart: unless-stopped
+    environment:
+      PORTAL_DATABASE_URL: "sqlite+aiosqlite:////data/portal.db"
+      PORTAL_ACORE_AUTH_URL: "${PORTAL_ACORE_AUTH_URL}"
+      PORTAL_SOAP_URL: "http://${CONTAINER_WORLDSERVER:-ac-worldserver}:${SOAP_PORT:-7878}/"
+      PORTAL_SOAP_USER: "${PORTAL_SOAP_USER}"
+      PORTAL_SOAP_PASS: "${PORTAL_SOAP_PASS}"
+      PORTAL_SMTP_HOST: "${PORTAL_SMTP_HOST}"
+      PORTAL_SMTP_PORT: "${PORTAL_SMTP_PORT:-587}"
+      PORTAL_SMTP_USER: "${PORTAL_SMTP_USER:-}"
+      PORTAL_SMTP_PASS: "${PORTAL_SMTP_PASS:-}"
+      PORTAL_SMTP_FROM: "${PORTAL_SMTP_FROM}"
+      PORTAL_SMTP_STARTTLS: "${PORTAL_SMTP_STARTTLS:-true}"
+      PORTAL_INTERNAL_API_KEY: "${PORTAL_INTERNAL_API_KEY}"
+      PORTAL_PUBLIC_BASE_URL: "${PORTAL_PUBLIC_BASE_URL}"
+      PORTAL_INVITE_TTL_DAYS: "${PORTAL_INVITE_TTL_DAYS:-7}"
+      PORTAL_SESSION_TTL_DAYS: "${PORTAL_SESSION_TTL_DAYS:-7}"
+      PORTAL_TOTP_ISSUER: "${PORTAL_TOTP_ISSUER:-AzerothCore}"
+      PORTAL_ADMIN_USERNAMES: "${PORTAL_ADMIN_USERNAMES:-}"
+      PORTAL_BOT_PREFIXES: "${PORTAL_BOT_PREFIXES:-RNDBOT,PLAYERBOT}"
+    volumes:
+      - portal-appdata:/data
+    networks:
+      - azerothcore
+
+  portal-frontend:
+    image: "${PORTAL_FRONTEND_IMAGE:-uprightbass360/azerothcore-account-portal-frontend}:${PORTAL_IMAGE_TAG:-latest}"
+    container_name: ac-portal-frontend
+    restart: unless-stopped
+    environment:
+      ORIGIN: "${PORTAL_PUBLIC_BASE_URL}"
+      BACKEND_URL: "http://portal-backend:8000"
+      INTERNAL_API_KEY: "${PORTAL_INTERNAL_API_KEY}"
+      PORT: "3000"
+      ADDRESS_HEADER: "${PORTAL_ADDRESS_HEADER:-}"
+      XFF_DEPTH: "${PORTAL_XFF_DEPTH:-1}"
+    ports:
+      - "${PORTAL_HTTP_PORT:-8080}:3000"
+    depends_on:
+      - portal-backend
+    networks:
+      - azerothcore
+
+volumes:
+  portal-appdata:
+    driver: local
