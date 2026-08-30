@@ -181,7 +181,8 @@ Requirements on the RealmMaster side:
 Two ways to run it:
 - **Standalone** (independent release train): clone the portal repo next to the stack and
   `docker compose pull && docker compose up -d` there — its backend joins this stack's
-  docker network by name.
+  docker network by name (set `ACORE_NETWORK` in the portal's `.env` to this stack's
+  network, found with `docker network ls`).
 - **As part of this stack**: set `COMPOSE_OVERRIDE_ACCOUNT_PORTAL_ENABLED=1` and fill the
   `PORTAL_*` block in `.env` — deploys then include
   [`compose-overrides/account-portal.yml`](compose-overrides/account-portal.yml), running the
