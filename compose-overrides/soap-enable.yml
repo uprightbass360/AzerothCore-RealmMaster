@@ -1,0 +1,21 @@
+# override-flag: COMPOSE_OVERRIDE_SOAP_ENABLED
+# Optional override file that enables the worldserver SOAP API (used by the
+# account portal and other remote-administration tooling). RealmMaster scripts
+# auto-include this file whenever `COMPOSE_OVERRIDE_SOAP_ENABLED=1` in `.env`.
+# When running Compose manually, add:
+#   docker compose -f docker-compose.yml -f compose-overrides/soap-enable.yml up -d
+# SOAP listens on ${SOAP_PORT} inside the container network (and is published on
+# ${SOAP_EXTERNAL_PORT} by the base compose). Reset the flag to 0 to disable.
+services:
+  ac-worldserver-standard:
+    environment:
+      AC_SOAP_ENABLED: "1"
+      AC_SOAP_IP: "0.0.0.0"
+  ac-worldserver-playerbots:
+    environment:
+      AC_SOAP_ENABLED: "1"
+      AC_SOAP_IP: "0.0.0.0"
+  ac-worldserver-modules:
+    environment:
+      AC_SOAP_ENABLED: "1"
+      AC_SOAP_IP: "0.0.0.0"
