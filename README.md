@@ -43,6 +43,8 @@ git clone https://github.com/uprightbass360/AzerothCore-RealmMaster.git
 cd AzerothCore-RealmMaster
 
 # 2. Configure your server
+## Optionally use profile builder to set up your own custom module list
+## https://uprightbass360.github.io/AzerothCore-RealmMaster
 ./setup.sh
 
 # 3. Deploy 
@@ -105,7 +107,7 @@ For complete local and remote deployment guides, see **[docs/GETTING_STARTED.md]
 
 ## Complete Module Catalog
 
-Choose from **hundreds of enhanced modules** spanning automation, quality-of-life improvements, gameplay enhancements, PvP features, and more. The manifest contains 348 modules (221 marked supported/active); the default RealmMaster preset enables 33 that are exercised in testing. All modules are automatically downloaded, configured, and integrated during deployment when selected.
+Choose from **hundreds of enhanced modules** spanning automation, quality-of-life improvements, gameplay enhancements, PvP features, and more. The manifest contains hundreds of automatically populated modules from the AzerothCore community, the default RealmMaster preset enables 33 that are exercised in testing. All modules are automatically downloaded, configured, and integrated during deployment when selected.
 
 Want a shortcut? Use a preset (`RealmMaster`, `suggested-modules`, `playerbots-suggested-modules`, `azerothcore-vanilla`, `playerbots-only`, `all-modules`) from `config/module-profiles/`—see [docs/GETTING_STARTED.md#module-presets](docs/GETTING_STARTED.md#module-presets).
 
@@ -115,8 +117,7 @@ Want a shortcut? Use a preset (`RealmMaster`, `suggested-modules`, `playerbots-s
 - **Gameplay** - Autobalance, challenge modes, hardcore mode
 - **Services** - Transmog, profession NPCs, talent templates
 
-Browse the complete catalog with descriptions at **[docs/MODULES.md](docs/MODULES.md)**.
-
+Browse the complete catalog with <https://uprightbass360.github.io/AzerothCore-RealmMaster/> 
 ---
 
 ## Custom NPCs Guide
@@ -153,12 +154,7 @@ that act on configuration.
 
 - **Hosted:** **<https://uprightbass360.github.io/AzerothCore-RealmMaster/>** —
   published to GitHub Pages from `main` on every push
-  (`.github/workflows/config-ui-pages.yml`); data shown is always exactly
-  what is on `main`.
-- **Local:** `tools/config-ui/serve.sh`, then open
-  <http://localhost:8321/tools/config-ui/> — reads your working copy.
-- **Formats:** defined by `tools/config-ui/check_roundtrip.py`, which the
-  publish workflow runs as a gate.
+  (`.github/workflows/config-ui-pages.yml`); data shown is updated weekly
 
 ---
 
@@ -212,16 +208,9 @@ This project builds upon:
 - **[AzerothCore Discord](https://discord.gg/gkt4y2x)** - Join the community for support and discussions
 - **[GitHub Issues](https://github.com/uprightbass360/AzerothCore-RealmMaster/issues)** - Report build or deployment issues here
 
-#### Key Features
-- ✅ **Fully Automated Setup** - Interactive configuration and deployment
-- ✅ **Intelligent Module System** - Automatic source builds and profile selection
-- ✅ **Automated Backups** - Health checks, scheduled backups, and monitoring
-- ✅ **Docker-Based** - Containerized deployment for easy setup and portability
-- ✅ **Comprehensive Documentation** - Clear setup and troubleshooting guides
-
 ### Next Steps After Installation
 **For detailed server administration, monitoring, backup configuration, and performance tuning, see [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).**
 
 - **Create admin account** - Attach to worldserver and create a GM user (commands in **[docs/GETTING_STARTED.md#post-installation-steps](docs/GETTING_STARTED.md#post-installation-steps)**).
-- **Point your client** - Update `realmlist.wtf` to your host/ports (defaults in the same section above).
+- **Point your client** - Recommended client: ChromieCraft. Update `realmlist.wtf` to your host/ports
 - **Open services** - phpMyAdmin and Keira3 URLs/ports are listed in **[docs/GETTING_STARTED.md#post-installation-steps](docs/GETTING_STARTED.md#post-installation-steps)**.
