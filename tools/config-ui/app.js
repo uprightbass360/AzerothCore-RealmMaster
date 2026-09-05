@@ -10,7 +10,7 @@ const ConfigUI = {
   BASES: ["config/", "../../config/"],
 
   async fetchData(relPath) {
-    const res = await fetch(this.data.base + relPath);
+    const res = await fetch(this.data.base + relPath, { cache: "no-cache" });
     if (!res.ok) throw new Error(`${res.status} for ${relPath}`);
     return res.text();
   },
@@ -36,7 +36,7 @@ const ConfigUI = {
   async init() {
     for (const base of this.BASES) {
       try {
-        const res = await fetch(base + "module-manifest.json");
+        const res = await fetch(base + "module-manifest.json", { cache: "no-cache" });
         if (!res.ok) continue;
         const j = await res.json();
         this.data.manifest = Array.isArray(j) ? j : (j.modules || []);
