@@ -8925,6 +8925,34 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_VANILLA_NAXXRAMAS",
+      "name": "mod-vanilla-naxxramas",
+      "repo": "https://github.com/valsan-azerty-boi/mod-vanilla-naxxramas.git",
+      "description": " AzerothCore custom module that brings back vanilla Naxxramas",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_LEARNSPELLS",
+      "name": "mod-learnspells",
+      "repo": "https://github.com/talamortis/mod-learnspells.git",
+      "description": "Learn all spell module",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
