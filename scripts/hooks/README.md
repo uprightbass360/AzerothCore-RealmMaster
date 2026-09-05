@@ -46,7 +46,7 @@ Module-specific hooks are named after their primary module and handle unique set
 ### `mod-ale-patches`
 Applies signature-compatibility patches for mod-ale (ALE - AzerothCore Lua Engine, formerly Eluna) so a fresh mod-ale checkout compiles against whichever core is being built (upstream AzerothCore or the playerbots fork, which can lag upstream API changes).
 
-Both patches are self-guarding: they read the signature declared by the core's actual header and only rewrite the module when the two disagree. If the core header can't be located, they skip rather than guess.
+All patches are self-guarding: they read the signature declared by the actual header being built against (the core, or the sibling mod-playerbots checkout) and only rewrite the module when the two disagree. If that header can't be located, they skip rather than guess.
 
 **Patches Applied:**
 
@@ -60,11 +60,17 @@ Both patches are self-guarding: they read the signature declared by the core's a
 **Core header consulted:** `src/server/game/Scripting/ScriptDefines/ServerScript.h`
 **File patched:** `src/ALE_SC.cpp`
 
+#### Playerbot InterruptSpell Binding Fix
+**What it fixes:** mod-playerbots #2680 removed `PlayerbotAI::InterruptSpell()` in favour of the deferred `RequestSpellInterrupt()`; mod-ale #397's Lua bindings still call the old method (azerothcore/mod-ale#398). The binding is redirected to `RequestSpellInterrupt()` only when the staged mod-playerbots checkout no longer declares `InterruptSpell()`.
+**Header consulted:** `modules/mod-playerbots/src/Bot/PlayerbotAI.h` (sibling checkout)
+**File patched:** `src/LuaEngine/methods/Playerbots/PlayerBotAIMethods.h`
+
 **Feature Flags:**
 ```bash
-# Both enabled by default; set to 0 to disable
+# All enabled by default; set to 0 to disable
 APPLY_RESURRECT_SIGNATURE_PATCH=1
 APPLY_PACKET_SIGNATURE_PATCH=1
+APPLY_PLAYERBOT_INTERRUPT_PATCH=1
 ```
 
 **History:** Earlier revisions also carried blind sed patches (SendTrainerList, override keyword, MovePath). They were removed in 2026-08 after their target patterns disappeared from mod-ale master and the playerbots fork caught up to the upstream signatures.
