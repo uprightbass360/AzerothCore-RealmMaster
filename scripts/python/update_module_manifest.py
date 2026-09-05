@@ -27,7 +27,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 from urllib import error, parse, request
 
 API_ROOT = "https://api.github.com"
@@ -105,6 +105,19 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         "--skip-template",
         action="store_true",
         help="Skip updating .env.template",
+    )
+    parser.add_argument(
+        "--profiles-dir",
+        default="config/module-profiles",
+        help=(
+            "Directory of module profile JSON files to keep in sync with the manifest "
+            "(default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--skip-profiles",
+        action="store_true",
+        help="Skip removing unknown module keys from profile files",
     )
     parser.add_argument(
         "--prune-missing",
@@ -344,6 +357,53 @@ def prune_missing_repositories(
     manifest["modules"] = [entry for entry in modules if id(entry) not in dead_ids]
     print(f"🗑️  Removed {len(dead)} dead entr(ies) from the manifest")
     return dead
+
+
+def prune_profiles(
+    profiles_dir: str,
+    valid_keys: set,
+    dry_run: bool = False,
+    verbose: bool = False,
+) -> List[Tuple[str, List[str]]]:
+    """Drop module keys that no longer exist in the manifest from profile files.
+
+    The config UI's round-trip check (tools/config-ui/check_roundtrip.py) gates
+    the Pages deploy and fails on any profile key missing from the manifest, so
+    a pruned manifest must never leave dangling references behind.  Files are
+    rewritten with the same ``json.dumps(indent=2)`` layout they already use, so
+    untouched profiles stay byte-identical and touched ones change only in the
+    removed lines.
+
+    Returns ``[(path, [removed keys...]), ...]`` for every profile that changed.
+    """
+    profile_root = Path(profiles_dir)
+    if not profile_root.is_dir():
+        return []
+
+    changes: List[Tuple[str, List[str]]] = []
+    for path in sorted(profile_root.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"Warning: skipping unreadable profile {path}: {exc}")
+            continue
+        modules = data.get("modules")
+        if not isinstance(modules, list):
+            continue
+        unknown = [key for key in modules if key not in valid_keys]
+        if not unknown:
+            continue
+        changes.append((str(path), unknown))
+        prefix = "[dry-run] Would remove" if dry_run else "🗑️  Removed"
+        print(f"{prefix} {len(unknown)} unknown key(s) from {path.name}: {', '.join(unknown)}")
+        if dry_run:
+            continue
+        data["modules"] = [key for key in modules if key in valid_keys]
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+    if not changes and verbose:
+        print("✅ All profile keys exist in the manifest")
+    return changes
 
 
 def repo_name_to_key(name: str) -> str:
@@ -603,7 +663,13 @@ def main(argv: Sequence[str]) -> int:
             verbose=args.log,
         )
 
+    valid_keys = {
+        str(entry.get("key")) for entry in manifest.get("modules", []) if entry.get("key")
+    }
+
     if args.dry_run:
+        if not args.skip_profiles:
+            prune_profiles(args.profiles_dir, valid_keys, dry_run=True, verbose=args.log)
         print(
             f"Discovered {len(repos)} repositories "
             f"(added={added}, updated={updated}, would remove={len(removed)})"
@@ -618,6 +684,13 @@ def main(argv: Sequence[str]) -> int:
         f"Updated manifest {args.manifest}: added {added}, refreshed {updated}, "
         f"removed {len(removed)}"
     )
+
+    # Keep profiles free of keys the manifest no longer has; the config UI's
+    # round-trip check fails the Pages deploy on any dangling reference.
+    if not args.skip_profiles:
+        profile_changes = prune_profiles(args.profiles_dir, valid_keys, verbose=args.log)
+        if profile_changes:
+            print(f"Updated {len(profile_changes)} profile file(s) under {args.profiles_dir}")
 
     # Update .env.template if requested (always run to clean up disabled modules)
     if not args.skip_template:

@@ -28,6 +28,11 @@ jobs:
         run: |
           python3 scripts/python/update_module_manifest.py --log --prune-missing
 
+      - name: Config UI round-trip check
+        # Same gate the Pages deploy runs; a sync PR must never leave profiles
+        # referencing keys the manifest no longer has.
+        run: python3 tools/config-ui/check_roundtrip.py
+
       - name: Check for changes
         id: changes
         run: |
