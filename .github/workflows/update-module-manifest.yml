@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: '0 9 * * 1'
 
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -46,6 +51,7 @@ jobs:
           fi
 
       - name: Create Pull Request with changes
+        id: cpr
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
@@ -57,7 +63,37 @@ jobs:
 
             Entries whose upstream repository returned a hard 404/451 are
             removed. Repos that merely dropped the topic are verified via the
-            GitHub API and kept. Please sanity-check any deletions below before
-            merging.
+            GitHub API and kept.
+
+            Merged automatically once the in-job gates pass: the sync aborts
+            pruning on any GitHub API error or if removals exceed 10% of the
+            manifest, and the config UI round-trip check must succeed.
           labels: modules
           delete-branch: true
+
+      - name: Merge pull request
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.cpr.outputs.pull-request-number }}
+        run: |
+          # Mergeability is computed asynchronously right after creation, so
+          # retry briefly instead of failing on the first "not mergeable".
+          for attempt in 1 2 3 4 5 6; do
+            if gh pr merge "$PR" --squash; then
+              echo "Merged PR #$PR"
+              exit 0
+            fi
+            echo "Merge attempt $attempt failed; retrying in 10s"
+            sleep 10
+          done
+          echo "::error::Could not merge PR #$PR; leaving it open for manual review"
+          exit 1
+
+      - name: Refresh config UI
+        # A merge performed with GITHUB_TOKEN does not trigger push workflows,
+        # so the Pages deploy must be dispatched explicitly.
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run config-ui-pages.yml --ref main
