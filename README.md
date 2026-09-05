@@ -205,8 +205,9 @@ This project builds upon:
 - **All module creators** - Making amazing things every day
 
 ### Community & Support
-- **[AzerothCore Discord](https://discord.gg/gkt4y2x)** - Join the community for support and discussions
+- **[GitHub Discussions](https://github.com/uprightbass360/AzerothCore-RealmMaster/discussions)** - Questions, ideas, and show-and-tell for RealmMaster itself. Bugs go to Issues.
 - **[GitHub Issues](https://github.com/uprightbass360/AzerothCore-RealmMaster/issues)** - Report build or deployment issues here
+- **[AzerothCore Discord](https://discord.gg/gkt4y2x)** - Upstream AzerothCore, playerbots, and individual module support
 
 ### Next Steps After Installation
 **For detailed server administration, monitoring, backup configuration, and performance tuning, see [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).**
