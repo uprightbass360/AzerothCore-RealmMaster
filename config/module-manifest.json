@@ -9163,6 +9163,62 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_ZONE_SCALING",
+      "name": "mod-zone-scaling",
+      "repo": "https://github.com/firstoni-dev/mod-zone-scaling.git",
+      "description": "Open-world per-player level scaling for AzerothCore 3.3.5a: mobs, XP and loot present to each player at their own level, within configurable zone bands.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_AUTO_ATTACK_FOREVER",
+      "name": "Auto-Attack-Forever",
+      "repo": "https://github.com/CWO4PapaBear/Auto-Attack-Forever.git",
+      "description": "Automatic ranged/melee attack switching for AzerothCore 3.3.5a. Supports bows, guns, crossbows, thrown weapons and wands while preserving normal weapon restrictions. Stock-tested preview; core and client patches required.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_ARCANE_SHREDDER",
+      "name": "mod-arcane-shredder",
+      "repo": "https://github.com/eveletspb/mod-arcane-shredder.git",
+      "description": "Safe batch disenchanting module for AzerothCore WotLK 3.3.5a with server-side preview, revalidation, and companion addon.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MODERN_CHARACTER_FRAME_AIO",
+      "name": "modern-character-frame-AIO",
+      "repo": "https://github.com/Slaywowdevstuff/modern-character-frame-AIO.git",
+      "description": "",
+      "type": "lua",
+      "category": "scripting",
+      "notes": "Discovered via GitHub topic 'azerothcore-lua'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
