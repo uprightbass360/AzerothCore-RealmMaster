@@ -136,15 +136,23 @@ crash-loops after deploying, run ./modules.sh remove <key> and deploy again.
 
 On playerbots stacks, `mod-playerbots` and the core fork
 (`azerothcore-playerbots`, branch `Playerbot`) must move together: mod-playerbots's
-HEAD regularly needs newer core symbols than an older core provides. So every
-`./build.sh` also updates the core fork to latest, unless `MODULE_PLAYERBOTS` is
+HEAD regularly needs newer core symbols than an older core provides. So every build
+updates the core fork to latest before compiling, unless `MODULE_PLAYERBOTS` is
 pinned (`./modules.sh add --key MODULE_PLAYERBOTS --ref <ref>`), in which case it
-prints an info line and leaves the core alone. `./build.sh --force-update` always
-updates the core, pinned or not.
+prints an info line and builds with the current core instead.
 
-Plain deploys never update a compiled module's checkout (its SQL/config would then
-be newer than the compiled binary). To update the pinned pair, run `./build.sh
---force-update`.
+- Unpinned stack: to move the core + mod-playerbots together and rebuild, run
+  `./build.sh --force`.
+- Pinned stack: re-pin mod-playerbots to a newer ref (`./modules.sh add --key
+  MODULE_PLAYERBOTS --ref <new ref>`) or remove the pin, then run `./build.sh
+  --force --force-update`. `--force-update` moves the core to the fork's latest
+  `Playerbot` HEAD, so a new pin should be a mod-playerbots commit that matches
+  that core.
+
+Plain deploys never update a compiled module's checkout on a stack that builds
+locally (its SQL/config would then be newer than the compiled binary); a
+prebuilt-image stack has nothing compiled in, so its module checkouts keep
+following their repos on every deploy.
 
 ### Lua (`lua`)
 
