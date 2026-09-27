@@ -86,6 +86,13 @@ class AddTest(CliCase):
         self.assertIn("MODULE_UP=1", err)
         self.assertEqual(self.local_entries(), [])
 
+    def test_add_rejects_upstream_repo_http_scheme_with_git_suffix(self):
+        rc, _, err = self.run_cli("add", "http://github.com/AzerothCore/mod-up.git", "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("MODULE_UP=1", err)
+        self.assertEqual(self.local_entries(), [])
+        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+
     def test_add_twice_same_url_is_rejected(self):
         repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
         self.assertEqual(self.run_cli("add", str(repo), "--yes")[0], 0)
@@ -102,6 +109,16 @@ class AddTest(CliCase):
         self.assertEqual(rc, 1)
         self.assertIn("--key", err)
 
+    def test_add_same_folder_name_needs_explicit_key(self):
+        # Folder name "mod-playerbots" already matches the upstream MODULE_PLAYERBOTS
+        # entry's "name", even though the derived key would differ.
+        repo = make_repo(self.repos / "mod-playerbots", {"README.md": "x"})
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("--key MODULE_PLAYERBOTS", err)
+        self.assertEqual(self.local_entries(), [])
+        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+
     def test_add_collection_refused_without_type(self):
         files = {f"s{i}.lua": "" for i in range(25)}
         repo = make_repo(self.repos / "scripts", files)
@@ -109,6 +126,7 @@ class AddTest(CliCase):
         self.assertEqual(rc, 1)
         self.assertIn("--type lua", err)
         self.assertEqual(self.local_entries(), [])
+        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
 
     def test_add_collection_with_type_lua(self):
         files = {f"s{i}.lua": "" for i in range(25)}
@@ -127,6 +145,7 @@ class AddTest(CliCase):
         rc, _, err = self.run_cli("add", str(self.repos / "missing"), "--yes")
         self.assertEqual(rc, 1)
         self.assertEqual(self.local_entries(), [])
+        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
 
     def test_add_refuses_when_local_file_is_invalid(self):
         path = self.root / "config" / LOCAL_MANIFEST_NAME
@@ -141,6 +160,14 @@ class AddTest(CliCase):
         rc, out, _ = self.run_cli("add", "--key", "MODULE_UP", "--ref", "v1.2", "--yes")
         self.assertEqual(rc, 0, out)
         self.assertEqual(self.local_entries(), [{"key": "MODULE_UP", "ref": "v1.2"}])
+        self.assertIn("MODULE_UP=1", self.env())
+        self.assertIn("run inside your worldserver", out)
+        self.assertIn("./build.sh --force", out)
+
+    def test_ref_only_override_no_enable(self):
+        rc, _, _ = self.run_cli("add", "--key", "MODULE_UP", "--ref", "v1.2", "--yes", "--no-enable")
+        self.assertEqual(rc, 0)
+        self.assertNotIn("MODULE_UP", self.env())
 
     def test_fork_override(self):
         fork = make_repo(self.repos / "mod-up", {"src/l.cpp": "void Addmod_upScripts(){}"})
@@ -150,14 +177,87 @@ class AddTest(CliCase):
         self.assertEqual((e["key"], e["repo"]), ("MODULE_UP", str(fork)))
         self.assertNotIn("description", e)
 
+    def test_fork_override_uses_listed_type_and_requires(self):
+        # MODULE_UP is upstream cpp with a requires; the fork's content looks like
+        # AIO Lua, but that's advisory only -- the listed entry's type/requires win.
+        write_manifest(self.root / "config" / "module-manifest.json", [
+            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_AIO", name="mod-aio", type="lua"),
+            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream",
+                  requires=["MODULE_PLAYERBOTS"]),
+        ])
+        fork = make_repo(self.repos / "mod-up", {"Server/s.lua": 'local AIO = require("AIO")'})
+        rc, out, err = self.run_cli("add", str(fork), "--key", "MODULE_UP", "--yes")
+        self.assertEqual(rc, 0)
+        [e] = self.local_entries()
+        self.assertEqual(e["repo"], str(fork))
+        self.assertNotIn("type", e)
+        self.assertNotIn("requires", e)
+        self.assertNotIn("post_install_hooks", e)
+        self.assertNotIn("MODULE_AIO", self.env())
+        self.assertIn("MODULE_PLAYERBOTS=1", self.env())
+        self.assertIn("./build.sh --force", out)
+        self.assertIn("WARNING", err)
+
+    def test_fork_override_detection_finds_nothing_still_ok(self):
+        fork = make_repo(self.repos / "mod-up", {"README.md": "x"})
+        rc, _, _ = self.run_cli("add", str(fork), "--key", "MODULE_UP", "--yes")
+        self.assertEqual(rc, 0)
+        [e] = self.local_entries()
+        self.assertEqual(e["repo"], str(fork))
+
+    def test_fork_override_type_flag_is_ignored_with_warning(self):
+        fork = make_repo(self.repos / "mod-up", {"src/l.cpp": "void Addmod_upScripts(){}"})
+        rc, _, err = self.run_cli("add", str(fork), "--key", "MODULE_UP", "--type", "lua", "--yes")
+        self.assertEqual(rc, 0)
+        self.assertIn("ignored", err)
+
+    def test_refork_keeps_existing_override_fields(self):
+        self.assertEqual(self.run_cli("add", "--key", "MODULE_UP", "--ref", "v1", "--yes")[0], 0)
+        fork = make_repo(self.repos / "mod-up", {"src/l.cpp": "void Addmod_upScripts(){}"})
+        rc, _, _ = self.run_cli("add", str(fork), "--key", "MODULE_UP", "--yes")
+        self.assertEqual(rc, 0)
+        [e] = self.local_entries()
+        self.assertEqual(e, {"key": "MODULE_UP", "ref": "v1", "repo": str(fork)})
+
+    def test_unrelated_manifest_errors_do_not_block(self):
+        write_manifest(self.root / "config" / "module-manifest.json", [
+            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_AIO", name="mod-aio", type="lua"),
+            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
+            entry("MODULE_BROKEN", name="mod-broken", type="cpp", requires=["MODULE_GHOST"]),
+        ])
+        (self.root / ".env").write_text("MODULE_ELUNA=1\nMODULE_BROKEN=1\n")
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 0)
+        self.assertIn("WARNING", err)
+
+    def test_blocking_error_from_enabled_requirement_keeps_entry_and_reports_removal(self):
+        write_manifest(self.root / "config" / "module-manifest.json", [
+            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_AIO", name="mod-aio", type="lua", requires=["MODULE_MISSING"]),
+            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
+        ])
+        repo = make_repo(self.repos / "aio-thing", {"Server/s.lua": 'local AIO = require("AIO")'})
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("MODULE_AIO", err)
+        self.assertIn("./modules.sh remove", err)
+        self.assertEqual(len(self.local_entries()), 1)
+
     def test_declined_prompt_writes_nothing(self):
         repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
         import builtins
         from unittest import mock
         with mock.patch.object(builtins, "input", return_value="n"):
-            rc, _, _ = self.run_cli("add", str(repo))
+            rc, _, err = self.run_cli("add", str(repo))
         self.assertEqual(rc, 1)
         self.assertEqual(self.local_entries(), [])
+        self.assertIn("Nothing written. (Use --yes", err)
 
 
 if __name__ == "__main__":

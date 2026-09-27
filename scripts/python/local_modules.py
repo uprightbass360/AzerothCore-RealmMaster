@@ -167,9 +167,40 @@ def _enable(paths: Paths, keys: List[str]) -> None:
         print(f"   enabled {key}=1 in .env")
 
 
+def _finish(paths: Paths, key: str, requires: List[str], module_type: str,
+            is_override: bool, no_enable: bool) -> int:
+    """Shared tail for every add path: enable, validate, warn, and say what's next."""
+    if not no_enable:
+        _enable(paths, [key] + list(requires))
+
+    from modules import build_state
+    state = build_state(paths.env, paths.manifest)
+    relevant = {key, *requires}
+    blocking = [error for error in state.errors if any(k in error for k in relevant)]
+    other = [error for error in state.errors if error not in blocking]
+    for warning in other:
+        print(f"WARNING: {warning}", file=sys.stderr)
+    for error in blocking:
+        print(f"ERROR: {error}", file=sys.stderr)
+
+    print(WORLDSERVER_WARNING.format(key=key))
+    if module_type == "cpp":
+        print("Next: ./build.sh --force (rebuilds even though the module name hasn't changed)"
+              if is_override else "Next: ./build.sh")
+    else:
+        print("Next: ./deploy.sh")
+
+    if blocking:
+        print(f"{key} was kept in {paths.local.name} despite the error(s) above; "
+              f"run ./modules.sh remove {key} to remove it.", file=sys.stderr)
+        return 1
+    return 0
+
+
 def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
     upstream, local, merged = _load(paths)
     by_key = {m["key"]: m for m in merged}
+    local_by_key = {e["key"]: e for e in local}
     upstream_keys = {m["key"] for m in upstream}
 
     # Ref-only override of a listed module: no clone, nothing to detect.
@@ -178,14 +209,17 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
             raise Refused("add needs a git URL, or --key MODULE_X --ref <ref> to pin a listed module")
         if args.key not in by_key:
             raise Refused(f"{args.key} is not in the manifest; give a git URL to add it")
-        override = next((e for e in local if e["key"] == args.key), {"key": args.key})
+        listed = by_key[args.key]
+        module_type = str(listed.get("type", "cpp"))
+        requires = [str(r) for r in (listed.get("requires") or [])]
+        override = local_by_key.get(args.key, {"key": args.key})
         override = {**override, "ref": args.ref}
         print(json.dumps(override, indent=2))
         if not _confirm(f"Pin {args.key} to {args.ref}?", args.yes):
-            raise Refused("Nothing written.")
+            raise Refused("Nothing written. (Use --yes to skip the confirmation.)")
         write_local_entries(paths.local, [e for e in local if e["key"] != args.key] + [override])
-        print(f"✅ {args.key} pinned to {args.ref} in {paths.local.name}. Run ./deploy.sh to apply.")
-        return 0
+        print(f"✅ {args.key} pinned to {args.ref} in {paths.local.name}")
+        return _finish(paths, args.key, requires, module_type, True, args.no_enable)
 
     wanted = normalize_repo(args.url)
     same_repo = next((m for m in merged if normalize_repo(str(m.get("repo", ""))) == wanted), None)
@@ -195,6 +229,15 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
                       f"enable it with {same_repo['key']}=1 in .env")
 
     name = repo_basename(args.url)
+
+    if not args.key:
+        same_name = next((m for m in merged if m.get("name") == name), None)
+        if same_name:
+            raise Refused(
+                f"{name} is already listed as {same_name['key']} ({same_name.get('repo')}); "
+                f"to use your fork of it, run ./modules.sh add {args.url} --key {same_name['key']}"
+            )
+
     key = args.key or repo_name_to_key(name)
     is_override = key in upstream_keys
     if not args.key and key in by_key:
@@ -208,31 +251,42 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
             raise Refused(str(exc))
         detection = detect(checkout, by_key[key]["name"] if is_override else name)
 
-    module_type = args.type or detection.module_type
-    if module_type is None:
-        raise Refused(f"Could not tell how to install {name}: {detection.reason}. "
-                      "Pass --type cpp|lua|sql if you know better.")
-    if detection.is_collection and args.type != "lua":
-        raise Refused(f"{name} looks like a Lua script collection (many scripts or folders). "
-                      "Staging all of it can break the worldserver; copy the scripts you want into "
-                      "storage/lua_scripts/ yourself, or pass --type lua to stage everything.")
-    for warning in detection.warnings:
-        print(f"WARNING: {warning}", file=sys.stderr)
-
-    hooks = detection.post_install_hooks if module_type == detection.module_type else []
-    if module_type == "lua" and not hooks:
-        hooks, requires = ["copy-standard-lua"], ["MODULE_ELUNA"]
-    else:
-        requires = detection.requires if module_type == detection.module_type else []
-
     if is_override:
-        new_entry = {"key": key, "repo": args.url}
+        listed = by_key[key]
+        module_type = str(listed.get("type", "cpp"))
+        requires = [str(r) for r in (listed.get("requires") or [])]
+
+        if args.type:
+            print(f"WARNING: --type is ignored for {key}; its type is defined by the listed "
+                  f"entry ({module_type})", file=sys.stderr)
+        if detection.module_type and detection.module_type != module_type:
+            print(f"WARNING: {args.url} looks like {detection.module_type}, but {key} is "
+                  f"{module_type} upstream", file=sys.stderr)
+        for warning in detection.warnings:
+            print(f"WARNING: {warning}", file=sys.stderr)
+
+        existing_override = local_by_key.get(key, {"key": key})
+        new_entry = {**existing_override, "key": key, "repo": args.url}
         if args.ref:
             new_entry["ref"] = args.ref
-        if module_type != str(by_key[key].get("type", "cpp")):
-            print(f"WARNING: {args.url} looks like {module_type}, but {key} is {by_key[key].get('type')} upstream",
-                  file=sys.stderr)
     else:
+        module_type = args.type or detection.module_type
+        if module_type is None:
+            raise Refused(f"Could not tell how to install {name}: {detection.reason}. "
+                          "Pass --type cpp|lua|sql if you know better.")
+        if detection.is_collection and args.type != "lua":
+            raise Refused(f"{name} looks like a Lua script collection (many scripts or folders). "
+                          "Staging all of it can break the worldserver; copy the scripts you want into "
+                          "storage/lua_scripts/ yourself, or pass --type lua to stage everything.")
+        for warning in detection.warnings:
+            print(f"WARNING: {warning}", file=sys.stderr)
+
+        hooks = detection.post_install_hooks if module_type == detection.module_type else []
+        if module_type == "lua" and not hooks:
+            hooks, requires = ["copy-standard-lua"], ["MODULE_ELUNA"]
+        else:
+            requires = detection.requires if module_type == detection.module_type else []
+
         new_entry = {"key": key, "name": name, "repo": args.url, "type": module_type,
                      "post_install_hooks": hooks, "requires": requires,
                      "description": f"User module from {args.url}", "category": "local"}
@@ -241,21 +295,11 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
 
     print(json.dumps(new_entry, indent=2))
     if not _confirm(f"Add {key}?", args.yes):
-        raise Refused("Nothing written.")
+        raise Refused("Nothing written. (Use --yes to skip the confirmation.)")
     write_local_entries(paths.local, [e for e in local if e["key"] != key] + [new_entry])
     print(f"✅ {key} written to {paths.local.name}")
 
-    if not args.no_enable:
-        _enable(paths, [key] + [r for r in requires])
-
-    from modules import build_state
-    state = build_state(paths.env, paths.manifest)
-    for error in state.errors:
-        print(f"ERROR: {error}", file=sys.stderr)
-
-    print(WORLDSERVER_WARNING.format(key=key))
-    print("Next: ./build.sh (C++ module)" if module_type == "cpp" else "Next: ./deploy.sh")
-    return 1 if state.errors else 0
+    return _finish(paths, key, requires, module_type, is_override, args.no_enable)
 
 
 def build_parser() -> argparse.ArgumentParser:
