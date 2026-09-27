@@ -93,20 +93,15 @@ generate_module_state(){
   local output_dir="${storage_root}/modules"
   ensure_modules_dir_writable "$storage_root"
 
-  # Capture output and exit code from module validation
+  # Capture module validation output. The assignment sits in the if-condition:
+  # under set -e a bare failing $(...) would exit before the errors are shown.
   local validation_output
-  local validation_exit_code
-  validation_output=$(python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/module-manifest.json" generate --output-dir "$output_dir" 2>&1)
-  validation_exit_code=$?
-
-  # Display the validation output
-  echo "$validation_output"
-
-  # Check for validation errors (not warnings)
-  if [ $validation_exit_code -ne 0 ]; then
+  if ! validation_output=$(python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$ROOT_DIR/config/module-manifest.json" generate --output-dir "$output_dir" 2>&1); then
+    echo "$validation_output"
     err "Module manifest validation failed. See errors above."
     exit 1
   fi
+  echo "$validation_output"
 
   # Check if blocked modules were detected in warnings
   if echo "$validation_output" | grep -q "is blocked:"; then
@@ -514,7 +509,6 @@ stage_modules(){
 
   # Run module staging script in local modules directory
   export MODULES_LOCAL_RUN=1
-  export MODULES_SKIP_SQL=1
   if [ "${FRESH_MODULES:-0}" = "1" ]; then
     export MODULES_FORCE_RECLONE=1
   fi
@@ -550,9 +544,13 @@ stage_modules(){
         --exclude 'modules-enabled.txt' \
         "$local_modules_dir"/ "$staging_modules_dir"/
     else
+      # Keep .modules-meta/ (modules-enabled.txt etc. are written straight into
+      # the staging dir and filter SQL staging); the rsync branch keeps it via
+      # its unanchored excludes.
       find "$staging_modules_dir" -mindepth 1 -maxdepth 1 \
         ! -name '.modules_state' \
         ! -name '.requires_rebuild' \
+        ! -name '.modules-meta' \
         ! -name 'modules.env' \
         ! -name 'modules-state.json' \
         ! -name 'modules-compile.txt' \
@@ -568,7 +566,6 @@ stage_modules(){
   # Cleanup
   export GIT_CONFIG_GLOBAL="$prev_git_config_global"
   unset MODULES_LOCAL_RUN
-  unset MODULES_SKIP_SQL
   unset MODULES_HOST_DIR
   unset MODULES_FORCE_RECLONE
   [ -n "$git_temp_config" ] && [ -f "$git_temp_config" ] && rm -f "$git_temp_config"
