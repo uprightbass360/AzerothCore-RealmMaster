@@ -55,7 +55,7 @@ resolve_manifest_path(){
     echo "$candidate"
     return
   fi
-  err "Unable to locate module manifest (set MODULES_MANIFEST_PATH or ensure config/module-manifest.json exists)"
+  fatal "Unable to locate module manifest (set MODULES_MANIFEST_PATH or ensure config/module-manifest.json exists)"
 }
 
 setup_git_config(){
@@ -66,19 +66,21 @@ setup_git_config(){
 
 generate_module_state(){
   mkdir -p "$STATE_DIR"
+  # modules.py writes modules.env before reporting validation errors, so a
+  # failure here must stop the run rather than continue on invalid state.
   if ! python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$MANIFEST_PATH" generate --output-dir "$STATE_DIR"; then
-    err "Module manifest validation failed"
+    fatal "Module manifest validation failed"
   fi
   local env_file="$STATE_DIR/modules.env"
   if [ ! -f "$env_file" ]; then
-    err "modules.env not produced at $env_file"
+    fatal "modules.env not produced at $env_file"
   fi
   # shellcheck disable=SC1090
   source "$env_file"
 
   # Module arrays are already declared at script level
   if ! MODULE_SHELL_STATE="$(python3 "$MODULE_HELPER" --env-path "$ENV_PATH" --manifest "$MANIFEST_PATH" dump --format shell)"; then
-    err "Unable to load manifest metadata"
+    fatal "Unable to load manifest metadata"
   fi
   local eval_script
   # Remove the declare line since we already declared the arrays
@@ -531,10 +533,6 @@ manage_configuration_files(){
     update_playerbots_db_info "$modules_conf_dir/playerbots.conf.dist"
   fi
 
-  if [ "${MODULE_AUTOBALANCE:-0}" = "1" ] && [ -f "$env_target/AutoBalance.conf.dist" ]; then
-    sed -i 's/^AutoBalance\.LevelScaling\.EndGameBoost.*/AutoBalance.LevelScaling.EndGameBoost = false    # disabled pending proper implementation/' \
-      "$env_target/AutoBalance.conf.dist" || true
-  fi
 }
 
 load_sql_helper(){
