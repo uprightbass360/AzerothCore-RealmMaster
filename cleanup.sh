@@ -122,7 +122,7 @@ show_resources() {
 
   echo -e "${BLUE}💾 Volumes:${NC}"
   docker volume ls --format 'table {{.Name}}\t{{.Driver}}' | head -1
-  docker volume ls --format '{{.Name}}\t{{.Driver}}' | grep -E 'ac_|acore|azerothcore' || echo "No project volumes found"
+  docker volume ls --filter "label=com.docker.compose.project=${PROJECT_NAME}" --format '{{.Name}}\t{{.Driver}}' | grep . || echo "No project volumes found"
 }
 
 # Load env for STORAGE_PATH etc.
@@ -153,10 +153,16 @@ remove_storage_dir(){
   fi
 }
 
+# Select by compose project label: name prefixes also match other stacks on the
+# host (e.g. azerothcore-account-portal_appdata).
 remove_project_volumes(){
-  docker volume ls --format '{{.Name}}' \
-    | grep -E "^${PROJECT_NAME}|^azerothcore" \
-    | xargs -r docker volume rm >/dev/null 2>&1 || true
+  docker volume ls -q --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
+    | xargs -r docker volume rm
+}
+
+remove_project_containers(){
+  docker ps -aq --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
+    | xargs -r docker rm -f
 }
 
 soft_cleanup() {
@@ -190,9 +196,7 @@ hard_cleanup() {
     --profile db
   )
   execute_command "Removing containers and networks" $COMPOSE_BASE "${profiles[@]}" down --remove-orphans
-  execute_command "Remove project volumes" remove_project_volumes
-  # Remove straggler containers matching project name (defensive)
-  execute_command "Remove stray project containers" "docker ps -a --format '{{.Names}}' | grep -E '^ac-' | xargs -r docker rm -f"
+  execute_command "Remove stray project containers" remove_project_containers
   # Remove project network if present and not automatically removed
   if [ -n "${NETWORK_NAME:-}" ]; then
     execute_command "Remove project network ${NETWORK_NAME}" "docker network rm ${NETWORK_NAME} 2>/dev/null || true"
@@ -242,8 +246,6 @@ nuclear_cleanup() {
     execute_command "Removing local storage" "remove_storage_dir '${STORAGE_PATH_LOCAL}'"
   fi
 
-  # Optional system prune for project context
-  execute_command "Docker system prune (dangling)" "docker system prune -af --volumes"
   print_status SUCCESS "Nuclear cleanup completed"
 }
 
