@@ -31,6 +31,16 @@ class BuildStateMergedTest(unittest.TestCase):
         self.assertIn("mod-mine", [m.name for m in state.compile_modules()])
         self.assertFalse(any("MODULE_MINE" in w and "missing from the manifest" in w for w in state.warnings))
 
+    def test_tombstone_is_disabled_even_if_env_enables_it(self):
+        write_manifest(local_manifest_path(self.manifest), [{
+            "key": "MODULE_MINE", "name": "mod-mine", "repo": "https://example.com/mod-mine.git",
+            "status": "blocked", "block_reason": "removed with ./modules.sh remove",
+        }])
+        state = build_state(self.env, self.manifest)
+        mine = next(m for m in state.modules if m.key == "MODULE_MINE")
+        self.assertFalse(mine.enabled_effective)
+        self.assertNotIn("mod-mine", [m.name for m in state.compile_modules()])
+
     def test_override_ref_reaches_module_state(self):
         write_manifest(local_manifest_path(self.manifest), [{"key": "MODULE_A", "ref": "v9"}])
         state = build_state(self.env, self.manifest)

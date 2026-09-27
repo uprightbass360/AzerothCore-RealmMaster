@@ -751,4 +751,7 @@ main(){
   fi
 }
 
-main "$@"
+# Tests source this file for its functions; only run main when executed.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
