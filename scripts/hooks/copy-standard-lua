@@ -1,61 +1,16 @@
 #!/bin/bash
-# Generic hook to copy standard Lua scripts to runtime location
+# Generic hook to stage standard Lua scripts for ALE
 set -e
 
-# Hook environment
-MODULE_KEY="${MODULE_KEY:-}"
-MODULE_DIR="${MODULE_DIR:-}"
-MODULE_NAME="${MODULE_NAME:-}"
-MODULES_ROOT="${MODULES_ROOT:-/modules}"
-LUA_SCRIPTS_TARGET="${LUA_SCRIPTS_TARGET:-/azerothcore/lua_scripts}"
+# shellcheck source-path=SCRIPTDIR source=lib/lua-staging.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/lua-staging.sh"
 
-if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
-    echo "❌ copy-standard-lua: Invalid module directory: $MODULE_DIR"
-    exit 2
-fi
+lua_stage_init copy-standard-lua
 
-echo "📜 copy-standard-lua: Processing $MODULE_NAME"
+# Search locations (in priority order)
+lua_stage_files "$MODULE_DIR/lua_scripts" "lua_scripts/ directory"
+lua_stage_files "$MODULE_DIR/Server Files/lua_scripts" "Server Files/lua_scripts/ (Black Market pattern)"
+lua_stage_files "$MODULE_DIR/scripts" "scripts/ directory"
+lua_stage_files "$MODULE_DIR" "root level Lua files"
 
-# Create target directory if possible
-if ! mkdir -p "$LUA_SCRIPTS_TARGET" 2>/dev/null; then
-    echo "ℹ️  copy-standard-lua: Target directory $LUA_SCRIPTS_TARGET not accessible (will be copied during container build)"
-    exit 0
-fi
-
-copied_count=0
-
-# Function to copy files and count them
-copy_lua_files() {
-    local source_pattern="$1"
-    local label="$2"
-
-    if compgen -G "$source_pattern" > /dev/null 2>&1; then
-        echo "   📂 Found $label"
-        for lua_file in $source_pattern; do
-            if [ -f "$lua_file" ]; then
-                local basename_file
-                basename_file="$(basename "$lua_file")"
-                if cp "$lua_file" "$LUA_SCRIPTS_TARGET/$basename_file" 2>/dev/null; then
-                    echo "      ✅ Copied $basename_file"
-                    copied_count=$((copied_count + 1))
-                else
-                    echo "      ⚠️  Failed to copy $basename_file"
-                fi
-            fi
-        done
-    fi
-}
-
-# Search patterns (in priority order)
-copy_lua_files "$MODULE_DIR/lua_scripts/*.lua" "lua_scripts/ directory"
-copy_lua_files "$MODULE_DIR/Server Files/lua_scripts/*.lua" "Server Files/lua_scripts/ (Black Market pattern)"
-copy_lua_files "$MODULE_DIR/scripts/*.lua" "scripts/ directory"
-copy_lua_files "$MODULE_DIR/*.lua" "root level Lua files"
-
-if [ $copied_count -eq 0 ]; then
-    echo "   ℹ️  No Lua scripts found in standard locations"
-    exit 0
-fi
-
-echo "   ✅ Copied $copied_count Lua script(s) to $LUA_SCRIPTS_TARGET"
-exit 0
+lua_stage_finish

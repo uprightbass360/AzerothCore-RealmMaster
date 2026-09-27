@@ -14,7 +14,9 @@ All hooks receive these environment variables:
 - `MODULE_DIR` - Module directory path (e.g., /modules/eluna-scripts)
 - `MODULE_NAME` - Module name (e.g., eluna-scripts)
 - `MODULES_ROOT` - Base modules directory (/modules)
-- `LUA_SCRIPTS_TARGET` - Target lua_scripts directory (/azerothcore/lua_scripts)
+- `LUA_SCRIPTS_TARGET` - ALE script directory. Set to `/azerothcore/lua_scripts` (the
+  `storage/lua_scripts` mount the worldserver reads) inside the `ac-modules` container; empty
+  for host-side runs from `build.sh`, where Lua hooks skip staging.
 
 ### Return Codes
 - `0` - Success
@@ -23,17 +25,31 @@ All hooks receive these environment variables:
 
 ## Generic Hooks
 
+### Lua staging hooks
+`copy-standard-lua`, `copy-aio-lua`, `copy-aio-server` and `black-market-setup` share
+`lib/lua-staging.sh`. Each module's scripts are staged into their own subfolder,
+`$LUA_SCRIPTS_TARGET/<module name>/`, which is wiped and rebuilt on every run and removed by
+`manage-modules.sh` when the module is disabled. ALE loads subfolders recursively and adds each
+to the Lua `require` path. ALE refuses to load two scripts with the same file name, even from
+different subfolders, and logs "File with same name already loaded".
+
+Exit codes: `0` staged, `1` no Lua found (warning), `2` target not writable (error).
+Tests: `scripts/hooks/tests/test-lua-hooks.sh`.
+
 ### `copy-standard-lua`
-Copies Lua scripts from standard locations to runtime directory.
-Searches for:
+Stages Lua scripts from standard locations (non-recursive):
 - `lua_scripts/*.lua`
-- `*.lua` (root level)
-- `scripts/*.lua`
 - `Server Files/lua_scripts/*.lua` (Black Market pattern)
+- `scripts/*.lua`
+- `*.lua` (root level)
 
 ### `copy-aio-lua`
-Copies AIO-specific Lua scripts for client-server communication.
-Handles both client and server scripts.
+Stages server-side scripts of AIO addon modules from `Server/`, `server/`, `lua_scripts/`,
+`Server Files/lua_scripts/` and the module root. Client files are not copied.
+
+### `copy-aio-server`
+Stages the AIO framework itself (`MODULE_AIO`): the whole `AIO_Server/` tree, preserving
+subfolders such as `Dep_Smallfolk/`. `AIO_Client/` is a client addon and is not copied.
 
 ### `apply-compatibility-patch`
 Applies source code patches for compatibility fixes.

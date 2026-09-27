@@ -1,0 +1,18 @@
+#!/bin/bash
+# Hook for the AIO framework itself (Rochet2/AIO): stage AIO_Server, which
+# every AIO addon module requires at runtime. AIO_Client is client-side only
+# and also contains an AIO.lua, which ALE would reject as a duplicate name.
+set -e
+
+# shellcheck source-path=SCRIPTDIR source=lib/lua-staging.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/lua-staging.sh"
+
+lua_stage_init copy-aio-server
+
+lua_stage_tree "$MODULE_DIR/AIO_Server" "AIO_Server/ directory"
+
+if [ -d "$MODULE_DIR/AIO_Client" ]; then
+    echo "   ℹ️  Note: AIO_Client must be installed as a WoW client addon (not copied to server)"
+fi
+
+lua_stage_finish
