@@ -62,7 +62,9 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --yes|-y) ASSUME_YES=1; shift;;
     --force) FORCE_REBUILD=1; shift;;
-    --force-update) FORCE_UPDATE=1; shift;;
+    # Implies a rebuild: moving the source without compiling it would leave a
+    # running server's data/sql out of sync with what's mounted from source.
+    --force-update) FORCE_UPDATE=1; FORCE_REBUILD=1; shift;;
     --source-path) CUSTOM_SOURCE_PATH="$2"; shift 2;;
     --skip-source-setup) SKIP_SOURCE_SETUP=1; shift;;
     --fresh-modules) FRESH_MODULES=1; shift;;
@@ -203,26 +205,100 @@ core_source_pin_notice(){
 
 # MODULE_PLAYERBOTS's effective ref (repo/ref overrides live in
 # config/module-manifest.local.json; jq may be absent, so parse with python).
-# Prints the empty string when unpinned or on any error.
+# Prints the empty string and returns 0 when unpinned; returns 1 (nothing
+# printed) when the manifest could not be read or parsed, so callers can tell
+# "confirmed unpinned" apart from "don't know" rather than treating a read
+# failure as an unpinned stack.
 playerbots_pinned_ref(){
   local manifest_path="$1"
   local modules_helper="$2"
-  python3 "$modules_helper" --manifest "$manifest_path" manifest --merged 2>/dev/null | python3 -c '
+  local manifest_json
+  if ! manifest_json="$(python3 "$modules_helper" --manifest "$manifest_path" manifest --merged 2>/dev/null)"; then
+    return 1
+  fi
+  python3 -c '
 import json
 import sys
 
 try:
-    data = json.load(sys.stdin)
+    data = json.loads(sys.stdin.read())
 except ValueError:
-    data = {}
+    sys.exit(1)
+
+if not isinstance(data, dict):
+    sys.exit(1)
 
 ref = ""
-for module in data.get("modules", []) if isinstance(data, dict) else []:
-    if module.get("key") == "MODULE_PLAYERBOTS":
+for module in data.get("modules", []):
+    if isinstance(module, dict) and module.get("key") == "MODULE_PLAYERBOTS":
         ref = module.get("ref") or ""
         break
 print(ref)
-'
+' <<< "$manifest_json"
+}
+
+# Runs the core-source update for an existing checkout, once main() knows a
+# build is actually going to happen (called after confirm_build succeeds, and
+# before sync_modules/stage_modules). A freshly-cloned checkout (handled by
+# ensure_source_repo) needs no further update here.
+#
+# Failure handling: a forced update (--force-update) that fails is fatal -
+# building against a source update that couldn't complete is not safe, so
+# this returns non-zero and the caller should stop. An automatic playerbots
+# update that fails only warns and continues: building with the current core
+# is still better than not building at all.
+update_core_source_if_needed(){
+  local src_dir="$1"
+
+  [ -d "$src_dir/.git" ] || return 0
+
+  local use_playerbot_source=0
+  if requires_playerbot_source; then
+    use_playerbot_source=1
+  fi
+
+  local playerbots_ref=""
+  local ref_read_failed=0
+  if [ "$use_playerbot_source" = "1" ]; then
+    if ! playerbots_ref="$(playerbots_pinned_ref "$ROOT_DIR/config/module-manifest.json" "$MODULE_HELPER")"; then
+      ref_read_failed=1
+      playerbots_ref=""
+    fi
+  fi
+
+  # A read failure means we don't actually know whether mod-playerbots is
+  # pinned, so treat it as "don't update" (unless forced) rather than
+  # defaulting to the unpinned behaviour.
+  if [ "$ref_read_failed" = "1" ] && [ "${FORCE_UPDATE:-0}" != "1" ]; then
+    warn "Could not read mod-playerbots' pinned ref from the module manifest; not updating the core source automatically (run ./build.sh --force-update to update it anyway)" >&2
+    return 0
+  fi
+
+  local update_reason
+  update_reason="$(core_source_update_reason "$use_playerbot_source" "${FORCE_UPDATE:-0}" "$playerbots_ref")"
+
+  case "$update_reason" in
+    forced)
+      info "Force update requested - updating source repository to latest" >&2
+      if ! (cd "$ROOT_DIR" && ./scripts/bash/setup-source.sh) >&2; then
+        err "Failed to update source repository" >&2
+        return 1
+      fi
+      ;;
+    playerbots-unpinned)
+      info "mod-playerbots is unpinned; updating the core source to keep it in sync" >&2
+      if ! (cd "$ROOT_DIR" && ./scripts/bash/setup-source.sh) >&2; then
+        warn "Could not update the core source; building with the current core" >&2
+      fi
+      ;;
+    *)
+      if [ "$use_playerbot_source" = "1" ] && [ -n "$playerbots_ref" ]; then
+        info "$(core_source_pin_notice "$playerbots_ref")" >&2
+      fi
+      ;;
+  esac
+
+  return 0
 }
 
 ensure_source_repo(){
@@ -260,30 +336,14 @@ ensure_source_repo(){
   fi
   src_path="${src_path//\/.\//\/}"
 
+  # No update here: ensure_source_repo runs before detect_rebuild_reasons /
+  # confirm_build, so every invocation (including "no build required" runs,
+  # and update-latest.sh's unconditional `build.sh --yes`) would otherwise
+  # move the core source - whose data/sql is mounted into ac-db-import /
+  # ac-db-guard - without pulling mod-playerbots or compiling anything.
+  # update_core_source_if_needed (called from main, after confirm_build has
+  # decided a build will actually happen) does the update instead.
   if [ -d "$src_path/.git" ]; then
-    local playerbots_ref=""
-    if [ "$use_playerbot_source" = "1" ]; then
-      playerbots_ref="$(playerbots_pinned_ref "$ROOT_DIR/config/module-manifest.json" "$MODULE_HELPER")"
-    fi
-
-    local update_reason
-    update_reason="$(core_source_update_reason "$use_playerbot_source" "${FORCE_UPDATE:-0}" "$playerbots_ref")"
-    case "$update_reason" in
-      forced)
-        info "Force update requested - updating source repository to latest" >&2
-        ;;
-      playerbots-unpinned)
-        info "mod-playerbots is unpinned; updating the core source to keep it in sync" >&2
-        ;;
-    esac
-    if [ -n "$update_reason" ]; then
-      if ! (cd "$ROOT_DIR" && ./scripts/bash/setup-source.sh) >&2; then
-        err "Failed to update source repository" >&2
-        exit 1
-      fi
-    elif [ "$use_playerbot_source" = "1" ] && [ -n "$playerbots_ref" ]; then
-      info "$(core_source_pin_notice "$playerbots_ref")" >&2
-    fi
     echo "$src_path"
     return
   fi
@@ -542,6 +602,7 @@ sync_staged_modules(){
       --exclude 'modules-compile.txt' \
       --exclude 'modules-enabled.txt' \
       --exclude '.built-modules' \
+      --exclude '.built-locally' \
       "$local_modules_dir"/ "$staging_modules_dir"/
   else
     # Keep .modules-meta/ (modules-enabled.txt etc. are written straight into
@@ -556,8 +617,9 @@ sync_staged_modules(){
       ! -name 'modules-compile.txt' \
       ! -name 'modules-enabled.txt' \
       ! -name '.built-modules' \
+      ! -name '.built-locally' \
       -exec rm -rf {} + 2>/dev/null || true
-    (cd "$local_modules_dir" && tar cf - --exclude='.modules_state' --exclude='.requires_rebuild' --exclude='.built-modules' .) | (cd "$staging_modules_dir" && tar xf -)
+    (cd "$local_modules_dir" && tar cf - --exclude='.modules_state' --exclude='.requires_rebuild' --exclude='.built-modules' --exclude='.built-locally' .) | (cd "$staging_modules_dir" && tar xf -)
   fi
   if [ -f "$local_modules_dir/.modules_state" ]; then
     cp "$local_modules_dir/.modules_state" "$staging_modules_dir/.modules_state" 2>/dev/null || true
@@ -747,6 +809,12 @@ main(){
   if ! confirm_build "${rebuild_reasons[@]}"; then
     info "Build cancelled or not required."
     exit 0
+  fi
+
+  # Only now do we know a build is actually happening, so it's safe to move
+  # the core source (see update_core_source_if_needed's comment).
+  if ! update_core_source_if_needed "$src_dir"; then
+    exit 1
   fi
 
   info "Step 3/6: Syncing modules to container storage"
