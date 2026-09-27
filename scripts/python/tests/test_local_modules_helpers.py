@@ -1,0 +1,121 @@
+import json
+import os
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+from local_modules import (
+    ProbeError,
+    normalize_repo,
+    probe_clone,
+    repo_basename,
+    set_env_value,
+    write_local_entries,
+)
+
+GIT_ENV = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
+               GIT_COMMITTER_EMAIL="t@t", GIT_CONFIG_GLOBAL=os.devnull)
+
+
+def make_repo(root: Path, files: dict, branch: str = "main") -> Path:
+    root.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", "-b", branch, str(root)], check=True, env=GIT_ENV)
+    for rel, content in files.items():
+        p = root / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(content)
+    subprocess.run(["git", "-C", str(root), "add", "-A"], check=True, env=GIT_ENV)
+    subprocess.run(["git", "-C", str(root), "commit", "-q", "-m", "init"], check=True, env=GIT_ENV)
+    return root
+
+
+class NormalizeTest(unittest.TestCase):
+    def test_normalize_repo_variants(self):
+        variants = [
+            "https://github.com/Foo/mod-bar.git",
+            "https://github.com/foo/mod-bar",
+            "https://github.com/foo/mod-bar/",
+            "http://github.com/foo/mod-bar.git",
+            "  https://GitHub.com/foo/mod-bar.git/ ",
+        ]
+        self.assertEqual(len({normalize_repo(v) for v in variants}), 1)
+
+    def test_different_repos_differ(self):
+        self.assertNotEqual(normalize_repo("https://github.com/a/x"), normalize_repo("https://github.com/b/x"))
+
+    def test_repo_basename(self):
+        self.assertEqual(repo_basename("https://gitlab.com/me/Mod-Thing.git/"), "Mod-Thing")
+        self.assertEqual(repo_basename("/srv/git/lua-ah-bot"), "lua-ah-bot")
+
+
+class EnvFileTest(unittest.TestCase):
+    def setUp(self):
+        self.env = Path(tempfile.mkdtemp()) / ".env"
+
+    def test_creates_missing_file(self):
+        set_env_value(self.env, "MODULE_X", "1")
+        self.assertEqual(self.env.read_text(), "MODULE_X=1\n")
+
+    def test_replaces_in_place(self):
+        self.env.write_text("A=1\nMODULE_X=0\nB=2\n")
+        set_env_value(self.env, "MODULE_X", "1")
+        self.assertEqual(self.env.read_text(), "A=1\nMODULE_X=1\nB=2\n")
+
+    def test_appends_when_absent_without_trailing_newline(self):
+        self.env.write_text("A=1")
+        set_env_value(self.env, "MODULE_X", "1")
+        self.assertEqual(self.env.read_text(), "A=1\nMODULE_X=1\n")
+
+    def test_export_prefix_and_duplicates(self):
+        self.env.write_text("export MODULE_X=0\nA=1\nMODULE_X=0\n")
+        set_env_value(self.env, "MODULE_X", "1")
+        self.assertEqual(self.env.read_text(), "MODULE_X=1\nA=1\n")
+
+    def test_does_not_touch_similar_keys(self):
+        self.env.write_text("MODULE_X_EXTRA=0\n")
+        set_env_value(self.env, "MODULE_X", "1")
+        self.assertEqual(self.env.read_text(), "MODULE_X_EXTRA=0\nMODULE_X=1\n")
+
+
+class WriteLocalEntriesTest(unittest.TestCase):
+    def test_atomic_write(self):
+        path = Path(tempfile.mkdtemp()) / "config" / "module-manifest.local.json"
+        write_local_entries(path, [{"key": "MODULE_X", "name": "x", "repo": "r"}])
+        self.assertEqual(json.loads(path.read_text())["modules"][0]["key"], "MODULE_X")
+        self.assertEqual([p.name for p in path.parent.iterdir()], ["module-manifest.local.json"])
+
+
+class ProbeCloneTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.repo = make_repo(self.tmp / "src", {"a.lua": "print(1)"})
+        subprocess.run(["git", "-C", str(self.repo), "tag", "v1"], check=True, env=GIT_ENV)
+
+    def test_probe_clone_default_branch(self):
+        probe_clone(str(self.repo), None, self.tmp / "out1")
+        self.assertTrue((self.tmp / "out1" / "a.lua").exists())
+
+    def test_probe_clone_tag(self):
+        probe_clone(str(self.repo), "v1", self.tmp / "out2")
+        self.assertTrue((self.tmp / "out2" / "a.lua").exists())
+
+    def test_probe_clone_commit_sha(self):
+        sha = subprocess.run(["git", "-C", str(self.repo), "rev-parse", "HEAD"], capture_output=True,
+                             text=True, check=True).stdout.strip()
+        probe_clone(str(self.repo), sha, self.tmp / "out3")
+        head = subprocess.run(["git", "-C", str(self.tmp / "out3"), "rev-parse", "HEAD"], capture_output=True,
+                              text=True, check=True).stdout.strip()
+        self.assertEqual(head, sha)
+
+    def test_probe_clone_bad_url(self):
+        with self.assertRaises(ProbeError):
+            probe_clone(str(self.tmp / "does-not-exist"), None, self.tmp / "out4")
+
+    def test_probe_clone_bad_ref(self):
+        with self.assertRaises(ProbeError):
+            probe_clone(str(self.repo), "no-such-ref", self.tmp / "out5")
+
+
+if __name__ == "__main__":
+    unittest.main()
