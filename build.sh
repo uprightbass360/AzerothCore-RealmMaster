@@ -458,6 +458,44 @@ resolve_project_image(){
   echo "${project_name}:${tag}"
 }
 
+# Sync the freshly staged module sources ($local_modules_dir) into the
+# container-storage staging dir ($staging_modules_dir) used as the build
+# context, without clobbering files that live only in the staging dir.
+sync_staged_modules(){
+  local local_modules_dir="$1"
+  local staging_modules_dir="$2"
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete \
+      --exclude '.modules_state' \
+      --exclude '.requires_rebuild' \
+      --exclude 'modules.env' \
+      --exclude 'modules-state.json' \
+      --exclude 'modules-compile.txt' \
+      --exclude 'modules-enabled.txt' \
+      --exclude '.built-modules' \
+      "$local_modules_dir"/ "$staging_modules_dir"/
+  else
+    # Keep .modules-meta/ (modules-enabled.txt etc. are written straight into
+    # the staging dir and filter SQL staging); the rsync branch keeps it via
+    # its unanchored excludes.
+    find "$staging_modules_dir" -mindepth 1 -maxdepth 1 \
+      ! -name '.modules_state' \
+      ! -name '.requires_rebuild' \
+      ! -name '.modules-meta' \
+      ! -name 'modules.env' \
+      ! -name 'modules-state.json' \
+      ! -name 'modules-compile.txt' \
+      ! -name 'modules-enabled.txt' \
+      ! -name '.built-modules' \
+      -exec rm -rf {} + 2>/dev/null || true
+    (cd "$local_modules_dir" && tar cf - --exclude='.modules_state' --exclude='.requires_rebuild' --exclude='.built-modules' .) | (cd "$staging_modules_dir" && tar xf -)
+  fi
+  if [ -f "$local_modules_dir/.modules_state" ]; then
+    cp "$local_modules_dir/.modules_state" "$staging_modules_dir/.modules_state" 2>/dev/null || true
+  fi
+}
+
 stage_modules(){
   local src_path="$1"
   local storage_path
@@ -539,33 +577,7 @@ stage_modules(){
 
   ok "Module repositories staged to $local_modules_dir"
   if [ -n "$staging_modules_dir" ]; then
-    if command -v rsync >/dev/null 2>&1; then
-      rsync -a --delete \
-        --exclude '.modules_state' \
-        --exclude '.requires_rebuild' \
-        --exclude 'modules.env' \
-        --exclude 'modules-state.json' \
-        --exclude 'modules-compile.txt' \
-        --exclude 'modules-enabled.txt' \
-        "$local_modules_dir"/ "$staging_modules_dir"/
-    else
-      # Keep .modules-meta/ (modules-enabled.txt etc. are written straight into
-      # the staging dir and filter SQL staging); the rsync branch keeps it via
-      # its unanchored excludes.
-      find "$staging_modules_dir" -mindepth 1 -maxdepth 1 \
-        ! -name '.modules_state' \
-        ! -name '.requires_rebuild' \
-        ! -name '.modules-meta' \
-        ! -name 'modules.env' \
-        ! -name 'modules-state.json' \
-        ! -name 'modules-compile.txt' \
-        ! -name 'modules-enabled.txt' \
-        -exec rm -rf {} + 2>/dev/null || true
-      (cd "$local_modules_dir" && tar cf - --exclude='.modules_state' --exclude='.requires_rebuild' .) | (cd "$staging_modules_dir" && tar xf -)
-    fi
-    if [ -f "$local_modules_dir/.modules_state" ]; then
-      cp "$local_modules_dir/.modules_state" "$staging_modules_dir/.modules_state" 2>/dev/null || true
-    fi
+    sync_staged_modules "$local_modules_dir" "$staging_modules_dir"
   fi
 
   # Cleanup
