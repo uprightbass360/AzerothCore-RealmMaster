@@ -723,7 +723,9 @@
       "repo": "https://github.com/Rochet2/AIO.git",
       "type": "cpp",
       "notes": "Azeroth Interface Override - enables client-server interface communication",
-      "post_install_hooks": [],
+      "post_install_hooks": [
+        "copy-aio-server"
+      ],
       "description": "Pure Lua server-client communication system for bidirectional data transmission",
       "category": "scripting",
       "order": 9999,
