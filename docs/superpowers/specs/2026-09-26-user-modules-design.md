@@ -258,6 +258,16 @@ the escape hatch for pinning a known-good commit.
      container's own filesystem and is discarded when it exits. Host
      `storage/lua_scripts`, which the worldserver mounts, is empty even though three
      copy-hook modules are enabled and cloned (364 `.lua` files between them).
+   - **Prod (.179), same result:**
+     - Four copy-hook modules are enabled: `Eluna-scripts`, `azerothcore-lua-ah-bot`,
+       `Acore_eventScripts`, `ActiveChat`.
+     - `/home/sam/RealmMaster/storage/lua_scripts` is empty, and the running
+       `ac-worldserver` (playerbots image) sees 0 `.lua` files under
+       `/azerothcore/lua_scripts`.
+     - Because `CONTAINER_USER=1001:1000` is non-root, the hook cannot even create
+       the directory. It logs "not accessible (will be copied during container
+       build)" and exits 0, and no such copy step exists. The failure reads as
+       success.
    - **Host path (`build.sh`):** it exports `MODULES_LUA_TARGET_DIR`, which nothing
      reads, so the hook targets `/azerothcore/lua_scripts` on the host.
    - **Side issues:**
