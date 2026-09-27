@@ -173,6 +173,58 @@ requires_playerbot_source(){
   [ "${MODULES_REQUIRES_PLAYERBOT_SOURCE:-0}" = "1" ]
 }
 
+# Pure decision: should ensure_source_repo re-run setup-source.sh for an
+# *existing* checkout? Prints a non-empty reason keyword when it should,
+# nothing when it shouldn't. mod-playerbots regularly needs newer core symbols
+# than an older compiled core provides (e.g. ModuleDatabasePool.h,
+# WorldSession::IsLoggingOut), so on playerbots stacks the core fork and
+# mod-playerbots must move together unless mod-playerbots is pinned.
+core_source_update_reason(){
+  local use_playerbot_source="$1"
+  local force_update="$2"
+  local playerbots_ref="$3"
+
+  if [ "$force_update" = "1" ]; then
+    echo "forced"
+    return
+  fi
+  if [ "$use_playerbot_source" = "1" ] && [ -z "$playerbots_ref" ]; then
+    echo "playerbots-unpinned"
+    return
+  fi
+}
+
+# Info message shown when playerbots is in use but MODULE_PLAYERBOTS is
+# pinned, so the automatic core update above is skipped.
+core_source_pin_notice(){
+  local ref="$1"
+  echo "mod-playerbots is pinned to ${ref}; not updating the core source automatically (run ./build.sh --force-update to update it anyway)"
+}
+
+# MODULE_PLAYERBOTS's effective ref (repo/ref overrides live in
+# config/module-manifest.local.json; jq may be absent, so parse with python).
+# Prints the empty string when unpinned or on any error.
+playerbots_pinned_ref(){
+  local manifest_path="$1"
+  local modules_helper="$2"
+  python3 "$modules_helper" --manifest "$manifest_path" manifest --merged 2>/dev/null | python3 -c '
+import json
+import sys
+
+try:
+    data = json.load(sys.stdin)
+except ValueError:
+    data = {}
+
+ref = ""
+for module in data.get("modules", []) if isinstance(data, dict) else []:
+    if module.get("key") == "MODULE_PLAYERBOTS":
+        ref = module.get("ref") or ""
+        break
+print(ref)
+'
+}
+
 ensure_source_repo(){
   local use_playerbot_source=0
   if requires_playerbot_source; then
@@ -209,12 +261,28 @@ ensure_source_repo(){
   src_path="${src_path//\/.\//\/}"
 
   if [ -d "$src_path/.git" ]; then
-    if [ "${FORCE_UPDATE:-0}" = "1" ]; then
-      info "Force update requested - updating source repository to latest" >&2
+    local playerbots_ref=""
+    if [ "$use_playerbot_source" = "1" ]; then
+      playerbots_ref="$(playerbots_pinned_ref "$ROOT_DIR/config/module-manifest.json" "$MODULE_HELPER")"
+    fi
+
+    local update_reason
+    update_reason="$(core_source_update_reason "$use_playerbot_source" "${FORCE_UPDATE:-0}" "$playerbots_ref")"
+    case "$update_reason" in
+      forced)
+        info "Force update requested - updating source repository to latest" >&2
+        ;;
+      playerbots-unpinned)
+        info "mod-playerbots is unpinned; updating the core source to keep it in sync" >&2
+        ;;
+    esac
+    if [ -n "$update_reason" ]; then
       if ! (cd "$ROOT_DIR" && ./scripts/bash/setup-source.sh) >&2; then
         err "Failed to update source repository" >&2
         exit 1
       fi
+    elif [ "$use_playerbot_source" = "1" ] && [ -n "$playerbots_ref" ]; then
+      info "$(core_source_pin_notice "$playerbots_ref")" >&2
     fi
     echo "$src_path"
     return
