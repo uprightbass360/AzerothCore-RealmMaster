@@ -37,8 +37,12 @@ would strip unknown keys.
   manifest. Every consumer reads the merged view through that loader.
 - A top-level `./modules.sh` (thin wrapper over new `modules.py` subcommands) adds,
   lists and removes local entries, probing the repo to determine its install type.
-- Everything downstream (clone, `ref` checkout, hooks, conf copy, Lua staging, SQL
-  staging) is unchanged: it already operates on manifest entries regardless of origin.
+- Downstream (clone, `ref` checkout, hooks, conf copy, Lua staging, SQL staging)
+  operates on merged manifest entries regardless of origin, with two additions:
+  `manage-modules.sh` re-clones an existing checkout when its origin no longer
+  matches the module's repo (a fork override added or removed), and `remove` leaves
+  a disabled tombstone entry so the next deploy still knows the module and cleans it
+  up like any other disabled module.
 - C++ rebuilds follow automatically. Adding, enabling or disabling a user C++ module
   changes `MODULES_COMPILE`, and `deploy.sh`/`build.sh` compare that list with the
   last build's record (`local-storage/modules/.built-modules`, from #46).
@@ -144,8 +148,12 @@ forwards arguments.
 
 ### `remove`
 
-- **Local-only module:** deletes the entry and sets `MODULE_X=0` in `.env`. The
-  existing `manage-modules.sh` cleanup removes the cloned directory on the next run.
+- **Local-only module:** replaces the entry with a tombstone (`key`, `name`, `repo`,
+  `status: "blocked"`, `block_reason: "removed with ./modules.sh remove"`) and sets
+  `MODULE_X=0` in `.env`. Because the key stays in the merged manifest, the next
+  `manage-modules.sh` run removes the checkout and the staged Lua folder, SQL staging
+  skips it, and it leaves `MODULES_COMPILE`. `list` shows it as `removed`; removing
+  it again is refused; `add` of the same URL or key replaces the tombstone.
 - **Override:** deletes only the override and leaves `MODULE_X` in `.env` untouched,
   so the module reverts to its upstream `repo`/`ref` on the next run. A message says
   so.
@@ -223,9 +231,11 @@ and the worldserver crash-looped.
 - `add` prints the warning below whenever it writes an entry, and the docs repeat it:
   "Lua and SQL from this module run inside your worldserver. If the worldserver
   crash-loops after deploying, run `./modules.sh remove <KEY>` and deploy again."
-- `remove` plus a deploy must fully undo an `add`. Lua is covered: `reset_staged_lua`
-  clears the module's folder. Module SQL that was already applied stays in the
-  database; say so in the `remove` output.
+- `remove` plus a deploy must fully undo an `add`. `remove` keeps the entry as a
+  disabled tombstone (see §3 `remove`), so the next deploy treats it as a disabled
+  module: `remove_disabled_modules` deletes its checkout, `reset_staged_lua` clears
+  its Lua folder, SQL staging skips it, and a C++ module leaves the build set. Module
+  SQL that was already applied stays in the database; say so in the `remove` output.
 
 ## 6. Error handling summary
 

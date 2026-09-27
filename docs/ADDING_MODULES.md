@@ -60,7 +60,7 @@ touches it.
 ./modules.sh add https://github.com/me/mod-thing --ref v1.2   # pinned to a tag, branch or commit
 ./modules.sh add https://github.com/me/mod-transmog --key MODULE_TRANSMOG  # use your fork of a listed module
 ./modules.sh add --key MODULE_TRANSMOG --ref 1a2b3c4           # pin a listed module
-./modules.sh list                                              # local entries: local, override or orphaned
+./modules.sh list                                              # local entries: local, override, removed or orphaned
 ./modules.sh remove MODULE_MOD_THING                           # undo an add or an override
 ```
 
@@ -78,7 +78,10 @@ touches it.
 - Forking or pinning a listed module (`--key` or a URL that overrides one) keeps
   that module's type and `requires`; `--type` is ignored for it, with a warning.
   Re-forking a module that already has a local override (say, a pinned ref)
-  keeps its other override fields.
+  keeps its other override fields. A fork takes effect even if the module is
+  already installed: when a module's repo changes, the next deploy or build
+  re-clones its checkout from the new repo (and removing the override re-clones
+  it from the upstream repo again).
 - `add` refuses a repository that's already listed under a different key (enable
   that key instead), a key that's already taken by another entry (pass a
   different `--key`), a new entry whose folder name (the repository name) is
@@ -89,13 +92,20 @@ touches it.
 - Validation errors only fail the command (exit 1) when they involve the module
   you just added or a module it just enabled; the entry is still written, and the
   message says how to remove it with `./modules.sh remove`.
-- `list` shows KEY, KIND (`local`, `override` or `orphaned`), ENABLED and REPO;
+- `list` shows KEY, KIND (`local`, `override`, `removed` or `orphaned`), ENABLED and REPO;
   an override without its own repo shows `(upstream repo)` there. If the sync
   later drops the upstream entry a partial override has nothing to attach to and
   `list` shows it as `orphaned`.
-- `remove` on your own module deletes it and sets it to `0` in `.env`. On an
-  override, it restores the upstream repo/ref and leaves `.env` alone. Either
-  way, SQL the module already applied stays in the database.
+- `remove` on your own module sets it to `0` in `.env` and keeps its entry as a
+  disabled marker, which `list` shows as `removed`. The next deploy uses that
+  marker to delete the module's checkout and staged Lua and to stop staging its
+  SQL. Removing it again is refused; `add` of the same URL or key replaces the
+  marker. On an override, `remove` deletes the override, restoring the upstream
+  repo/ref, and leaves `.env` alone. Either way, SQL the module already applied
+  stays in the database.
+- `config/module-manifest.local.json` is gitignored, so moving a stack to another
+  host means copying it along with `.env`; `migrate-stack.sh`'s git-clone
+  fallback doesn't carry it.
 - Private repositories work when the host's git can clone them: probing times
   out after 10 minutes, and SSH runs non-interactively, so a private repo over
   SSH needs a working key or agent on the host. The `ac-modules` container has
