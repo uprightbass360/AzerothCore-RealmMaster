@@ -105,6 +105,8 @@ def module_list(env):
                     manifest_map[mod["key"]] = mod
             except Exception:
                 pass
+        except Exception:
+            pass
 
     modules = []
     pattern = re.compile(r"^MODULE_([A-Z0-9_]+)=1$")
