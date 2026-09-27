@@ -1,0 +1,164 @@
+import io
+import json
+import tempfile
+import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+
+from local_modules import main
+from manifest_overlay import LOCAL_MANIFEST_NAME
+from tests.helpers import entry, write_manifest
+from tests.test_local_modules_helpers import make_repo
+
+
+class CliCase(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.repos = Path(tempfile.mkdtemp())
+        (self.root / "config").mkdir()
+        self.upstream_repo = "https://github.com/azerothcore/mod-up.git"
+        write_manifest(self.root / "config" / "module-manifest.json", [
+            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_AIO", name="mod-aio", type="lua"),
+            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
+        ])
+        (self.root / ".env").write_text("MODULE_ELUNA=1\n")
+
+    def run_cli(self, *args):
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            rc = main(["--root", str(self.root), *args])
+        return rc, out.getvalue(), err.getvalue()
+
+    def local_entries(self):
+        path = self.root / "config" / LOCAL_MANIFEST_NAME
+        return json.loads(path.read_text())["modules"] if path.exists() else []
+
+    def env(self):
+        return (self.root / ".env").read_text()
+
+
+class AddTest(CliCase):
+    def test_add_lua_module(self):
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
+        rc, out, _ = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 0)
+        [e] = self.local_entries()
+        self.assertEqual((e["key"], e["name"], e["type"]), ("MODULE_LUA_THING", "lua-thing", "lua"))
+        self.assertEqual(e["post_install_hooks"], ["copy-standard-lua"])
+        self.assertEqual(e["requires"], ["MODULE_ELUNA"])
+        self.assertIn("MODULE_LUA_THING=1", self.env())
+        self.assertIn("run inside your worldserver", out)
+        self.assertIn("./deploy.sh", out)
+
+    def test_add_enables_requires(self):
+        repo = make_repo(self.repos / "aio-thing", {"Server/s.lua": 'local AIO = require("AIO")'})
+        rc, out, _ = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 0)
+        self.assertIn("MODULE_AIO=1", self.env())
+        self.assertIn("MODULE_AIO", out)
+
+    def test_add_cpp_says_build(self):
+        repo = make_repo(self.repos / "mod-mine", {"src/l.cpp": "void Addmod_mineScripts(){}"})
+        rc, out, _ = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 0)
+        self.assertIn("./build.sh", out)
+
+    def test_add_no_enable(self):
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
+        rc, _, _ = self.run_cli("add", str(repo), "--yes", "--no-enable")
+        self.assertEqual(rc, 0)
+        self.assertNotIn("MODULE_LUA_THING", self.env())
+
+    def test_add_records_ref(self):
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
+        import subprocess
+        from tests.test_local_modules_helpers import GIT_ENV
+        subprocess.run(["git", "-C", str(repo), "tag", "v2"], check=True, env=GIT_ENV)
+        rc, _, _ = self.run_cli("add", str(repo), "--ref", "v2", "--yes")
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.local_entries()[0]["ref"], "v2")
+
+    def test_add_rejects_upstream_repo_with_git_suffix(self):
+        rc, _, err = self.run_cli("add", "https://github.com/AzerothCore/mod-up/", "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("MODULE_UP=1", err)
+        self.assertEqual(self.local_entries(), [])
+
+    def test_add_twice_same_url_is_rejected(self):
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
+        self.assertEqual(self.run_cli("add", str(repo), "--yes")[0], 0)
+        rc, _, err = self.run_cli("add", str(repo) + "/", "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("MODULE_LUA_THING", err)
+        self.assertEqual(len(self.local_entries()), 1)
+
+    def test_add_key_collision_needs_explicit_key(self):
+        repo = make_repo(self.repos / "mod-up", {"thing.lua": ""})  # derives MODULE_MOD_UP; force a clash:
+        write_manifest(self.root / "config" / "module-manifest.json",
+                       [entry("MODULE_MOD_UP", name="mod-up-other", repo="https://example.com/other.git")])
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("--key", err)
+
+    def test_add_collection_refused_without_type(self):
+        files = {f"s{i}.lua": "" for i in range(25)}
+        repo = make_repo(self.repos / "scripts", files)
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("--type lua", err)
+        self.assertEqual(self.local_entries(), [])
+
+    def test_add_collection_with_type_lua(self):
+        files = {f"s{i}.lua": "" for i in range(25)}
+        repo = make_repo(self.repos / "scripts", files)
+        rc, _, _ = self.run_cli("add", str(repo), "--type", "lua", "--yes")
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.local_entries()[0]["post_install_hooks"], ["copy-standard-lua"])
+
+    def test_add_undetectable_refused(self):
+        repo = make_repo(self.repos / "tool", {"README.md": "x"})
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("--type", err)
+
+    def test_add_bad_url_writes_nothing(self):
+        rc, _, err = self.run_cli("add", str(self.repos / "missing"), "--yes")
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.local_entries(), [])
+
+    def test_add_refuses_when_local_file_is_invalid(self):
+        path = self.root / "config" / LOCAL_MANIFEST_NAME
+        path.write_text("{broken")
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn(LOCAL_MANIFEST_NAME, err)
+        self.assertEqual(path.read_text(), "{broken")
+
+    def test_ref_only_override(self):
+        rc, out, _ = self.run_cli("add", "--key", "MODULE_UP", "--ref", "v1.2", "--yes")
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.local_entries(), [{"key": "MODULE_UP", "ref": "v1.2"}])
+
+    def test_fork_override(self):
+        fork = make_repo(self.repos / "mod-up", {"src/l.cpp": "void Addmod_upScripts(){}"})
+        rc, _, _ = self.run_cli("add", str(fork), "--key", "MODULE_UP", "--yes")
+        self.assertEqual(rc, 0)
+        [e] = self.local_entries()
+        self.assertEqual((e["key"], e["repo"]), ("MODULE_UP", str(fork)))
+        self.assertNotIn("description", e)
+
+    def test_declined_prompt_writes_nothing(self):
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
+        import builtins
+        from unittest import mock
+        with mock.patch.object(builtins, "input", return_value="n"):
+            rc, _, _ = self.run_cli("add", str(repo))
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.local_entries(), [])
+
+
+if __name__ == "__main__":
+    unittest.main()
