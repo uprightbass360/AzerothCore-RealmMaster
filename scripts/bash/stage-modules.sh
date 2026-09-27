@@ -136,6 +136,27 @@ read_env(){
   if [ -z "$value" ]; then
     value="$default"
   fi
+  # Expand ${VAR} references the way compose interpolation does (same as
+  # deploy.sh): from the env file first, then the process environment.
+  # .env values such as STAGE_PATH_MODULE_SQL=${STORAGE_MODULE_SQL_PATH} are
+  # otherwise returned literally. Unresolvable refs stay literal.
+  local depth=0 ref sub pat
+  while [ "$depth" -lt 10 ] && [[ "$value" =~ \$\{([A-Za-z_][A-Za-z0-9_]*)\} ]]; do
+    ref="${BASH_REMATCH[1]}"
+    sub=""
+    if [ -f "$env_path" ]; then
+      sub="$(grep -E "^${ref}=" "$env_path" | tail -n1 | cut -d'=' -f2- | tr -d '\r')"
+    fi
+    if [ -z "$sub" ]; then
+      sub="${!ref:-}"
+    fi
+    if [ -z "$sub" ]; then
+      break
+    fi
+    pat='${'"$ref"'}'
+    value="${value//"$pat"/$sub}"
+    depth=$((depth + 1))
+  done
   echo "$value"
 }
 
@@ -260,7 +281,11 @@ MODULES_META_DIR="$STORAGE_PATH/modules/.modules-meta"
 RESTORE_PRESTAGED_FLAG="$MODULES_META_DIR/.restore-prestaged"
 MODULES_ENABLED_FILE="$MODULES_META_DIR/modules-enabled.txt"
 STAGE_PATH_MODULE_SQL="$(read_env STAGE_PATH_MODULE_SQL "$STORAGE_PATH/module-sql-updates")"
-STAGE_PATH_MODULE_SQL="$(eval "echo \"$STAGE_PATH_MODULE_SQL\"")"
+case "$STAGE_PATH_MODULE_SQL" in
+  ""|*'${'*)
+    echo "❌ Could not resolve STAGE_PATH_MODULE_SQL (got '${STAGE_PATH_MODULE_SQL}'); check .env" >&2
+    exit 1;;
+esac
 if [[ "$STAGE_PATH_MODULE_SQL" != /* ]]; then
   STAGE_PATH_MODULE_SQL="$PROJECT_DIR/$STAGE_PATH_MODULE_SQL"
 fi
@@ -400,7 +425,8 @@ if [ "$TARGET_PROFILE" = "modules" ]; then
     show_staging_step "Source Rebuild" "Preparing custom build with modules"
     echo "🚀 Triggering source rebuild with modules..."
     if confirm "Proceed with source rebuild? (15-45 minutes)" n; then
-      "$PROJECT_DIR/scripts/bash/rebuild-with-modules.sh" ${ASSUME_YES:+--yes}
+      # Already confirmed above (or --yes was given), so don't prompt again.
+      "$PROJECT_DIR/scripts/bash/rebuild-with-modules.sh" --yes
     else
       echo "❌ Rebuild cancelled"
       exit 1
@@ -508,7 +534,9 @@ stage_module_sql_to_core() {
   local staged_count=0
   local total_skipped=0
   local total_failed=0
-  docker exec ac-worldserver bash -c "find /azerothcore/data/sql/updates -name '*_MODULE_*.sql' -delete" >/dev/null 2>&1 || true
+  # Remove previously staged module SQL (named MODULE_<module>_<file>.sql below) so
+  # files of since-disabled modules do not linger; enabled ones are re-staged.
+  docker exec ac-worldserver bash -c "find /azerothcore/data/sql/updates -name 'MODULE_*.sql' -delete" >/dev/null 2>&1 || true
 
   shopt -s nullglob
   for db_type in db-world db-characters db-auth db-playerbots; do
@@ -599,15 +627,16 @@ stage_module_sql_to_core() {
   done
   shopt -u nullglob
 
+  STAGING_FAILURES=$((STAGING_FAILURES + total_failed))
   echo ""
   if [ "$staged_count" -gt 0 ]; then
     echo "✅ Staged $staged_count module SQL files to core updates directory"
-    [ "$total_skipped" -gt 0 ] && echo "⚠️  Skipped $total_skipped empty/invalid file(s)"
-    [ "$total_failed" -gt 0 ] && echo "❌ Failed to stage $total_failed file(s)"
     echo "🔄 Restart worldserver to apply: docker restart ac-worldserver"
-  else
+  elif [ "$total_failed" -eq 0 ]; then
     echo "ℹ️  No module SQL files found to stage"
   fi
+  if [ "$total_skipped" -gt 0 ]; then echo "⚠️  Skipped $total_skipped file(s) (empty, invalid or module disabled)"; fi
+  if [ "$total_failed" -gt 0 ]; then echo "❌ Failed to stage $total_failed module SQL file(s); see errors above"; fi
 }
 
 get_module_dbc_path(){
@@ -617,16 +646,17 @@ get_module_dbc_path(){
   if [ ! -f "$manifest_file" ]; then
     return 1
   fi
-
-  if command -v jq >/dev/null 2>&1; then
-    local dbc_path
-    dbc_path=$(jq -r ".modules[] | select(.name == \"$module_name\") | .server_dbc_path // empty" "$manifest_file" 2>/dev/null)
-    if [ -n "$dbc_path" ]; then
-      echo "$dbc_path"
-      return 0
-    fi
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "  ⚠️  jq not installed; cannot read server_dbc_path for $module_name, DBC files not staged" >&2
+    return 1
   fi
 
+  local dbc_path
+  dbc_path=$(jq -r ".modules[] | select(.name == \"$module_name\") | .server_dbc_path // empty" "$manifest_file" 2>/dev/null)
+  if [ -n "$dbc_path" ]; then
+    echo "$dbc_path"
+    return 0
+  fi
   return 1
 }
 
@@ -692,16 +722,19 @@ stage_module_dbc_files(){
   done
   shopt -u nullglob
 
+  STAGING_FAILURES=$((STAGING_FAILURES + failed))
   echo ""
   if [ "$staged_count" -gt 0 ]; then
     echo "✅ Staged $staged_count module DBC files to server data directory"
-    [ "$skipped" -gt 0 ] && echo "⚠️  Skipped $skipped file(s) (no server_dbc_path in manifest)"
-    [ "$failed" -gt 0 ] && echo "❌ Failed to stage $failed file(s)"
     echo "🔄 Restart worldserver to load new DBC data: docker restart ac-worldserver"
-  else
+  elif [ "$failed" -eq 0 ]; then
     echo "ℹ️  No module DBC files found to stage (use 'server_dbc_path' in manifest to enable)"
   fi
+  if [ "$skipped" -gt 0 ]; then echo "⚠️  Skipped $skipped DBC file(s) or folder(s) (missing or empty)"; fi
+  if [ "$failed" -gt 0 ]; then echo "❌ Failed to stage $failed DBC file(s); see errors above"; fi
 }
+
+STAGING_FAILURES=0
 
 # Stage module SQL (this will also start the containers)
 stage_module_sql_to_core
@@ -709,7 +742,11 @@ stage_module_sql_to_core
 # Stage module DBC files
 stage_module_dbc_files
 
-printf '\n%b\n' "${GREEN}⚔️ Realm staging completed successfully! ⚔️${NC}"
+if [ "$STAGING_FAILURES" -gt 0 ]; then
+  printf '\n%b\n' "${YELLOW}⚠️  Realm staging finished with ${STAGING_FAILURES} failed file(s); see errors above${NC}"
+else
+  printf '\n%b\n' "${GREEN}⚔️ Realm staging completed successfully! ⚔️${NC}"
+fi
 printf '%b\n' "${GREEN}🏰 Profile: services-$TARGET_PROFILE${NC}"
 printf '%b\n' "${GREEN}🗡️ Your realm is ready for adventure!${NC}"
 
