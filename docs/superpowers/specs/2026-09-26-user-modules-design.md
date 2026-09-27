@@ -277,7 +277,29 @@ the escape hatch for pinning a known-good commit.
        overwrite each other.
      - Nothing removes a disabled module's Lua files.
 
+   - **Root cause: this has never worked.**
+     - No commit in `docker-compose.yml` history has ever mounted `lua_scripts` in
+       `ac-modules`.
+     - The hooks arrived in `9e4eae1` (2025-11-01). `78eb55d` ("fixing … default lua
+       install") then changed the failing `mkdir` from `exit 1` with a warning to
+       `exit 0` with the "will be copied during container build" message. No such
+       copy step exists, and the repo has no Dockerfile. The "fix" hid the failure.
+   - **Runtime side is correct:** the worldserver's cwd is `/azerothcore`, so ALE's
+     default `ALE.ScriptPath = "lua_scripts"` resolves to the mounted
+     `/azerothcore/lua_scripts`. Only the staging side is broken.
+
    This directly affects user Lua modules and blocks their end-to-end test.
+8. **`AC_ELUNA_*` env vars are dead.** `docker-compose.yml` injects
+   `AC_ELUNA_ENABLED`, `…_SCRIPT_PATH`, `…_AUTO_RELOAD`, `…_TRACE_BACK` and others,
+   sourced from `.env.template` and `setup/defaults.sh`.
+   - The module is now mod-ale, whose config keys are `ALE.*`. AzerothCore derives
+     override names from the key (`Config.cpp` `IniKeyToEnvVarKey`: `ALE.ScriptPath`
+     becomes `AC_ALE_SCRIPT_PATH`), so the `AC_ELUNA_*` names match nothing.
+   - On prod the env says `AC_ELUNA_AUTO_RELOAD=1` and `AC_ELUNA_TRACE_BACK=1`, while
+     the effective `mod_ale.conf` has `ALE.AutoReload = false` and
+     `ALE.TraceBack = false`.
+   - Fix: rename to `AC_ALE_*`, and check the setup defaults still reflect the
+     intended values.
 2. **Scraped Lua entries lack hooks and `requires`.** 57 upstream Lua entries have
    neither, so enabling one may stage nothing. Reuse the section 4 detection in
    `update_module_manifest.py` to fill them in during sync.
