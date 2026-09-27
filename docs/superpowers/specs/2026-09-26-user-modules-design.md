@@ -249,11 +249,25 @@ the escape hatch for pinning a known-good commit.
 
 ## Follow-ups (separate issues)
 
-1. **Lua staging may be broken for all modules (unverified).** The hooks copy to a
-   hard-coded `LUA_SCRIPTS_TARGET=/azerothcore/lua_scripts`
-   (`manage-modules.sh:143`), `ac-modules` does not mount `lua_scripts`, and
-   `MODULES_LUA_TARGET_DIR` exported at `build.sh:488` is never read. Reproduce, then
-   fix. This directly affects user Lua modules.
+1. **Lua staging is broken for all modules (confirmed 2026-09-26 on the local
+   stack).** `manage-modules.sh:143` hard-codes
+   `LUA_SCRIPTS_TARGET=/azerothcore/lua_scripts`, and `ac-modules` does not mount
+   `storage/lua_scripts`.
+   - **Evidence:** the `ac-modules` log shows `copy-standard-lua` reporting "Copied
+     10 Lua script(s) to /azerothcore/lua_scripts", but that path lives in the
+     container's own filesystem and is discarded when it exits. Host
+     `storage/lua_scripts`, which the worldserver mounts, is empty even though three
+     copy-hook modules are enabled and cloned (364 `.lua` files between them).
+   - **Host path (`build.sh`):** it exports `MODULES_LUA_TARGET_DIR`, which nothing
+     reads, so the hook targets `/azerothcore/lua_scripts` on the host.
+   - **Side issues:**
+     - `export MODULE_NAME=…` targets an associative array, so hooks receive an empty
+       `MODULE_NAME` (visible as "Processing " with a blank name).
+     - The hooks flatten files by basename, so files from different modules can
+       overwrite each other.
+     - Nothing removes a disabled module's Lua files.
+
+   This directly affects user Lua modules and blocks their end-to-end test.
 2. **Scraped Lua entries lack hooks and `requires`.** 57 upstream Lua entries have
    neither, so enabling one may stage nothing. Reuse the section 4 detection in
    `update_module_manifest.py` to fill them in during sync.
