@@ -35,7 +35,8 @@ republished after each sync.
   folder name. Enable only one of them.
 
 Modules that aren't public GitHub repositories, repositories without a topic, forks,
-and pinned refs can be added locally with `./modules.sh` (next section).
+and pinned refs can be added locally with `./modules.sh` (see
+[Adding a module yourself](#adding-a-module-yourself-modulessh) below).
 
 ## Enabling a module
 
@@ -63,10 +64,12 @@ touches it.
 ./modules.sh remove MODULE_MOD_THING                           # undo an add or an override
 ```
 
-- `add` clones the repository to a temp folder, works out the type (C++, Lua or
-  SQL) and the staging hook, shows the entry as JSON and asks before writing it.
-  `--yes` skips the question; without a terminal (nothing to answer the prompt),
-  `add` needs `--yes` or it refuses.
+- Given a git URL, `add` clones the repository to a temp folder, works out the
+  type (C++, Lua or SQL) and the staging hook. Given `--key MODULE_X --ref
+  <ref>` instead, it doesn't clone or detect anything: it pins that listed
+  module to the ref. Either way it shows the entry as JSON and asks before
+  writing it. `--yes` skips the question; without a terminal (nothing to
+  answer the prompt), `add` needs `--yes` or it refuses.
 - Every add enables the module and anything it requires in `.env` (`--no-enable`
   leaves `.env` alone), then validates and prints what to run next: `./build.sh`
   for a new C++ module, `./build.sh --force` for a C++ fork or pin (the rebuild

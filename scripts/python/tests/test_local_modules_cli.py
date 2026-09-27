@@ -261,6 +261,13 @@ class AddTest(CliCase):
         self.assertEqual(rc, 0)
         self.assertIn("ignored", err)
 
+    def test_ref_only_override_type_flag_is_ignored_with_warning(self):
+        rc, _, err = self.run_cli("add", "--key", "MODULE_UP", "--ref", "v1", "--type", "lua", "--yes")
+        self.assertEqual(rc, 0)
+        self.assertIn("ignored", err)
+        [e] = self.local_entries()
+        self.assertEqual(e, {"key": "MODULE_UP", "ref": "v1"})
+
     def test_refork_keeps_existing_override_fields(self):
         self.assertEqual(self.run_cli("add", "--key", "MODULE_UP", "--ref", "v1", "--yes")[0], 0)
         fork = make_repo(self.repos / "mod-up", {"src/l.cpp": "void Addmod_upScripts(){}"})
