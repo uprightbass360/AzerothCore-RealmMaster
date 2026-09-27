@@ -271,6 +271,13 @@ install_enabled_modules(){
     if [ "${MODULES_FORCE_RECLONE:-0}" = "1" ] && [ -d "$dir" ]; then
       info "MODULES_FORCE_RECLONE=1: re-cloning $dir fresh"
       reclone_module_fresh "$dir" "$repo" "$ref" || install_failures+=("$dir")
+    elif [ "${MODULES_LOCAL_RUN:-0}" != "1" ] && [ "${MODULE_NEEDS_BUILD[$key]:-0}" = "1" ] && [ -d "$dir/.git" ]; then
+      # build.sh stages the compiled checkouts into local-storage/modules and
+      # stage-modules.sh syncs them to storage/modules before containers
+      # start, so the container already has the built version; pulling it (or
+      # re-cloning it on an origin change) here would stage SQL/config newer
+      # than the compiled binary.
+      info "$dir is compiled into the server; keeping the built checkout"
     elif [ -d "$dir/.git" ] && current_origin="$(git -C "$dir" remote get-url origin 2>/dev/null || true)" \
       && [ "$(normalize_repo_url "$current_origin")" != "$(normalize_repo_url "$repo")" ]; then
       # The module's repo changed (e.g. a fork override added or removed).
