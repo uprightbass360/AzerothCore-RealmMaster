@@ -241,28 +241,38 @@ apply_playerbot_interrupt_patch() {
     return 2
 }
 
-# Apply all patches
-patch_count=0
+# Apply all patches. Each returns 0 (patched or nothing to do), 1 (warning,
+# e.g. target file missing) or 2 (patch failed); the hook exits with the worst.
+checked=0
+warned=0
+failed=0
+run_patch() {
+    local rc=0
+    "$@" || rc=$?
+    checked=$((checked + 1))
+    case $rc in
+        0) ;;
+        1) warned=$((warned + 1)) ;;
+        *) failed=$((failed + 1)) ;;
+    esac
+}
 if [ "$APPLY_RESURRECT_SIGNATURE_PATCH" = "1" ]; then
-    if apply_resurrect_signature_patch; then
-        patch_count=$((patch_count + 1))
-    fi
+    run_patch apply_resurrect_signature_patch
 fi
 if [ "$APPLY_PACKET_SIGNATURE_PATCH" = "1" ]; then
-    if apply_packet_signature_patch; then
-        patch_count=$((patch_count + 1))
-    fi
+    run_patch apply_packet_signature_patch
 fi
 if [ "$APPLY_PLAYERBOT_INTERRUPT_PATCH" = "1" ]; then
-    if apply_playerbot_interrupt_patch; then
-        patch_count=$((patch_count + 1))
-    fi
+    run_patch apply_playerbot_interrupt_patch
 fi
 
-if [ $patch_count -eq 0 ]; then
-    echo "   ℹ️  No patches needed or applied"
-    exit 0
+if [ "$failed" -gt 0 ]; then
+    echo "   ❌ $failed of $checked compatibility patch(es) failed; mod-ale may not compile"
+    exit 2
 fi
-
-echo "   ✅ Applied $patch_count compatibility patch(es)"
+if [ "$warned" -gt 0 ]; then
+    echo "   ⚠️  $warned of $checked compatibility check(s) could not run; see warnings above"
+    exit 1
+fi
+echo "   ✅ $checked compatibility check(s) passed"
 exit 0
