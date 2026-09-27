@@ -15,6 +15,7 @@ trap 'rm -rf "$WORK"' EXIT
 
 # Sourcing manage-modules.sh without its main guard would run a real module pass
 # in the current directory; refuse rather than risk that.
+# shellcheck disable=SC2016  # literal pattern, nothing to expand
 grep -q '^if \[\[ "${BASH_SOURCE\[0\]}" == "$0" \]\]; then' "$REPO_ROOT/scripts/bash/manage-modules.sh" \
   || { echo "manage-modules.sh has no main guard; not sourcing it" >&2; exit 1; }
 
