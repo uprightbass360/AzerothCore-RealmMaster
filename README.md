@@ -117,7 +117,7 @@ Want a shortcut? Use a preset (`RealmMaster`, `suggested-modules`, `playerbots-s
 - **Gameplay** - Autobalance, challenge modes, hardcore mode
 - **Services** - Transmog, profession NPCs, talent templates
 
-Browse the complete catalog with <https://uprightbass360.github.io/AzerothCore-RealmMaster/> 
+Browse the complete catalog with <https://uprightbass360.github.io/AzerothCore-RealmMaster/>. To get your own module listed, see [Adding Modules](docs/ADDING_MODULES.md).
 ---
 
 ## Custom NPCs Guide

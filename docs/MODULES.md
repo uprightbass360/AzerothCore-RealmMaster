@@ -1,5 +1,7 @@
 # AzerothCore RealmMaster - Module Catalog
 
+To get a new module listed, or to learn how each module type is installed, see [ADDING_MODULES.md](ADDING_MODULES.md).
+
 This document provides a comprehensive overview of all available modules in the AzerothCore RealmMaster project. These modules enhance gameplay, provide quality-of-life improvements, add new features, and extend server functionality.
 
 ## Overview
