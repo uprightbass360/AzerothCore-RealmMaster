@@ -717,3 +717,10 @@ printf '%b\n' "${GREEN}🗡️ Your realm is ready for adventure!${NC}"
 printf '\n'
 echo "📊 Service Status:"
 docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" | grep -E "(ac-worldserver|ac-authserver|ac-phpmyadmin|ac-keira3|NAME)" || true
+
+# Post-install hook failures recorded by the ac-modules run of this deploy
+HOOK_FAILURES_FILE="$MODULES_META_DIR/hook-failures.txt"
+if [ -s "$HOOK_FAILURES_FILE" ]; then
+  printf '\n%b\n' "${YELLOW}⚠️  Module post-install hooks failed during this deploy (details: docker logs ac-modules):${NC}"
+  sed 's/^/   - /' "$HOOK_FAILURES_FILE"
+fi

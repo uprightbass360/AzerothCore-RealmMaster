@@ -20,8 +20,10 @@ All hooks receive these environment variables:
 
 ### Return Codes
 - `0` - Success
-- `1` - Warning (logged but not fatal)
-- `2` - Error (logged and fatal)
+- `1` - Warning (logged, never fatal)
+- `2` or higher - Error. A hook named in the manifest that doesn't exist counts as an error too.
+  - Host-side runs (from `build.sh`) stop before the build, because these hooks prepare sources that are about to be compiled.
+  - Runs inside `ac-modules` during a deploy record the failure in `storage/modules/.modules-meta/hook-failures.txt`. `stage-modules.sh` lists it at the end of the deploy. The container still exits 0, because the worldserver doesn't wait on it and failing it would only block `ac-post-install`.
 
 ## Generic Hooks
 

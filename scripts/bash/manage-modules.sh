@@ -31,6 +31,7 @@ DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_FILE")"
 # Module-specific state
 PLAYERBOTS_DB_UPDATE_LOGGED=0
 MODULES_INSTALL_FAILED=0
+declare -a HOOK_FAILURES=()
 
 # Declare module metadata arrays globally at script level
 declare -A MODULE_NAME MODULE_REPO MODULE_REF MODULE_TYPE MODULE_ENABLED MODULE_NEEDS_BUILD MODULE_BLOCKED MODULE_POST_INSTALL MODULE_REQUIRES MODULE_CONFIG_CLEANUP MODULE_NOTES MODULE_STATUS MODULE_BLOCK_REASON
@@ -172,11 +173,15 @@ run_post_install_hooks(){
         local exit_code=$?
         case $exit_code in
           1) warn "Hook '$hook' completed with warnings" ;;
-          *) err "Hook '$hook' failed with exit code $exit_code" ;;
+          *)
+            err "Hook '$hook' failed with exit code $exit_code"
+            HOOK_FAILURES+=("${MODULE_NAME[$key]:-$key}: $hook (exit $exit_code)")
+            ;;
         esac
       fi
     else
       err "Hook script not found for ${hook} (searched: ${hook_search_paths[*]})"
+      HOOK_FAILURES+=("${MODULE_NAME[$key]:-$key}: $hook (hook not found)")
     fi
   done
 }
@@ -666,6 +671,31 @@ track_module_state(){
   fi
 }
 
+# Hook failures (exit >= 2, or a hook named in the manifest that doesn't exist).
+# Host-side runs prepare sources for build.sh, so a failure stops the build.
+# ac-modules runs record them for stage-modules.sh to report at the end of the
+# deploy instead of failing the container: the worldserver doesn't wait on
+# ac-modules, so failing it would only block ac-post-install (first-install
+# realm setup).
+report_hook_failures(){
+  local record="${STATE_DIR%/}/.modules-meta/hook-failures.txt"
+  if [ "${#HOOK_FAILURES[@]}" -eq 0 ]; then
+    rm -f "$record" 2>/dev/null || true
+    return 0
+  fi
+
+  err "${#HOOK_FAILURES[@]} post-install hook(s) failed:"
+  printf '   - %s\n' "${HOOK_FAILURES[@]}" >&2
+
+  if [ "${MODULES_LOCAL_RUN:-0}" = "1" ]; then
+    fatal "Post-install hook failures; aborting before the build"
+  fi
+
+  if ! { mkdir -p "$(dirname "$record")" && printf '%s\n' "${HOOK_FAILURES[@]}" > "$record"; }; then
+    warn "Could not record hook failures at $record"
+  fi
+}
+
 main(){
   # Python is already checked at script start via require_cmd
 
@@ -687,6 +717,7 @@ main(){
   # Build-time SQL staging has been removed as it created files that were never processed.
 
   track_module_state
+  report_hook_failures
 
   if [ "${MODULES_INSTALL_FAILED:-0}" = "1" ]; then
     fatal "Module management finished with clone failures; see errors above"
