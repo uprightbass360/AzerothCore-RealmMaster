@@ -1,9 +1,11 @@
 import json
 import os
+import stat
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from local_modules import (
     ProbeError,
@@ -13,6 +15,7 @@ from local_modules import (
     set_env_value,
     write_local_entries,
 )
+import local_modules
 
 GIT_ENV = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
                GIT_COMMITTER_EMAIL="t@t", GIT_CONFIG_GLOBAL=os.devnull)
@@ -84,6 +87,8 @@ class WriteLocalEntriesTest(unittest.TestCase):
         write_local_entries(path, [{"key": "MODULE_X", "name": "x", "repo": "r"}])
         self.assertEqual(json.loads(path.read_text())["modules"][0]["key"], "MODULE_X")
         self.assertEqual([p.name for p in path.parent.iterdir()], ["module-manifest.local.json"])
+        # Verify file is readable by all (0o644)
+        self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o644)
 
 
 class ProbeCloneTest(unittest.TestCase):
@@ -115,6 +120,47 @@ class ProbeCloneTest(unittest.TestCase):
     def test_probe_clone_bad_ref(self):
         with self.assertRaises(ProbeError):
             probe_clone(str(self.repo), "no-such-ref", self.tmp / "out5")
+
+    def test_probe_clone_timeout_raises_probe_error(self):
+        with mock.patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=1)
+            dest = self.tmp / "out_timeout"
+            with self.assertRaises(ProbeError) as cm:
+                probe_clone("https://example.com/repo.git", None, dest)
+            self.assertIn("timed out", str(cm.exception))
+            self.assertFalse(dest.exists(), "Destination directory should be cleaned up on timeout")
+
+    def test_probe_clone_timeout_cleanup_on_full_clone(self):
+        with mock.patch("subprocess.run") as mock_run:
+            # First call succeeds (shallow clone attempt), second call fails with timeout (full clone)
+            mock_run.side_effect = [
+                mock.MagicMock(returncode=1, stderr="fatal: error"),
+                subprocess.TimeoutExpired(cmd="git", timeout=1)
+            ]
+            dest = self.tmp / "out_timeout_full"
+            with self.assertRaises(ProbeError):
+                probe_clone("https://example.com/repo.git", "somehash", dest)
+            self.assertFalse(dest.exists(), "Destination directory should be cleaned up on timeout during full clone")
+
+    def test_git_ssh_command_is_batch_mode_by_default(self):
+        with mock.patch("subprocess.run") as mock_run:
+            mock_run.return_value = mock.MagicMock(returncode=0)
+            probe_clone(str(self.repo), None, self.tmp / "out_ssh_default")
+            # Check that GIT_SSH_COMMAND is set
+            call_args = mock_run.call_args
+            env = call_args.kwargs.get("env", {})
+            self.assertEqual(env.get("GIT_SSH_COMMAND"), "ssh -o BatchMode=yes")
+
+    def test_git_ssh_command_is_preserved_when_set(self):
+        custom_ssh_cmd = "ssh -i /custom/key"
+        with mock.patch.dict(os.environ, {"GIT_SSH_COMMAND": custom_ssh_cmd}):
+            with mock.patch("subprocess.run") as mock_run:
+                mock_run.return_value = mock.MagicMock(returncode=0)
+                probe_clone(str(self.repo), None, self.tmp / "out_ssh_custom")
+                # Check that GIT_SSH_COMMAND is preserved
+                call_args = mock_run.call_args
+                env = call_args.kwargs.get("env", {})
+                self.assertEqual(env.get("GIT_SSH_COMMAND"), custom_ssh_cmd)
 
 
 if __name__ == "__main__":
