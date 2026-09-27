@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Iterable, List
 
+from manifest_overlay import ManifestError, load_merged_manifest
+
 
 def load_manifest(path: str) -> dict:
     manifest_path = Path(path)
@@ -15,10 +17,16 @@ def load_manifest(path: str) -> dict:
         print(f"ERROR: Module manifest not found at {manifest_path}", file=sys.stderr)
         sys.exit(1)
     try:
-        return json.loads(manifest_path.read_text())
+        modules, warnings = load_merged_manifest(manifest_path)
     except json.JSONDecodeError as exc:
         print(f"ERROR: Failed to parse manifest {manifest_path}: {exc}", file=sys.stderr)
         sys.exit(1)
+    except ManifestError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
+    for warning in warnings:
+        print(f"WARNING: {warning}", file=sys.stderr)
+    return {"modules": modules}
 
 
 def iter_modules(manifest: dict) -> Iterable[dict]:
