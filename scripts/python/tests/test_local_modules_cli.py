@@ -128,6 +128,45 @@ class AddTest(CliCase):
         self.assertIn("--key MODULE_PLAYERBOTS", err)
         self.assertEqual(self.local_entries(), [])
 
+    def _write_transmog_manifest(self):
+        # Two upstream entries legitimately share the "mod-transmog" folder name
+        # (a fork listed alongside the original) -- the real manifest has 17 such
+        # pairs. Overriding either existing key must not trip the folder guard.
+        write_manifest(self.root / "config" / "module-manifest.json", [
+            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_AIO", name="mod-aio", type="lua"),
+            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
+            entry("MODULE_TRANSMOG", name="mod-transmog",
+                  repo="https://github.com/example/mod-transmog.git", type="cpp"),
+            entry("MODULE_MOD_TRANSMOG", name="mod-transmog",
+                  repo="https://github.com/example/mod-transmog-fork.git", type="cpp"),
+        ])
+
+    def test_fork_override_of_second_entry_sharing_a_folder(self):
+        self._write_transmog_manifest()
+        fork = make_repo(self.repos / "mod-transmog", {"src/l.cpp": "void Addmod_transmogScripts(){}"})
+        rc, _, _ = self.run_cli("add", str(fork), "--key", "MODULE_MOD_TRANSMOG", "--yes")
+        self.assertEqual(rc, 0)
+        [e] = self.local_entries()
+        self.assertEqual(e["key"], "MODULE_MOD_TRANSMOG")
+
+    def test_fork_override_of_first_entry_sharing_a_folder(self):
+        self._write_transmog_manifest()
+        fork = make_repo(self.repos / "mod-transmog", {"src/l.cpp": "void Addmod_transmogScripts(){}"})
+        rc, _, _ = self.run_cli("add", str(fork), "--key", "MODULE_TRANSMOG", "--yes")
+        self.assertEqual(rc, 0)
+        [e] = self.local_entries()
+        self.assertEqual(e["key"], "MODULE_TRANSMOG")
+
+    def test_fork_new_key_sharing_a_listed_folder_is_refused(self):
+        self._write_transmog_manifest()
+        fork = make_repo(self.repos / "mod-transmog", {"src/l.cpp": "void Addmod_transmogScripts(){}"})
+        rc, _, err = self.run_cli("add", str(fork), "--key", "MODULE_NEW_TRANSMOG", "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("--key MODULE_TRANSMOG", err)
+        self.assertEqual(self.local_entries(), [])
+
     def test_add_collection_refused_without_type(self):
         files = {f"s{i}.lua": "" for i in range(25)}
         repo = make_repo(self.repos / "scripts", files)
