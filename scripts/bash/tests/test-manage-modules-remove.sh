@@ -1,4 +1,6 @@
 #!/bin/bash
+# pass/fail never fail, so A && pass || fail is safe here.
+# shellcheck disable=SC2015
 # `./modules.sh remove` followed by a deploy must undo `./modules.sh add`: the
 # next manage-modules.sh run removes the module's checkout and its staged Lua.
 # Runs the real local_modules.py remove against a temp project root, then the
@@ -16,6 +18,7 @@ trap 'rm -rf "$WORK"' EXIT
 
 # Sourcing manage-modules.sh without its main guard would run a real module pass
 # in the current directory; refuse rather than risk that.
+# shellcheck disable=SC2016  # literal pattern, nothing to expand
 grep -q '^if \[\[ "${BASH_SOURCE\[0\]}" == "$0" \]\]; then' "$REPO_ROOT/scripts/bash/manage-modules.sh" \
   || { echo "manage-modules.sh has no main guard; not sourcing it" >&2; exit 1; }
 
