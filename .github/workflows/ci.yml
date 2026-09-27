@@ -1,0 +1,51 @@
+name: CI
+
+# Tests and config checks for pull requests (including Dependabot's) and main.
+# Needs only bash, git and Python's standard library: no docker, no network.
+# Automated manifest-sync PRs are created with GITHUB_TOKEN, which doesn't
+# trigger workflows; that job runs its own gates before merging.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Python unit tests
+        run: python3 -m unittest discover -s scripts/python/tests -t scripts/python
+
+      - name: Shell test suites
+        run: |
+          status=0
+          for t in scripts/bash/tests/*.sh scripts/hooks/tests/test-lua-hooks.sh; do
+            echo "::group::$t"
+            if bash "$t"; then
+              echo "::endgroup::"
+            else
+              echo "::endgroup::"
+              echo "::error file=$t::$t failed"
+              status=1
+            fi
+          done
+          exit $status
+
+      - name: Config UI round-trip check
+        run: python3 tools/config-ui/check_roundtrip.py

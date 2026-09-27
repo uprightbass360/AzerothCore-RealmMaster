@@ -3,6 +3,13 @@ name: Publish config UI
 on:
   push:
     branches: [main]
+    # Only what the site is built from. The manifest sync dispatches this
+    # workflow directly after merging (its GITHUB_TOKEN merge triggers no push).
+    paths:
+      - 'tools/config-ui/**'
+      - 'config/**'
+      - 'img/config-builder-banner.jpg'
+      - '.github/workflows/config-ui-pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -10,9 +17,11 @@ permissions:
   pages: write
   id-token: write
 
+# Queue deploys instead of cancelling one mid-flight, which can leave the
+# Pages deployment stuck; the newest queued run still wins.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   publish:

@@ -20,8 +20,9 @@ Add one of these topics to the module's GitHub repository:
 | `azerothcore-tools` | `tool` | Tools; cloned when enabled, not part of the server build |
 
 The sync (`.github/workflows/update-module-manifest.yml`) searches these topics,
-including forks, and adds every new repository to the manifest. The config UI is
-republished after each sync.
+including forks, and adds every new repository to the manifest. It runs daily; the
+config UI is republished after each sync, and the nightly images are built right
+after it, so a new module is in the next morning's images.
 
 - **Key:** the repository name, upper-cased, with non-alphanumerics turned into `_`
   and a `MODULE_` prefix. `lottery-lua` becomes `MODULE_LOTTERY_LUA`. Older curated

@@ -153,8 +153,8 @@ with `git diff`, and commit; `setup.sh`/`deploy.sh` remain the only things
 that act on configuration.
 
 - **Hosted:** **<https://uprightbass360.github.io/AzerothCore-RealmMaster/>** —
-  published to GitHub Pages from `main` on every push
-  (`.github/workflows/config-ui-pages.yml`); data shown is updated weekly
+  published to GitHub Pages from `main` whenever the UI or `config/` changes
+  (`.github/workflows/config-ui-pages.yml`); data shown is updated daily
 
 ---
 

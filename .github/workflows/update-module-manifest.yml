@@ -4,8 +4,10 @@ on:
   workflow_dispatch:
   schedule:
     # Daily, off the hour: GitHub delays top-of-the-hour scheduled runs under load.
-    # A PR is only opened when the manifest actually changed.
-    - cron: '23 9 * * *'
+    # A PR is only opened when the manifest actually changed. Scheduled runs
+    # start the nightly build when they finish (last step), so the images are
+    # built from the manifest this run just synced.
+    - cron: '23 5 * * *'
 
 # One sync at a time: a manual dispatch overlapping the schedule would race on
 # the same PR branch and merge.
@@ -105,3 +107,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run config-ui-pages.yml --ref main
+
+      - name: Start nightly build
+        # Runs even if the sync failed: a broken sync must not cost the day's
+        # images. build-and-publish.yml keeps a later fallback schedule that
+        # skips itself when this dispatch already produced a build today.
+        if: ${{ !cancelled() && github.event_name == 'schedule' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run build-and-publish.yml --ref main

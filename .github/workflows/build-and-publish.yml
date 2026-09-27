@@ -17,9 +17,12 @@ name: Build and Publish
 # - worldserver-latest (generic tag, defaults to RealmMaster)
 
 on:
+  # The nightly build is started by the module manifest sync
+  # (update-module-manifest.yml) when it finishes, so it always builds the
+  # freshly synced manifest. This schedule is only a fallback for days the sync
+  # didn't run: the gate job skips it when a build already ran today.
   schedule:
-    # Run nightly at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: '47 8 * * *'
   workflow_dispatch:
     inputs:
       module_profile:
@@ -33,8 +36,48 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+  actions: read
+
+# Never run two builds at once (e.g. a manual dispatch during the nightly one).
+concurrency:
+  group: build-and-publish
+  cancel-in-progress: false
+
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Skip the fallback schedule if today's build already ran
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Any other build today that didn't fail or get cancelled counts
+          # (queued and in-progress runs included).
+          others=$(gh run list --repo "${{ github.repository }}" \
+            --workflow build-and-publish.yml --created ">=$(date -u +%F)" \
+            --json databaseId,conclusion \
+            --jq '[.[] | select(.databaseId != ${{ github.run_id }})
+                        | select(.conclusion != "failure" and .conclusion != "cancelled")] | length')
+          if [ "$others" -gt 0 ]; then
+            echo "A build already ran today (started by the manifest sync); skipping."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No build today yet; running the fallback build."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
 

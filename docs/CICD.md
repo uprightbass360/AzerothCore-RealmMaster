@@ -8,8 +8,17 @@ The `build-and-publish.yml` workflow automatically builds AzerothCore with your 
 
 ### Trigger Schedule
 
-- **Nightly builds**: Runs automatically at 2 AM UTC every day
+- **Nightly builds**: Started every day by the module manifest sync (`update-module-manifest.yml`, 05:23 UTC) as soon as it finishes, so the images always include the modules synced that morning. The sync starts the build even when the sync itself fails.
+- **Fallback schedule**: 08:47 UTC. It only builds if no build has run that day (e.g. the sync didn't run); otherwise it skips itself.
 - **Manual trigger**: Can be triggered manually via GitHub Actions UI with optional force rebuild
+
+Only one build runs at a time; a second one waits for the first to finish.
+
+### Related workflows
+
+- `update-module-manifest.yml`: daily manifest sync from GitHub topics; merges its own PR after in-job checks, then republishes the config UI and starts the nightly build.
+- `config-ui-pages.yml`: publishes the config UI to GitHub Pages when the UI or `config/` changes on `main`, and after each manifest sync.
+- `ci.yml`: runs the Python and shell test suites and the config UI round-trip check on every pull request and push to `main`.
 
 ### What It Does
 
