@@ -352,6 +352,47 @@ class AddTest(CliCase):
         self.assertEqual(self.local_entries(), [])
         self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
 
+    def test_ref_starting_with_dash_refused(self):
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
+        from unittest import mock
+        import local_modules
+        with mock.patch.object(local_modules, "_git") as git:
+            rc, _, err = self.run_cli("add", str(repo), "--ref=-x", "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("-x", err)
+        git.assert_not_called()
+        self.assertEqual(self.local_entries(), [])
+
+    def test_clone_args_end_options_before_url(self):
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
+        import local_modules
+        calls = []
+        real_git = local_modules._git
+
+        def spy(args, url=None):
+            calls.append(args)
+            return real_git(args, url=url)
+
+        from unittest import mock
+        with mock.patch.object(local_modules, "_git", side_effect=spy):
+            self.assertEqual(self.run_cli("add", str(repo), "--yes")[0], 0)
+        clones = [c for c in calls if c[0] == "clone"]
+        self.assertTrue(clones)
+        for c in clones:
+            self.assertEqual(c[-3], "--", c)
+
+    def test_missing_upstream_manifest_refused(self):
+        (self.root / "config" / "module-manifest.json").unlink()
+        rc, _, err = self.run_cli("list")
+        self.assertEqual(rc, 1)
+        self.assertIn("module-manifest.json", err)
+
+    def test_corrupt_upstream_manifest_refused(self):
+        (self.root / "config" / "module-manifest.json").write_text("{broken")
+        rc, _, err = self.run_cli("list")
+        self.assertEqual(rc, 1)
+        self.assertIn("module-manifest.json", err)
+
     def test_declined_prompt_writes_nothing(self):
         repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
         import builtins
