@@ -64,6 +64,14 @@ def cmd_keys(manifest_path: str) -> None:
         print(entry["key"])
 
 
+def cmd_local_keys(manifest_path: str) -> None:
+    """Keys added by config/module-manifest.local.json (not overrides of upstream ones)."""
+    manifest = load_manifest(manifest_path)
+    for entry in iter_modules(manifest):
+        if entry.get("source") == "local":
+            print(entry["key"])
+
+
 def cmd_metadata(manifest_path: str) -> None:
     manifest = load_manifest(manifest_path)
     for entry in iter_modules(manifest):
@@ -124,6 +132,7 @@ def cmd_sorted_keys(manifest_path: str) -> None:
 
 COMMAND_MAP = {
     "keys": cmd_keys,
+    "local-keys": cmd_local_keys,
     "metadata": cmd_metadata,
     "sorted-keys": cmd_sorted_keys,
 }
