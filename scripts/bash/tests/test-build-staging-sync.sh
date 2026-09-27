@@ -1,8 +1,9 @@
 #!/bin/bash
 # Tests for build.sh's sync_staged_modules (the staging sync inside
 # stage_modules): it must not delete the C++ build record
-# (.built-modules, see lib/module-build-record.sh) while still honouring
-# the existing excludes and --delete/copy semantics.
+# (.built-modules) or the built-locally marker (.built-locally, fix round 1
+# item 2 - see lib/module-build-record.sh) while still honouring the
+# existing excludes and --delete/copy semantics.
 #
 # Extracts sync_staged_modules() straight out of build.sh with sed so this
 # never sources (and never runs) build.sh's main. Does not touch build.sh,
@@ -47,9 +48,13 @@ make_fixture(){
   local staging_dir="$base/staging"
   mkdir -p "$local_dir" "$staging_dir/.modules-meta"
 
-  # Only in staging: the build record and the other files the existing
+  # Only in staging: the build record, the built-locally marker (fix round 1,
+  # item 2: rebuild-with-modules.sh writes it there after a successful local
+  # build, and manage-modules.sh's ac-modules container checks for it before
+  # holding a compiled checkout in place) and the other files the existing
   # excludes protect.
   echo "mod-a" > "$staging_dir/.built-modules"
+  echo "2026-09-27T00:00:00+00:00" > "$staging_dir/.built-locally"
   echo "sentinel" > "$staging_dir/.requires_rebuild"
   echo "MODULE_A=1" > "$staging_dir/modules.env"
   echo "mod-a" > "$staging_dir/.modules-meta/modules-enabled.txt"
@@ -98,6 +103,9 @@ assert_case(){
 
   [ -f "$staging_dir/.built-modules" ]
   check "$mode: .built-modules survives" "$?" "0"
+
+  [ -f "$staging_dir/.built-locally" ]
+  check "$mode: .built-locally survives" "$?" "0"
 
   [ -f "$staging_dir/.requires_rebuild" ]
   check "$mode: .requires_rebuild survives" "$?" "0"

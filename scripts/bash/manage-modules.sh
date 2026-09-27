@@ -256,6 +256,17 @@ normalize_repo_url(){
 
 install_enabled_modules(){
   local -a install_failures=()
+
+  # A stack that never builds locally (prebuilt/registry images) has no
+  # local-storage/modules dir, so stage-modules.sh's sync never runs and
+  # .built-locally never arrives here - its module checkouts must keep
+  # following their repos on every deploy, same as before the held-checkout
+  # behaviour below existed. Only a local build's checkout is held in place.
+  local container_holds_builds=0
+  if [ "${MODULES_LOCAL_RUN:-0}" != "1" ] && [ -f "${MODULES_ROOT:-}/.built-locally" ]; then
+    container_holds_builds=1
+  fi
+
   for key in "${MODULE_KEYS[@]}"; do
     if [ "${MODULE_ENABLED[$key]:-0}" != "1" ]; then
       continue
@@ -271,7 +282,7 @@ install_enabled_modules(){
     if [ "${MODULES_FORCE_RECLONE:-0}" = "1" ] && [ -d "$dir" ]; then
       info "MODULES_FORCE_RECLONE=1: re-cloning $dir fresh"
       reclone_module_fresh "$dir" "$repo" "$ref" || install_failures+=("$dir")
-    elif [ "${MODULES_LOCAL_RUN:-0}" != "1" ] && [ "${MODULE_NEEDS_BUILD[$key]:-0}" = "1" ] && [ -d "$dir/.git" ]; then
+    elif [ "$container_holds_builds" = "1" ] && [ "${MODULE_NEEDS_BUILD[$key]:-0}" = "1" ] && [ -d "$dir/.git" ]; then
       # build.sh stages the compiled checkouts into local-storage/modules and
       # stage-modules.sh syncs them to storage/modules before containers
       # start, so the container already has the built version; pulling it (or

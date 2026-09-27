@@ -486,6 +486,15 @@ remove_sentinel "$SENTINEL_FILE"
 module_build_record_write "$BUILD_RECORD_FILE" "${MODULES_COMPILE_LIST[@]}" \
   || echo "⚠️  Unable to write build record at $BUILD_RECORD_FILE; the next deploy may ask to rebuild."
 
+# Marks that local-storage/modules now holds checkouts this build actually
+# compiled in, so the ac-modules container (via stage-modules.sh's sync) knows
+# to hold them in place instead of pulling them. See
+# module_built_locally_marker_file's comment in lib/module-build-record.sh.
+BUILT_LOCALLY_MARKER="$(module_built_locally_marker_file "$LOCAL_STORAGE_PATH")"
+if ! date -Iseconds > "$BUILT_LOCALLY_MARKER" 2>/dev/null; then
+  echo "⚠️  Unable to write built-locally marker at $BUILT_LOCALLY_MARKER; the next deploy's ac-modules container may re-pull compiled modules."
+fi
+
 echo ""
 echo -e "${GREEN}⚔️ Module build forged successfully! ⚔️${NC}"
 echo -e "${GREEN}🏰 Your custom AzerothCore images are ready${NC}"
