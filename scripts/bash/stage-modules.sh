@@ -742,8 +742,14 @@ stage_module_sql_to_core
 # Stage module DBC files
 stage_module_dbc_files
 
+# Count post-install hook failures recorded by this deploy's ac-modules run
+# (listed after the service status below) so the banner doesn't claim success.
+if [ -s "$MODULES_META_DIR/hook-failures.txt" ]; then
+  STAGING_FAILURES=$((STAGING_FAILURES + $(grep -c . "$MODULES_META_DIR/hook-failures.txt")))
+fi
+
 if [ "$STAGING_FAILURES" -gt 0 ]; then
-  printf '\n%b\n' "${YELLOW}⚠️  Realm staging finished with ${STAGING_FAILURES} failed file(s); see errors above${NC}"
+  printf '\n%b\n' "${YELLOW}⚠️  Realm staging finished with ${STAGING_FAILURES} failure(s); see errors above and below${NC}"
 else
   printf '\n%b\n' "${GREEN}⚔️ Realm staging completed successfully! ⚔️${NC}"
 fi
