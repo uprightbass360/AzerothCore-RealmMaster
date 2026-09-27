@@ -132,6 +132,20 @@ crash-loops after deploying, run ./modules.sh remove <key> and deploy again.
 - `conf/*.conf.dist` files are copied to `storage/config/modules/`. A `.conf` is
   created from the `.dist` only if you don't already have one.
 
+#### Playerbots stacks
+
+On playerbots stacks, `mod-playerbots` and the core fork
+(`azerothcore-playerbots`, branch `Playerbot`) must move together: mod-playerbots's
+HEAD regularly needs newer core symbols than an older core provides. So every
+`./build.sh` also updates the core fork to latest, unless `MODULE_PLAYERBOTS` is
+pinned (`./modules.sh add --key MODULE_PLAYERBOTS --ref <ref>`), in which case it
+prints an info line and leaves the core alone. `./build.sh --force-update` always
+updates the core, pinned or not.
+
+Plain deploys never update a compiled module's checkout (its SQL/config would then
+be newer than the compiled binary). To update the pinned pair, run `./build.sh
+--force-update`.
+
 ### Lua (`lua`)
 
 - Lua runs inside the worldserver through ALE and is staged into
