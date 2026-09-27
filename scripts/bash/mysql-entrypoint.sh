@@ -148,8 +148,11 @@ handle_shutdown() {
 
 # Simple startup restoration
 if [ -d "$PERSISTENT_DIR" ]; then
-  # Check for MySQL data files (exclude marker files starting with .)
-  if find "$PERSISTENT_DIR" -maxdepth 1 -name "*" ! -name ".*" ! -path "$PERSISTENT_DIR" | grep -q .; then
+  # Only a real datadir is restored (MySQL 8 keeps its system schema in
+  # mysql.ibd, older versions in mysql/). Copying anything else, e.g. leftover
+  # #ib_*.dblwr files, leaves a non-empty but invalid datadir that mysqld
+  # refuses to initialise, so the container restart-loops.
+  if [ -f "$PERSISTENT_DIR/mysql.ibd" ] || [ -d "$PERSISTENT_DIR/mysql" ]; then
     if [ -d "$RUNTIME_DIR" ] && [ -z "$(ls -A "$RUNTIME_DIR" 2>/dev/null)" ]; then
       echo "🔄 Restoring MySQL data from persistent storage..."
       # A partial copy (e.g. the runtime tmpfs is too small) must stop startup:
@@ -164,6 +167,9 @@ if [ -d "$PERSISTENT_DIR" ]; then
       chown -R mysql:"$target_group_name" "$RUNTIME_DIR"
       echo "✅ Data restored from persistent storage"
     fi
+  elif find "$PERSISTENT_DIR" -mindepth 1 -maxdepth 1 ! -name ".*" | grep -q .; then
+    echo "⚠️  $PERSISTENT_DIR has files but no MySQL datadir (no mysql.ibd or mysql/); not restoring them."
+    echo "   MySQL will initialise a fresh datadir; the next shutdown sync replaces these files."
   fi
 fi
 
