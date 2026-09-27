@@ -29,6 +29,13 @@ class SetupManifestMergedTest(unittest.TestCase):
         out = self.run_cmd("metadata")
         self.assertIn("MODULE_MINE", out.stdout)
 
+    def test_local_keys_lists_only_local_modules(self):
+        write_manifest(local_manifest_path(self.manifest),
+                       [entry("MODULE_MINE"), {"key": "MODULE_A", "ref": "v1"}])
+        out = self.run_cmd("local-keys")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(out.stdout.split(), ["MODULE_MINE"])
+
     def test_broken_local_file_fails_with_path(self):
         local_manifest_path(self.manifest).write_text("{broken")
         out = self.run_cmd("keys")

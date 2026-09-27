@@ -155,12 +155,24 @@ initialize_module_defaults() {
   load_env_template_values
   load_module_manifest_metadata
 
+  # Modules added in config/module-manifest.local.json have no .env.template
+  # default; they start disabled. Upstream keys must be in the template.
+  local -A local_keys=()
+  local local_key
+  while IFS= read -r local_key; do
+    [ -n "$local_key" ] && local_keys["$local_key"]=1
+  done < <(python3 "$MODULE_MANIFEST_HELPER" local-keys "$MODULE_MANIFEST_PATH")
+
   for key in "${MODULE_KEYS[@]}"; do
-    if [ -z "${ENV_TEMPLATE_VALUES[$key]+_}" ]; then
+    local default
+    if [ -n "${ENV_TEMPLATE_VALUES[$key]+_}" ]; then
+      default="${ENV_TEMPLATE_VALUES[$key]}"
+    elif [ -n "${local_keys[$key]:-}" ]; then
+      default=0
+    else
       echo "ERROR: .env.template missing default value for ${key}" >&2
       exit 1
     fi
-    local default="${ENV_TEMPLATE_VALUES[$key]}"
     MODULE_DEFAULT_VALUES["$key"]="$default"
     printf -v "$key" '%s' "$default"
   done
