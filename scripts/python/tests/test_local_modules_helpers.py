@@ -122,8 +122,16 @@ class ProbeCloneTest(unittest.TestCase):
             probe_clone(str(self.repo), "no-such-ref", self.tmp / "out5")
 
     def test_probe_clone_timeout_raises_probe_error(self):
-        with mock.patch("subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=1)
+        def mock_run_timeout(*args, **kwargs):
+            # Extract the git command list: args[0] = ["git", "clone", "--quiet", "--depth", "1", url, dest]
+            cmd_list = args[0]
+            if len(cmd_list) >= 7 and cmd_list[1] == "clone":
+                dest_path = Path(cmd_list[-1])  # Last element is the destination
+                dest_path.mkdir(parents=True, exist_ok=True)
+                (dest_path / "file.txt").write_text("test")
+            raise subprocess.TimeoutExpired(cmd="git", timeout=1)
+
+        with mock.patch("subprocess.run", side_effect=mock_run_timeout):
             dest = self.tmp / "out_timeout"
             with self.assertRaises(ProbeError) as cm:
                 probe_clone("https://example.com/repo.git", None, dest)
@@ -131,25 +139,39 @@ class ProbeCloneTest(unittest.TestCase):
             self.assertFalse(dest.exists(), "Destination directory should be cleaned up on timeout")
 
     def test_probe_clone_timeout_cleanup_on_full_clone(self):
-        with mock.patch("subprocess.run") as mock_run:
-            # First call succeeds (shallow clone attempt), second call fails with timeout (full clone)
-            mock_run.side_effect = [
-                mock.MagicMock(returncode=1, stderr="fatal: error"),
-                subprocess.TimeoutExpired(cmd="git", timeout=1)
-            ]
+        def mock_run_side_effect(*args, **kwargs):
+            # First call (shallow clone): return error
+            if len(mock_run_side_effect.calls) == 0:
+                mock_run_side_effect.calls.append(1)
+                return mock.MagicMock(returncode=1, stderr="fatal: error")
+            # Second call (full clone): create dest and timeout
+            cmd_list = args[0]
+            if len(cmd_list) >= 4 and cmd_list[1] == "clone":
+                dest_path = Path(cmd_list[-1])  # Last element is the destination
+                dest_path.mkdir(parents=True, exist_ok=True)
+                (dest_path / "file.txt").write_text("test")
+            raise subprocess.TimeoutExpired(cmd="git", timeout=1)
+        mock_run_side_effect.calls = []
+
+        with mock.patch("subprocess.run", side_effect=mock_run_side_effect):
             dest = self.tmp / "out_timeout_full"
             with self.assertRaises(ProbeError):
                 probe_clone("https://example.com/repo.git", "somehash", dest)
             self.assertFalse(dest.exists(), "Destination directory should be cleaned up on timeout during full clone")
 
     def test_git_ssh_command_is_batch_mode_by_default(self):
-        with mock.patch("subprocess.run") as mock_run:
-            mock_run.return_value = mock.MagicMock(returncode=0)
-            probe_clone(str(self.repo), None, self.tmp / "out_ssh_default")
-            # Check that GIT_SSH_COMMAND is set
-            call_args = mock_run.call_args
-            env = call_args.kwargs.get("env", {})
-            self.assertEqual(env.get("GIT_SSH_COMMAND"), "ssh -o BatchMode=yes")
+        # Ensure we're testing with clean environment (no ambient GIT_SSH_COMMAND)
+        clean_env = dict(os.environ)
+        clean_env.pop("GIT_SSH_COMMAND", None)
+
+        with mock.patch.dict(os.environ, clean_env, clear=True):
+            with mock.patch("subprocess.run") as mock_run:
+                mock_run.return_value = mock.MagicMock(returncode=0)
+                probe_clone(str(self.repo), None, self.tmp / "out_ssh_default")
+                # Check that GIT_SSH_COMMAND is set to batch mode
+                call_args = mock_run.call_args
+                env = call_args.kwargs.get("env", {})
+                self.assertEqual(env.get("GIT_SSH_COMMAND"), "ssh -o BatchMode=yes")
 
     def test_git_ssh_command_is_preserved_when_set(self):
         custom_ssh_cmd = "ssh -i /custom/key"

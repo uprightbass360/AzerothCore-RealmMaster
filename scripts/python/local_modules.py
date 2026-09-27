@@ -79,7 +79,7 @@ def _git(args: List[str], url: Optional[str] = None) -> subprocess.CompletedProc
         env["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes"
     try:
         return subprocess.run(["git", *args], capture_output=True, text=True, env=env, timeout=GIT_TIMEOUT_SECONDS)
-    except subprocess.TimeoutExpired as e:
+    except subprocess.TimeoutExpired:
         raise ProbeError(f"Could not clone {url}: timed out after {GIT_TIMEOUT_SECONDS} seconds" if url else f"Git command timed out after {GIT_TIMEOUT_SECONDS} seconds")
 
 
@@ -107,7 +107,7 @@ def probe_clone(url: str, ref: Optional[str], dest: Path) -> None:
     if full.returncode != 0:
         raise ProbeError(f"Could not clone {url}: {full.stderr.strip()}")
     try:
-        checkout = _git(["-C", str(dest), "checkout", "--quiet", ref])
+        checkout = _git(["-C", str(dest), "checkout", "--quiet", ref], url=url)
     except ProbeError:
         shutil.rmtree(dest, ignore_errors=True)
         raise
