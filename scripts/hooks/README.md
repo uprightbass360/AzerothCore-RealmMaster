@@ -50,6 +50,10 @@ Stages Lua scripts from standard locations (non-recursive):
 Stages server-side scripts of AIO addon modules from `Server/`, `server/`, `lua_scripts/`,
 `Server Files/lua_scripts/` and the module root. Client files are not copied.
 
+### `copy-lua-tree`
+Stages every `.lua` in the module (skipping `.git`), preserving subfolders. For modules that
+`require` files kept in subfolders, e.g. `azerothcore-lua-ah-bot` (`AHBot/EnchantmentModule.lua`).
+
 ### `copy-aio-server`
 Stages the AIO framework itself (`MODULE_AIO`): the whole `AIO_Server/` tree, preserving
 subfolders such as `Dep_Smallfolk/`. `AIO_Client/` is a client addon and is not copied.

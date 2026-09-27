@@ -74,14 +74,14 @@ lua_stage_files(){
 }
 
 # lua_stage_tree <dir> <label>
-# Copies every .lua under <dir>, preserving its relative layout.
+# Copies every .lua under <dir> (skipping .git), preserving its relative layout.
 lua_stage_tree(){
   local dir="$1" label="$2" file
   [ -d "$dir" ] || return 0
   local -a files=()
   while IFS= read -r -d '' file; do
     files+=("$file")
-  done < <(cd "$dir" && find . -type f -name '*.lua' -print0 | sort -z)
+  done < <(cd "$dir" && find . -name .git -prune -o -type f -name '*.lua' -print0 | sort -z)
   [ "${#files[@]}" -gt 0 ] || return 0
   echo "   📂 Found $label"
   for file in "${files[@]}"; do

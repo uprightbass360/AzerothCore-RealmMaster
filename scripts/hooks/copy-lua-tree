@@ -1,0 +1,16 @@
+#!/bin/bash
+# Generic hook for Lua modules split across subfolders: stage every .lua in the
+# module, keeping its layout. ALE adds each staged folder to the require path,
+# so e.g. azerothcore-lua-ah-bot's require("EnchantmentModule") resolves to
+# AHBot/EnchantmentModule.lua. copy-standard-lua only takes a few known flat
+# locations, which is safer for modules that also ship examples or tests.
+set -e
+
+# shellcheck source-path=SCRIPTDIR source=lib/lua-staging.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/lua-staging.sh"
+
+lua_stage_init copy-lua-tree
+
+lua_stage_tree "$MODULE_DIR" "module Lua tree"
+
+lua_stage_finish

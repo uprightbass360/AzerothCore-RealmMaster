@@ -888,7 +888,7 @@
         "MODULE_ELUNA"
       ],
       "post_install_hooks": [
-        "copy-standard-lua"
+        "copy-lua-tree"
       ],
       "description": "An Eluna implementation for a WotLK 3.3.5a compatible auction house bot.",
       "category": "scripting",
