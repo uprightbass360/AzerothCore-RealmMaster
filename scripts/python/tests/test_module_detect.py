@@ -50,6 +50,12 @@ class DetectTest(unittest.TestCase):
                              "data/sql/world/base/c.sql": "SELECT 1;"}), "mod-foo")
         self.assertEqual(d.warnings, [])
 
+    def test_cpp_sql_in_legacy_playerbots_dir_is_quiet(self):
+        d = detect(self.mod({"src/x.cpp": "void Addmod_fooScripts(){}",
+                             "data/sql/playerbots/a.sql": "SELECT 1;",
+                             "data/sql/playerbots/base/b.sql": "SELECT 1;"}), "mod-foo")
+        self.assertEqual(d.warnings, [])
+
     # Lua
     def test_lua_standard(self):
         d = detect(self.mod({"script.lua": "print(1)"}), "lua-thing")

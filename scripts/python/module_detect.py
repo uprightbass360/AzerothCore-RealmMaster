@@ -22,7 +22,7 @@ _SQL_DIRS = {
     f"{db}{suffix}"
     for db in ("db-world", "db-characters", "db-auth", "db-playerbots")
     for suffix in ("", "/base", "/updates")
-} | {f"{db}{suffix}" for db in ("world", "characters", "auth") for suffix in ("", "/base")}
+} | {f"{db}{suffix}" for db in ("world", "characters", "auth") for suffix in ("", "/base")} | {f"{db}{suffix}" for db in ("playerbots",) for suffix in ("", "/base")}
 
 # Flat locations copy-standard-lua reads.
 _STANDARD_LUA_DIRS = {".", "lua_scripts", "scripts", "Server Files/lua_scripts"}
