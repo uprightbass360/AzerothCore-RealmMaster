@@ -46,6 +46,39 @@ normalize_repo_url(){
     printf '%s' "$url"
 }
 
+# chown the checkout to the current user, through a root container when the
+# user can't (same approach as repair-storage-permissions.sh, but only this
+# directory).
+take_source_ownership(){
+    local target="$1" uid gid
+    uid="$(id -u)"
+    gid="$(id -g)"
+    chown -R "$uid:$gid" "$target" 2>/dev/null && return 0
+    command -v docker >/dev/null 2>&1 || return 1
+    docker run --rm -u 0:0 -v "$target":/workspace "${ALPINE_IMAGE:-alpine:latest}" \
+        chown -R "$uid:$gid" /workspace
+}
+
+# If the checkout differs from git only in file modes (e.g. a container ran
+# chmod over the tree), put the modes back so pull doesn't refuse every file
+# as a local change. Real edits are left alone for git to report.
+restore_mode_only_changes(){
+    if git diff --quiet || ! git -c core.fileMode=false diff --quiet \
+        || ! git diff --cached --quiet; then
+        return 0
+    fi
+    local meta path count=0
+    while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
+        case "${meta%% *}" in
+            :100644) chmod 644 "$path" ;;
+            :100755) chmod 755 "$path" ;;
+            *) continue ;;
+        esac
+        count=$((count + 1))
+    done < <(git diff --raw -z)
+    echo "🔧 Restored $count file-mode changes (no content changes) so the update can proceed"
+}
+
 show_client_data_requirement(){
     local repo_path="$1"
     local detector="$PROJECT_ROOT/scripts/bash/detect-client-data-version.sh"
@@ -131,6 +164,13 @@ if [ -d "$SOURCE_PATH/.git" ]; then
   # Never delete an existing checkout: it holds build output and may hold
   # local work. If the origin can't be read (e.g. git refuses a checkout owned
   # by another user) or points at another repo, stop and say why.
+  # A checkout owned by another user (e.g. created by a root container) makes
+  # git refuse it; take ownership of the checkout (only) once and retry.
+  if ! CURRENT_REMOTE=$(git remote get-url origin 2>&1) \
+      && [[ "$CURRENT_REMOTE" == *"dubious ownership"* ]]; then
+    echo "🔧 $SOURCE_PATH is owned by another user; taking ownership..."
+    take_source_ownership "$SOURCE_PATH" || true
+  fi
   if ! CURRENT_REMOTE=$(git remote get-url origin 2>&1); then
     echo "❌ Cannot read the origin of $SOURCE_PATH:" >&2
     echo "   $CURRENT_REMOTE" >&2
@@ -146,6 +186,7 @@ if [ -d "$SOURCE_PATH/.git" ]; then
     echo "   git -C \"$SOURCE_PATH\" remote set-url origin \"$REPO_URL\"" >&2
     exit 1
   fi
+  restore_mode_only_changes
   echo "🔄 Fetching latest changes from origin..."
   git fetch origin --progress
   echo "🔀 Switching to branch $BRANCH..."

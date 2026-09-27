@@ -44,6 +44,7 @@ mkdir -p "$WORK/shim"
 cat > "$WORK/shim/git" <<EOF
 #!/bin/bash
 case " \$* " in *" remote get-url "*)
+  [ -e "$WORK/root-owned" ] || exec "$REAL_GIT" "\$@"
   echo "fatal: detected dubious ownership in repository at '\$PWD'" >&2
   exit 128;;
 esac
@@ -69,23 +70,52 @@ touch "$SRC/marker"   # stands in for build output and local files
 
 echo "unreadable origin: fail, keep the tree"
 push_commit up "up v2"
+touch "$WORK/root-owned"
 if run_setup "$WORK/up.git" "$WORK/shim"; then r=no; else r=yes; fi
 check "exit status is non-zero" "$r" "yes"
 check "tree kept" "$([ -f "$SRC/marker" ] && [ -d "$SRC/.git" ] && echo yes)" "yes"
 check "no re-clone message" "$(grep -c 'Repository URL changed' "$WORK/out.log")" "0"
 check "explains why" "$(grep -c 'Cannot read the origin' "$WORK/out.log")" "1"
 
+echo "unreadable origin, ownership fixed through docker: retry and update"
+# chown fails (shim), so the script falls back to a root container (shim).
+cat > "$WORK/shim/chown" <<EOF
+#!/bin/bash
+exit 1
+EOF
+cat > "$WORK/shim/docker" <<EOF
+#!/bin/bash
+echo "docker \$*" >> "$WORK/docker.log"
+[ -e "$WORK/docker-fails" ] && exit 1
+rm -f "$WORK/root-owned"
+EOF
+chmod +x "$WORK/shim/chown" "$WORK/shim/docker"
+run_setup "$WORK/up.git" "$WORK/shim"
+check "exit status" "$?" "0"
+check "chowned only the checkout" "$(grep -c -- "-v $SRC:/workspace .* chown -R $(id -u):$(id -g) /workspace" "$WORK/docker.log" 2>/dev/null)" "1"
+check "updated" "$(cat "$SRC/content.txt")" "up v2"
+check "tree kept" "$([ -f "$SRC/marker" ] && echo yes)" "yes"
+push_commit up "up v2b"
+
+echo "ownership can't be fixed: fail, keep the tree"
+touch "$WORK/root-owned" "$WORK/docker-fails"
+if run_setup "$WORK/up.git" "$WORK/shim"; then r=no; else r=yes; fi
+check "exit status is non-zero" "$r" "yes"
+check "tree kept" "$([ -f "$SRC/marker" ] && echo yes)" "yes"
+check "explains why" "$(grep -c 'Cannot read the origin' "$WORK/out.log")" "1"
+rm -f "$WORK/root-owned" "$WORK/docker-fails" "$WORK/shim/chown" "$WORK/shim/docker"
+
 echo "origin differs only by scheme/case/.git/slash: update in place"
 run_setup "FILE://$WORK/up.git/"
 check "exit status" "$?" "0"
-check "updated" "$(cat "$SRC/content.txt")" "up v2"
+check "updated" "$(cat "$SRC/content.txt")" "up v2b"
 check "tree kept" "$([ -f "$SRC/marker" ] && echo yes)" "yes"
 
 echo "origin is a different repo: fail, keep the tree"
 if run_setup "$WORK/other.git"; then r=no; else r=yes; fi
 check "exit status is non-zero" "$r" "yes"
 check "tree kept" "$([ -f "$SRC/marker" ] && echo yes)" "yes"
-check "still on the old repo" "$(cat "$SRC/content.txt")" "up v2"
+check "still on the old repo" "$(cat "$SRC/content.txt")" "up v2b"
 check "explains why" "$(grep -c 'points at a different repository' "$WORK/out.log")" "1"
 
 echo "same origin: update in place"
@@ -94,6 +124,25 @@ run_setup "$WORK/up.git"
 check "exit status" "$?" "0"
 check "updated" "$(cat "$SRC/content.txt")" "up v3"
 check "tree kept" "$([ -f "$SRC/marker" ] && echo yes)" "yes"
+
+echo "only file modes changed (e.g. a container chmod-ed the tree): restore them, update"
+push_commit up "up v4"
+chmod 755 "$SRC/content.txt"
+run_setup "$WORK/up.git"
+check "exit status" "$?" "0"
+check "updated" "$(cat "$SRC/content.txt")" "up v4"
+check "mode restored" "$(stat -c %a "$SRC/content.txt")" "644"
+check "says so" "$(grep -c 'file-mode changes' "$WORK/out.log")" "1"
+check "tree kept" "$([ -f "$SRC/marker" ] && echo yes)" "yes"
+
+echo "real local edit: fail, keep the edit"
+push_commit up "up v5"
+echo "local edit" > "$SRC/content.txt"
+chmod 755 "$SRC/content.txt"
+if run_setup "$WORK/up.git"; then r=no; else r=yes; fi
+check "exit status is non-zero" "$r" "yes"
+check "edit kept" "$(cat "$SRC/content.txt")" "local edit"
+check "mode left alone" "$(stat -c %a "$SRC/content.txt")" "755"
 
 echo
 echo "passed: $PASS  failed: $FAIL"
