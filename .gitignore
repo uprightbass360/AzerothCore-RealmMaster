@@ -5,6 +5,7 @@
 env
 .claude/
 .mcp*/
+config/module-manifest.local.json
 
 # ===================================
 # Storage & Data Directories
