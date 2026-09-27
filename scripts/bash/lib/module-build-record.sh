@@ -10,6 +10,20 @@ module_build_record_file(){
   printf '%s/modules/.built-modules\n' "${1%/}"
 }
 
+# module_built_locally_marker_file <local storage path>
+# Marks that *this* local-storage/modules dir holds checkouts a local build
+# actually compiled in (written by rebuild-with-modules.sh after a
+# successful build). manage-modules.sh's ac-modules container run only holds
+# a compiled C++ module's checkout in place (instead of pulling it) when this
+# marker made it into storage/modules - stacks that never build locally
+# (prebuilt/registry images) have no local-storage/modules at all, so
+# stage-modules.sh's sync never runs and the marker never arrives; their
+# module checkouts keep following their repos on every deploy, same as
+# before this held-checkout behaviour existed.
+module_built_locally_marker_file(){
+  printf '%s/modules/.built-locally\n' "${1%/}"
+}
+
 _module_build_record_normalize(){
   printf '%s\n' "$@" | sed '/^$/d' | LC_ALL=C sort -u
 }
