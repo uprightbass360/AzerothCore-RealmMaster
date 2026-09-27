@@ -209,8 +209,10 @@ docker exec ac-mysql mysql -uroot -p"$MYSQL_PW" -e "DROP DATABASE IF EXISTS $STA
 docker exec ac-mysql mysql -uroot -p"$MYSQL_PW" -e "DROP DATABASE IF EXISTS $STAGE_CHARS_DB;" 2>/dev/null || true
 
 # Create staging databases
-docker exec ac-mysql mysql -uroot -p"$MYSQL_PW" -e "CREATE DATABASE $STAGE_AUTH_DB;" 2>/dev/null
-docker exec ac-mysql mysql -uroot -p"$MYSQL_PW" -e "CREATE DATABASE $STAGE_CHARS_DB;" 2>/dev/null
+docker exec ac-mysql mysql -uroot -p"$MYSQL_PW" -e "CREATE DATABASE $STAGE_AUTH_DB;" \
+  || fatal "Failed to create staging database $STAGE_AUTH_DB"
+docker exec ac-mysql mysql -uroot -p"$MYSQL_PW" -e "CREATE DATABASE $STAGE_CHARS_DB;" \
+  || fatal "Failed to create staging database $STAGE_CHARS_DB"
 
 # Cleanup staging databases on exit
 cleanup_staging(){
@@ -225,12 +227,23 @@ trap 'cleanup_staging; rm -rf "$TEMP_DIR"' EXIT
 
 info "Loading backup into staging database..."
 
-# Modify SQL to use staging database names
-sed "s/\`acore_auth\`/\`$STAGE_AUTH_DB\`/g; s/USE \`acore_auth\`;/USE \`$STAGE_AUTH_DB\`;/g" "$TEMP_DIR/auth.sql" | \
-  docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" 2>/dev/null
+# Load a dump into a staging schema. Database-level statements (DROP/CREATE
+# DATABASE, USE) are stripped rather than renamed, so the dump cannot target a
+# live schema whatever name it was taken under; the tables land in the staging
+# schema passed as the default database.
+load_dump_into_stage(){
+  local dump="$1" stage_db="$2"
+  local stripped="${dump}.stage"
+  grep -vE '^(/\*![0-9]+ )?(DROP|CREATE) DATABASE|^USE `' "$dump" > "$stripped" || true
+  if grep -qE '^(/\*![0-9]+ )?(DROP|CREATE) DATABASE|^USE ' "$stripped"; then
+    fatal "$(basename "$dump") still contains database-level statements after filtering; refusing to load it"
+  fi
+  docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" "$stage_db" < "$stripped" \
+    || fatal "Failed to load $(basename "$dump") into staging database $stage_db"
+}
 
-sed "s/\`acore_characters\`/\`$STAGE_CHARS_DB\`/g; s/USE \`acore_characters\`;/USE \`$STAGE_CHARS_DB\`;/g" "$TEMP_DIR/characters.sql" | \
-  docker exec -i ac-mysql mysql -uroot -p"$MYSQL_PW" 2>/dev/null
+load_dump_into_stage "$TEMP_DIR/auth.sql" "$STAGE_AUTH_DB"
+load_dump_into_stage "$TEMP_DIR/characters.sql" "$STAGE_CHARS_DB"
 
 log "Backup loaded into staging databases"
 
@@ -833,7 +846,7 @@ EOSQL
     echo "$CHAR_RESULT" >&2
     fatal "Character import SQL failed. See /tmp/char-import-result.log for details."
   fi
-  CHARS_IMPORTED=$(mysql_query "$CHARACTERS_DB" "SELECT COUNT(*) FROM characters WHERE account IN (101, 102);")
+  CHARS_IMPORTED=$(mysql_query "$CHARACTERS_DB" "SELECT COUNT(*) FROM characters c INNER JOIN $STAGE_CHARS_DB.character_guid_map cm ON c.guid = cm.new_guid;")
   info "  Characters imported: $CHARS_IMPORTED"
 
   log "✓ Main character data imported"
