@@ -241,13 +241,26 @@ reclone_module_fresh(){
   return 1
 }
 
+# Compare repo URLs ignoring case, scheme, trailing slashes and ".git"
+# (matches normalize_repo in scripts/python/local_modules.py).
+normalize_repo_url(){
+  local url="${1,,}"
+  if [[ "$url" =~ ^[a-z]+:// ]]; then
+    url="${url#*://}"
+  fi
+  while [[ "$url" == */ ]]; do url="${url%/}"; done
+  url="${url%.git}"
+  while [[ "$url" == */ ]]; do url="${url%/}"; done
+  printf '%s' "$url"
+}
+
 install_enabled_modules(){
   local -a install_failures=()
   for key in "${MODULE_KEYS[@]}"; do
     if [ "${MODULE_ENABLED[$key]:-0}" != "1" ]; then
       continue
     fi
-    local dir repo ref
+    local dir repo ref current_origin
     dir="${MODULE_NAME[$key]:-}"
     repo="${MODULE_REPO[$key]:-}"
     ref="${MODULE_REF[$key]:-}"
@@ -257,6 +270,11 @@ install_enabled_modules(){
     fi
     if [ "${MODULES_FORCE_RECLONE:-0}" = "1" ] && [ -d "$dir" ]; then
       info "MODULES_FORCE_RECLONE=1: re-cloning $dir fresh"
+      reclone_module_fresh "$dir" "$repo" "$ref" || install_failures+=("$dir")
+    elif [ -d "$dir/.git" ] && current_origin="$(git -C "$dir" remote get-url origin 2>/dev/null || true)" \
+      && [ "$(normalize_repo_url "$current_origin")" != "$(normalize_repo_url "$repo")" ]; then
+      # The module's repo changed (e.g. a fork override added or removed).
+      info "$dir origin changed (${current_origin} -> ${repo}); re-cloning"
       reclone_module_fresh "$dir" "$repo" "$ref" || install_failures+=("$dir")
     elif [ -d "$dir/.git" ]; then
       info "$dir already present; checking for updates"
