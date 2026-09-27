@@ -281,7 +281,10 @@ install_enabled_modules(){
         install_failures+=("$dir")
       fi
     fi
-    run_post_install_hooks "$key" "$dir"
+    # A failed first clone leaves no directory; its failure is already recorded.
+    if [ -d "$dir" ]; then
+      run_post_install_hooks "$key" "$dir"
+    fi
   done
 
   if [ "${#install_failures[@]}" -gt 0 ]; then
