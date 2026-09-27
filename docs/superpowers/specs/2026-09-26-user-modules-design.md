@@ -37,9 +37,11 @@ would strip unknown keys.
   manifest. Every consumer reads the merged view through that loader.
 - A top-level `./modules.sh` (thin wrapper over new `modules.py` subcommands) adds,
   lists and removes local entries, probing the repo to determine its install type.
-- Everything downstream (clone, `ref` checkout, hooks, conf copy, C++ rebuild via
-  `MODULES_COMPILE`, SQL staging) is unchanged: it already operates on manifest entries
-  regardless of origin.
+- Everything downstream (clone, `ref` checkout, hooks, conf copy, Lua staging, SQL
+  staging) is unchanged: it already operates on manifest entries regardless of origin.
+- C++ rebuilds follow automatically. Adding, enabling or disabling a user C++ module
+  changes `MODULES_COMPILE`, and `deploy.sh`/`build.sh` compare that list with the
+  last build's record (`local-storage/modules/.built-modules`, from #46).
 
 ## 1. Local manifest file
 
@@ -176,14 +178,24 @@ the first match wins; `--type` bypasses detection.
 
 ### Lua (`type: lua`)
 
-**Match:** `.lua` files at the root, in `lua_scripts/`, in `Server/` or `server/`, or
-in `Server Files/lua_scripts/` (the paths the hooks search).
+**Match:** any `.lua` file in the module outside `.git/`.
 
-- The scripts reference `AIO` (`require("AIO")` / `AIO.`):
-  `requires: ["MODULE_AIO"]`, `post_install_hooks: ["copy-aio-lua"]`.
-- Otherwise: `requires: ["MODULE_ELUNA"]`, `post_install_hooks: ["copy-standard-lua"]`.
+Pick the staging hook the same way the curated entries do:
 
-This matches the 25 curated Lua entries in the upstream manifest.
+| Module shape | Hook | `requires` |
+|---|---|---|
+| Scripts use AIO (`require("AIO")` / `AIO.`) | `copy-aio-lua` | `MODULE_AIO` |
+| Scripts `require` files kept in subfolders, or have no `.lua` in the flat locations `copy-standard-lua` reads (root, `lua_scripts/`, `scripts/`, `Server Files/lua_scripts/`) | `copy-lua-tree` | `MODULE_ELUNA` |
+| Otherwise | `copy-standard-lua` | `MODULE_ELUNA` |
+
+For the `require` check, collect the names in `require("X")` calls and see whether
+`X.lua` exists only below a subfolder, as `azerothcore-lua-ah-bot` needs.
+
+**Script collections.** If the module has more than 20 `.lua` files, or `.lua` files
+spread across several unrelated top-level folders, warn that it looks like a
+collection rather than one module. Don't add a hook without explicit confirmation
+(`--yes` alone is not enough; require `--type lua`). This is the lesson from
+Eluna-scripts and Acore_eventScripts (see Runtime risk).
 
 ### SQL (`type: sql`)
 
@@ -201,7 +213,21 @@ tool or client patch". `--type` forces a type.
 Whether C++ compiles against the current core. That surfaces in `build.sh`; `--ref` is
 the escape hatch for pinning a known-good commit.
 
-## 5. Error handling summary
+## 5. Runtime risk
+
+A user module runs code inside the worldserver, and nothing in the pipeline can prove
+it safe. The end-to-end test for #44 showed how badly that can go: Eluna-scripts'
+`lotteryDB.lua` ran invalid SQL at startup, AzerothCore treats SQL errors as fatal,
+and the worldserver crash-looped.
+
+- `add` prints the warning below whenever it writes an entry, and the docs repeat it:
+  "Lua and SQL from this module run inside your worldserver. If the worldserver
+  crash-loops after deploying, run `./modules.sh remove <KEY>` and deploy again."
+- `remove` plus a deploy must fully undo an `add`. Lua is covered: `reset_staged_lua`
+  clears the module's folder. Module SQL that was already applied stays in the
+  database; say so in the `remove` output.
+
+## 6. Error handling summary
 
 | Situation | Behaviour |
 |---|---|
@@ -213,15 +239,16 @@ the escape hatch for pinning a known-good commit.
 | `add`: repo already upstream | Abort with the `MODULE_X=1` hint (unless `--key` override) |
 | `add`: key collision | Abort unless `--key` given |
 | `add`: type undetectable | Abort unless `--type` given |
+| `add`: Lua looks like a script collection | Warn; add a hook only with `--type lua` |
 
-## 6. Testing
+## 7. Testing
 
 - **pytest for the merge in `modules.py`:** new key; per-field override; list
   replacement; orphaned override with and without `name`/`repo`; duplicate local keys;
   invalid local JSON; missing local file; `status` override warning.
 - **pytest for detection, against fixture directories:** C++ with a single loader
   symbol, a mismatched name, and zero/multiple symbols; playerbots include; C++ with
-  stray SQL; Lua standard vs AIO; SQL-only; undetectable.
+  stray SQL; Lua standard vs AIO vs tree (subfolder `require`); a collection (>20 files) warns and needs `--type`; SQL-only; undetectable.
 - **pytest for `add`/`list`/`remove`:** writes to a temp config dir, `.env` updates,
   key collision, upstream-duplicate detection. Probing is exercised against a local
   bare git repo, with no network.
@@ -230,7 +257,7 @@ the escape hatch for pinning a known-good commit.
   small C++ module, run `./build.sh` and `./deploy.sh`, and confirm both load. Also
   confirm that re-running `setup.sh` keeps the local `MODULE_*` values.
 
-## 7. Docs
+## 8. Docs
 
 - `docs/MODULES.md`: a "Custom / user modules" section covering tagging your repo
   (preferred for public modules), `./modules.sh`, the overlay file format, and
@@ -249,70 +276,29 @@ the escape hatch for pinning a known-good commit.
 
 ## Follow-ups (separate issues)
 
-1. **Lua staging is broken for all modules (confirmed 2026-09-26 on the local
-   stack).** `manage-modules.sh:143` hard-codes
-   `LUA_SCRIPTS_TARGET=/azerothcore/lua_scripts`, and `ac-modules` does not mount
-   `storage/lua_scripts`.
-   - **Evidence:** the `ac-modules` log shows `copy-standard-lua` reporting "Copied
-     10 Lua script(s) to /azerothcore/lua_scripts", but that path lives in the
-     container's own filesystem and is discarded when it exits. Host
-     `storage/lua_scripts`, which the worldserver mounts, is empty even though three
-     copy-hook modules are enabled and cloned (364 `.lua` files between them).
-   - **Prod (.179), same result:**
-     - Four copy-hook modules are enabled: `Eluna-scripts`, `azerothcore-lua-ah-bot`,
-       `Acore_eventScripts`, `ActiveChat`.
-     - `/home/sam/RealmMaster/storage/lua_scripts` is empty, and the running
-       `ac-worldserver` (playerbots image) sees 0 `.lua` files under
-       `/azerothcore/lua_scripts`.
-     - Because `CONTAINER_USER=1001:1000` is non-root, the hook cannot even create
-       the directory. It logs "not accessible (will be copied during container
-       build)" and exits 0, and no such copy step exists. The failure reads as
-       success.
-   - **Host path (`build.sh`):** it exports `MODULES_LUA_TARGET_DIR`, which nothing
-     reads, so the hook targets `/azerothcore/lua_scripts` on the host.
-   - **Side issues:**
-     - `export MODULE_NAME=…` targets an associative array, so hooks receive an empty
-       `MODULE_NAME` (visible as "Processing " with a blank name).
-     - The hooks flatten files by basename, so files from different modules can
-       overwrite each other.
-     - Nothing removes a disabled module's Lua files.
+Open:
 
-   - **Root cause: this has never worked.**
-     - No commit in `docker-compose.yml` history has ever mounted `lua_scripts` in
-       `ac-modules`.
-     - The hooks arrived in `9e4eae1` (2025-11-01). `78eb55d` ("fixing … default lua
-       install") then changed the failing `mkdir` from `exit 1` with a warning to
-       `exit 0` with the "will be copied during container build" message. No such
-       copy step exists, and the repo has no Dockerfile. The "fix" hid the failure.
-   - **Runtime side is correct:** the worldserver's cwd is `/azerothcore`, so ALE's
-     default `ALE.ScriptPath = "lua_scripts"` resolves to the mounted
-     `/azerothcore/lua_scripts`. Only the staging side is broken.
+1. **Scraped Lua entries lack hooks and `requires`.** 57 upstream Lua entries have
+   neither, so enabling one stages nothing. Don't blanket-add hooks during sync: the
+   collections showed that staging unreviewed Lua can crash the worldserver. Reuse
+   section 4's detection to *suggest* hooks, and have a person review them.
+2. **`stage-modules.sh` hard-coded `MODULE_REPO_MAP`** (38 keys). It only drives
+   automatic profile selection when playerbots is off and no `--profile` is given.
+   Replace it with `MODULES_COMPILE`.
+3. **Private repo support:** credentials for clones inside `ac-modules`.
+4. **Config UI:** let users drop in `module-manifest.local.json` next to the upstream
+   manifest, so local modules appear in the builder.
+5. **Manifest types:** `mod-arac` and `mod-aio` are typed `cpp` but have no `src/`, so
+   toggling them triggers a no-op rebuild.
+6. `manage-modules-sql.sh`/`load_sql_helper` are dead code, and SQL staging applies no
+   filter when `modules-enabled.txt` is empty. Both are in the slop-sweep queue.
 
-   This directly affects user Lua modules and blocks their end-to-end test.
-8. **`AC_ELUNA_*` env vars are dead.** `docker-compose.yml` injects
-   `AC_ELUNA_ENABLED`, `…_SCRIPT_PATH`, `…_AUTO_RELOAD`, `…_TRACE_BACK` and others,
-   sourced from `.env.template` and `setup/defaults.sh`.
-   - The module is now mod-ale, whose config keys are `ALE.*`. AzerothCore derives
-     override names from the key (`Config.cpp` `IniKeyToEnvVarKey`: `ALE.ScriptPath`
-     becomes `AC_ALE_SCRIPT_PATH`), so the `AC_ELUNA_*` names match nothing.
-   - On prod the env says `AC_ELUNA_AUTO_RELOAD=1` and `AC_ELUNA_TRACE_BACK=1`, while
-     the effective `mod_ale.conf` has `ALE.AutoReload = false` and
-     `ALE.TraceBack = false`.
-   - Fix: rename to `AC_ALE_*`, and check the setup defaults still reflect the
-     intended values.
-2. **Scraped Lua entries lack hooks and `requires`.** 57 upstream Lua entries have
-   neither, so enabling one may stage nothing. Reuse the section 4 detection in
-   `update_module_manifest.py` to fill them in during sync.
-3. **`stage-modules.sh` hard-coded `MODULE_REPO_MAP`** (`:299-338`, 38 keys). It only
-   drives automatic profile selection when playerbots is off and no `--profile` is
-   given. Replace it with `MODULES_COMPILE` so any C++ module selects
-   `services-modules`.
-4. **Private repo support:** credentials for clones inside `ac-modules` (for example a
-   mounted git credential helper or a token env var).
-5. **Config UI:** let users drop in `module-manifest.local.json` alongside the upstream
-   manifest so local modules appear in the builder.
-6. **Dead code:** `manage-modules-sql.sh` and `load_sql_helper` are loaded but never
-   called (`manage-modules.sh:540-567`). Remove them or wire them in.
-7. **SQL staging with an empty enabled list:** when `modules-enabled.txt` is empty,
-   `stage-modules.sh:285-296` applies no filter and stages SQL from every module
-   directory. Confirm whether this is intended.
+Resolved by #44, #45 and #46 (merged 2026-09-27), which this design now relies on:
+
+- **Lua staging never reached the worldserver.** Fixed: the `ac-modules` mount,
+  per-module folders, `reset_staged_lua`, and the `copy-lua-tree` / `copy-aio-server`
+  hooks.
+- **`AC_ELUNA_*` never reached mod-ale.** Compose now also sets `AC_ALE_*`.
+- **Hook failures were only logged.** They now stop the build, or are reported at the
+  end of the deploy.
+- **Enabling a C++ module didn't trigger a rebuild.** Fixed with the build record.
