@@ -9,14 +9,20 @@ docs/ADDING_MODULES.md.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import List, Optional
+
+from manifest_overlay import ManifestError, load_local_entries, local_manifest_path, merge_manifest
+from module_detect import detect
+from update_module_manifest import repo_name_to_key
 
 GIT_TIMEOUT_SECONDS = 600
 
@@ -114,3 +120,170 @@ def probe_clone(url: str, ref: Optional[str], dest: Path) -> None:
     if checkout.returncode != 0:
         shutil.rmtree(dest, ignore_errors=True)
         raise ProbeError(f"Ref '{ref}' not found in {url}: {checkout.stderr.strip()}")
+
+
+WORLDSERVER_WARNING = (
+    "⚠️  Lua and SQL from this module run inside your worldserver. If the worldserver "
+    "crash-loops after deploying, run ./modules.sh remove {key} and deploy again."
+)
+
+
+class Refused(Exception):
+    """add/remove refused with a message for the user (exit code 1)."""
+
+
+class Paths:
+    def __init__(self, root: Path):
+        self.root = Path(root)
+        self.manifest = self.root / "config" / "module-manifest.json"
+        self.local = local_manifest_path(self.manifest)
+        self.env = self.root / ".env"
+
+
+def _load(paths: Paths):
+    try:
+        local = load_local_entries(paths.local)
+    except ManifestError as exc:
+        raise Refused(f"{exc}\nFix or remove {paths.local} first; it was not modified.")
+    upstream = json.loads(paths.manifest.read_text(encoding="utf-8")).get("modules", [])
+    merged, warnings = merge_manifest(upstream, local)
+    for warning in warnings:
+        print(f"WARNING: {warning}", file=sys.stderr)
+    return upstream, local, merged
+
+
+def _confirm(prompt: str, assume_yes: bool) -> bool:
+    if assume_yes:
+        return True
+    try:
+        return input(f"{prompt} [y/N]: ").strip().lower() in ("y", "yes")
+    except EOFError:
+        return False
+
+
+def _enable(paths: Paths, keys: List[str]) -> None:
+    for key in keys:
+        set_env_value(paths.env, key, "1")
+        print(f"   enabled {key}=1 in .env")
+
+
+def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
+    upstream, local, merged = _load(paths)
+    by_key = {m["key"]: m for m in merged}
+    upstream_keys = {m["key"] for m in upstream}
+
+    # Ref-only override of a listed module: no clone, nothing to detect.
+    if not args.url:
+        if not args.key or not args.ref:
+            raise Refused("add needs a git URL, or --key MODULE_X --ref <ref> to pin a listed module")
+        if args.key not in by_key:
+            raise Refused(f"{args.key} is not in the manifest; give a git URL to add it")
+        override = next((e for e in local if e["key"] == args.key), {"key": args.key})
+        override = {**override, "ref": args.ref}
+        print(json.dumps(override, indent=2))
+        if not _confirm(f"Pin {args.key} to {args.ref}?", args.yes):
+            raise Refused("Nothing written.")
+        write_local_entries(paths.local, [e for e in local if e["key"] != args.key] + [override])
+        print(f"✅ {args.key} pinned to {args.ref} in {paths.local.name}. Run ./deploy.sh to apply.")
+        return 0
+
+    wanted = normalize_repo(args.url)
+    same_repo = next((m for m in merged if normalize_repo(str(m.get("repo", ""))) == wanted), None)
+    if same_repo and args.key != same_repo["key"]:
+        where = "added locally" if same_repo.get("source") == "local" else "in the manifest"
+        raise Refused(f"{args.url} is already {where} as {same_repo['key']}; "
+                      f"enable it with {same_repo['key']}=1 in .env")
+
+    name = repo_basename(args.url)
+    key = args.key or repo_name_to_key(name)
+    is_override = key in upstream_keys
+    if not args.key and key in by_key:
+        raise Refused(f"Key {key} is already used by {by_key[key].get('repo')}; choose one with --key MODULE_...")
+
+    with tempfile.TemporaryDirectory(prefix="realmmaster-probe-") as tmp:
+        checkout = Path(tmp) / name
+        try:
+            probe_clone(args.url, args.ref, checkout)
+        except ProbeError as exc:
+            raise Refused(str(exc))
+        detection = detect(checkout, by_key[key]["name"] if is_override else name)
+
+    module_type = args.type or detection.module_type
+    if module_type is None:
+        raise Refused(f"Could not tell how to install {name}: {detection.reason}. "
+                      "Pass --type cpp|lua|sql if you know better.")
+    if detection.is_collection and args.type != "lua":
+        raise Refused(f"{name} looks like a Lua script collection (many scripts or folders). "
+                      "Staging all of it can break the worldserver; copy the scripts you want into "
+                      "storage/lua_scripts/ yourself, or pass --type lua to stage everything.")
+    for warning in detection.warnings:
+        print(f"WARNING: {warning}", file=sys.stderr)
+
+    hooks = detection.post_install_hooks if module_type == detection.module_type else []
+    if module_type == "lua" and not hooks:
+        hooks, requires = ["copy-standard-lua"], ["MODULE_ELUNA"]
+    else:
+        requires = detection.requires if module_type == detection.module_type else []
+
+    if is_override:
+        new_entry = {"key": key, "repo": args.url}
+        if args.ref:
+            new_entry["ref"] = args.ref
+        if module_type != str(by_key[key].get("type", "cpp")):
+            print(f"WARNING: {args.url} looks like {module_type}, but {key} is {by_key[key].get('type')} upstream",
+                  file=sys.stderr)
+    else:
+        new_entry = {"key": key, "name": name, "repo": args.url, "type": module_type,
+                     "post_install_hooks": hooks, "requires": requires,
+                     "description": f"User module from {args.url}", "category": "local"}
+        if args.ref:
+            new_entry["ref"] = args.ref
+
+    print(json.dumps(new_entry, indent=2))
+    if not _confirm(f"Add {key}?", args.yes):
+        raise Refused("Nothing written.")
+    write_local_entries(paths.local, [e for e in local if e["key"] != key] + [new_entry])
+    print(f"✅ {key} written to {paths.local.name}")
+
+    if not args.no_enable:
+        _enable(paths, [key] + [r for r in requires])
+
+    from modules import build_state
+    state = build_state(paths.env, paths.manifest)
+    for error in state.errors:
+        print(f"ERROR: {error}", file=sys.stderr)
+
+    print(WORLDSERVER_WARNING.format(key=key))
+    print("Next: ./build.sh (C++ module)" if module_type == "cpp" else "Next: ./deploy.sh")
+    return 1 if state.errors else 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="modules.sh", description="Manage user-defined modules")
+    parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]), help=argparse.SUPPRESS)
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    add = sub.add_parser("add", help="Add a module from a git URL, or pin/fork a listed one")
+    add.add_argument("url", nargs="?", help="git URL (omit with --key and --ref to pin a listed module)")
+    add.add_argument("--ref", help="branch, tag or commit to check out")
+    add.add_argument("--type", choices=["cpp", "lua", "sql"], help="skip detection")
+    add.add_argument("--key", help="MODULE_* key (to override a listed module, or on a key collision)")
+    add.add_argument("--no-enable", action="store_true", help="don't set MODULE_*=1 in .env")
+    add.add_argument("--yes", action="store_true", help="don't ask for confirmation")
+    add.set_defaults(func=cmd_add)
+    return parser
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    paths = Paths(Path(args.root))
+    try:
+        return args.func(args, paths)
+    except Refused as exc:
+        print(f"❌ {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
