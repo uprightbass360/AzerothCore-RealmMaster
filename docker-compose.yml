@@ -599,6 +599,15 @@ services:
       AC_ELUNA_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS}"
       AC_ELUNA_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS}"
       AC_ELUNA_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL}"
+      # mod-ale reads ALE.* keys, overridden by AC_ALE_* (AC_ELUNA_* only reaches mod-eluna builds)
+      AC_ALE_ENABLED: "${AC_ELUNA_ENABLED:-1}"
+      AC_ALE_TRACE_BACK: "${AC_ELUNA_TRACE_BACK:-1}"
+      AC_ALE_AUTO_RELOAD: "${AC_ELUNA_AUTO_RELOAD:-1}"
+      AC_ALE_BYTECODE_CACHE: "${AC_ELUNA_BYTECODE_CACHE:-1}"
+      AC_ALE_SCRIPT_PATH: "${AC_ELUNA_SCRIPT_PATH:-lua_scripts}"
+      AC_ALE_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS}"
+      AC_ALE_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS}"
+      AC_ALE_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL:-1}"
       PLAYERBOT_ENABLED: "${PLAYERBOT_ENABLED}"
       PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS}"
       AC_LOG_LEVEL: "2"
@@ -732,6 +741,15 @@ services:
       AC_ELUNA_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS}"
       AC_ELUNA_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS}"
       AC_ELUNA_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL}"
+      # mod-ale reads ALE.* keys, overridden by AC_ALE_* (AC_ELUNA_* only reaches mod-eluna builds)
+      AC_ALE_ENABLED: "${AC_ELUNA_ENABLED:-1}"
+      AC_ALE_TRACE_BACK: "${AC_ELUNA_TRACE_BACK:-1}"
+      AC_ALE_AUTO_RELOAD: "${AC_ELUNA_AUTO_RELOAD:-1}"
+      AC_ALE_BYTECODE_CACHE: "${AC_ELUNA_BYTECODE_CACHE:-1}"
+      AC_ALE_SCRIPT_PATH: "${AC_ELUNA_SCRIPT_PATH:-lua_scripts}"
+      AC_ALE_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS}"
+      AC_ALE_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS}"
+      AC_ALE_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL:-1}"
       PLAYERBOT_ENABLED: "${PLAYERBOT_ENABLED}"
       PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS}"
       AC_LOG_LEVEL: "2"
@@ -788,6 +806,15 @@ services:
       AC_ELUNA_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS}"
       AC_ELUNA_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS}"
       AC_ELUNA_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL}"
+      # mod-ale reads ALE.* keys, overridden by AC_ALE_* (AC_ELUNA_* only reaches mod-eluna builds)
+      AC_ALE_ENABLED: "${AC_ELUNA_ENABLED:-1}"
+      AC_ALE_TRACE_BACK: "${AC_ELUNA_TRACE_BACK:-1}"
+      AC_ALE_AUTO_RELOAD: "${AC_ELUNA_AUTO_RELOAD:-1}"
+      AC_ALE_BYTECODE_CACHE: "${AC_ELUNA_BYTECODE_CACHE:-1}"
+      AC_ALE_SCRIPT_PATH: "${AC_ELUNA_SCRIPT_PATH:-lua_scripts}"
+      AC_ALE_REQUIRE_PATHS: "${AC_ELUNA_REQUIRE_PATHS}"
+      AC_ALE_REQUIRE_CPATHS: "${AC_ELUNA_REQUIRE_CPATHS}"
+      AC_ALE_AUTO_RELOAD_INTERVAL: "${AC_ELUNA_AUTO_RELOAD_INTERVAL:-1}"
       PLAYERBOT_ENABLED: "${PLAYERBOT_ENABLED}"
       PLAYERBOT_MAX_BOTS: "${PLAYERBOT_MAX_BOTS}"
       AC_LOG_LEVEL: "2"
@@ -833,12 +860,14 @@ services:
     volumes:
       - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/modules
       - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
+      - ${STORAGE_LUA_SCRIPTS_PATH:-${STORAGE_PATH}/lua_scripts}:/azerothcore/lua_scripts
       - ./scripts:/tmp/scripts:ro
       - ./config:/tmp/config:ro
     env_file:
       - ./.env
     environment:
       MODULES_MANIFEST_PATH: /tmp/config/module-manifest.json
+      LUA_SCRIPTS_TARGET: /azerothcore/lua_scripts
     entrypoint: ["/bin/sh"]
     command:
       - -c

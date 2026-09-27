@@ -91,13 +91,32 @@ generate_module_state(){
 }
 
 remove_disabled_modules(){
+  # Several manifest entries can share a clone directory (a module and its
+  # forks, e.g. MODULE_PLAYERBOTS and MODULE_MOD_PLAYERBOTS -> mod-playerbots).
+  # Never remove a directory an enabled entry still uses.
+  local -A enabled_dirs=()
+  local key
+  for key in "${MODULE_KEYS[@]}"; do
+    if [ "${MODULE_ENABLED[$key]:-0}" = "1" ] && [ -n "${MODULE_NAME[$key]:-}" ]; then
+      enabled_dirs["${MODULE_NAME[$key]}"]=1
+    fi
+  done
+
   for key in "${MODULE_KEYS[@]}"; do
     local dir
     dir="${MODULE_NAME[$key]:-}"
     [ -n "$dir" ] || continue
-    if [ "${MODULE_ENABLED[$key]:-0}" != "1" ] && [ -d "$dir" ]; then
+    [ "${MODULE_ENABLED[$key]:-0}" != "1" ] || continue
+    [ -z "${enabled_dirs[$dir]:-}" ] || continue
+    if [ -d "$dir" ]; then
       info "Removing ${dir} (disabled)"
       rm -rf "$dir"
+    fi
+    # Lua hooks stage into a per-module subfolder; drop it with the module.
+    case "$dir" in */*|.|..) continue;; esac
+    if [ -n "${LUA_SCRIPTS_TARGET:-}" ] && [ -d "$LUA_SCRIPTS_TARGET/$dir" ]; then
+      info "Removing staged Lua scripts for ${dir} (disabled)"
+      rm -rf "${LUA_SCRIPTS_TARGET:?}/$dir"
     fi
   done
 }
@@ -135,19 +154,19 @@ run_post_install_hooks(){
     if [ -n "$hook_script" ]; then
       info "Running post-install hook: $hook"
 
-      # Set hook environment variables
-      export MODULE_KEY="$key"
-      export MODULE_DIR="$dir"
-      export MODULE_NAME="${MODULE_NAME[$key]:-$(basename "$dir")}"
-      export MODULES_ROOT="${MODULES_ROOT:-/modules}"
-      export LUA_SCRIPTS_TARGET="/azerothcore/lua_scripts"
-
-      # Pass build environment variables to hooks
-      export STACK_SOURCE_VARIANT="${STACK_SOURCE_VARIANT:-}"
-      export MODULES_REBUILD_SOURCE_PATH="${MODULES_REBUILD_SOURCE_PATH:-}"
-
-      # Execute the hook script
-      if "$hook_script"; then
+      # Hook environment is passed via env(1): MODULE_NAME is an associative
+      # array in this shell, so exporting it would never reach the hook.
+      # LUA_SCRIPTS_TARGET is only set inside ac-modules (the storage/lua_scripts
+      # mount); host-side runs leave it empty and Lua hooks skip staging.
+      if env \
+        MODULE_KEY="$key" \
+        MODULE_DIR="$dir" \
+        MODULE_NAME="${MODULE_NAME[$key]:-$(basename "$dir")}" \
+        MODULES_ROOT="${MODULES_ROOT:-/modules}" \
+        LUA_SCRIPTS_TARGET="${LUA_SCRIPTS_TARGET:-}" \
+        STACK_SOURCE_VARIANT="${STACK_SOURCE_VARIANT:-}" \
+        MODULES_REBUILD_SOURCE_PATH="${MODULES_REBUILD_SOURCE_PATH:-}" \
+        "$hook_script"; then
         ok "Hook '$hook' completed successfully"
       else
         local exit_code=$?
@@ -156,9 +175,6 @@ run_post_install_hooks(){
           *) err "Hook '$hook' failed with exit code $exit_code" ;;
         esac
       fi
-
-      # Clean up hook-specific environment (preserve MODULE_NAME array and script-level MODULES_ROOT)
-      unset MODULE_KEY MODULE_DIR LUA_SCRIPTS_TARGET
     else
       err "Hook script not found for ${hook} (searched: ${hook_search_paths[*]})"
     fi

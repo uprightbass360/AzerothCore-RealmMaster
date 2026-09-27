@@ -483,11 +483,6 @@ stage_modules(){
   export MODULES_ENV_TARGET_DIR="$env_target_dir"
   ensure_host_writable "$env_target_dir"
 
-  local lua_target_dir="$src_path/lua_scripts"
-  mkdir -p "$lua_target_dir"
-  export MODULES_LUA_TARGET_DIR="$lua_target_dir"
-  ensure_host_writable "$lua_target_dir"
-
   # Set up local storage path for build sentinel tracking
   local local_storage_path
   local_storage_path="$(read_env STORAGE_PATH_LOCAL "./local-storage")"
