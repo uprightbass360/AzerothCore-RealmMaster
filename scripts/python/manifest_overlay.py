@@ -17,10 +17,24 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 LOCAL_MANIFEST_NAME = "module-manifest.local.json"
+
+# Keys are written unquoted into .env/modules.env and names become directories
+# (rm -rf'd when disabled), so both are restricted to safe characters.
+KEY_PATTERN = re.compile(r"^MODULE_[A-Z0-9_]+$")
+NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def is_valid_key(key: object) -> bool:
+    return isinstance(key, str) and bool(KEY_PATTERN.match(key))
+
+
+def is_valid_name(name: object) -> bool:
+    return isinstance(name, str) and bool(NAME_PATTERN.match(name)) and name not in (".", "..")
 
 
 class ManifestError(ValueError):
@@ -48,6 +62,16 @@ def load_local_entries(local_path: Path) -> List[dict]:
     for idx, item in enumerate(modules):
         if not isinstance(item, dict) or not isinstance(item.get("key"), str) or not item["key"]:
             raise ManifestError(f"Local manifest {local_path}: entry {idx} must be an object with a string 'key'")
+        if not is_valid_key(item["key"]):
+            raise ManifestError(
+                f"Local manifest {local_path}: entry {idx} has invalid key '{item['key']}' "
+                "(keys look like MODULE_SOMETHING: capitals, digits and underscores)"
+            )
+        if "name" in item and not is_valid_name(item["name"]):
+            raise ManifestError(
+                f"Local manifest {local_path}: entry {idx} ({item['key']}) has invalid name '{item['name']}' "
+                "(a folder name: letters, digits, '.', '_' and '-', not starting with '.' or '-')"
+            )
         if item["key"] in seen:
             raise ManifestError(f"Local manifest {local_path}: duplicate key '{item['key']}'")
         seen.add(item["key"])

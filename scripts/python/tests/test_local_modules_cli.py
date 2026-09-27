@@ -335,6 +335,23 @@ class AddTest(CliCase):
         self.assertIn("./modules.sh remove", err)
         self.assertEqual(len(self.local_entries()), 1)
 
+    def test_add_bad_key_refused(self):
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
+        for bad in ("MODULE_FOO $(id)", "mod_foo", "MODULE_"):
+            rc, _, err = self.run_cli("add", str(repo), "--key", bad, "--yes")
+            self.assertEqual(rc, 1, bad)
+            self.assertIn("capitals, digits and underscores", err)
+        self.assertEqual(self.local_entries(), [])
+        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+
+    def test_add_url_with_invalid_folder_name_refused(self):
+        repo = make_repo(self.repos / "bad name", {"thing.lua": ""})
+        rc, _, err = self.run_cli("add", str(repo), "--key", "MODULE_BAD_NAME", "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("bad name", err)
+        self.assertEqual(self.local_entries(), [])
+        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+
     def test_declined_prompt_writes_nothing(self):
         repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
         import builtins

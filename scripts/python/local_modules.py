@@ -20,7 +20,14 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional
 
-from manifest_overlay import ManifestError, load_local_entries, local_manifest_path, merge_manifest
+from manifest_overlay import (
+    ManifestError,
+    is_valid_key,
+    is_valid_name,
+    load_local_entries,
+    local_manifest_path,
+    merge_manifest,
+)
 from module_detect import detect
 from modules import build_state, load_env_file, parse_bool
 from update_module_manifest import repo_name_to_key
@@ -138,6 +145,17 @@ class Refused(Exception):
     """add/remove refused with a message for the user (exit code 1)."""
 
 
+def _check_key(key: str) -> None:
+    if not is_valid_key(key):
+        raise Refused(f"Invalid key '{key}'. Keys look like MODULE_SOMETHING: capitals, digits and underscores.")
+
+
+def _check_name(name: str, url: str) -> None:
+    if not is_valid_name(name):
+        raise Refused(f"'{name}' (from {url}) can't be used as a module folder name: use letters, digits, "
+                      "'.', '_' and '-', not starting with '.' or '-'.")
+
+
 class Paths:
     def __init__(self, root: Path):
         self.root = Path(root)
@@ -204,6 +222,8 @@ def _finish(paths: Paths, key: str, requires: List[str], module_type: str,
 
 
 def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
+    if args.key:
+        _check_key(args.key)
     upstream, local, merged = _load(paths)
     by_key = {m["key"]: m for m in merged}
     local_by_key = {e["key"]: e for e in local}
@@ -237,7 +257,9 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
                       f"enable it with {same_repo['key']}=1 in .env")
 
     name = repo_basename(args.url)
+    _check_name(name, args.url)
     key = args.key or repo_name_to_key(name)
+    _check_key(key)
 
     # A new entry (key not already in the merged manifest) targeting a folder name
     # that's already listed would clone a second module into that folder. This

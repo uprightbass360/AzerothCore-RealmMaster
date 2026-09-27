@@ -103,6 +103,31 @@ class LoadLocalEntriesTest(unittest.TestCase):
             load_local_entries(path)
         self.assertIn("MODULE_A", str(ctx.exception))
 
+    def assert_rejected(self, item, needle):
+        path = write_manifest(self.tmp / "module-manifest.local.json", [item])
+        with self.assertRaises(ManifestError) as ctx:
+            load_local_entries(path)
+        self.assertIn(str(path), str(ctx.exception))
+        self.assertIn(needle, str(ctx.exception))
+
+    def test_key_must_look_like_module_key(self):
+        self.assert_rejected(entry("mod_foo"), "mod_foo")
+
+    def test_key_with_spaces_or_substitution_is_rejected(self):
+        self.assert_rejected(entry("MODULE_FOO $(id)"), "MODULE_FOO $(id)")
+        self.assert_rejected({"key": "MODULE_FOO BAR", "ref": "v1"}, "MODULE_FOO BAR")
+
+    def test_name_dotdot_is_rejected(self):
+        self.assert_rejected(entry("MODULE_FOO", name=".."), "..")
+
+    def test_name_with_slash_is_rejected(self):
+        self.assert_rejected(entry("MODULE_FOO", name="a/b"), "a/b")
+
+    def test_valid_key_and_name_are_accepted(self):
+        path = write_manifest(self.tmp / "module-manifest.local.json",
+                              [entry("MODULE_FOO_2", name="mod-foo_2.x"), {"key": "MODULE_BAR", "ref": "v1"}])
+        self.assertEqual(len(load_local_entries(path)), 2)
+
 
 class LoadMergedManifestTest(unittest.TestCase):
     def test_reads_sibling_local_file(self):
