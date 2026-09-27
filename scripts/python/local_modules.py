@@ -129,6 +129,11 @@ WORLDSERVER_WARNING = (
 )
 
 
+def _warn_type_ignored(key: str, module_type: str) -> None:
+    print(f"WARNING: --type is ignored for {key}; its type is defined by the listed "
+          f"entry ({module_type})", file=sys.stderr)
+
+
 class Refused(Exception):
     """add/remove refused with a message for the user (exit code 1)."""
 
@@ -213,6 +218,8 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
         listed = by_key[args.key]
         module_type = str(listed.get("type", "cpp"))
         requires = [str(r) for r in (listed.get("requires") or [])]
+        if args.type:
+            _warn_type_ignored(args.key, module_type)
         override = local_by_key.get(args.key, {"key": args.key})
         override = {**override, "ref": args.ref}
         print(json.dumps(override, indent=2))
@@ -263,8 +270,7 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
         requires = [str(r) for r in (listed.get("requires") or [])]
 
         if args.type:
-            print(f"WARNING: --type is ignored for {key}; its type is defined by the listed "
-                  f"entry ({module_type})", file=sys.stderr)
+            _warn_type_ignored(key, module_type)
         if detection.module_type and detection.module_type != module_type:
             print(f"WARNING: {args.url} looks like {detection.module_type}, but {key} is "
                   f"{module_type} upstream", file=sys.stderr)
