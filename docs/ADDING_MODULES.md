@@ -60,8 +60,8 @@ Set `MODULE_<KEY>=1` in `.env` and deploy. Other ways to pick modules:
   `void Addmod_fooScripts()`.
 - SQL in `data/sql/db-world`, `db-characters`, `db-auth` and `db-playerbots` (and
   their `base/` and `updates/` subfolders), or in the legacy `world`, `characters`,
-  `auth` (and their `base/`), is staged and applied by the worldserver. SQL anywhere
-  else isn't imported.
+  `auth`, `playerbots` (and their `base/`), is staged and applied by the worldserver.
+  SQL anywhere else isn't imported.
 - `conf/*.conf.dist` files are copied to `storage/config/modules/`. A `.conf` is
   created from the `.dist` only if you don't already have one.
 
