@@ -152,7 +152,15 @@ if [ -d "$PERSISTENT_DIR" ]; then
   if find "$PERSISTENT_DIR" -maxdepth 1 -name "*" ! -name ".*" ! -path "$PERSISTENT_DIR" | grep -q .; then
     if [ -d "$RUNTIME_DIR" ] && [ -z "$(ls -A "$RUNTIME_DIR" 2>/dev/null)" ]; then
       echo "🔄 Restoring MySQL data from persistent storage..."
-      cp -a "$PERSISTENT_DIR"/* "$RUNTIME_DIR/" 2>/dev/null || true
+      # A partial copy (e.g. the runtime tmpfs is too small) must stop startup:
+      # MySQL would run on the partial datadir and the shutdown sync
+      # (rsync --delete) would then erase the missing files from persistent storage.
+      if ! cp -a "$PERSISTENT_DIR"/* "$RUNTIME_DIR/"; then
+        echo "❌ Failed to copy MySQL data from $PERSISTENT_DIR to $RUNTIME_DIR." >&2
+        echo "   Refusing to start on a partial datadir; persistent data was not modified." >&2
+        echo "   Check free space (MYSQL_RUNTIME_TMPFS_SIZE) against the size of $PERSISTENT_DIR." >&2
+        exit 1
+      fi
       chown -R mysql:"$target_group_name" "$RUNTIME_DIR"
       echo "✅ Data restored from persistent storage"
     fi
