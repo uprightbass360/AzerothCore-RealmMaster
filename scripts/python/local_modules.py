@@ -99,11 +99,13 @@ def _git(args: List[str], url: Optional[str] = None) -> subprocess.CompletedProc
 
 def probe_clone(url: str, ref: Optional[str], dest: Path) -> None:
     dest = Path(dest)
+    if ref and ref.startswith("-"):
+        raise ProbeError(f"Invalid ref '{ref}': a branch, tag or commit can't start with '-'")
     args = ["clone", "--quiet", "--depth", "1"]
     if ref:
         args += ["--branch", ref]
     try:
-        result = _git([*args, url, str(dest)], url=url)
+        result = _git([*args, "--", url, str(dest)], url=url)
     except ProbeError:
         shutil.rmtree(dest, ignore_errors=True)
         raise
@@ -114,7 +116,7 @@ def probe_clone(url: str, ref: Optional[str], dest: Path) -> None:
     # --branch only takes branches and tags; a commit SHA needs a full clone.
     shutil.rmtree(dest, ignore_errors=True)
     try:
-        full = _git(["clone", "--quiet", url, str(dest)], url=url)
+        full = _git(["clone", "--quiet", "--", url, str(dest)], url=url)
     except ProbeError:
         shutil.rmtree(dest, ignore_errors=True)
         raise
@@ -186,7 +188,18 @@ def _load(paths: Paths):
         local = load_local_entries(paths.local)
     except ManifestError as exc:
         raise Refused(f"{exc}\nFix or remove {paths.local} first; it was not modified.")
-    upstream = json.loads(paths.manifest.read_text(encoding="utf-8")).get("modules", [])
+    try:
+        data = json.loads(paths.manifest.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise Refused(f"Module manifest {paths.manifest} not found; run this from a RealmMaster checkout.")
+    except (OSError, ValueError) as exc:
+        raise Refused(f"Cannot read module manifest {paths.manifest}: {exc}\n"
+                      "Restore it with: git checkout -- config/module-manifest.json")
+    modules = data.get("modules") if isinstance(data, dict) else None
+    if not isinstance(modules, list):
+        raise Refused(f"Module manifest {paths.manifest} has no 'modules' list; "
+                      "restore it with: git checkout -- config/module-manifest.json")
+    upstream = [m for m in modules if isinstance(m, dict) and m.get("key")]
     merged, warnings = merge_manifest(upstream, local)
     for warning in warnings:
         print(f"WARNING: {warning}", file=sys.stderr)
@@ -241,6 +254,8 @@ def _finish(paths: Paths, key: str, requires: List[str], module_type: str,
 def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
     if args.key:
         _check_key(args.key)
+    if args.ref and args.ref.startswith("-"):
+        raise Refused(f"Invalid ref '{args.ref}': a branch, tag or commit can't start with '-'.")
     upstream, local, merged = _load(paths)
     by_key = {m["key"]: m for m in merged}
     local_by_key = {e["key"]: e for e in local}
