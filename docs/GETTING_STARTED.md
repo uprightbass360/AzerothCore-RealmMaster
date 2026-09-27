@@ -251,7 +251,7 @@ cd ~/AzerothCore-RealmMaster  # or your custom project directory
   - `config/module-profiles/azerothcore-vanilla.json` – pure AzerothCore (no optional modules).
   - `config/module-profiles/playerbots-only.json` – playerbot prerequisites only (tune bot counts separately).
   - `config/module-profiles/all-modules.json` – enable everything currently marked supported/active (not recommended).
-- Module metadata lives in `config/module-manifest.json`, which is generated from GitHub topics; don't edit it by hand. To get a new module listed, or to learn what happens to each module type, see [ADDING_MODULES.md](ADDING_MODULES.md).
+- Module metadata lives in `config/module-manifest.json`, which is generated from GitHub topics; don't edit it by hand. Add your own modules with `./modules.sh` (see [ADDING_MODULES.md](ADDING_MODULES.md)).
 
 ---
 
