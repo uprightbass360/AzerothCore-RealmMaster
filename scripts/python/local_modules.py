@@ -141,6 +141,23 @@ def _warn_type_ignored(key: str, module_type: str) -> None:
           f"entry ({module_type})", file=sys.stderr)
 
 
+# `remove` leaves this marker in place of a local-only entry, so the next deploy
+# still knows the module and cleans it up like any disabled module (checkout,
+# staged Lua, SQL staging, C++ build set). `add` of the same URL or key replaces it.
+TOMBSTONE_REASON = "removed with ./modules.sh remove"
+
+
+def is_tombstone(item: dict) -> bool:
+    return (str(item.get("status", "")).lower() == "blocked"
+            and item.get("block_reason") == TOMBSTONE_REASON
+            and item.get("source", "local") == "local")
+
+
+def tombstone_for(item: dict) -> dict:
+    return {"key": item["key"], "name": item["name"], "repo": item["repo"],
+            "status": "blocked", "block_reason": TOMBSTONE_REASON}
+
+
 class Refused(Exception):
     """add/remove refused with a message for the user (exit code 1)."""
 
@@ -236,6 +253,8 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
         if args.key not in by_key:
             raise Refused(f"{args.key} is not in the manifest; give a git URL to add it")
         listed = by_key[args.key]
+        if is_tombstone(listed):
+            raise Refused(f"{args.key} was removed; add it again with ./modules.sh add {listed['repo']}")
         module_type = str(listed.get("type", "cpp"))
         requires = [str(r) for r in (listed.get("requires") or [])]
         if args.type:
@@ -249,8 +268,21 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
         print(f"✅ {args.key} pinned to {args.ref} in {paths.local.name}")
         return _finish(paths, args.key, requires, module_type, True, args.no_enable)
 
+    def drop_tombstone(tomb_key: str) -> None:
+        nonlocal local, merged
+        local = [e for e in local if e["key"] != tomb_key]
+        merged = [m for m in merged if m["key"] != tomb_key]
+        by_key.pop(tomb_key, None)
+        local_by_key.pop(tomb_key, None)
+
     wanted = normalize_repo(args.url)
     same_repo = next((m for m in merged if normalize_repo(str(m.get("repo", ""))) == wanted), None)
+    tombstone_key = None
+    if same_repo and is_tombstone(same_repo):
+        # Re-adding a removed module: its tombstone is replaced.
+        tombstone_key = same_repo["key"]
+        drop_tombstone(tombstone_key)
+        same_repo = None
     if same_repo and args.key != same_repo["key"]:
         where = "added locally" if same_repo.get("source") == "local" else "in the manifest"
         raise Refused(f"{args.url} is already {where} as {same_repo['key']}; "
@@ -258,8 +290,10 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
 
     name = repo_basename(args.url)
     _check_name(name, args.url)
-    key = args.key or repo_name_to_key(name)
+    key = args.key or tombstone_key or repo_name_to_key(name)
     _check_key(key)
+    if key in by_key and is_tombstone(by_key[key]):
+        drop_tombstone(key)
 
     # A new entry (key not already in the merged manifest) targeting a folder name
     # that's already listed would clone a second module into that folder. This
@@ -348,6 +382,8 @@ def cmd_list(args: argparse.Namespace, paths: Paths) -> int:
         key = item["key"]
         if key in upstream_keys:
             kind = "override"
+        elif is_tombstone(item):
+            kind = "removed"
         elif item.get("name") and item.get("repo"):
             kind = "local"
         else:
@@ -366,16 +402,29 @@ def cmd_list(args: argparse.Namespace, paths: Paths) -> int:
 def cmd_remove(args: argparse.Namespace, paths: Paths) -> int:
     upstream, local, _merged = _load(paths)
     key = args.key
-    if not any(e["key"] == key for e in local):
+    item = next((e for e in local if e["key"] == key), None)
+    if item is None:
         raise Refused(f"{key} has no entry in {paths.local.name}; ./modules.sh list shows the local entries")
-    write_local_entries(paths.local, [e for e in local if e["key"] != key])
-    if key in {m["key"] for m in upstream}:
+    upstream_keys = {m["key"] for m in upstream}
+    if key not in upstream_keys and is_tombstone(item):
+        raise Refused(f"{key} is already removed; its disabled marker stays in {paths.local.name} "
+                      f"so the next deploy cleans it up")
+    if key in upstream_keys:
+        write_local_entries(paths.local, [e for e in local if e["key"] != key])
         print(f"✅ Removed the local override for {key}; it goes back to its upstream repo/ref "
               f"on the next deploy. {key} in .env is unchanged.")
-    else:
+    elif item.get("name") and item.get("repo"):
+        write_local_entries(paths.local, [tombstone_for(item) if e["key"] == key else e for e in local])
         set_env_value(paths.env, key, "0")
         print(f"✅ Removed {key} and set {key}=0 in .env. The next deploy removes its checkout "
-              f"and staged Lua.")
+              f"and staged Lua and stops staging its SQL.")
+        print(f"   The removed entry stays in {paths.local.name} as a disabled marker "
+              f"(shown by ./modules.sh list) so that deploy knows to clean it up.")
+    else:
+        # An orphaned override: nothing was installed from it.
+        write_local_entries(paths.local, [e for e in local if e["key"] != key])
+        set_env_value(paths.env, key, "0")
+        print(f"✅ Removed {key} and set {key}=0 in .env.")
     print("   SQL the module already applied stays in the database.")
     return 0
 

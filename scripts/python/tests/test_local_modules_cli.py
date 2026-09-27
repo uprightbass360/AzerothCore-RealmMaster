@@ -384,14 +384,69 @@ class ListRemoveTest(CliCase):
         self.assertEqual(rc, 0)
         self.assertIn("No user-defined modules", out)
 
-    def test_remove_local_module_disables_it(self):
-        self.seed([entry("MODULE_MINE", name="mine")], env="MODULE_MINE=1\nA=1\n")
+    def test_remove_local_module_leaves_tombstone_and_disables_it(self):
+        mine = entry("MODULE_MINE", name="mine", type="lua", post_install_hooks=["copy-standard-lua"])
+        self.seed([mine], env="MODULE_MINE=1\nA=1\n")
         rc, out, _ = self.run_cli("remove", "MODULE_MINE")
         self.assertEqual(rc, 0)
-        self.assertEqual(self.local_entries(), [])
+        self.assertEqual(self.local_entries(), [{
+            "key": "MODULE_MINE", "name": "mine", "repo": mine["repo"],
+            "status": "blocked", "block_reason": "removed with ./modules.sh remove",
+        }])
         self.assertIn("MODULE_MINE=0", self.env())
         self.assertIn("A=1", self.env())
         self.assertIn("stays in the database", out)
+        self.assertIn("disabled marker", out)
+
+    def test_list_shows_removed_tombstone(self):
+        self.seed([entry("MODULE_MINE", name="mine")], env="MODULE_MINE=1\n")
+        self.assertEqual(self.run_cli("remove", "MODULE_MINE")[0], 0)
+        rc, out, _ = self.run_cli("list")
+        self.assertEqual(rc, 0)
+        lines = {line.split()[0]: line.split() for line in out.strip().splitlines()[1:]}
+        self.assertEqual(lines["MODULE_MINE"][1:3], ["removed", "no"])
+
+    def test_remove_twice_refused(self):
+        self.seed([entry("MODULE_MINE", name="mine")], env="MODULE_MINE=1\n")
+        self.assertEqual(self.run_cli("remove", "MODULE_MINE")[0], 0)
+        before = self.local_entries()
+        rc, _, err = self.run_cli("remove", "MODULE_MINE")
+        self.assertEqual(rc, 1)
+        self.assertIn("already removed", err)
+        self.assertEqual(self.local_entries(), before)
+
+    def test_add_same_url_after_remove_replaces_tombstone(self):
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
+        self.assertEqual(self.run_cli("add", str(repo), "--yes")[0], 0)
+        self.assertEqual(self.run_cli("remove", "MODULE_LUA_THING")[0], 0)
+        self.assertIn("MODULE_LUA_THING=0", self.env())
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 0, err)
+        [e] = self.local_entries()
+        self.assertEqual(e["key"], "MODULE_LUA_THING")
+        self.assertNotIn("status", e)
+        self.assertEqual(e["type"], "lua")
+        self.assertIn("MODULE_LUA_THING=1", self.env())
+        self.assertNotIn("MODULE_LUA_THING=0", self.env())
+
+    def test_add_new_url_with_tombstoned_key_replaces_tombstone(self):
+        self.seed([entry("MODULE_LUA_THING", name="old-thing")], env="MODULE_LUA_THING=1\n")
+        self.assertEqual(self.run_cli("remove", "MODULE_LUA_THING")[0], 0)
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 0, err)
+        [e] = self.local_entries()
+        self.assertEqual((e["key"], e["name"], e["repo"]), ("MODULE_LUA_THING", "lua-thing", str(repo)))
+        self.assertIn("MODULE_LUA_THING=1", self.env())
+
+    def test_pin_of_tombstone_refused(self):
+        self.seed([entry("MODULE_MINE", name="mine")], env="MODULE_MINE=1\n")
+        self.assertEqual(self.run_cli("remove", "MODULE_MINE")[0], 0)
+        before = self.local_entries()
+        rc, _, err = self.run_cli("add", "--key", "MODULE_MINE", "--ref", "v1", "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("was removed", err)
+        self.assertEqual(self.local_entries(), before)
 
     def test_remove_override_keeps_env(self):
         self.seed([{"key": "MODULE_UP", "ref": "v1"}], env="MODULE_UP=1\n")
