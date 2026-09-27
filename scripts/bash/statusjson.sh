@@ -86,13 +86,16 @@ def module_list(env):
     import json
     from pathlib import Path
 
-    # Load module manifest
+    # Load module manifest (with config/module-manifest.local.json merged in)
+    sys.path.insert(0, str(PROJECT_DIR / "scripts" / "python"))
+    from manifest_overlay import load_merged_manifest
+
     manifest_path = PROJECT_DIR / "config" / "module-manifest.json"
     manifest_map = {}
     if manifest_path.exists():
         try:
-            manifest_data = json.loads(manifest_path.read_text())
-            for mod in manifest_data.get("modules", []):
+            merged, _warnings = load_merged_manifest(manifest_path)
+            for mod in merged:
                 manifest_map[mod["key"]] = mod
         except Exception:
             pass

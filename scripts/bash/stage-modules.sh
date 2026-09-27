@@ -639,29 +639,40 @@ stage_module_sql_to_core() {
   if [ "$total_failed" -gt 0 ]; then echo "❌ Failed to stage $total_failed module SQL file(s); see errors above"; fi
 }
 
+MERGED_MANIFEST_JSON=""
+
+# Merged manifest (config/module-manifest.local.json over the upstream file), loaded once.
+load_merged_manifest_json(){
+  [ -n "$MERGED_MANIFEST_JSON" ] && return 0
+  MERGED_MANIFEST_JSON="$(python3 "$PROJECT_DIR/scripts/python/modules.py" \
+    --manifest "$PROJECT_DIR/config/module-manifest.json" manifest --merged)" || return 1
+}
+
 get_module_dbc_path(){
   local module_name="$1"
-  local manifest_file="$PROJECT_DIR/config/module-manifest.json"
 
-  if [ ! -f "$manifest_file" ]; then
-    return 1
-  fi
   if ! command -v jq >/dev/null 2>&1; then
     echo "  ⚠️  jq not installed; cannot read server_dbc_path for $module_name, DBC files not staged" >&2
     return 1
   fi
+  if ! load_merged_manifest_json; then
+    echo "  ⚠️  Could not load the module manifest; DBC files for $module_name not staged" >&2
+    return 1
+  fi
 
   local dbc_path
-  dbc_path=$(jq -r ".modules[] | select(.name == \"$module_name\") | .server_dbc_path // empty" "$manifest_file" 2>/dev/null)
+  dbc_path=$(printf '%s' "$MERGED_MANIFEST_JSON" | jq -r --arg n "$module_name" '.modules[] | select(.name == $n) | .server_dbc_path // empty' 2>/dev/null)
   if [ -n "$dbc_path" ]; then
     echo "$dbc_path"
     return 0
   fi
   return 1
 }
+# ---- end DBC lookup ----
 
 stage_module_dbc_files(){
   show_staging_step "Module DBC Staging" "Deploying binary DBC files to server"
+  load_merged_manifest_json || true
 
   if ! docker ps --format '{{.Names}}' | grep -q "ac-worldserver"; then
     echo "⚠️  Worldserver container not found, skipping module DBC staging"
