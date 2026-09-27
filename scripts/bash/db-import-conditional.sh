@@ -34,6 +34,10 @@ Notes:
 EOF
 }
 
+# Returns 0 when the AzerothCore databases hold tables, 1 when MySQL answers and
+# they are empty, and 2 when their state cannot be determined. Callers must
+# treat 2 as "stop": guessing "empty" here leads to restoring a backup over, or
+# dropping, live data.
 verify_databases_populated() {
   local mysql_host="${CONTAINER_MYSQL:-ac-mysql}"
   local mysql_port="${MYSQL_PORT:-3306}"
@@ -45,14 +49,14 @@ verify_databases_populated() {
 
   if ! command -v mysql >/dev/null 2>&1; then
     echo "⚠️  mysql client is not available to verify restoration status"
-    return 1
+    return 2
   fi
 
   local query="SELECT COUNT(*) FROM information_schema.tables WHERE table_schema IN ('$db_auth','$db_world','$db_characters');"
   local table_count
   if ! table_count=$(MYSQL_PWD="$mysql_pass" mysql -h "$mysql_host" -P "$mysql_port" -u "$mysql_user" -N -B -e "$query" 2>/dev/null); then
     echo "⚠️  Unable to query MySQL at ${mysql_host}:${mysql_port} to verify restoration status"
-    return 1
+    return 2
   fi
 
   if [ "${table_count:-0}" -gt 0 ]; then
@@ -131,8 +135,8 @@ if ! wait_for_mysql; then
 fi
 
 # Restoration status markers - use writable location
-RESTORE_STATUS_DIR="/var/lib/mysql-persistent"
-MARKER_STATUS_DIR="/tmp"
+RESTORE_STATUS_DIR="${RESTORE_STATUS_DIR:-/var/lib/mysql-persistent}"
+MARKER_STATUS_DIR="${MARKER_STATUS_DIR:-/tmp}"
 RESTORE_SUCCESS_MARKER="$RESTORE_STATUS_DIR/.restore-completed"
 RESTORE_FAILED_MARKER="$RESTORE_STATUS_DIR/.restore-failed"
 RESTORE_SUCCESS_MARKER_TMP="$MARKER_STATUS_DIR/.restore-completed"
@@ -149,39 +153,55 @@ fi
 
 echo "🔍 Checking restoration status..."
 
-if [ -f "$RESTORE_SUCCESS_MARKER" ]; then
-  if verify_databases_populated; then
+db_state=0
+verify_databases_populated || db_state=$?
+
+if [ "$db_state" -eq 2 ]; then
+  echo "❌ Cannot determine whether the databases already contain data."
+  echo "   Refusing to restore a backup or recreate databases; re-run once MySQL answers queries."
+  exit 1
+fi
+
+if [ "$db_state" -eq 0 ]; then
+  # Databases hold data: never restore over them or recreate them, whether they
+  # came from a backup restore or from an earlier fresh import.
+  if [ -f "$RESTORE_SUCCESS_MARKER" ]; then
     echo "✅ Backup restoration completed successfully"
     cat "$RESTORE_SUCCESS_MARKER" || true
-
-    # Check if there are pending module SQL updates to apply
-    echo "🔍 Checking for pending module SQL updates..."
-    has_pending_updates=0
-
-    # Check if module SQL staging directory has files
-    if [ -d "/azerothcore/data/sql/updates/db_world" ] && [ -n "$(find /azerothcore/data/sql/updates/db_world -name 'MODULE_*.sql' -type f 2>/dev/null)" ]; then
-      echo "   ⚠️  Found staged module SQL updates that may need application"
-      has_pending_updates=1
-    fi
-
-    if [ "$has_pending_updates" -eq 0 ]; then
-      echo "🚫 Skipping database import - data already restored and no pending updates"
-      exit 0
-    fi
-
-    echo "📦 Running dbimport to apply pending module SQL updates..."
-    cd /azerothcore/env/dist/bin
-    seed_dbimport_conf
-
-    if ./dbimport; then
-      echo "✅ Module SQL updates applied successfully!"
-      exit 0
-    else
-      echo "⚠️  dbimport reported issues - check logs for details"
-      exit 1
-    fi
+  else
+    echo "✅ Databases already populated"
   fi
 
+  # Check if there are pending module SQL updates to apply
+  echo "🔍 Checking for pending module SQL updates..."
+  has_pending_updates=0
+
+  # Check if module SQL staging directory has files
+  if [ -d "/azerothcore/data/sql/updates/db_world" ] && [ -n "$(find /azerothcore/data/sql/updates/db_world -name 'MODULE_*.sql' -type f 2>/dev/null)" ]; then
+    echo "   ⚠️  Found staged module SQL updates that may need application"
+    has_pending_updates=1
+  fi
+
+  if [ "$has_pending_updates" -eq 0 ]; then
+    echo "🚫 Skipping database import - data already present and no pending updates"
+    exit 0
+  fi
+
+  echo "📦 Running dbimport to apply pending module SQL updates..."
+  cd /azerothcore/env/dist/bin
+  seed_dbimport_conf
+
+  if ./dbimport; then
+    echo "✅ Module SQL updates applied successfully!"
+    exit 0
+  else
+    echo "⚠️  dbimport reported issues - check logs for details"
+    exit 1
+  fi
+fi
+
+# db_state is 1: MySQL answered and the databases are empty.
+if [ -f "$RESTORE_SUCCESS_MARKER" ]; then
   echo "⚠️  Restoration marker found, but databases are empty - forcing re-import"
   rm -f "$RESTORE_SUCCESS_MARKER" 2>/dev/null || true
   rm -f "$RESTORE_SUCCESS_MARKER_TMP" 2>/dev/null || true
@@ -476,6 +496,16 @@ if [ -n "$backup_path" ]; then
 else
   echo "ℹ️  No valid SQL backups found - proceeding with fresh setup"
   echo "$(date): No backup found - fresh setup needed" > "$RESTORE_FAILED_MARKER"
+fi
+
+# Last line of defence before DROP: re-check that the databases are still empty.
+drop_state=0
+verify_databases_populated || drop_state=$?
+if [ "$drop_state" -ne 1 ]; then
+  echo "❌ Databases are not verifiably empty (state ${drop_state}); refusing to drop and recreate them."
+  echo "   If a backup restore just failed part-way, inspect the databases, drop them manually"
+  echo "   if they should be rebuilt, and re-run the import."
+  exit 1
 fi
 
 echo "🗄️ Creating fresh AzerothCore databases..."
