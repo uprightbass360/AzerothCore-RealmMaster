@@ -175,8 +175,9 @@ def _finish(paths: Paths, key: str, requires: List[str], module_type: str,
 
     from modules import build_state
     state = build_state(paths.env, paths.manifest)
-    relevant = {key, *requires}
-    blocking = [error for error in state.errors if any(k in error for k in relevant)]
+    relevant = {key} if no_enable else {key, *requires}
+    blocking = [error for error in state.errors
+                if set(re.findall(r"\bMODULE_[A-Z0-9_]+\b", error)) & relevant]
     other = [error for error in state.errors if error not in blocking]
     for warning in other:
         print(f"WARNING: {warning}", file=sys.stderr)
@@ -229,16 +230,18 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
                       f"enable it with {same_repo['key']}=1 in .env")
 
     name = repo_basename(args.url)
-
-    if not args.key:
-        same_name = next((m for m in merged if m.get("name") == name), None)
-        if same_name:
-            raise Refused(
-                f"{name} is already listed as {same_name['key']} ({same_name.get('repo')}); "
-                f"to use your fork of it, run ./modules.sh add {args.url} --key {same_name['key']}"
-            )
-
     key = args.key or repo_name_to_key(name)
+
+    # A different key targeting a folder name that's already listed would create a
+    # second entry cloned into the same folder; only skip this when the target key
+    # *is* that entry (i.e. this is an override of the same folder, not a new one).
+    same_name = next((m for m in merged if m.get("name") == name), None)
+    if same_name and same_name["key"] != key:
+        raise Refused(
+            f"{name} is already the folder of {same_name['key']} ({same_name.get('repo')}). "
+            f"To use your fork in place of it, run ./modules.sh add {args.url} --key {same_name['key']}"
+        )
+
     is_override = key in upstream_keys
     if not args.key and key in by_key:
         raise Refused(f"Key {key} is already used by {by_key[key].get('repo')}; choose one with --key MODULE_...")

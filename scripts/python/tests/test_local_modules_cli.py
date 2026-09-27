@@ -119,6 +119,15 @@ class AddTest(CliCase):
         self.assertEqual(self.local_entries(), [])
         self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
 
+    def test_add_same_folder_new_key_still_refused(self):
+        # Even with an explicit --key, a *different* key targeting a folder that's
+        # already listed would clone a second module into the same folder.
+        repo = make_repo(self.repos / "mod-playerbots", {"README.md": "x"})
+        rc, _, err = self.run_cli("add", str(repo), "--key", "MODULE_MY_BOTS", "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("--key MODULE_PLAYERBOTS", err)
+        self.assertEqual(self.local_entries(), [])
+
     def test_add_collection_refused_without_type(self):
         files = {f"s{i}.lua": "" for i in range(25)}
         repo = make_repo(self.repos / "scripts", files)
@@ -234,6 +243,37 @@ class AddTest(CliCase):
         rc, _, err = self.run_cli("add", str(repo), "--yes")
         self.assertEqual(rc, 0)
         self.assertIn("WARNING", err)
+
+    def test_unrelated_error_from_key_sharing_a_prefix_does_not_block(self):
+        # MODULE_ELUNA_TS shares the "MODULE_ELUNA" prefix with the module our add
+        # requires; a substring match would misfire on its unrelated error.
+        write_manifest(self.root / "config" / "module-manifest.json", [
+            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_ELUNA_TS", name="mod-eluna-ts", type="cpp", requires=["MODULE_GHOST"]),
+            entry("MODULE_AIO", name="mod-aio", type="lua"),
+            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
+        ])
+        (self.root / ".env").write_text("MODULE_ELUNA=1\nMODULE_ELUNA_TS=1\n")
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 0)
+        self.assertIn("WARNING", err)
+        self.assertIn("MODULE_ELUNA_TS", err)
+
+    def test_no_enable_excludes_requires_from_error_relevance(self):
+        write_manifest(self.root / "config" / "module-manifest.json", [
+            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_AIO", name="mod-aio", type="lua", requires=["MODULE_MISSING"]),
+            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
+        ])
+        (self.root / ".env").write_text("MODULE_ELUNA=1\nMODULE_AIO=1\n")
+        repo = make_repo(self.repos / "aio-thing", {"Server/s.lua": 'local AIO = require("AIO")'})
+        rc, _, err = self.run_cli("add", str(repo), "--yes", "--no-enable")
+        self.assertEqual(rc, 0)
+        self.assertIn("WARNING", err)
+        self.assertNotIn("MODULE_AIO_THING=1", self.env())
 
     def test_blocking_error_from_enabled_requirement_keeps_entry_and_reports_removal(self):
         write_manifest(self.root / "config" / "module-manifest.json", [
