@@ -58,7 +58,7 @@ set_override(){
 # run_pass: one deploy's install step. Sets OUT and RC.
 run_pass(){
   OUT="$(
-    MODULES_ENV_PATH="$ROOT/.env" MODULES_LOCAL_RUN=1 bash -c '
+    PATH="${SHIM_PATH:+$SHIM_PATH:}$PATH" MODULES_ENV_PATH="$ROOT/.env" MODULES_LOCAL_RUN=1 bash -c '
       set -e
       source "$1/scripts/bash/manage-modules.sh"
       cd "$2/modules"
@@ -100,6 +100,24 @@ check "pass succeeds" "$RC" "0"
 check "not re-cloned" "$(recloned)" "no"
 check "checkout kept (marker still there)" "$([ -e "$checkout/.marker" ] && echo yes || echo no)" "yes"
 check "origin unchanged" "$(origin)" "$FORK"
+
+echo "origin unreadable (git refuses a checkout owned by another user)"
+# A git shim that fails `remote get-url` the way git does for a repo owned by
+# another user, and passes everything else through.
+REAL_GIT="$(command -v git)"
+mkdir -p "$WORK/shim"
+cat > "$WORK/shim/git" <<EOF
+#!/bin/bash
+case " \$* " in *" remote get-url "*)
+  echo "fatal: detected dubious ownership in repository at '\$PWD'" >&2
+  exit 128;;
+esac
+exec "$REAL_GIT" "\$@"
+EOF
+chmod +x "$WORK/shim/git"
+SHIM_PATH="$WORK/shim" run_pass
+check "not re-cloned" "$(recloned)" "no"
+check "checkout kept (marker still there)" "$([ -e "$checkout/.marker" ] && echo yes || echo no)" "yes"
 
 echo "override removed again"
 set_override ""

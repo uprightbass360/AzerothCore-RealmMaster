@@ -33,6 +33,19 @@ if [ "$STACK_SOURCE_VARIANT" = "playerbots" ]; then
 fi
 SOURCE_PATH="${MODULES_REBUILD_SOURCE_PATH:-$SOURCE_PATH_DEFAULT}"
 
+# Compare repo URLs ignoring case, scheme, trailing slashes and ".git"
+# (same rules as manage-modules.sh).
+normalize_repo_url(){
+    local url="${1,,}"
+    if [[ "$url" =~ ^[a-z]+:// ]]; then
+        url="${url#*://}"
+    fi
+    while [[ "$url" == */ ]]; do url="${url%/}"; done
+    url="${url%.git}"
+    while [[ "$url" == */ ]]; do url="${url%/}"; done
+    printf '%s' "$url"
+}
+
 show_client_data_requirement(){
     local repo_path="$1"
     local detector="$PROJECT_ROOT/scripts/bash/detect-client-data-version.sh"
@@ -115,24 +128,31 @@ if [ -d "$SOURCE_PATH/.git" ]; then
   echo "📂 Existing repository found, updating..."
   cd "$SOURCE_PATH"
 
-  # Check if we're on the correct repository
-  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
-  if [ "$CURRENT_REMOTE" != "$REPO_URL" ]; then
-    echo "🔄 Repository URL changed, re-cloning..."
-    cd ..
-    rm -rf "$(basename "$SOURCE_PATH")"
-    echo "⏳ Cloning $REPO_URL (branch $BRANCH) into $(basename "$SOURCE_PATH")"
-    git clone -b "$BRANCH" "$REPO_URL" "$(basename "$SOURCE_PATH")"
-    cd "$(basename "$SOURCE_PATH")"
-  else
-    echo "🔄 Fetching latest changes from origin..."
-    git fetch origin --progress
-    echo "🔀 Switching to branch $BRANCH..."
-    git checkout "$BRANCH"
-    echo "⬇️  Pulling latest commits..."
-    git pull --ff-only origin "$BRANCH"
-    echo "✅ Repository updated to latest $BRANCH"
+  # Never delete an existing checkout: it holds build output and may hold
+  # local work. If the origin can't be read (e.g. git refuses a checkout owned
+  # by another user) or points at another repo, stop and say why.
+  if ! CURRENT_REMOTE=$(git remote get-url origin 2>&1); then
+    echo "❌ Cannot read the origin of $SOURCE_PATH:" >&2
+    echo "   $CURRENT_REMOTE" >&2
+    echo "   If the checkout is owned by another user (e.g. root), fix ownership with:" >&2
+    echo "   sudo chown -R \"\$(id -u):\$(id -g)\" \"$SOURCE_PATH\"" >&2
+    exit 1
   fi
+  if [ "$(normalize_repo_url "$CURRENT_REMOTE")" != "$(normalize_repo_url "$REPO_URL")" ]; then
+    echo "❌ $SOURCE_PATH points at a different repository:" >&2
+    echo "   origin:   $CURRENT_REMOTE" >&2
+    echo "   expected: $REPO_URL" >&2
+    echo "   Move or remove that directory to clone $REPO_URL there, or point it at the new repo with:" >&2
+    echo "   git -C \"$SOURCE_PATH\" remote set-url origin \"$REPO_URL\"" >&2
+    exit 1
+  fi
+  echo "🔄 Fetching latest changes from origin..."
+  git fetch origin --progress
+  echo "🔀 Switching to branch $BRANCH..."
+  git checkout "$BRANCH"
+  echo "⬇️  Pulling latest commits..."
+  git pull --ff-only origin "$BRANCH"
+  echo "✅ Repository updated to latest $BRANCH"
 else
   echo "📥 Cloning repository..."
   echo "⏳ Cloning $REPO_URL (branch $BRANCH) into $SOURCE_PATH"
