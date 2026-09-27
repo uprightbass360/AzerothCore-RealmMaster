@@ -113,13 +113,29 @@ remove_disabled_modules(){
       info "Removing ${dir} (disabled)"
       rm -rf "$dir"
     fi
-    # Lua hooks stage into a per-module subfolder; drop it with the module.
-    case "$dir" in */*|.|..) continue;; esac
-    if [ -n "${LUA_SCRIPTS_TARGET:-}" ] && [ -d "$LUA_SCRIPTS_TARGET/$dir" ]; then
-      info "Removing staged Lua scripts for ${dir} (disabled)"
+  done
+}
+
+# Lua hooks stage into $LUA_SCRIPTS_TARGET/<module name>/. Clear every module's
+# folder before the hooks run so the result matches this run exactly: disabled
+# modules and modules whose Lua hook was dropped from the manifest disappear,
+# and enabled ones are re-staged by their hooks. Files and folders not named
+# after a manifest module (e.g. hand-placed scripts) are left alone.
+reset_staged_lua(){
+  [ -n "${LUA_SCRIPTS_TARGET:-}" ] || return 0
+  [ -d "$LUA_SCRIPTS_TARGET" ] || return 0
+  local key dir removed=0
+  for key in "${MODULE_KEYS[@]}"; do
+    dir="${MODULE_NAME[$key]:-}"
+    case "$dir" in ""|*/*|.|..) continue;; esac
+    if [ -d "$LUA_SCRIPTS_TARGET/$dir" ]; then
       rm -rf "${LUA_SCRIPTS_TARGET:?}/$dir"
+      removed=$((removed + 1))
     fi
   done
+  if [ "$removed" -gt 0 ]; then
+    info "Cleared ${removed} staged Lua folder(s); enabled modules are re-staged below"
+  fi
 }
 
 run_post_install_hooks(){
@@ -710,6 +726,7 @@ main(){
   setup_git_config
   generate_module_state
   remove_disabled_modules
+  reset_staged_lua
   install_enabled_modules
   manage_configuration_files
   # NOTE: Module SQL staging is now handled at runtime by stage-modules.sh

@@ -30,8 +30,9 @@ All hooks receive these environment variables:
 ### Lua staging hooks
 `copy-standard-lua`, `copy-aio-lua`, `copy-aio-server` and `black-market-setup` share
 `lib/lua-staging.sh`. Each module's scripts are staged into their own subfolder,
-`$LUA_SCRIPTS_TARGET/<module name>/`, which is wiped and rebuilt on every run and removed by
-`manage-modules.sh` when the module is disabled. ALE loads subfolders recursively and adds each
+`$LUA_SCRIPTS_TARGET/<module name>/`. `manage-modules.sh` clears every manifest module's folder
+before the hooks run, so disabled modules (and modules whose Lua hook was removed) disappear and
+enabled ones are re-staged; files not named after a module are left alone. ALE loads subfolders recursively and adds each
 to the Lua `require` path. ALE refuses to load two scripts with the same file name, even from
 different subfolders, and logs "File with same name already loaded".
 

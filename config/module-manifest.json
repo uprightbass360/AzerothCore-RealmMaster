@@ -740,15 +740,13 @@
       "requires": [
         "MODULE_ELUNA"
       ],
-      "post_install_hooks": [
-        "copy-standard-lua"
-      ],
+      "post_install_hooks": [],
       "description": "Lua script for eluna trinity core and azeroth core servers.",
       "category": "scripting",
       "status": "active",
       "order": 5000,
       "config_cleanup": [],
-      "notes": "Discovered via GitHub topic 'azerothcore-lua'",
+      "notes": "Lua script collection: not auto-staged, because some scripts break the worldserver (e.g. Eluna-scripts' lotteryDB.lua runs invalid SQL, which AzerothCore treats as fatal). Copy the scripts you want into storage/lua_scripts/ yourself. \nDiscovered via GitHub topic 'azerothcore-lua'",
       "last_modified": "2025-10-17T18:23:53Z"
     },
     {
@@ -777,15 +775,13 @@
       "requires": [
         "MODULE_ELUNA"
       ],
-      "post_install_hooks": [
-        "copy-standard-lua"
-      ],
+      "post_install_hooks": [],
       "description": "Lua script for Azerothcore with Eluna to spawn custom phased bosses and other toys.",
       "category": "scripting",
       "status": "active",
       "order": 5000,
       "config_cleanup": [],
-      "notes": "Discovered via GitHub topic 'azerothcore-lua'",
+      "notes": "Lua script collection: not auto-staged, because some scripts break the worldserver (e.g. Eluna-scripts' lotteryDB.lua runs invalid SQL, which AzerothCore treats as fatal). Copy the scripts you want into storage/lua_scripts/ yourself. \nDiscovered via GitHub topic 'azerothcore-lua'",
       "last_modified": "2025-02-19T08:29:02Z"
     },
     {
