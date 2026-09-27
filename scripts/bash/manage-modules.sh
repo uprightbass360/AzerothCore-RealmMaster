@@ -611,15 +611,20 @@ track_module_state(){
     echo "✅ No C++ modules enabled - pre-built containers can be used"
   fi
 
+  # Only the host-side run (build.sh) signals rebuilds: build.sh and deploy.sh
+  # read the sentinel from local storage and compare the enabled C++ modules with
+  # the last build's record (lib/module-build-record.sh). A sentinel written by
+  # the ac-modules container landed in storage/modules, where nothing read it,
+  # and would arrive after deploy.sh had already chosen its images anyway.
+  if [ "${MODULES_LOCAL_RUN:-0}" != "1" ]; then
+    return 0
+  fi
+
   local rebuild_sentinel
-  if [ "${MODULES_LOCAL_RUN:-0}" = "1" ]; then
-    if [ -n "${LOCAL_STORAGE_SENTINEL_PATH:-}" ]; then
-      rebuild_sentinel="${LOCAL_STORAGE_SENTINEL_PATH}"
-    else
-      rebuild_sentinel="./.requires_rebuild"
-    fi
+  if [ -n "${LOCAL_STORAGE_SENTINEL_PATH:-}" ]; then
+    rebuild_sentinel="${LOCAL_STORAGE_SENTINEL_PATH}"
   else
-    rebuild_sentinel="/modules/.requires_rebuild"
+    rebuild_sentinel="./.requires_rebuild"
   fi
 
   local host_rebuild_sentinel=""
@@ -640,14 +645,12 @@ track_module_state(){
     fi
   fi
 
-  if [ "${MODULES_LOCAL_RUN:-0}" = "1" ]; then
-    local target_dir="${MODULES_HOST_DIR:-$(pwd)}"
-    local desired_user
-    desired_user="$(id -u):$(id -g)"
-    if [ -d "$target_dir" ]; then
-      chown -R "$desired_user" "$target_dir" >/dev/null 2>&1 || true
-      chmod -R ug+rwX "$target_dir" >/dev/null 2>&1 || true
-    fi
+  local target_dir="${MODULES_HOST_DIR:-$(pwd)}"
+  local desired_user
+  desired_user="$(id -u):$(id -g)"
+  if [ -d "$target_dir" ]; then
+    chown -R "$desired_user" "$target_dir" >/dev/null 2>&1 || true
+    chmod -R ug+rwX "$target_dir" >/dev/null 2>&1 || true
   fi
 }
 

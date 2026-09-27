@@ -13,6 +13,7 @@ DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_PATH="$ROOT_DIR/.env"
 TEMPLATE_PATH="$ROOT_DIR/.env.template"
 source "$ROOT_DIR/scripts/bash/lib/common.sh"
+source "$ROOT_DIR/scripts/bash/lib/module-build-record.sh"
 source "$ROOT_DIR/scripts/bash/project_name.sh"
 
 # Default project name (read from .env or template)
@@ -498,6 +499,13 @@ detect_build_needed(){
 
   # Check if any C++ modules are enabled but modules-latest images don't exist
   ensure_module_state
+
+  # Enabling or disabling a C++ module needs a rebuild even when images exist
+  local record_reason
+  record_reason="$(module_build_record_reason "$(module_build_record_file "$(resolve_local_storage_path)")" "${MODULES_COMPILE_LIST[@]}")"
+  if [ -n "$record_reason" ]; then
+    reasons+=("$record_reason")
+  fi
 
   local any_cxx_modules=0
   if [ "${#MODULES_COMPILE_LIST[@]}" -gt 0 ]; then

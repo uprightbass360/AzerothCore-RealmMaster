@@ -12,6 +12,7 @@ DEFAULT_ENV_PATH="$ENV_PATH"
 TEMPLATE_PATH="$ROOT_DIR/.env.template"
 source "$ROOT_DIR/scripts/bash/project_name.sh"
 source "$ROOT_DIR/scripts/bash/lib/common.sh"
+source "$ROOT_DIR/scripts/bash/lib/module-build-record.sh"
 
 # Default project name (read from .env or template)
 DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_PATH" "$TEMPLATE_PATH")"
@@ -305,6 +306,15 @@ detect_rebuild_reasons(){
   # Check if any C++ modules are enabled but modules-latest images don't exist
   if [ "$MODULE_STATE_INITIALIZED" -ne 1 ]; then
     generate_module_state
+  fi
+
+  # Enabling or disabling a C++ module needs a rebuild even when images exist.
+  # Checked here too: build.sh decides before its own module staging runs, so
+  # the sentinel alone would not reflect an .env change made since the last run.
+  local record_reason
+  record_reason="$(module_build_record_reason "$(module_build_record_file "$storage_path")" "${MODULES_COMPILE_LIST[@]}")"
+  if [ -n "$record_reason" ]; then
+    reasons+=("$record_reason")
   fi
 
   local any_cxx_modules=0

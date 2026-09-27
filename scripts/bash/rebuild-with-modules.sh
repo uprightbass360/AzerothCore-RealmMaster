@@ -12,6 +12,7 @@ ENV_PATH="$ENV_FILE"
 DEFAULT_ENV_PATH="$ENV_FILE"
 source "$PROJECT_DIR/scripts/bash/project_name.sh"
 source "$PROJECT_DIR/scripts/bash/lib/common.sh"
+source "$PROJECT_DIR/scripts/bash/lib/module-build-record.sh"
 
 # Default project name (read from .env or template)
 DEFAULT_PROJECT_NAME="$(project_name::resolve "$ENV_FILE" "$TEMPLATE_FILE")"
@@ -265,9 +266,12 @@ fi
 
 ensure_module_state
 
+BUILD_RECORD_FILE="$(module_build_record_file "$LOCAL_STORAGE_PATH")"
+
 if [ ${#MODULES_COMPILE_LIST[@]} -eq 0 ]; then
   echo "✅ No C++ modules enabled that require a source rebuild."
   rm -f "$SENTINEL_FILE" 2>/dev/null || true
+  module_build_record_write "$BUILD_RECORD_FILE"
   exit 0
 fi
 
@@ -479,6 +483,8 @@ remove_sentinel(){
 }
 
 remove_sentinel "$SENTINEL_FILE"
+module_build_record_write "$BUILD_RECORD_FILE" "${MODULES_COMPILE_LIST[@]}" \
+  || echo "⚠️  Unable to write build record at $BUILD_RECORD_FILE; the next deploy may ask to rebuild."
 
 echo ""
 echo -e "${GREEN}⚔️ Module build forged successfully! ⚔️${NC}"
