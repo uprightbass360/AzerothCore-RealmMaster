@@ -232,15 +232,18 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
     name = repo_basename(args.url)
     key = args.key or repo_name_to_key(name)
 
-    # A different key targeting a folder name that's already listed would create a
-    # second entry cloned into the same folder; only skip this when the target key
-    # *is* that entry (i.e. this is an override of the same folder, not a new one).
-    same_name = next((m for m in merged if m.get("name") == name), None)
-    if same_name and same_name["key"] != key:
-        raise Refused(
-            f"{name} is already the folder of {same_name['key']} ({same_name.get('repo')}). "
-            f"To use your fork in place of it, run ./modules.sh add {args.url} --key {same_name['key']}"
-        )
+    # A new entry (key not already in the merged manifest) targeting a folder name
+    # that's already listed would clone a second module into that folder. This
+    # never applies to an override of an existing key -- that key's own entry may
+    # legitimately share its folder name with another, unrelated entry (several
+    # upstream modules are listed twice, once under a fork's own key).
+    if key not in by_key:
+        same_name = next((m for m in merged if m.get("name") == name), None)
+        if same_name:
+            raise Refused(
+                f"{name} is already the folder of {same_name['key']} ({same_name.get('repo')}). "
+                f"To use your fork in place of it, run ./modules.sh add {args.url} --key {same_name['key']}"
+            )
 
     is_override = key in upstream_keys
     if not args.key and key in by_key:
