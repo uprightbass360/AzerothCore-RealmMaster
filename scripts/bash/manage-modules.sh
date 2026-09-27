@@ -290,8 +290,11 @@ install_enabled_modules(){
       # than the compiled binary.
       info "$dir is compiled into the server; keeping the built checkout"
     elif [ -d "$dir/.git" ] && current_origin="$(git -C "$dir" remote get-url origin 2>/dev/null || true)" \
+      && [ -n "$current_origin" ] \
       && [ "$(normalize_repo_url "$current_origin")" != "$(normalize_repo_url "$repo")" ]; then
-      # The module's repo changed (e.g. a fork override added or removed).
+      # The module's repo changed (e.g. a fork override added or removed). An
+      # unreadable origin (git refusing a checkout owned by another user) is
+      # not a change: fall through to the update, which warns if it can't fetch.
       info "$dir origin changed (${current_origin} -> ${repo}); re-cloning"
       reclone_module_fresh "$dir" "$repo" "$ref" || install_failures+=("$dir")
     elif [ -d "$dir/.git" ]; then
