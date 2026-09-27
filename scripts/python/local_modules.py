@@ -22,6 +22,7 @@ from typing import List, Optional
 
 from manifest_overlay import ManifestError, load_local_entries, local_manifest_path, merge_manifest
 from module_detect import detect
+from modules import build_state, load_env_file, parse_bool
 from update_module_manifest import repo_name_to_key
 
 GIT_TIMEOUT_SECONDS = 600
@@ -173,7 +174,6 @@ def _finish(paths: Paths, key: str, requires: List[str], module_type: str,
     if not no_enable:
         _enable(paths, [key] + list(requires))
 
-    from modules import build_state
     state = build_state(paths.env, paths.manifest)
     relevant = {key} if no_enable else {key, *requires}
     blocking = [error for error in state.errors
@@ -308,6 +308,50 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
     return _finish(paths, key, requires, module_type, is_override, args.no_enable)
 
 
+def cmd_list(args: argparse.Namespace, paths: Paths) -> int:
+    upstream, local, _merged = _load(paths)
+    if not local:
+        print("No user-defined modules (config/module-manifest.local.json is empty or missing).")
+        return 0
+    upstream_keys = {m["key"] for m in upstream}
+    env = load_env_file(paths.env)
+    rows = [("KEY", "KIND", "ENABLED", "REPO")]
+    for item in local:
+        key = item["key"]
+        if key in upstream_keys:
+            kind = "override"
+        elif item.get("name") and item.get("repo"):
+            kind = "local"
+        else:
+            kind = "orphaned"
+        enabled = "yes" if parse_bool(env.get(key, "0")) else "no"
+        repo = item.get("repo", "(upstream repo)")
+        if item.get("ref"):
+            repo = f"{repo}@{item['ref']}"
+        rows.append((key, kind, enabled, repo))
+    widths = [max(len(r[i]) for r in rows) for i in range(3)]
+    for row in rows:
+        print("  ".join(cell.ljust(widths[i]) if i < 3 else cell for i, cell in enumerate(row)))
+    return 0
+
+
+def cmd_remove(args: argparse.Namespace, paths: Paths) -> int:
+    upstream, local, _merged = _load(paths)
+    key = args.key
+    if not any(e["key"] == key for e in local):
+        raise Refused(f"{key} has no entry in {paths.local.name}; ./modules.sh list shows the local entries")
+    write_local_entries(paths.local, [e for e in local if e["key"] != key])
+    if key in {m["key"] for m in upstream}:
+        print(f"✅ Removed the local override for {key}; it goes back to its upstream repo/ref "
+              f"on the next deploy. {key} in .env is unchanged.")
+    else:
+        set_env_value(paths.env, key, "0")
+        print(f"✅ Removed {key} and set {key}=0 in .env. The next deploy removes its checkout "
+              f"and staged Lua.")
+    print("   SQL the module already applied stays in the database.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="modules.sh", description="Manage user-defined modules")
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]), help=argparse.SUPPRESS)
@@ -321,6 +365,13 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--no-enable", action="store_true", help="don't set MODULE_*=1 in .env")
     add.add_argument("--yes", action="store_true", help="don't ask for confirmation")
     add.set_defaults(func=cmd_add)
+
+    lst = sub.add_parser("list", help="Show user-defined modules and overrides")
+    lst.set_defaults(func=cmd_list)
+
+    rm = sub.add_parser("remove", help="Remove a user-defined module or override")
+    rm.add_argument("key", help="MODULE_* key")
+    rm.set_defaults(func=cmd_remove)
     return parser
 
 

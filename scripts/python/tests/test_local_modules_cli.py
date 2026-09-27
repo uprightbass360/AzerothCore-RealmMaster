@@ -339,5 +339,56 @@ class AddTest(CliCase):
         self.assertIn("Nothing written. (Use --yes", err)
 
 
+class ListRemoveTest(CliCase):
+    def seed(self, entries, env="MODULE_ELUNA=1\n"):
+        write_manifest(self.root / "config" / LOCAL_MANIFEST_NAME, entries)
+        (self.root / ".env").write_text(env)
+
+    def test_list_shows_kinds_and_enabled(self):
+        self.seed([entry("MODULE_MINE", name="mine", repo="https://x/mine.git"),
+                   {"key": "MODULE_UP", "ref": "v1"},
+                   {"key": "MODULE_GONE", "ref": "v1"}], env="MODULE_MINE=1\n")
+        rc, out, _ = self.run_cli("list")
+        self.assertEqual(rc, 0)
+        lines = {line.split()[0]: line.split() for line in out.strip().splitlines()[1:]}
+        self.assertEqual(lines["MODULE_MINE"][1:3], ["local", "yes"])
+        self.assertEqual(lines["MODULE_UP"][1], "override")
+        self.assertEqual(lines["MODULE_GONE"][1], "orphaned")
+
+    def test_list_empty(self):
+        rc, out, _ = self.run_cli("list")
+        self.assertEqual(rc, 0)
+        self.assertIn("No user-defined modules", out)
+
+    def test_remove_local_module_disables_it(self):
+        self.seed([entry("MODULE_MINE", name="mine")], env="MODULE_MINE=1\nA=1\n")
+        rc, out, _ = self.run_cli("remove", "MODULE_MINE")
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.local_entries(), [])
+        self.assertIn("MODULE_MINE=0", self.env())
+        self.assertIn("A=1", self.env())
+        self.assertIn("stays in the database", out)
+
+    def test_remove_override_keeps_env(self):
+        self.seed([{"key": "MODULE_UP", "ref": "v1"}], env="MODULE_UP=1\n")
+        rc, out, _ = self.run_cli("remove", "MODULE_UP")
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.local_entries(), [])
+        self.assertIn("MODULE_UP=1", self.env())
+        self.assertIn("upstream", out)
+
+    def test_remove_unknown_key(self):
+        rc, _, err = self.run_cli("remove", "MODULE_NOPE")
+        self.assertEqual(rc, 1)
+        self.assertIn("MODULE_NOPE", err)
+
+    def test_remove_refuses_invalid_local_file(self):
+        path = self.root / "config" / LOCAL_MANIFEST_NAME
+        path.write_text("{broken")
+        rc, _, err = self.run_cli("remove", "MODULE_X")
+        self.assertEqual(rc, 1)
+        self.assertEqual(path.read_text(), "{broken")
+
+
 if __name__ == "__main__":
     unittest.main()
