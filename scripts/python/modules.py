@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 import shlex
 
+from manifest_overlay import ManifestError, load_local_entries, local_manifest_path, merge_manifest
+
 
 STRICT_TRUE = {"1", "true", "yes", "on"}
 
@@ -235,6 +237,7 @@ class ModuleState:
     warnings: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     sql_files: Dict[str, List[str]] = field(default_factory=dict)
+    source: str = "upstream"
 
     @property
     def blocked(self) -> bool:
@@ -271,10 +274,12 @@ class ModuleCollectionState:
 
 def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
     env_map = load_env_file(env_path)
-    manifest_entries = load_manifest(manifest_path)
+    upstream_entries = load_manifest(manifest_path)
+    local_entries = load_local_entries(local_manifest_path(manifest_path))
+    manifest_entries, overlay_warnings = merge_manifest(upstream_entries, local_entries)
     modules: List[ModuleState] = []
     errors: List[str] = []
-    warnings: List[str] = []
+    warnings: List[str] = list(overlay_warnings)
 
     # Track which manifest keys appear in .env for coverage validation
     env_keys_in_manifest: set[str] = set()
@@ -327,6 +332,7 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
             sql=sql,
             notes=notes,
             enabled_raw=enabled_raw,
+            source=str(entry.get("source", "upstream")),
         )
 
         if module.blocked and enabled_raw:
@@ -686,13 +692,40 @@ def configure_parser() -> argparse.ArgumentParser:
 
     dump_parser.set_defaults(func=handle_dump)
 
+    manifest_parser = subparsers.add_parser(
+        "manifest", help="Print the manifest with config/module-manifest.local.json merged in"
+    )
+    manifest_parser.add_argument("--merged", action="store_true", required=True,
+                                 help="Merge the local manifest (the only supported mode)")
+
+    def handle_manifest(args: argparse.Namespace) -> int:
+        manifest_path = Path(args.manifest).resolve()
+        try:
+            upstream = load_manifest(manifest_path)
+            local = load_local_entries(local_manifest_path(manifest_path))
+        except (ManifestError, ValueError, FileNotFoundError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        merged, overlay_warnings = merge_manifest(upstream, local)
+        for warning in overlay_warnings:
+            print(f"WARNING: {warning}", file=sys.stderr)
+        json.dump({"modules": merged}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+
+    manifest_parser.set_defaults(func=handle_manifest)
+
     return parser
 
 
 def main(argv: Optional[Iterable[str]] = None) -> int:
     parser = configure_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except ManifestError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
