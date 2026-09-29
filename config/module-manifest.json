@@ -9959,6 +9959,20 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_ACORE_CLIENT_LAUNCHER",
+      "name": "acore-client-launcher",
+      "repo": "https://github.com/nolt/acore-client-launcher.git",
+      "description": "Cross-platform game client launcher and auto-updater for AzerothCore servers.",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
