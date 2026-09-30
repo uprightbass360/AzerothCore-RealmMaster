@@ -9973,6 +9973,76 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_SERVER_API",
+      "name": "mod-server-api",
+      "repo": "https://github.com/eveletspb/mod-server-api.git",
+      "description": "",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_AZEROTHCORE_WEBADMIN",
+      "name": "azerothcore-webadmin",
+      "repo": "https://github.com/marrenia/azerothcore-webadmin.git",
+      "description": "Web admin panel for a private AzerothCore 3.3.5 realm: accounts, characters, moderation, live player tracker, world and realm editing, GM console. Vibecoded; tested only inside a private tailnet.",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_AZEROTHCORE_UPDATER",
+      "name": "azerothcore-updater",
+      "repo": "https://github.com/marrenia/azerothcore-updater.git",
+      "description": "Unattended AzerothCore + module updater: auto-detects your layout, carries local patches that never block updates, rolls back if the realm does not come back healthy",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_DIREBREW_ANTI_BLOCK",
+      "name": "mod-direbrew-anti-block",
+      "repo": "https://github.com/AlsoNotMehh/mod-direbrew-anti-block.git",
+      "description": "AzerothCore module to prevent Direbrew's Remote mole machines from blocking doorways in capitals and sanctuaries. Based on AzerothCore issue #27857 and PR #27858.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_INSTANCE_COMPLETION_REWARDS",
+      "name": "mod-instance-completion-rewards",
+      "repo": "https://github.com/ShaneBair/mod-instance-completion-rewards.git",
+      "description": "mod-instance-completion-rwards is an AzerothCore module that rewards players additional tokens upon completing an instance to aid progression and reduce grind.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
