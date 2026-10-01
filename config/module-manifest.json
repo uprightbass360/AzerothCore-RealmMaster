@@ -10043,6 +10043,34 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_MOD_AUTOSELL_GREY",
+      "name": "mod-autosell-grey",
+      "repo": "https://github.com/Souicia/mod-autosell-grey.git",
+      "description": "Automatic grey-item selling for AzerothCore with persistent player settings, safe item exclusions, manual bag cleanup, and full-inventory support.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_AZEROTHCORE_CUSTOM_MODULES",
+      "name": "azerothcore-custom-modules",
+      "repo": "https://github.com/quasistatic-setup/azerothcore-custom-modules.git",
+      "description": "Custom AzerothCore WotLK modules for quest drop rates, group speed, offline respawn handling, mana regeneration, welcome rewards and Playerbot-oriented gameplay tweaks.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
