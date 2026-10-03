@@ -20,6 +20,8 @@ APPLY_RESURRECT_SIGNATURE_PATCH="${APPLY_RESURRECT_SIGNATURE_PATCH:-1}"
 APPLY_PACKET_SIGNATURE_PATCH="${APPLY_PACKET_SIGNATURE_PATCH:-1}"
 # Playerbot InterruptSpell patch: align the Lua binding with the mod-playerbots API
 APPLY_PLAYERBOT_INTERRUPT_PATCH="${APPLY_PLAYERBOT_INTERRUPT_PATCH:-1}"
+# Playerbot IsBot patch: align the Lua binding with the mod-playerbots API (sPlayerbotsMgr.GetPlayerbotAI)
+APPLY_PLAYERBOT_ISBOT_PATCH="${APPLY_PLAYERBOT_ISBOT_PATCH:-1}"
 
 if [ -z "$MODULE_DIR" ] || [ ! -d "$MODULE_DIR" ]; then
     echo "❌ mod-ale-patches: Invalid module directory: $MODULE_DIR"
@@ -175,17 +177,21 @@ apply_packet_signature_patch() {
     return 2
 }
 
-# Locate the mod-playerbots checkout that mod-ale will be compiled against.
+# Locate headers from the mod-playerbots checkout that mod-ale will be compiled against.
 # Modules are staged as siblings under <source>/modules/, and mod-playerbots
 # precedes mod-ale in the manifest, so it is normally already cloned when this
-# hook runs. Prints the PlayerbotAI.h path, or nothing if not found.
-find_playerbot_ai_header() {
+# hook runs. Prints the header path, or nothing if not found.
+find_playerbot_header() {
+    local header_name="$1"
+    local grandparent
+    grandparent="$(cd "$MODULE_DIR/../.." 2>/dev/null && pwd)"
     local base candidate
     for base in \
         "$MODULE_DIR/../mod-playerbots" \
+        "$grandparent/modules/mod-playerbots" \
         "${MODULES_REBUILD_SOURCE_PATH:+$MODULES_REBUILD_SOURCE_PATH/modules/mod-playerbots}"; do
         [ -n "$base" ] || continue
-        for candidate in "$base/src/Bot/PlayerbotAI.h" "$base/src/PlayerbotAI.h"; do
+        for candidate in "$base/src/Bot/$header_name" "$base/src/$header_name"; do
             if [ -f "$candidate" ]; then
                 echo "$candidate"
                 return 0
@@ -193,6 +199,14 @@ find_playerbot_ai_header() {
         done
     done
     return 1
+}
+
+find_playerbot_ai_header() {
+    find_playerbot_header "PlayerbotAI.h"
+}
+
+find_playerbot_mgr_header() {
+    find_playerbot_header "PlayerbotMgr.h"
 }
 
 # Apply Playerbot InterruptSpell compatibility patch
@@ -241,6 +255,87 @@ apply_playerbot_interrupt_patch() {
     return 2
 }
 
+# Apply Playerbot IsBot compatibility patch
+# mod-playerbots #2864 / commit 037c0141 refactored bot status detection:
+# WorldSession::IsBot() was removed in favour of the centralized PlayerbotsMgr
+# (sPlayerbotsMgr.GetPlayerbotAI(player) != nullptr). mod-ale's PlayerMethods.h
+# still calls player->GetSession()->IsBot(), failing compilation when built
+# against the updated playerbots branch. Patch PlayerMethods.h to include
+# PlayerbotAI.h / PlayerbotMgr.h and query sPlayerbotsMgr.GetPlayerbotAI(player)
+# when WorldSession::IsBot() is no longer declared by the core.
+apply_playerbot_isbot_patch() {
+    local target_file="$MODULE_DIR/src/LuaEngine/methods/PlayerMethods.h"
+
+    if [ ! -f "$target_file" ]; then
+        echo "   ⚠️  Playerbot IsBot patch target file missing: $target_file"
+        return 1
+    fi
+    if grep -q 'sPlayerbotsMgr.GetPlayerbotAI' "$target_file"; then
+        echo "   ✅ Playerbot IsBot binding already matches mod-playerbots"
+        return 0
+    fi
+    if ! grep -q 'player->GetSession()->IsBot()' "$target_file"; then
+        echo "   ✅ Module has no player->GetSession()->IsBot() call; nothing to do"
+        return 0
+    fi
+
+    local core_header
+    core_header="$(find_core_header "src/server/game/Server/WorldSession.h")" || core_header=""
+
+    if [ -n "$core_header" ]; then
+        if grep -qE '\bIsBot\s*\(' "$core_header"; then
+            echo "   ✅ Core WorldSession still declares IsBot(); nothing to do"
+            return 0
+        fi
+    else
+        local pb_mgr_header
+        pb_mgr_header="$(find_playerbot_mgr_header)" || pb_mgr_header=""
+        if [ -z "$pb_mgr_header" ]; then
+            # Never guess: skipping when neither core nor playerbots header is found
+            echo "   ℹ️  Core header and mod-playerbots checkout not found; skipping IsBot check"
+            return 0
+        fi
+    fi
+
+    local pb_mgr
+    pb_mgr="$(find_playerbot_mgr_header)" || pb_mgr=""
+    if [ -n "$pb_mgr" ] && ! grep -qE '\bGetPlayerbotAI\s*\(' "$pb_mgr"; then
+        echo "   ❌ mod-playerbots PlayerbotMgr.h does not declare GetPlayerbotAI(); cannot patch"
+        return 2
+    fi
+
+    # Anchor 1: Include headers under #ifdef MOD_PLAYERBOTS
+    if ! grep -q 'PlayerbotMgr\.h' "$target_file"; then
+        if ! grep -q '#include "GossipDef\.h"' "$target_file"; then
+            echo "   ❌ Anchor '#include \"GossipDef.h\"' not found in $target_file; cannot insert headers"
+            return 2
+        fi
+        if ! sed -i '/#include "GossipDef\.h"/a \
+\
+#ifdef MOD_PLAYERBOTS\
+#include "PlayerbotAI.h"\
+#include "PlayerbotMgr.h"\
+#endif' "$target_file"; then
+            echo "   ❌ Failed to insert Playerbot includes in $target_file"
+            return 2
+        fi
+    fi
+
+    # Anchor 2: Replace player->GetSession()->IsBot()
+    if ! sed -i 's/player->GetSession()->IsBot()/player \&\& sPlayerbotsMgr.GetPlayerbotAI(player) != nullptr/' "$target_file"; then
+        echo "   ❌ Failed to replace player->GetSession()->IsBot() in $target_file"
+        return 2
+    fi
+
+    if grep -q 'sPlayerbotsMgr.GetPlayerbotAI' "$target_file"; then
+        echo "   ✅ Patched Playerbot IsBot binding to sPlayerbotsMgr.GetPlayerbotAI (mod-playerbots #2864/037c014)"
+        return 0
+    fi
+
+    echo "   ❌ Failed to apply Playerbot IsBot patch"
+    return 2
+}
+
 # Apply all patches. Each returns 0 (patched or nothing to do), 1 (warning,
 # e.g. target file missing) or 2 (patch failed); the hook exits with the worst.
 checked=0
@@ -264,6 +359,9 @@ if [ "$APPLY_PACKET_SIGNATURE_PATCH" = "1" ]; then
 fi
 if [ "$APPLY_PLAYERBOT_INTERRUPT_PATCH" = "1" ]; then
     run_patch apply_playerbot_interrupt_patch
+fi
+if [ "$APPLY_PLAYERBOT_ISBOT_PATCH" = "1" ]; then
+    run_patch apply_playerbot_isbot_patch
 fi
 
 if [ "$failed" -gt 0 ]; then
