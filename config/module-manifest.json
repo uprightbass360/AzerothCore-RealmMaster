@@ -10099,6 +10099,34 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": []
+    },
+    {
+      "key": "MODULE_LONELYICE",
+      "name": "lonelyice",
+      "repo": "https://github.com/LonelyIceProject/lonelyice.git",
+      "description": "Single-player World of Warcraft 3.3.5a launcher: server, bots, first-run setup and plugins in one app",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
+    },
+    {
+      "key": "MODULE_AZEROTHCORE_SERVER_MANAGER_PRO",
+      "name": "AzerothCore-Server-Manager-Pro",
+      "repo": "https://github.com/baguviix/AzerothCore-Server-Manager-Pro.git",
+      "description": "Modern, fast, and modular GUI Server Manager for AzerothCore (WoW 3.3.5a) with SSH, MySQL, and SOAP integration.",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": []
     }
   ]
 }
