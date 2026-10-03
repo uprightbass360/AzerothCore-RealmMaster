@@ -88,12 +88,19 @@ All patches are self-guarding: they read the signature declared by the actual he
 **Header consulted:** `modules/mod-playerbots/src/Bot/PlayerbotAI.h` (sibling checkout)
 **File patched:** `src/LuaEngine/methods/Playerbots/PlayerBotAIMethods.h`
 
+#### Playerbot IsBot Binding Fix
+**What it fixes:** mod-playerbots #2864 (commit 037c014) removed `WorldSession::IsBot()` in favour of centralized bot tracking via `sPlayerbotsMgr.GetPlayerbotAI(player)`. mod-ale's `PlayerMethods.h` calls `player->GetSession()->IsBot()`, causing compile errors against updated playerbots branches. When `WorldSession::IsBot()` is no longer declared by the core, `PlayerMethods.h` is patched to include `PlayerbotAI.h`/`PlayerbotMgr.h` and use `player && sPlayerbotsMgr.GetPlayerbotAI(player) != nullptr`.
+**Core header consulted:** `src/server/game/Server/WorldSession.h`
+**Module header consulted:** `modules/mod-playerbots/src/Bot/PlayerbotMgr.h` (sibling checkout)
+**File patched:** `src/LuaEngine/methods/PlayerMethods.h`
+
 **Feature Flags:**
 ```bash
 # All enabled by default; set to 0 to disable
 APPLY_RESURRECT_SIGNATURE_PATCH=1
 APPLY_PACKET_SIGNATURE_PATCH=1
 APPLY_PLAYERBOT_INTERRUPT_PATCH=1
+APPLY_PLAYERBOT_ISBOT_PATCH=1
 ```
 
 **History:** Earlier revisions also carried blind sed patches (SendTrainerList, override keyword, MovePath). They were removed in 2026-08 after their target patterns disappeared from mod-ale master and the playerbots fork caught up to the upstream signatures.
