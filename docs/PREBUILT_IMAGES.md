@@ -43,14 +43,16 @@ cd AzerothCore-RealmMaster
 cp .env.prebuilt .env
 ```
 
-### 3. Configure Docker Hub Username
+### 3. Docker Hub Account (usually nothing to change)
 
-Edit `.env` and set your Docker Hub username:
+`.env.prebuilt` pulls the project's nightly images from the `uprightbass360`
+Docker Hub account:
 
 ```bash
-# Change this line to your Docker Hub username:
-DOCKERHUB_USERNAME=your-dockerhub-username
+DOCKERHUB_USERNAME=uprightbass360
 ```
+
+Change it only if you run your own fork's CI and want the images it publishes.
 
 ### 4. Optional: Customize Settings
 
@@ -256,8 +258,6 @@ mv .env .env.custom
 # Use pre-built configuration
 cp .env.prebuilt .env
 
-# Edit DOCKERHUB_USERNAME in .env
-
 # Deploy
 ./deploy.sh
 ```
@@ -269,8 +269,8 @@ cp .env.prebuilt .env
 **Problem**: `Error response from daemon: manifest not found`
 
 **Solutions**:
-1. Verify `DOCKERHUB_USERNAME` is set correctly in `.env`
-2. Check that the images exist at: https://hub.docker.com/u/your-username
+1. Verify `DOCKERHUB_USERNAME` in `.env` (`uprightbass360` for the project's images)
+2. Check that the images exist at: https://hub.docker.com/r/uprightbass360/azerothcore-realmmaster/tags
 3. Ensure the CI/CD workflow has run successfully
 
 ### Module SQL Not Applied

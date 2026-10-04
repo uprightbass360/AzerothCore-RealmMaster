@@ -143,9 +143,8 @@ wget https://github.com/uprightbass360/AzerothCore-RealmMaster/releases/download
 unzip azerothcore-realmmaster-v1.0.0-realmmaster.zip
 cd azerothcore-realmmaster-v1.0.0-realmmaster
 
-# 3. Configure
+# 3. Optional: server address, passwords
 nano .env.prebuilt
-# Set: DOCKERHUB_USERNAME=your-dockerhub-username
 
 # 4. Deploy
 mv .env.prebuilt .env

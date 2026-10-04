@@ -240,7 +240,8 @@ cd AzerothCore-RealmMaster
 # Use pre-built configuration
 cp .env.prebuilt .env
 
-# Edit .env and set DOCKERHUB_USERNAME=your-dockerhub-username
+# Images come from DOCKERHUB_USERNAME (uprightbass360 by default); set it to
+# your own Docker Hub account to deploy images your fork's CI published.
 
 # Deploy (no build required!)
 ./deploy.sh

@@ -66,8 +66,7 @@ cd AzerothCore-RealmMaster
 # 2. Use pre-built configuration
 cp .env.prebuilt .env
 
-# 3. Edit .env and set DOCKERHUB_USERNAME
-# 4. Deploy
+# 3. Deploy (optionally edit .env first: SERVER_ADDRESS, passwords, ...)
 ./deploy.sh
 ```
 
