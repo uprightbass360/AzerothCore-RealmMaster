@@ -39,11 +39,6 @@ if [ -z "$REALM_PORT" ]; then
   exit 1
 fi
 
-if [ -z "$MYSQL_HOST" ]; then
-  err "MYSQL_HOST not set in .env"
-  exit 1
-fi
-
 if [ -z "$MYSQL_USER" ]; then
   err "MYSQL_USER not set in .env"
   exit 1
@@ -63,14 +58,20 @@ info "Updating realmlist table..."
 info "  Address: $SERVER_ADDRESS"
 info "  Port: $REALM_PORT"
 
+# Run the queries inside the MySQL container: the MySQL host name (ac-mysql)
+# only resolves on the compose network, and the host may have no mysql client.
+mysql_container="${CONTAINER_MYSQL:-ac-mysql}"
+run_sql(){
+  docker exec -e MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" "$mysql_container" \
+    mysql -u"${MYSQL_USER}" "${DB_AUTH_NAME}" -e "$1"
+}
+
 # Try to update the database
-if mysql -h "${MYSQL_HOST}" -u"${MYSQL_USER}" -p"${MYSQL_ROOT_PASSWORD}" --skip-ssl-verify "${DB_AUTH_NAME}" \
-  -e "UPDATE realmlist SET address='${SERVER_ADDRESS}', port=${REALM_PORT} WHERE id=1;" 2>/dev/null; then
+if run_sql "UPDATE realmlist SET address='${SERVER_ADDRESS}', port=${REALM_PORT} WHERE id=1;" 2>/dev/null; then
   ok "Realmlist updated successfully"
 
   # Show the current realmlist entry
-  mysql -h "${MYSQL_HOST}" -u"${MYSQL_USER}" -p"${MYSQL_ROOT_PASSWORD}" --skip-ssl-verify "${DB_AUTH_NAME}" \
-    -e "SELECT id, name, address, port FROM realmlist WHERE id=1;" 2>/dev/null || true
+  run_sql "SELECT id, name, address, port FROM realmlist WHERE id=1;" 2>/dev/null || true
 
   exit 0
 else

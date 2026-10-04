@@ -9,8 +9,12 @@ MONTHLY_DIR="$BACKUP_DIR_BASE/monthly"
 RETENTION_HOURS=${BACKUP_RETENTION_HOURS:-6}
 RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
 RETENTION_MONTHS=${BACKUP_RETENTION_MONTHS:-12}
-# Force base-10 (a bare printf %02d rejects "09" as invalid octal)
-DAILY_TIME=$(printf '%02d' "$((10#${BACKUP_DAILY_TIME:-09}))" 2>/dev/null || echo "09")
+# BACKUP_DAILY_TIME is an hour ("09"); an "HH:MM" value keeps just the hour.
+# Force base-10 (a bare printf %02d rejects "09" as invalid octal).
+DAILY_HOUR="${BACKUP_DAILY_TIME:-09}"
+DAILY_HOUR="${DAILY_HOUR%%:*}"
+case "$DAILY_HOUR" in ''|*[!0-9]*) DAILY_HOUR=09 ;; esac
+DAILY_TIME=$(printf '%02d' "$((10#$DAILY_HOUR))")
 BACKUP_INTERVAL_MINUTES=${BACKUP_INTERVAL_MINUTES:-60}
 MYSQL_PORT=${MYSQL_PORT:-3306}
 # Optional webhook (e.g. ntfy/Discord/Slack) notified on backup failures
