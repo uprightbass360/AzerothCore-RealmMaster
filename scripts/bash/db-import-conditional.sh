@@ -5,6 +5,15 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# Core SQL: a stack that builds from source mounts its checkout's data/sql at
+# /source/data/sql, and dbimport is pointed there (SourceDirectory). Without
+# that (prebuilt images), the SQL that ships inside the db-import image is used.
+CORE_SQL_SOURCE_MOUNT="${CORE_SQL_SOURCE_MOUNT:-/source}"
+if [ -d "$CORE_SQL_SOURCE_MOUNT/data/sql/base" ]; then
+  export AC_SOURCE_DIRECTORY="$CORE_SQL_SOURCE_MOUNT"
+fi
+CORE_SQL_ROOT="${AC_SOURCE_DIRECTORY:-/azerothcore}/data/sql"
+
 print_help() {
   cat <<'EOF'
 Usage: db-import-conditional.sh [options]
@@ -177,7 +186,7 @@ if [ "$db_state" -eq 0 ]; then
   has_pending_updates=0
 
   # Check if module SQL staging directory has files
-  if [ -d "/azerothcore/data/sql/updates/db_world" ] && [ -n "$(find /azerothcore/data/sql/updates/db_world -name 'MODULE_*.sql' -type f 2>/dev/null)" ]; then
+  if [ -d "$CORE_SQL_ROOT/updates/db_world" ] && [ -n "$(find "$CORE_SQL_ROOT/updates/db_world" -name 'MODULE_*.sql' -type f 2>/dev/null)" ]; then
     echo "   ⚠️  Found staged module SQL updates that may need application"
     has_pending_updates=1
   fi
@@ -526,7 +535,7 @@ cd /azerothcore/env/dist/bin
 seed_dbimport_conf
 
 validate_sql_source(){
-  local sql_base_dir="/azerothcore/data/sql/base"
+  local sql_base_dir="$CORE_SQL_ROOT/base"
   local required_dirs=("db_auth" "db_world" "db_characters")
   local missing_dirs=()
 
@@ -553,9 +562,8 @@ This directory should contain SQL schemas for database initialization.
 
 📦 ALTERNATIVE (Prebuilt Images):
 
-  If using Docker images with bundled SQL schemas:
-  - Set AC_SQL_SOURCE_PATH in .env to point to bundled location
-  - Example: AC_SQL_SOURCE_PATH=/bundled/sql
+  The db-import image (AC_DB_IMPORT_IMAGE in .env) must ship its SQL
+  under /azerothcore/data/sql, and nothing may be mounted over it.
 
 📚 Documentation: docs/GETTING_STARTED.md#database-setup
 
@@ -610,13 +618,13 @@ maybe_run_base_import(){
   }
 
   if needs_import "${DB_WORLD_NAME:-acore_world}"; then
-    import_dir "${DB_WORLD_NAME:-acore_world}" "/azerothcore/data/sql/base/db_world"
+    import_dir "${DB_WORLD_NAME:-acore_world}" "$CORE_SQL_ROOT/base/db_world"
   fi
   if needs_import "${DB_AUTH_NAME:-acore_auth}"; then
-    import_dir "${DB_AUTH_NAME:-acore_auth}" "/azerothcore/data/sql/base/db_auth"
+    import_dir "${DB_AUTH_NAME:-acore_auth}" "$CORE_SQL_ROOT/base/db_auth"
   fi
   if needs_import "${DB_CHARACTERS_NAME:-acore_characters}"; then
-    import_dir "${DB_CHARACTERS_NAME:-acore_characters}" "/azerothcore/data/sql/base/db_characters"
+    import_dir "${DB_CHARACTERS_NAME:-acore_characters}" "$CORE_SQL_ROOT/base/db_characters"
   fi
 }
 

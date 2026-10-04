@@ -80,7 +80,9 @@ services:
       - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
       - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
       - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/env/dist/logs
-      - ${AC_SQL_SOURCE_PATH:-${STORAGE_LOCAL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source}/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
+      # Source checkout's SQL, used when it exists; otherwise the image's own
+      # SQL (prebuilt installs). Never mounted over /azerothcore/data/sql.
+      - ${AC_SQL_SOURCE_PATH:-${STORAGE_LOCAL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source}/azerothcore-playerbots/data/sql}:/source/data/sql:ro
       - ${STAGE_PATH_MODULE_SQL:-${STORAGE_MODULE_SQL_PATH:-${STORAGE_PATH}/module-sql-updates}}:/modules-sql
       - mysql-data:/var/lib/mysql-persistent
       - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/modules
@@ -146,7 +148,9 @@ services:
       - ${STORAGE_CONFIG_PATH:-${STORAGE_PATH}/config}:/azerothcore/env/dist/etc
       - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/logs
       - ${STORAGE_LOGS_PATH:-${STORAGE_PATH}/logs}:/azerothcore/env/dist/logs
-      - ${AC_SQL_SOURCE_PATH:-${STORAGE_LOCAL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source}/azerothcore-playerbots/data/sql}:/azerothcore/data/sql:ro
+      # Source checkout's SQL, used when it exists; otherwise the image's own
+      # SQL (prebuilt installs). Never mounted over /azerothcore/data/sql.
+      - ${AC_SQL_SOURCE_PATH:-${STORAGE_LOCAL_SOURCE_PATH:-${STORAGE_PATH_LOCAL}/source}/azerothcore-playerbots/data/sql}:/source/data/sql:ro
       - ${STAGE_PATH_MODULE_SQL:-${STORAGE_MODULE_SQL_PATH:-${STORAGE_PATH}/module-sql-updates}}:/modules-sql
       - mysql-data:/var/lib/mysql-persistent
       - ${STORAGE_MODULES_PATH:-${STORAGE_PATH}/modules}:/modules

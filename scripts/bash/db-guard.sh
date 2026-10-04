@@ -25,6 +25,15 @@ ERROR_FILE="${DB_GUARD_ERROR_FILE:-/tmp/db-guard.error}"
 MODULE_SQL_HOST_PATH="${MODULE_SQL_HOST_PATH:-/modules-sql}"
 
 SEED_CONF_SCRIPT="${SEED_DBIMPORT_CONF_SCRIPT:-/tmp/seed-dbimport-conf.sh}"
+
+# Core SQL: a stack that builds from source mounts its checkout's data/sql at
+# /source/data/sql, and dbimport is pointed there (SourceDirectory). Without
+# that (prebuilt images), the SQL that ships inside the db-import image is used.
+CORE_SQL_SOURCE_MOUNT="${CORE_SQL_SOURCE_MOUNT:-/source}"
+if [ -d "$CORE_SQL_SOURCE_MOUNT/data/sql/base" ]; then
+  export AC_SOURCE_DIRECTORY="$CORE_SQL_SOURCE_MOUNT"
+fi
+CORE_SQL_ROOT="${AC_SOURCE_DIRECTORY:-/azerothcore}/data/sql"
 if [ -f "$SEED_CONF_SCRIPT" ]; then
   # shellcheck source=/dev/null
   . "$SEED_CONF_SCRIPT"
@@ -118,7 +127,7 @@ sync_host_stage_files(){
   [ -d "$host_root" ] || return 0
   for dir in db_world db_characters db_auth db_playerbots; do
     local src="$host_root/$dir"
-    local dest="/azerothcore/data/sql/updates/$dir"
+    local dest="$CORE_SQL_ROOT/updates/$dir"
     mkdir -p "$dest"
     rm -f "$dest"/MODULE_*.sql >/dev/null 2>&1 || true
     if [ -d "$src" ]; then
