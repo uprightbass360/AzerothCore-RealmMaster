@@ -370,9 +370,13 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
         if module.warnings:
             warnings.extend(module.warnings)
 
-    # Warn if .env defines modules not in manifest
+    # Warn if .env enables or disables modules the manifest doesn't know. Only
+    # 0/1 flags are module switches; other MODULE_* values (e.g. MODULE_PROFILE
+    # in .env.prebuilt) are settings.
     extra_env_modules = [
-        key for key in env_map.keys() if key.startswith("MODULE_") and key not in module_map
+        key for key, value in env_map.items()
+        if key.startswith("MODULE_") and key not in module_map
+        and str(value).strip() in ("0", "1")
     ]
     for unknown_key in extra_env_modules:
         warnings.append(f".env defines {unknown_key} but it is missing from the manifest")

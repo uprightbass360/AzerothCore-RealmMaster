@@ -31,6 +31,15 @@ class BuildStateMergedTest(unittest.TestCase):
         self.assertIn("mod-mine", [m.name for m in state.compile_modules()])
         self.assertFalse(any("MODULE_MINE" in w and "missing from the manifest" in w for w in state.warnings))
 
+    def test_only_module_flags_missing_from_manifest_warn(self):
+        # MODULE_PROFILE=realmmaster (.env.prebuilt) is a setting, not a module flag.
+        self.env.write_text("MODULE_A=1\nMODULE_PROFILE=realmmaster\nMODULE_GONE=1\nMODULE_OFF=0\n")
+        state = build_state(self.env, self.manifest)
+        missing = [w for w in state.warnings if "missing from the manifest" in w]
+        self.assertFalse(any("MODULE_PROFILE" in w for w in missing))
+        self.assertTrue(any("MODULE_GONE" in w for w in missing))
+        self.assertTrue(any("MODULE_OFF" in w for w in missing))
+
     def test_tombstone_is_disabled_even_if_env_enables_it(self):
         write_manifest(local_manifest_path(self.manifest), [{
             "key": "MODULE_MINE", "name": "mod-mine", "repo": "https://example.com/mod-mine.git",
