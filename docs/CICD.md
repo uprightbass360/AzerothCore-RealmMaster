@@ -240,8 +240,8 @@ cd AzerothCore-RealmMaster
 # Use pre-built configuration
 cp .env.prebuilt .env
 
-# Images come from DOCKERHUB_USERNAME (uprightbass360 by default); set it to
-# your own Docker Hub account to deploy images your fork's CI published.
+# Images come from PREBUILT_IMAGE_REPO (uprightbass360/azerothcore-realmmaster);
+# point it at your own repository to deploy images your fork's CI published.
 
 # Deploy (no build required!)
 ./deploy.sh
@@ -271,7 +271,7 @@ The `.env.prebuilt` template provides a minimal configuration that:
 - References Docker Hub images instead of local builds
 - Removes all build-related variables
 - Includes only runtime configuration
-- Is ready to use with minimal editing (just set DOCKERHUB_USERNAME)
+- Works as-is (PREBUILT_IMAGE_REPO already points at the published images)
 
 **Benefits of pre-built images**:
 - ✅ Skip 15-45 minute build time

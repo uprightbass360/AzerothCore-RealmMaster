@@ -43,16 +43,17 @@ cd AzerothCore-RealmMaster
 cp .env.prebuilt .env
 ```
 
-### 3. Docker Hub Account (usually nothing to change)
+### 3. Image Repository (usually nothing to change)
 
-`.env.prebuilt` pulls the project's nightly images from the `uprightbass360`
-Docker Hub account:
+`.env.prebuilt` pulls the project's nightly images from Docker Hub. They are
+public, so no Docker login is needed:
 
 ```bash
-DOCKERHUB_USERNAME=uprightbass360
+PREBUILT_IMAGE_REPO=uprightbass360/azerothcore-realmmaster
 ```
 
 Change it only if you run your own fork's CI and want the images it publishes.
+It doesn't depend on `COMPOSE_PROJECT_NAME`, so renaming the project is safe.
 
 ### 4. Optional: Customize Settings
 
@@ -114,8 +115,9 @@ MODULE_PROFILE=realmmaster          # 32 modules (default, recommended)
 # MODULE_PROFILE=playerbots-only    # Just playerbots
 
 # Images automatically reference the selected profile
-AC_AUTHSERVER_IMAGE_MODULES=${DOCKERHUB_USERNAME}/${COMPOSE_PROJECT_NAME}:authserver-${MODULE_PROFILE}-latest
-AC_WORLDSERVER_IMAGE_MODULES=${DOCKERHUB_USERNAME}/${COMPOSE_PROJECT_NAME}:worldserver-${MODULE_PROFILE}-latest
+AC_AUTHSERVER_IMAGE_MODULES=${PREBUILT_IMAGE_REPO}:authserver-${MODULE_PROFILE}-latest
+AC_WORLDSERVER_IMAGE_MODULES=${PREBUILT_IMAGE_REPO}:worldserver-${MODULE_PROFILE}-latest
+AC_DB_IMPORT_IMAGE=${PREBUILT_IMAGE_REPO}:db-import-${MODULE_PROFILE}-latest
 ```
 
 ### Using Date-Tagged Images
@@ -126,9 +128,11 @@ To pin to a specific build date, edit `.env`:
 # Set your profile
 MODULE_PROFILE=realmmaster
 
-# Pin to a specific date (example: January 9, 2026)
-AC_AUTHSERVER_IMAGE_MODULES=${DOCKERHUB_USERNAME}/${COMPOSE_PROJECT_NAME}:authserver-${MODULE_PROFILE}-20260109
-AC_WORLDSERVER_IMAGE_MODULES=${DOCKERHUB_USERNAME}/${COMPOSE_PROJECT_NAME}:worldserver-${MODULE_PROFILE}-20260109
+# Pin to a specific date (example: October 5, 2026). Pin all three together:
+# the db-import image carries the SQL that matches that day's servers.
+AC_AUTHSERVER_IMAGE_MODULES=${PREBUILT_IMAGE_REPO}:authserver-${MODULE_PROFILE}-20261005
+AC_WORLDSERVER_IMAGE_MODULES=${PREBUILT_IMAGE_REPO}:worldserver-${MODULE_PROFILE}-20261005
+AC_DB_IMPORT_IMAGE=${PREBUILT_IMAGE_REPO}:db-import-${MODULE_PROFILE}-20261005
 ```
 
 ## Differences from Local Build
@@ -269,7 +273,7 @@ cp .env.prebuilt .env
 **Problem**: `Error response from daemon: manifest not found`
 
 **Solutions**:
-1. Verify `DOCKERHUB_USERNAME` in `.env` (`uprightbass360` for the project's images)
+1. Verify `PREBUILT_IMAGE_REPO` in `.env` (`uprightbass360/azerothcore-realmmaster` for the project's images)
 2. Check that the images exist at: https://hub.docker.com/r/uprightbass360/azerothcore-realmmaster/tags
 3. Ensure the CI/CD workflow has run successfully
 
