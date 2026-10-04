@@ -5456,7 +5456,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T05:36:41Z"
+      "last_modified": "2026-10-04T07:44:28Z"
     },
     {
       "key": "MODULE_DELVES",
@@ -5906,7 +5906,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T18:03:11Z"
+      "last_modified": "2026-10-04T08:11:46Z"
     },
     {
       "key": "MODULE_MOD_I_FOUND_YOUR_SWORD",
@@ -5921,7 +5921,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-01T00:03:47Z"
+      "last_modified": "2026-10-04T09:26:20Z"
     },
     {
       "key": "MODULE_MOD_LLM_GUIDE",
@@ -9251,7 +9251,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T07:36:15Z"
+      "last_modified": "2026-10-04T11:07:28Z"
     },
     {
       "key": "MODULE_MOD_BOSS_ARCHIVE",
@@ -10482,6 +10482,36 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-10-03T23:44:26Z"
+    },
+    {
+      "key": "MODULE_MOD_LFG_EXPANSION",
+      "name": "mod-lfg-expansion",
+      "repo": "https://github.com/MekBits/mod-lfg-expansion.git",
+      "description": "AzerothCore module: keep the Dungeon Finder inside the expansion a character has reached (works with mod-individual-progression).",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-04T10:01:13Z"
+    },
+    {
+      "key": "MODULE_MOD_SUMMON_FRIEND",
+      "name": "mod-summon-friend",
+      "repo": "https://github.com/MekBits/mod-summon-friend.git",
+      "description": "AzerothCore module: summon a group member with .summonfriend, using the normal summon dialog.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-04T10:01:10Z"
     }
   ]
 }
