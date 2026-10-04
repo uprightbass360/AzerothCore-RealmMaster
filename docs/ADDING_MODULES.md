@@ -61,7 +61,7 @@ touches it.
 ./modules.sh add https://github.com/me/mod-thing --ref v1.2   # pinned to a tag, branch or commit
 ./modules.sh add https://github.com/me/mod-transmog --key MODULE_TRANSMOG  # use your fork of a listed module
 ./modules.sh add --key MODULE_TRANSMOG --ref 1a2b3c4           # pin a listed module
-./modules.sh list                                              # local entries: local, override, removed or orphaned
+./modules.sh list                                              # your entries: added, override, removed or orphaned
 ./modules.sh remove MODULE_MOD_THING                           # undo an add or an override
 ```
 
@@ -93,8 +93,12 @@ touches it.
 - Validation errors only fail the command (exit 1) when they involve the module
   you just added or a module it just enabled; the entry is still written, and the
   message says how to remove it with `./modules.sh remove`.
-- `list` shows KEY, KIND (`local`, `override`, `removed` or `orphaned`), ENABLED and REPO;
-  an override without its own repo shows `(upstream repo)` there. If the sync
+- `list` shows KEY, KIND, ENABLED and REPO. KIND says how the entry relates to
+  the module list, not where the code comes from: `added` is a module you added
+  that isn't in `config/module-manifest.json` (it is still cloned from its git
+  URL), `override` is your fork or pin of a listed module, `removed` is a module
+  you removed, and `orphaned` is explained below. An override without its own
+  repo shows `(upstream repo)` in REPO. If the sync
   later drops the upstream entry a partial override has nothing to attach to and
   `list` shows it as `orphaned`.
 - `remove` on your own module sets it to `0` in `.env` and keeps its entry as a
@@ -104,9 +108,19 @@ touches it.
   marker. On an override, `remove` deletes the override, restoring the upstream
   repo/ref, and leaves `.env` alone. Either way, SQL the module already applied
   stays in the database.
-- `config/module-manifest.local.json` is gitignored, so moving a stack to another
-  host means copying it along with `.env`; `migrate-stack.sh`'s git-clone
-  fallback doesn't carry it.
+- `config/module-manifest.local.json` is gitignored, so `git pull`, `git stash`
+  and the daily manifest sync never touch it. Moving a stack to another host
+  means copying it along with `.env`; `migrate-stack.sh`'s git-clone fallback
+  doesn't carry it.
+- Don't edit `config/module-manifest.json` itself: it is regenerated every day,
+  and local edits to it get in the way of `git pull`. If you added modules there
+  before `./modules.sh` existed and `git stash` put the edits away, they are
+  still in the stash: `git stash list` shows it, and
+  `git show stash@{0}:config/module-manifest.json` prints the old file, so you
+  can find each entry's `repo` and add it back with `./modules.sh add <repo>`.
+  `.env` keeps flags for modules no longer in the manifest (the build warns
+  `.env defines MODULE_X but it is missing from the manifest`); those modules
+  are not built until they are added back.
 - Private repositories work when the host's git can clone them: probing times
   out after 10 minutes, and SSH runs non-interactively, so a private repo over
   SSH needs a working key or agent on the host. The `ac-modules` container has

@@ -416,7 +416,7 @@ class ListRemoveTest(CliCase):
         rc, out, _ = self.run_cli("list")
         self.assertEqual(rc, 0)
         lines = {line.split()[0]: line.split() for line in out.strip().splitlines()[1:]}
-        self.assertEqual(lines["MODULE_MINE"][1:3], ["local", "yes"])
+        self.assertEqual(lines["MODULE_MINE"][1:3], ["added", "yes"])
         self.assertEqual(lines["MODULE_UP"][1], "override")
         self.assertEqual(lines["MODULE_GONE"][1], "orphaned")
 

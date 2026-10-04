@@ -400,7 +400,7 @@ def cmd_list(args: argparse.Namespace, paths: Paths) -> int:
         elif is_tombstone(item):
             kind = "removed"
         elif item.get("name") and item.get("repo"):
-            kind = "local"
+            kind = "added"
         else:
             kind = "orphaned"
         enabled = "yes" if parse_bool(env.get(key, "0")) else "no"
