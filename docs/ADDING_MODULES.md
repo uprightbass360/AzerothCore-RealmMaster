@@ -132,6 +132,9 @@ crash-loops after deploying, run ./modules.sh remove <key> and deploy again.
   SQL anywhere else isn't imported.
 - `conf/*.conf.dist` files are copied to `storage/config/modules/`. A `.conf` is
   created from the `.dist` only if you don't already have one.
+  Every deploy refreshes the `.dist` but never overwrites your `.conf`, so edits
+  survive `start-containers.sh`. When a module is removed, its `.conf` is deleted
+  only if you never edited it.
 
 #### Playerbots stacks
 

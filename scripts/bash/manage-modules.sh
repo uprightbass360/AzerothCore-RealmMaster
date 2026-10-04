@@ -569,7 +569,21 @@ manage_configuration_files(){
   local modules_conf_dir="${env_target%/}/modules"
   mkdir -p "$modules_conf_dir"
   rm -rf "${modules_conf_dir}.backup"
-  rm -f "$modules_conf_dir"/*.conf "$modules_conf_dir"/*.conf.dist 2>/dev/null || true
+
+  # A .conf is the user's file: it is seeded once and never overwritten. Only
+  # the shipped .conf.dist defaults are refreshed. Note which configs still
+  # match their default before the refresh, so ones left behind by removed
+  # modules can be cleaned up without losing edits.
+  local -A pristine_confs=() staged_confs=()
+  local dist_file conf_path conf_name
+  for dist_file in "$modules_conf_dir"/*.conf.dist; do
+    [ -f "$dist_file" ] || continue
+    conf_path="${dist_file%.dist}"
+    if [ -f "$conf_path" ] && cmp -s "$conf_path" "$dist_file"; then
+      pristine_confs["$(basename "$conf_path")"]=1
+    fi
+  done
+  rm -f "$modules_conf_dir"/*.conf.dist 2>/dev/null || true
 
   local module_dir
   for key in "${MODULE_KEYS[@]}"; do
@@ -591,15 +605,28 @@ manage_configuration_files(){
         fi
       fi
 
-      dest_path="${modules_conf_dir}/${base_name}"
-      cp "$conf_file" "$dest_path"
       if [[ "$base_name" == *.conf.dist ]]; then
-        dest_conf="${modules_conf_dir}/${base_name%.dist}"
-        if [ ! -f "$dest_conf" ]; then
-          cp "$conf_file" "$dest_conf"
-        fi
+        cp "$conf_file" "${modules_conf_dir}/${base_name}"
+      fi
+      dest_conf="${modules_conf_dir}/${base_name%.dist}"
+      staged_confs["$(basename "$dest_conf")"]=1
+      if [ ! -f "$dest_conf" ]; then
+        cp "$conf_file" "$dest_conf"
       fi
     done < <(find "$module_dir" -path "*/conf/*" -type f \( -name "*.conf" -o -name "*.conf.dist" \) 2>/dev/null)
+  done
+
+  # Configs no installed module provides any more: drop the untouched ones,
+  # keep (and report) the ones the user edited.
+  for conf_path in "$modules_conf_dir"/*.conf; do
+    [ -f "$conf_path" ] || continue
+    conf_name="$(basename "$conf_path")"
+    [ -z "${staged_confs[$conf_name]:-}" ] || continue
+    if [ -n "${pristine_confs[$conf_name]:-}" ]; then
+      rm -f "$conf_path"
+    else
+      warn "Keeping ${conf_name}: no enabled module provides it, but it differs from its default"
+    fi
   done
 
   local playerbots_enabled="${MODULE_PLAYERBOTS:-0}"

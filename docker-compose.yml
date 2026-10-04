@@ -872,6 +872,7 @@ services:
     command:
       - -c
       - |
+        set -e
         apk add --no-cache curl bash git python3 su-exec
         chmod +x /tmp/scripts/bash/manage-modules.sh /tmp/scripts/bash/manage-modules-sql.sh 2>/dev/null || true
         echo "🔐 Running module manager as ${CONTAINER_USER}"
@@ -920,6 +921,7 @@ services:
       - sh
       - -c
       - |
+        set -e
         apk add --no-cache bash curl docker-cli su-exec
         chmod +x /tmp/scripts/bash/auto-post-install.sh 2>/dev/null || true
         echo "📥 Running post-install as root (testing mode)"
