@@ -242,6 +242,25 @@ confirm(){
   done
 }
 
+# detect_target_profile <playerbots enabled 0|1> <STACK_IMAGE_MODE> <C++ module count>
+# Prints the compose service profile (standard, playerbots or modules).
+# STACK_IMAGE_MODE=modules means the realm runs the *_MODULES images: a
+# prebuilt install (.env.prebuilt) pulls them from Docker Hub, and they are
+# playerbots builds, so it wins over the playerbots profile, whose images
+# only exist after a local source build.
+detect_target_profile(){
+  local playerbots_on="$1" image_mode="$2" cpp_count="$3"
+  if [ "$image_mode" = "modules" ]; then
+    echo modules
+  elif [ "$playerbots_on" = "1" ]; then
+    echo playerbots
+  elif [ "$cpp_count" -gt 0 ]; then
+    echo modules
+  else
+    echo standard
+  fi
+}
+
 # Parse arguments
 ASSUME_YES=0
 FORCE_REBUILD=0
@@ -376,27 +395,38 @@ done
 # Check for playerbots mode
 PLAYERBOT_ENABLED="$(read_env PLAYERBOT_ENABLED "0")"
 MODULE_PLAYERBOTS="$(read_env MODULE_PLAYERBOTS "0")"
+STACK_IMAGE_MODE="$(read_env STACK_IMAGE_MODE "")"
+playerbots_on=0
+if [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
+  playerbots_on=1
+fi
 
 # Determine target profile if not specified
 if [ -z "$TARGET_PROFILE" ]; then
   show_staging_step "Profile Detection" "Analyzing enabled modules"
-  if [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
-    TARGET_PROFILE="playerbots"
-    echo "🤖 Playerbot profile enabled"
-    if [ ${#compile_modules[@]} -gt 0 ]; then
-      echo "   ⚠️  Detected ${#compile_modules[@]} C++ modules. Ensure your playerbot images include these features."
-    fi
-  elif [ ${#compile_modules[@]} -gt 0 ]; then
-    echo "🔧 Detected ${#compile_modules[@]} C++ modules requiring compilation:"
-    for mod in "${compile_modules[@]}"; do
-      echo "   • $mod"
-    done
-    TARGET_PROFILE="modules"
-    echo "🧩 Using modules profile for custom source build"
-  else
-    TARGET_PROFILE="standard"
-    echo "✅ No special modules detected - using standard profile"
-  fi
+  TARGET_PROFILE="$(detect_target_profile "$playerbots_on" "$STACK_IMAGE_MODE" "${#compile_modules[@]}")"
+  case "$TARGET_PROFILE" in
+    playerbots)
+      echo "🤖 Playerbot profile enabled"
+      if [ ${#compile_modules[@]} -gt 0 ]; then
+        echo "   ⚠️  Detected ${#compile_modules[@]} C++ modules. Ensure your playerbot images include these features."
+      fi
+      ;;
+    modules)
+      if [ "$playerbots_on" = "1" ]; then
+        echo "🧩 Using modules profile (STACK_IMAGE_MODE=modules: prebuilt or custom module images)"
+      else
+        echo "🔧 Detected ${#compile_modules[@]} C++ modules requiring compilation:"
+        for mod in "${compile_modules[@]}"; do
+          echo "   • $mod"
+        done
+        echo "🧩 Using modules profile for custom source build"
+      fi
+      ;;
+    *)
+      echo "✅ No special modules detected - using standard profile"
+      ;;
+  esac
 fi
 
 echo "🎯 Target profile: services-$TARGET_PROFILE"
