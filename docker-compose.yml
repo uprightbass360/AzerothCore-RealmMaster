@@ -407,8 +407,10 @@ services:
 
         # Copy core AzerothCore config template files (.dist) to config directory
         echo "📄 Copying AzerothCore configuration templates..."
-        SOURCE_DIR="${SOURCE_DIR:-/local-storage-root/source/azerothcore-playerbots}"
-        if [ ! -d "$SOURCE_DIR" ] && [ -d "/local-storage-root/source/azerothcore-wotlk" ]; then
+        # $$ keeps compose from interpolating the shell variable (and warning
+        # "SOURCE_DIR variable is not set").
+        SOURCE_DIR="/local-storage-root/source/azerothcore-playerbots"
+        if [ ! -d "$$SOURCE_DIR" ] && [ -d "/local-storage-root/source/azerothcore-wotlk" ]; then
           SOURCE_DIR="/local-storage-root/source/azerothcore-wotlk"
         fi
 
@@ -416,32 +418,32 @@ services:
         if [ -f "/tmp/seed-dbimport-conf.sh" ]; then
           echo "🧩 Seeding dbimport.conf"
           DBIMPORT_CONF_DIR="/storage-root/config" \
-          DBIMPORT_SOURCE_ROOT="$SOURCE_DIR" \
+          DBIMPORT_SOURCE_ROOT="$$SOURCE_DIR" \
           sh -c '. /tmp/seed-dbimport-conf.sh && seed_dbimport_conf' || true
         else
-          if [ -f "$SOURCE_DIR/src/tools/dbimport/dbimport.conf.dist" ]; then
-            cp -n "$SOURCE_DIR/src/tools/dbimport/dbimport.conf.dist" /storage-root/config/ 2>/dev/null || true
+          if [ -f "$$SOURCE_DIR/src/tools/dbimport/dbimport.conf.dist" ]; then
+            cp -n "$$SOURCE_DIR/src/tools/dbimport/dbimport.conf.dist" /storage-root/config/ 2>/dev/null || true
             if [ ! -f "/storage-root/config/dbimport.conf" ]; then
-              cp "$SOURCE_DIR/src/tools/dbimport/dbimport.conf.dist" /storage-root/config/dbimport.conf
+              cp "$$SOURCE_DIR/src/tools/dbimport/dbimport.conf.dist" /storage-root/config/dbimport.conf
               echo "   ✓ Created dbimport.conf"
             fi
           fi
         fi
 
         # Copy authserver.conf.dist
-        if [ -f "$SOURCE_DIR/env/dist/etc/authserver.conf.dist" ]; then
-          cp -n "$SOURCE_DIR/env/dist/etc/authserver.conf.dist" /storage-root/config/ 2>/dev/null || true
+        if [ -f "$$SOURCE_DIR/env/dist/etc/authserver.conf.dist" ]; then
+          cp -n "$$SOURCE_DIR/env/dist/etc/authserver.conf.dist" /storage-root/config/ 2>/dev/null || true
           if [ ! -f "/storage-root/config/authserver.conf" ]; then
-            cp "$SOURCE_DIR/env/dist/etc/authserver.conf.dist" /storage-root/config/authserver.conf
+            cp "$$SOURCE_DIR/env/dist/etc/authserver.conf.dist" /storage-root/config/authserver.conf
             echo "   ✓ Created authserver.conf"
           fi
         fi
 
         # Copy worldserver.conf.dist
-        if [ -f "$SOURCE_DIR/env/dist/etc/worldserver.conf.dist" ]; then
-          cp -n "$SOURCE_DIR/env/dist/etc/worldserver.conf.dist" /storage-root/config/ 2>/dev/null || true
+        if [ -f "$$SOURCE_DIR/env/dist/etc/worldserver.conf.dist" ]; then
+          cp -n "$$SOURCE_DIR/env/dist/etc/worldserver.conf.dist" /storage-root/config/ 2>/dev/null || true
           if [ ! -f "/storage-root/config/worldserver.conf" ]; then
-            cp "$SOURCE_DIR/env/dist/etc/worldserver.conf.dist" /storage-root/config/worldserver.conf
+            cp "$$SOURCE_DIR/env/dist/etc/worldserver.conf.dist" /storage-root/config/worldserver.conf
             echo "   ✓ Created worldserver.conf"
           fi
         fi
