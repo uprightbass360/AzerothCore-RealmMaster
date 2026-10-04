@@ -202,11 +202,37 @@ ConfigUI.profile = {
     return m ? m[1] : "other";
   },
 
+  // last_modified is the repo's last push (GitHub pushed_at), refreshed by the
+  // nightly manifest sync. Entries without one (non-GitHub repos) are "unknown".
+  STALE_DAYS: 730,
+
+  ageDays(mod) {
+    const t = Date.parse(mod.last_modified || "");
+    return Number.isNaN(t) ? null : (Date.now() - t) / 86400000;
+  },
+
+  // "" = any; a number = pushed within that many days; "stale" = older than STALE_DAYS.
+  matchesUpdated(mod, range) {
+    if (!range) return true;
+    const days = this.ageDays(mod);
+    if (days === null) return false;
+    return range === "stale" ? days > this.STALE_DAYS : days <= Number(range);
+  },
+
+  relativeAge(days) {
+    if (days < 1) return "today";
+    if (days < 31) return `${Math.floor(days)}d ago`;
+    const months = Math.floor(days / 30.44);
+    if (months < 24) return `${months} mo ago`;
+    return `${Math.floor(days / 365.25)} yr ago`;
+  },
+
   render() {
     const list = document.getElementById("module-list");
     const filter = document.getElementById("module-search").value.toLowerCase();
     const catFilter = document.getElementById("module-category").value;
     const creatorFilter = document.getElementById("module-creator").value.trim().toLowerCase();
+    const updatedFilter = document.getElementById("module-updated").value;
     list.textContent = "";
     const blockedTotal = ConfigUI.data.manifest.filter(m => m.status === "blocked").length;
     document.getElementById("toggle-blocked-label").textContent = `Show incompatible (${blockedTotal})`;
@@ -218,6 +244,8 @@ ConfigUI.profile = {
       const cat = mod.category || "uncategorized";
       if (catFilter && cat !== catFilter) return false;
       if (creatorFilter && !this.creatorOf(mod).toLowerCase().includes(creatorFilter)) return false;
+      // A selected module stays visible so the filter never hides part of the profile.
+      if (!this.selection.has(mod.key) && !this.matchesUpdated(mod, updatedFilter)) return false;
       const hay = `${mod.key} ${mod.name || ""} ${mod.description || ""}`.toLowerCase();
       return !filter || hay.includes(filter);
     }).sort((a, b) =>
@@ -227,7 +255,7 @@ ConfigUI.profile = {
     table.className = "module-table";
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
-    for (const label of ["", "Module", "Key", "Category", "Description", "Link"]) {
+    for (const label of ["", "Module", "Key", "Category", "Updated", "Description", "Link"]) {
       const th = document.createElement("th");
       th.textContent = label;
       headRow.append(th);
@@ -260,6 +288,16 @@ ConfigUI.profile = {
       const catCell = document.createElement("td");
       catCell.className = "cat";
       catCell.textContent = mod.category || "uncategorized";
+      const updatedCell = document.createElement("td");
+      updatedCell.className = "updated";
+      const days = this.ageDays(mod);
+      if (days === null) {
+        updatedCell.textContent = "unknown";
+      } else {
+        updatedCell.textContent = this.relativeAge(days);
+        updatedCell.title = `Last push ${mod.last_modified.slice(0, 10)}`;
+        if (days > this.STALE_DAYS) updatedCell.classList.add("stale");
+      }
       const descCell = document.createElement("td");
       descCell.className = "desc";
       descCell.textContent = mod.description || "";
@@ -274,7 +312,7 @@ ConfigUI.profile = {
         a.textContent = "GitHub ↗";
         linkCell.append(a);
       }
-      row.append(cbCell, nameCell, keyCell, catCell, descCell, linkCell);
+      row.append(cbCell, nameCell, keyCell, catCell, updatedCell, descCell, linkCell);
       tbody.append(row);
     }
     table.append(tbody);
@@ -313,6 +351,8 @@ document.addEventListener("configui:ready", () => {
 document.getElementById("module-creator").addEventListener("input", () => ConfigUI.profile.render());
 
 document.getElementById("module-category").addEventListener("change", () => ConfigUI.profile.render());
+
+document.getElementById("module-updated").addEventListener("change", () => ConfigUI.profile.render());
 
 document.getElementById("toggle-blocked").addEventListener("change", e => {
   ConfigUI.profile.showBlocked = e.target.checked;

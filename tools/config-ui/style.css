@@ -41,12 +41,15 @@ a { color:var(--accent); }
 .module-table th:nth-child(2) { width:180px; }
 .module-table th:nth-child(3) { width:250px; }
 .module-table th:nth-child(4) { width:110px; }
-.module-table th:nth-child(6) { width:82px; }
+.module-table th:nth-child(5) { width:84px; }
+.module-table th:nth-child(7) { width:82px; }
 .module-table td { padding:4px 8px; vertical-align:top; border-bottom:1px solid var(--line); overflow-wrap:break-word; }
 .module-table td.cb { width:28px; }
 .module-table td.key { color:var(--dim); font-family:monospace; font-size:12px; overflow-wrap:anywhere; }
 .module-table td.desc { color:var(--dim); }
 .module-table td.link { white-space:nowrap; }
+.module-table td.updated { color:var(--dim); font-size:12px; white-space:nowrap; }
+.module-table td.updated.stale { color:var(--warn); }
 .module-table td.cat { color:var(--accent); font-size:12px; overflow-wrap:anywhere; }
 .badge { font-size:11px; border:1px solid var(--line); border-radius:10px; padding:0 8px; color:var(--dim); }
 .badge.warn { color:var(--warn); border-color:var(--warn); }

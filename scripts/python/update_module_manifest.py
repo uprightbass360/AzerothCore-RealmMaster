@@ -153,9 +153,11 @@ class GitHubClient:
         # partial view of GitHub can never delete live entries.
         self.error_count = 0
 
-    def check_repo(self, full_name: str) -> str:
-        """Return 'alive', 'dead' or 'error' for ``owner/name``.
+    def check_repo(self, full_name: str) -> Tuple[str, Optional[dict]]:
+        """Return ``(verdict, repo)`` for ``owner/name``.
 
+        ``verdict`` is 'alive', 'dead' or 'error'; ``repo`` is the API payload
+        for a live repo (``{}`` if it could not be parsed), otherwise None.
         Only an unambiguous 404 (gone) or 451 (DMCA takedown) counts as dead.
         Anything else -- including rate limiting and transient server errors --
         is reported as an error so the caller can bail out instead of guessing.
@@ -167,22 +169,25 @@ class GitHubClient:
         if self.token:
             req.add_header("Authorization", f"Bearer {self.token}")
         try:
-            with request.urlopen(req):
+            with request.urlopen(req) as resp:
                 # Redirects (renamed repos) are followed transparently and land
                 # here as 200 -- the project still exists, so keep it.
-                return "alive"
+                try:
+                    return "alive", json.loads(resp.read().decode("utf-8"))
+                except ValueError:
+                    return "alive", {}
         except error.HTTPError as exc:
             if exc.code in (404, 451):
-                return "dead"
+                return "dead", None
             self.error_count += 1
             if self.verbose:
                 print(f"  ! {full_name}: HTTP {exc.code} {exc.reason}")
-            return "error"
+            return "error", None
         except Exception as exc:  # network failure, DNS, timeout
             self.error_count += 1
             if self.verbose:
                 print(f"  ! {full_name}: {exc}")
-            return "error"
+            return "error", None
 
     def _request(self, url: str) -> dict:
         req = request.Request(url)
@@ -321,12 +326,15 @@ def prune_missing_repositories(
     print(f"🔍 Verifying {len(candidates)} manifest entr(ies) absent from search results...")
     dead: List[dict] = []
     for entry, full_name in candidates:
-        verdict = client.check_repo(full_name)
+        verdict, repo = client.check_repo(full_name)
         if verdict == "dead":
             dead.append(entry)
             print(f"   🗑️  {entry.get('key')} ({full_name}) — repository not found")
-        elif verdict == "alive" and verbose:
-            print(f"   ✓ {entry.get('key')} ({full_name}) — still exists, keeping")
+        elif verdict == "alive":
+            # The topic search missed it, so this is the only date refresh it gets.
+            update_last_modified(entry, repo or {})
+            if verbose:
+                print(f"   ✓ {entry.get('key')} ({full_name}) — still exists, keeping")
         # Avoid secondary rate-limits on long candidate lists.
         time.sleep(0.1)
 
@@ -436,7 +444,19 @@ def ensure_defaults(entry: dict) -> None:
     entry.setdefault("config_cleanup", [])
 
 
+def update_last_modified(entry: dict, repo: dict) -> None:
+    """Record the repo's last push; the config UI filters on it.
+
+    Unlike the descriptive fields this is activity data, so it is refreshed on
+    every sync rather than only with --refresh-existing.
+    """
+    pushed_at = repo.get("pushed_at")
+    if pushed_at:
+        entry["last_modified"] = pushed_at
+
+
 def update_entry_from_repo(entry: dict, repo: dict, repo_type: str, topic_expr: str, refresh: bool) -> None:
+    update_last_modified(entry, repo)
     # Only overwrite descriptive fields when refresh is enabled or when they are missing.
     if refresh or not entry.get("name"):
         entry["name"] = repo.get("name") or entry.get("name")

@@ -34,6 +34,14 @@
       <input id="module-search" type="search" placeholder="Search modules…">
       <label>Category <select id="module-category"><option value="">All categories</option></select></label>
       <label>Creator <input id="module-creator" list="creator-list" type="search" placeholder="any" size="16"></label>
+      <label>Last updated <select id="module-updated">
+        <option value="">Any time</option>
+        <option value="30">Past 30 days</option>
+        <option value="182">Past 6 months</option>
+        <option value="365">Past year</option>
+        <option value="730">Past 2 years</option>
+        <option value="stale">Stale (over 2 years)</option>
+      </select></label>
       <datalist id="creator-list"></datalist>
       <label class="check"><input id="toggle-blocked" type="checkbox"> <span id="toggle-blocked-label">Show incompatible</span></label>
       <label class="check"><input id="hide-disabled" type="checkbox"> Hide disabled</label>
