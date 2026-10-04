@@ -62,7 +62,16 @@ run_setup(){
   (cd "$PROJECT" && PATH="${2:+$2:}$PATH" bash "$REPO_ROOT/scripts/bash/setup-source.sh") > "$WORK/out.log" 2>&1
 }
 
-echo "first run clones"
+echo "placeholder with files but no .git: refuse, keep the files"
+mkdir -p "$SRC/data/sql"
+echo "mine" > "$SRC/data/sql/keep.sql"
+if run_setup "$WORK/up.git"; then r=no; else r=yes; fi
+check "exit status is non-zero" "$r" "yes"
+check "files kept" "$(cat "$SRC/data/sql/keep.sql" 2>/dev/null)" "mine"
+rm -rf "$SRC"
+
+echo "first run clones over an empty placeholder (folders Docker created)"
+mkdir -p "$SRC/data/sql"
 run_setup "$WORK/up.git"
 check "exit status" "$?" "0"
 check "content" "$(cat "$SRC/content.txt" 2>/dev/null)" "up v1"

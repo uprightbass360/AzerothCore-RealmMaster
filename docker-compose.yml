@@ -460,8 +460,14 @@ services:
         if [ "$(id -u)" -eq 0 ]; then
           chown -R ${CONTAINER_USER} /storage-root
           chmod -R u+rwX,go+rX /storage-root
+          # local-storage is the host user's build and staging area: only
+          # host-side scripts write there. Give it to the owner of this
+          # checkout (read off a mounted repo file), not CONTAINER_USER, which
+          # defaults to root. Inside source/ only the folder itself is taken.
+          host_owner="$$(stat -c '%u:%g' /tmp/seed-dbimport-conf.sh)"
+          chown "$$host_owner" /local-storage-root/source
           find /local-storage-root -path /local-storage-root/source -prune \
-            -o -exec chown ${CONTAINER_USER} {} + -exec chmod u+rwX,go+rX {} +
+            -o -exec chown "$$host_owner" {} + -exec chmod u+rwX,go+rX {} +
           echo "✅ Storage permissions initialized"
         else
           echo "ℹ️ Running as $(id -u):$(id -g); assuming host permissions are already correct."

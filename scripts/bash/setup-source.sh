@@ -195,6 +195,24 @@ if [ -d "$SOURCE_PATH/.git" ]; then
   git pull --ff-only origin "$BRANCH"
   echo "✅ Repository updated to latest $BRANCH"
 else
+  # Docker creates missing bind-mount paths as empty root-owned folders (the
+  # db-import SQL mount does this on prebuilt installs), which git refuses to
+  # clone into. Remove such a placeholder; a folder holding any file is left
+  # for git to refuse.
+  if [ -d "$SOURCE_PATH" ] && [ -z "$(find "$SOURCE_PATH" ! -type d -print -quit 2>/dev/null)" ]; then
+    echo "🧹 Removing empty placeholder folders at $SOURCE_PATH"
+    if ! rm -rf "$SOURCE_PATH" 2>/dev/null && command -v docker >/dev/null 2>&1; then
+      docker run --rm -u 0:0 -v "$(dirname "$SOURCE_PATH")":/parent "${ALPINE_IMAGE:-alpine:latest}" \
+        rm -rf "/parent/$(basename "$SOURCE_PATH")" || true
+    fi
+  fi
+  # The parent folder can be root-owned for the same reason; take that one
+  # folder (not its contents) so git can create the checkout in it.
+  parent_dir="$(dirname "$SOURCE_PATH")"
+  if [ ! -w "$parent_dir" ] && command -v docker >/dev/null 2>&1; then
+    docker run --rm -u 0:0 -v "$parent_dir":/parent "${ALPINE_IMAGE:-alpine:latest}" \
+      chown "$(id -u):$(id -g)" /parent || true
+  fi
   echo "📥 Cloning repository..."
   echo "⏳ Cloning $REPO_URL (branch $BRANCH) into $SOURCE_PATH"
   git clone -b "$BRANCH" "$REPO_URL" "$SOURCE_PATH"
