@@ -145,6 +145,36 @@ resolve_local_storage_path(){
   echo "${path%/}"
 }
 
+# sync_modules_into_source <staging dir> <source modules dir> <enabled names>
+# CMake compiles every module directory under the source tree's modules/, so
+# only enabled modules may be there. The core tracks only files in modules/;
+# every (non-hidden) directory is a module from an earlier build and is
+# cleared first. Staged checkouts of modules that are no longer enabled, or no
+# longer in the manifest at all, are skipped and named.
+sync_modules_into_source(){
+  local src="$1" dest="$2" enabled=" $3 " entry name
+  local -a skipped=()
+  mkdir -p "$dest"
+  find "$dest" -mindepth 1 -maxdepth 1 -type d ! -name '.*' -exec rm -rf {} + 2>/dev/null || true
+  for entry in "$src"/* "$src"/.[!.]*; do
+    [ -e "$entry" ] || continue
+    name="$(basename "$entry")"
+    if [ -d "$entry" ] && [[ "$name" != .* ]] && [[ "$enabled" != *" $name "* ]]; then
+      skipped+=("$name")
+      continue
+    fi
+    if command -v rsync >/dev/null 2>&1; then
+      rsync -a "$entry" "$dest"/
+    else
+      cp -R "$entry" "$dest"/
+    fi
+  done
+  if [ ${#skipped[@]} -gt 0 ]; then
+    echo "⚠️  Not compiling modules that aren't enabled: ${skipped[*]}"
+    echo "   (left in $src; re-add them with ./modules.sh add, or delete them)"
+  fi
+}
+
 ensure_module_state(){
   if [ -n "$MODULE_STATE_DIR" ]; then
     return 0
@@ -298,13 +328,7 @@ fi
 
 if [ -d "$MODULES_DIR" ]; then
   echo "🔄 Syncing enabled modules into source tree..."
-  mkdir -p modules
-  find modules -mindepth 1 -maxdepth 1 -type d -name 'mod-*' -exec rm -rf {} + 2>/dev/null || true
-  if command -v rsync >/dev/null 2>&1; then
-    rsync -a "$MODULES_DIR"/ modules/
-  else
-    cp -R "$MODULES_DIR"/. modules/
-  fi
+  sync_modules_into_source "$MODULES_DIR" modules "${MODULES_ENABLED:-}"
 else
   echo "⚠️  No modules directory found at $MODULES_DIR; continuing without sync."
 fi
