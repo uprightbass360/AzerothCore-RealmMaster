@@ -241,6 +241,16 @@ jobs:
           docker tag ${PROJECT_NAME}:worldserver-modules-latest \
             ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-latest
 
+          # db-import image from the same build: the SQL and dbimport that match
+          # these servers (prebuilt installs use it to create and update the
+          # databases). build.sh retags it to AC_DB_IMPORT_IMAGE in .env.
+          DB_IMPORT_IMAGE=$(grep '^AC_DB_IMPORT_IMAGE=' .env | cut -d'=' -f2 | tr -d '\r')
+          docker image inspect "${DB_IMPORT_IMAGE}" >/dev/null
+          docker tag "${DB_IMPORT_IMAGE}" \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:db-import-${PROFILE_TAG}-latest
+          docker tag "${DB_IMPORT_IMAGE}" \
+            ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:db-import-${PROFILE_TAG}-${DATE_TAG}
+
           echo "Tagged images with profile '${PROFILE_TAG}' and date '${DATE_TAG}'"
 
       - name: Push images to Docker Hub
@@ -256,6 +266,10 @@ jobs:
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-${DATE_TAG}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-latest
+
+          # Push db-import images
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:db-import-${PROFILE_TAG}-latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:db-import-${PROFILE_TAG}-${DATE_TAG}
 
           echo "✅ Pushed all image tags to Docker Hub"
 
@@ -289,6 +303,8 @@ jobs:
           echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-${PROFILE_TAG}-${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-latest\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:worldserver-${PROFILE_TAG}-${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:db-import-${PROFILE_TAG}-latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:db-import-${PROFILE_TAG}-${DATE_TAG}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Generic Tags (backward compatibility)" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ secrets.DOCKERHUB_USERNAME }}/${PROJECT_NAME}:authserver-latest\`" >> $GITHUB_STEP_SUMMARY
