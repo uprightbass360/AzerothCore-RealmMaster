@@ -446,10 +446,16 @@ services:
           fi
         fi
         mkdir -p /storage-root/config/temp
-        # Fix ownership of root directories and all contents
+        # Fix ownership of root directories and all contents. The core source
+        # checkout under local-storage/source belongs to the host user who
+        # builds: re-owning it (CONTAINER_USER defaults to root) makes git
+        # refuse it. X instead of 755 keeps plain files non-executable, so git
+        # checkouts don't show every file as a mode change.
         if [ "$(id -u)" -eq 0 ]; then
-          chown -R ${CONTAINER_USER} /storage-root /local-storage-root
-          chmod -R 755 /storage-root /local-storage-root
+          chown -R ${CONTAINER_USER} /storage-root
+          chmod -R u+rwX,go+rX /storage-root
+          find /local-storage-root -path /local-storage-root/source -prune \
+            -o -exec chown ${CONTAINER_USER} {} + -exec chmod u+rwX,go+rX {} +
           echo "✅ Storage permissions initialized"
         else
           echo "ℹ️ Running as $(id -u):$(id -g); assuming host permissions are already correct."
