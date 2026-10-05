@@ -4086,7 +4086,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T14:05:02Z"
+      "last_modified": "2026-10-05T05:00:11Z"
     },
     {
       "key": "MODULE_ACORE_LXD_IMAGE",
@@ -4210,7 +4210,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-30T18:54:30Z"
+      "last_modified": "2026-10-04T20:23:22Z"
     },
     {
       "key": "MODULE_AZEROTHCORE_SERVER_MANAGER",
@@ -4271,7 +4271,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-02T15:33:11Z"
+      "last_modified": "2026-10-04T11:50:14Z"
     },
     {
       "key": "MODULE_AZEROTHCORE_REGISTRATION_PAGE",
@@ -5456,7 +5456,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T07:44:28Z"
+      "last_modified": "2026-10-04T20:51:40Z"
     },
     {
       "key": "MODULE_DELVES",
@@ -5846,7 +5846,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-30T21:25:48Z"
+      "last_modified": "2026-10-04T15:50:39Z"
     },
     {
       "key": "MODULE_MOD_REAGENT_BANK_ACCOUNT",
@@ -6026,7 +6026,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T04:12:51Z"
+      "last_modified": "2026-10-04T22:49:19Z"
     },
     {
       "key": "MODULE_MOD_RCE",
@@ -6356,7 +6356,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T07:30:17Z"
+      "last_modified": "2026-10-05T10:54:52Z"
     },
     {
       "key": "MODULE_WOW_LIBRE_CMS",
@@ -7961,7 +7961,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T07:40:30Z"
+      "last_modified": "2026-10-05T11:05:11Z"
     },
     {
       "key": "MODULE_MOD_INDIVIDUAL_LEVELING_PROGRESSION",
@@ -8051,7 +8051,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-30T21:25:48Z"
+      "last_modified": "2026-10-04T15:50:39Z"
     },
     {
       "key": "MODULE_MOD_ILVL_SCALING",
@@ -9251,7 +9251,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T11:07:28Z"
+      "last_modified": "2026-10-05T12:22:58Z"
     },
     {
       "key": "MODULE_MOD_BOSS_ARCHIVE",
@@ -9581,7 +9581,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T04:53:05Z"
+      "last_modified": "2026-10-04T16:21:09Z"
     },
     {
       "key": "MODULE_MYTHICPLUS_EXTENDED",
@@ -9626,7 +9626,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T23:59:40Z"
+      "last_modified": "2026-10-05T08:12:16Z"
     },
     {
       "key": "MODULE_MOD_ASSISTANT",
@@ -10001,7 +10001,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:41:20Z"
+      "last_modified": "2026-10-04T12:54:09Z"
     },
     {
       "key": "MODULE_MOD_SELF_FOUND",
@@ -10211,7 +10211,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T23:32:50Z"
+      "last_modified": "2026-10-04T11:32:28Z"
     },
     {
       "key": "MODULE_MOD_PVP_ZONES_HOTFIX",
@@ -10406,7 +10406,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-02T21:53:36Z"
+      "last_modified": "2026-10-04T20:25:29Z"
     },
     {
       "key": "MODULE_MOD_E_INTERACT",
@@ -10496,7 +10496,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T10:01:13Z"
+      "last_modified": "2026-10-04T12:22:01Z"
     },
     {
       "key": "MODULE_MOD_SUMMON_FRIEND",
@@ -10512,6 +10512,51 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-10-04T10:01:10Z"
+    },
+    {
+      "key": "MODULE_MOD_PANDAREN",
+      "name": "mod-pandaren",
+      "repo": "https://github.com/MekBits/mod-pandaren.git",
+      "description": "AzerothCore module: playable pandaren (races 20 and 21) for 3.3.5a, with MoP 5.4.8 models and customization. Server SQL plus a client patch builder.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-04T20:37:56Z"
+    },
+    {
+      "key": "MODULE_CONFIGMERGER",
+      "name": "ConfigMerger",
+      "repo": "https://github.com/Drag-devs/ConfigMerger.git",
+      "description": "Review and selectively merge config files",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-04T20:39:04Z"
+    },
+    {
+      "key": "MODULE_AGENT_WOW",
+      "name": "agent-wow",
+      "repo": "https://github.com/agent-wow/agent-wow.git",
+      "description": "AzerothCore WoW client designed for autonomous AI agent players.",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-02T07:20:18Z"
     }
   ]
 }
