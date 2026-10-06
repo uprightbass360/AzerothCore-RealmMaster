@@ -16,7 +16,7 @@
       "special_message": "\ud83e\udd16 Foundation module: Enables AI-powered companions for solo and group content",
       "status": "active",
       "requires": [],
-      "last_modified": "2026-10-02T14:30:45Z"
+      "last_modified": "2026-10-06T06:01:13Z"
     },
     {
       "key": "MODULE_AOE_LOOT",
@@ -581,7 +581,7 @@
       "requires": [],
       "config_cleanup": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-10-02T23:33:35Z"
+      "last_modified": "2026-10-06T05:18:55Z"
     },
     {
       "key": "MODULE_PLAYER_BOT_LEVEL_BRACKETS",
@@ -5456,7 +5456,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T20:51:40Z"
+      "last_modified": "2026-10-05T12:25:47Z"
     },
     {
       "key": "MODULE_DELVES",
@@ -5756,7 +5756,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-07-22T00:08:44Z"
+      "last_modified": "2026-10-05T16:44:52Z"
     },
     {
       "key": "MODULE_AZEROTHCORE_DASHBOARD",
@@ -5921,7 +5921,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T09:26:20Z"
+      "last_modified": "2026-10-06T11:13:02Z"
     },
     {
       "key": "MODULE_MOD_LLM_GUIDE",
@@ -6356,7 +6356,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T10:54:52Z"
+      "last_modified": "2026-10-06T06:10:44Z"
     },
     {
       "key": "MODULE_WOW_LIBRE_CMS",
@@ -7961,7 +7961,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T11:05:11Z"
+      "last_modified": "2026-10-06T06:20:52Z"
     },
     {
       "key": "MODULE_MOD_INDIVIDUAL_LEVELING_PROGRESSION",
@@ -9251,7 +9251,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T12:22:58Z"
+      "last_modified": "2026-10-06T07:46:47Z"
     },
     {
       "key": "MODULE_MOD_BOSS_ARCHIVE",
@@ -9581,7 +9581,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T16:21:09Z"
+      "last_modified": "2026-10-05T16:44:06Z"
     },
     {
       "key": "MODULE_MYTHICPLUS_EXTENDED",
@@ -10406,7 +10406,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T20:25:29Z"
+      "last_modified": "2026-10-05T22:51:02Z"
     },
     {
       "key": "MODULE_MOD_E_INTERACT",
@@ -10451,7 +10451,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T09:00:42Z"
+      "last_modified": "2026-10-05T19:51:22Z"
     },
     {
       "key": "MODULE_AZEROTHCORE_SERVER_MANAGER_PRO",
