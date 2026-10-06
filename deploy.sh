@@ -9,6 +9,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/bash/lib/run-log.sh
+source "$ROOT_DIR/scripts/bash/lib/run-log.sh"
+run_log_start deploy -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 DEFAULT_COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 ENV_PATH="$ROOT_DIR/.env"
 TEMPLATE_PATH="$ROOT_DIR/.env.template"
@@ -268,6 +271,8 @@ Options:
   --remote-preserve-containers             Skip stopping/removing remote containers during migration
   --skip-config                            Skip applying server configuration preset
   -h, --help                               Show this help
+  --debug                                  Also write a trace of every command to the run log (logs/)
+  --no-log                                 Don't write a run log (logs/) for this run
 
 This command automates deployment: sync modules, stage the correct compose profile,
 and optionally watch worldserver logs.

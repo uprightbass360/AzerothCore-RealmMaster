@@ -5,6 +5,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/bash/lib/run-log.sh
+source "$ROOT_DIR/scripts/bash/lib/run-log.sh"
+run_log_start update-latest -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 cd "$ROOT_DIR"
 
 BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
@@ -31,6 +34,8 @@ Options:
   --skip-build   Do not run ./build.sh after updating
   --deploy       Auto-run ./deploy.sh after build (non-interactive)
   --help         Show this help
+  --debug        Also write a trace of every command to the run log (logs/)
+  --no-log       Don't write a run log (logs/) for this run
 
 Examples:
   ./update-latest.sh --yes --no-watch
@@ -95,7 +100,7 @@ fi
 # Offer to run deploy
 if [ "$AUTO_DEPLOY" -eq 1 ]; then
   info "Auto-deploy enabled; running deploy.sh ${DEPLOY_ARGS[*]:-(no extra args)}"
-  exec "$ROOT_DIR/deploy.sh" "${DEPLOY_ARGS[@]}"
+  "$ROOT_DIR/deploy.sh" "${DEPLOY_ARGS[@]}"; exit $?
 fi
 
 if [ -t 0 ]; then
@@ -104,7 +109,7 @@ if [ -t 0 ]; then
   case "$reply" in
     [Yy]*)
       info "Running deploy.sh ${DEPLOY_ARGS[*]:-(no extra args)}"
-      exec "$ROOT_DIR/deploy.sh" "${DEPLOY_ARGS[@]}"
+      "$ROOT_DIR/deploy.sh" "${DEPLOY_ARGS[@]}"; exit $?
       ;;
     *)
       ok "Update (and build) complete. Run ./deploy.sh ${DEPLOY_ARGS[*]} when ready."

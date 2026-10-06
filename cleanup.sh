@@ -11,6 +11,9 @@ set -e
 # Resolve project dir and compose
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${SCRIPT_DIR}"
+# shellcheck source=scripts/bash/lib/run-log.sh
+source "$PROJECT_DIR/scripts/bash/lib/run-log.sh"
+run_log_start cleanup -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 DEFAULT_COMPOSE_FILE="${PROJECT_DIR}/docker-compose.yml"
 ENV_FILE="${PROJECT_DIR}/.env"
 TEMPLATE_FILE="${PROJECT_DIR}/.env.template"
@@ -49,6 +52,8 @@ OPTIONS:
   --force            Skip confirmation prompts
   --preserve-backups Keep backups when nuking storage (moves them aside and restores)
   -h, --help         Show this help
+  --debug            Also write a trace of every command to the run log (logs/)
+  --no-log           Don't write a run log (logs/) for this run
 EOF
 }
 

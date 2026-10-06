@@ -7,6 +7,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck source=lib/run-log.sh
+source "$SCRIPT_DIR/lib/run-log.sh"
+run_log_start migrate-stack -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 ENV_FILE="$PROJECT_ROOT/.env"
 TEMPLATE_FILE="$PROJECT_ROOT/.env.template"
 source "$PROJECT_ROOT/scripts/bash/project_name.sh"
@@ -155,6 +158,8 @@ Options:
   --copy-source         Copy the full local project directory instead of syncing via git
   --yes, -y             Auto-confirm prompts (for existing deployments)
   --help                Show this help
+  --debug               Also write a trace of every command to the run log (logs/)
+  --no-log              Don't write a run log (logs/) for this run
 EOF_HELP
 }
 
@@ -392,7 +397,7 @@ copy_source_tree(){
   ensure_remote_temp_dir
   local tmp_tar
   tmp_tar="$(mktemp)"
-  if ! tar --exclude='./storage' --exclude='./local-storage' -C "$PROJECT_ROOT" -cf "$tmp_tar" .; then
+  if ! tar --exclude='./storage' --exclude='./local-storage' --exclude='./logs' -C "$PROJECT_ROOT" -cf "$tmp_tar" .; then
     echo "❌ Failed to archive local project directory."
     rm -f "$tmp_tar"
     exit 1

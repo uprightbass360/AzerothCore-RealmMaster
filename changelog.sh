@@ -5,6 +5,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
+# shellcheck source=scripts/bash/lib/run-log.sh
+source "$PROJECT_ROOT/scripts/bash/lib/run-log.sh"
+run_log_start changelog --read-only -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 cd "$PROJECT_ROOT"
 
 # Load environment configuration (available on deployed servers)
@@ -43,6 +46,7 @@ Options:
   --save                Save to file in output directory
   -v, --verbose         Verbose output
   -h, --help            Show this help
+  --debug               Write a run log with a trace of every command (logs/)
 
 Examples:
   $0                              # Console output with auto build detection

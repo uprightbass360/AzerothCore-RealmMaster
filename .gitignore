@@ -29,3 +29,6 @@ scripts/python/tests/__pycache__/
 deploy.log
 local-backups/
 config/index.json
+
+# Script run logs (scripts/bash/lib/run-log.sh)
+logs/

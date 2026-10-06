@@ -58,6 +58,7 @@ setup_write_env() {
   unset hc_key default_var
   MODULE_ELUNA=${MODULE_ELUNA:-$DEFAULT_MODULE_ELUNA}
   BACKUP_PATH=${BACKUP_PATH:-$DEFAULT_BACKUP_PATH}
+  LOG_KEEP_RUNS=${LOG_KEEP_RUNS:-$(get_template_value "LOG_KEEP_RUNS" "" 30)}
 
   local project_image_prefix
   project_image_prefix="$(sanitize_project_name "$DEFAULT_PROJECT_NAME")"
@@ -215,6 +216,12 @@ BACKUP_INTERVAL_MINUTES=$(get_template_value "BACKUP_INTERVAL_MINUTES")
 BACKUP_EXTRA_DATABASES=$(get_template_value "BACKUP_EXTRA_DATABASES")
 BACKUP_HEALTHCHECK_MAX_MINUTES=$BACKUP_HEALTHCHECK_MAX_MINUTES
 BACKUP_HEALTHCHECK_GRACE_SECONDS=$BACKUP_HEALTHCHECK_GRACE_SECONDS
+
+# =====================
+# Script run logs (logs/)
+# =====================
+# How many logs to keep per command (deploy, build, ...); older ones are deleted.
+LOG_KEEP_RUNS=$LOG_KEEP_RUNS
 
 EOF
     echo
