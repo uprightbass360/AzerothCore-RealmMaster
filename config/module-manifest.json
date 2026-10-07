@@ -16,7 +16,7 @@
       "special_message": "\ud83e\udd16 Foundation module: Enables AI-powered companions for solo and group content",
       "status": "active",
       "requires": [],
-      "last_modified": "2026-10-06T06:01:13Z"
+      "last_modified": "2026-10-06T20:26:54Z"
     },
     {
       "key": "MODULE_AOE_LOOT",
@@ -581,7 +581,7 @@
       "requires": [],
       "config_cleanup": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-10-06T05:18:55Z"
+      "last_modified": "2026-10-07T04:37:18Z"
     },
     {
       "key": "MODULE_PLAYER_BOT_LEVEL_BRACKETS",
@@ -4178,7 +4178,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T13:38:07Z"
+      "last_modified": "2026-10-07T00:14:01Z"
     },
     {
       "key": "MODULE_AZEROTHCORE_ARMORY",
@@ -5456,7 +5456,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T12:25:47Z"
+      "last_modified": "2026-10-06T22:22:05Z"
     },
     {
       "key": "MODULE_DELVES",
@@ -5711,7 +5711,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-20T05:24:54Z"
+      "last_modified": "2026-10-07T05:31:39Z"
     },
     {
       "key": "MODULE_MOD_CUSTOM_LOGIN",
@@ -5906,7 +5906,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T08:11:46Z"
+      "last_modified": "2026-10-06T22:59:52Z"
     },
     {
       "key": "MODULE_MOD_I_FOUND_YOUR_SWORD",
@@ -5921,7 +5921,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-06T11:13:02Z"
+      "last_modified": "2026-10-06T16:05:34Z"
     },
     {
       "key": "MODULE_MOD_LLM_GUIDE",
@@ -5936,7 +5936,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-14T20:08:54Z"
+      "last_modified": "2026-10-06T19:26:51Z"
     },
     {
       "key": "MODULE_MOD_STARTERGEAR",
@@ -6026,7 +6026,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T22:49:19Z"
+      "last_modified": "2026-10-07T01:45:00Z"
     },
     {
       "key": "MODULE_MOD_RCE",
@@ -6371,7 +6371,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-30T16:44:19Z"
+      "last_modified": "2026-10-07T06:36:09Z"
     },
     {
       "key": "MODULE_DASHBOARD",
@@ -6701,7 +6701,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T10:21:26Z"
+      "last_modified": "2026-10-07T10:22:30Z"
     },
     {
       "key": "MODULE_MOD_AUTOSORT",
@@ -9251,7 +9251,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-06T07:46:47Z"
+      "last_modified": "2026-10-07T08:23:59Z"
     },
     {
       "key": "MODULE_MOD_BOSS_ARCHIVE",
@@ -9716,7 +9716,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-02T01:25:51Z"
+      "last_modified": "2026-10-06T18:21:38Z"
     },
     {
       "key": "MODULE_MOD_REALM_FIRST_TITLES",
@@ -10406,7 +10406,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T22:51:02Z"
+      "last_modified": "2026-10-06T23:08:49Z"
     },
     {
       "key": "MODULE_MOD_E_INTERACT",
@@ -10451,7 +10451,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T19:51:22Z"
+      "last_modified": "2026-10-06T13:05:11Z"
     },
     {
       "key": "MODULE_AZEROTHCORE_SERVER_MANAGER_PRO",
@@ -10481,7 +10481,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T23:44:26Z"
+      "last_modified": "2026-10-07T07:49:55Z"
     },
     {
       "key": "MODULE_MOD_LFG_EXPANSION",
@@ -10557,6 +10557,21 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-10-02T07:20:18Z"
+    },
+    {
+      "key": "MODULE_NPCINFO",
+      "name": "NPCInfo",
+      "repo": "https://github.com/Shawodin/NPCInfo.git",
+      "description": "\u0410\u0434\u0434\u043e\u043d \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u0432\u044b\u0434\u0430\u0435\u0442 \u0432\u0441\u044e \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044e \u043f\u043e NPC",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-06T21:37:39Z"
     }
   ]
 }
