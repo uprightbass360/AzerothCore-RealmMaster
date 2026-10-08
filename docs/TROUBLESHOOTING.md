@@ -4,11 +4,44 @@ This guide covers common issues, diagnostic steps, and solutions for AzerothCore
 
 ## Table of Contents
 
+- [Logs and Debugging](#logs-and-debugging)
 - [Common Issues](#common-issues)
 - [Getting Help](#getting-help)
 - [Backup and Restoration System](#backup-and-restoration-system)
 
 ---
+
+## Logs and Debugging
+
+Every run of `build.sh`, `deploy.sh`, `setup.sh`, `cleanup.sh`, `modules.sh`,
+`update-latest.sh` and the backup/migration scripts writes a log file:
+
+- `logs/<command>-<date>-<time>.log`, e.g. `logs/deploy-20261005-143012.log`
+- `logs/latest.log` always points at the most recent run.
+
+Each log starts with the command, the repo commit and key `.env` settings,
+contains everything the command printed, and ends with the exit code. If the
+command failed, it also contains the last 50 log lines of every container
+that exited with an error or is restarting.
+
+**Reporting a problem:** attach `logs/latest.log` (or the log of the failing
+run).
+
+**What is masked:** the values of `.env` variables whose name contains
+`PASSWORD`, `TOKEN`, `SECRET` or `KEY` are replaced with `***` everywhere in
+the log, as are the values of options like `--mysql-password` or `-p` on the
+logged command line. Other values are not masked, for example a remote host's
+password typed at a prompt, so review a log before posting it publicly. Log
+files are readable only by you.
+
+**More detail:** re-run the command with `--debug`. The log then also contains
+every command run by every script, with file and line, and the logs of all
+containers. The terminal output doesn't change.
+
+**Options:**
+- `--no-log` (or `RM_LOG=0`) skips the log for one run.
+- `LOG_KEEP_RUNS` in `.env` sets how many logs are kept per command (default 30).
+- `status.sh` and `changelog.sh` only write a log with `--debug`.
 
 ## Common Issues
 

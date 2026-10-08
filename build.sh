@@ -7,6 +7,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/bash/lib/run-log.sh
+source "$ROOT_DIR/scripts/bash/lib/run-log.sh"
+run_log_start build -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 ENV_PATH="$ROOT_DIR/.env"
 DEFAULT_ENV_PATH="$ENV_PATH"
 TEMPLATE_PATH="$ROOT_DIR/.env.template"
@@ -42,6 +45,8 @@ Options:
   --skip-source-setup          Skip automatic source repository setup
   --fresh-modules              Discard and re-clone all enabled module repositories
   -h, --help                   Show this help
+  --debug                      Also write a trace of every command to the run log (logs/)
+  --no-log                     Don't write a run log (logs/) for this run
 
 This script handles:
 • Source repository preparation and updates

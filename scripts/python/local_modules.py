@@ -445,7 +445,11 @@ def cmd_remove(args: argparse.Namespace, paths: Paths) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="modules.sh", description="Manage user-defined modules")
+    parser = argparse.ArgumentParser(
+        prog="modules.sh",
+        description="Manage user-defined modules",
+        epilog="Run logs: modules.sh writes logs/modules-<time>.log; --debug adds a command trace, --no-log skips the log.",
+    )
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]), help=argparse.SUPPRESS)
     sub = parser.add_subparsers(dest="command", required=True)
 
