@@ -698,7 +698,7 @@
       "status": "active",
       "order": 5000,
       "config_cleanup": [],
-      "last_modified": "2026-04-03T15:07:35Z"
+      "last_modified": "2026-10-08T20:52:57Z"
     },
     {
       "key": "MODULE_ELUNA_TS",
@@ -1432,7 +1432,7 @@
         "SystemVip.conf*"
       ],
       "category": "premium",
-      "last_modified": "2026-03-23T21:28:13Z",
+      "last_modified": "2026-10-08T20:52:33Z",
       "status": "active",
       "order": 5000,
       "requires": [],
@@ -5276,7 +5276,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-20T12:42:18Z"
+      "last_modified": "2026-10-09T08:40:14Z"
     },
     {
       "key": "MODULE_ACORE_MALL",
@@ -5456,7 +5456,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T11:53:16Z"
+      "last_modified": "2026-10-08T12:08:31Z"
     },
     {
       "key": "MODULE_DELVES",
@@ -5906,7 +5906,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-06T22:59:52Z"
+      "last_modified": "2026-10-08T18:57:39Z"
     },
     {
       "key": "MODULE_MOD_I_FOUND_YOUR_SWORD",
@@ -5921,7 +5921,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-06T16:05:34Z"
+      "last_modified": "2026-10-08T17:26:13Z"
     },
     {
       "key": "MODULE_MOD_LLM_GUIDE",
@@ -6356,7 +6356,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T11:35:27Z"
+      "last_modified": "2026-10-09T07:22:58Z"
     },
     {
       "key": "MODULE_WOW_LIBRE_CMS",
@@ -6371,7 +6371,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T06:36:09Z"
+      "last_modified": "2026-10-09T01:45:25Z"
     },
     {
       "key": "MODULE_DASHBOARD",
@@ -6701,7 +6701,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T10:22:30Z"
+      "last_modified": "2026-10-09T11:29:24Z"
     },
     {
       "key": "MODULE_MOD_AUTOSORT",
@@ -6881,7 +6881,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-07-28T19:27:55Z"
+      "last_modified": "2026-10-09T11:34:10Z"
     },
     {
       "key": "MODULE_MOD_LOOT_CLEANUP",
@@ -7961,7 +7961,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T11:47:40Z"
+      "last_modified": "2026-10-09T07:33:21Z"
     },
     {
       "key": "MODULE_MOD_INDIVIDUAL_LEVELING_PROGRESSION",
@@ -9581,7 +9581,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T16:44:06Z"
+      "last_modified": "2026-10-08T19:34:55Z"
     },
     {
       "key": "MODULE_MYTHICPLUS_EXTENDED",
@@ -9761,7 +9761,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-08T20:47:26Z"
     },
     {
       "key": "MODULE_WOW_MOD_ACCOUNTWIDE_MOUNTS",
@@ -9776,7 +9776,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-08T20:50:32Z"
     },
     {
       "key": "MODULE_MOD_SPRINT_335A_AZEROTHCORE",
@@ -9821,7 +9821,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-25T03:27:22Z"
+      "last_modified": "2026-10-08T21:54:36Z"
     },
     {
       "key": "MODULE_WOW_MOD_SERVER_MAIL",
@@ -9836,7 +9836,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:47:04Z"
     },
     {
       "key": "MODULE_MOD_SHARED_LOOT",
@@ -10406,7 +10406,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T09:49:46Z"
+      "last_modified": "2026-10-08T12:32:35Z"
     },
     {
       "key": "MODULE_MOD_E_INTERACT",
@@ -10601,7 +10601,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T00:12:35Z"
+      "last_modified": "2026-10-08T20:39:56Z"
     },
     {
       "key": "MODULE_WOW_MOD_RAID_BWL",
@@ -10616,7 +10616,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:52:14Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_DUNGEON_XP",
@@ -10631,7 +10631,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-08T20:52:23Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_HUNTER",
@@ -10646,7 +10646,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:42:52Z"
     },
     {
       "key": "MODULE_WOW_MOD_RAID_ONYXIA",
@@ -10661,7 +10661,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:40:25Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_PALADIN",
@@ -10676,7 +10676,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-08T20:52:27Z"
     },
     {
       "key": "MODULE_WOW_MOD_RARE_TRACKER",
@@ -10691,7 +10691,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-08T13:08:52Z"
     },
     {
       "key": "MODULE_WOW_MOD_RETAIL_AH",
@@ -10706,7 +10706,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T03:28:32Z"
+      "last_modified": "2026-10-08T20:50:55Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_PERIODIC_CRIT",
@@ -10721,7 +10721,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:51:09Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_RACIALS",
@@ -10736,7 +10736,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:50:25Z"
     },
     {
       "key": "MODULE_WOW_MOD_RETAIL_PROFESSIONS",
@@ -10751,7 +10751,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:51:52Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_ROGUE",
@@ -10766,7 +10766,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:46:39Z"
     },
     {
       "key": "MODULE_WOW_MOD_STACK_SIZE",
@@ -10781,7 +10781,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-08T20:48:52Z"
     },
     {
       "key": "MODULE_WOW_MOD_TALENT_PER_LEVEL",
@@ -10796,7 +10796,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:41:03Z"
     },
     {
       "key": "MODULE_WOW_MOD_TRANSMOG_PLUS",
@@ -10811,7 +10811,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-09T00:17:57Z"
     },
     {
       "key": "MODULE_WOW_MOD_WEATHER",
@@ -10826,7 +10826,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-08T20:42:36Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_SHAMAN",
@@ -10841,7 +10841,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:47:30Z"
     },
     {
       "key": "MODULE_WOW_MOD_GATHERING_TOOLS",
@@ -10856,7 +10856,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:52:10Z"
     },
     {
       "key": "MODULE_WOW_MOD_HOLIDAY_CONTROL",
@@ -10871,7 +10871,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:51:05Z"
     },
     {
       "key": "MODULE_WOW_MOD_LEARN_SPELLS",
@@ -10886,7 +10886,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-08T20:48:25Z"
     },
     {
       "key": "MODULE_WOW_MOD_LFG_PROGRESSION",
@@ -10901,7 +10901,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-09T04:31:53Z"
     },
     {
       "key": "MODULE_WOW_MOD_NPC_FINDER",
@@ -10916,7 +10916,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:01Z"
+      "last_modified": "2026-10-08T20:40:31Z"
     },
     {
       "key": "MODULE_MOD_PERSONAL_LOOT",
@@ -10946,7 +10946,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:50:29Z"
     },
     {
       "key": "MODULE_WOW_MOD_RAID_LOCKOUT",
@@ -10961,7 +10961,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:50:18Z"
     },
     {
       "key": "MODULE_WOW_MOD_PROFESSION_SPECIALIZATIONS",
@@ -10976,7 +10976,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:43:17Z"
     },
     {
       "key": "MODULE_WOW_MOD_DUNGEON_BRD",
@@ -10991,7 +10991,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:49:07Z"
     },
     {
       "key": "MODULE_WOW_MOD_ERA_EVENTS",
@@ -11006,7 +11006,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:48:29Z"
     },
     {
       "key": "MODULE_WOW_MOD_DRUID_SWIPE_FISHING",
@@ -11021,7 +11021,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:50:11Z"
     },
     {
       "key": "MODULE_WOW_MOD_BEAST_COLLECTION",
@@ -11036,7 +11036,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:02Z"
+      "last_modified": "2026-10-08T20:40:06Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_DRUID",
@@ -11051,7 +11051,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:48:40Z"
     },
     {
       "key": "MODULE_WOW_MOD_DUNGEON_CONSUMABLES",
@@ -11066,7 +11066,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:48:22Z"
     },
     {
       "key": "MODULE_WOW_MOD_BOT_LFG_ACCEPT",
@@ -11081,7 +11081,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:40:40Z"
     },
     {
       "key": "MODULE_WOW_MOD_COMBAT_WATCHDOG",
@@ -11096,7 +11096,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:42:57Z"
     },
     {
       "key": "MODULE_MOD_LEARNABLE_MOUNTS",
@@ -11111,7 +11111,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:48:32Z"
     },
     {
       "key": "MODULE_WOW_MOD_ACCOUNTWIDE_FLIGHT_PATHS",
@@ -11126,7 +11126,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:42:46Z"
     },
     {
       "key": "MODULE_MOD_MASS_MILLING",
@@ -11141,7 +11141,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:43:04Z"
     },
     {
       "key": "MODULE_MOD_GATHERING_NODE_DYNAMIC",
@@ -11156,7 +11156,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:52:06Z"
     },
     {
       "key": "MODULE_MOD_MASS_PROSPECTING",
@@ -11171,7 +11171,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:52:58Z"
     },
     {
       "key": "MODULE_MOD_DRUID_FORMS_SCALES",
@@ -11261,7 +11261,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:24Z"
+      "last_modified": "2026-10-09T04:28:13Z"
     },
     {
       "key": "MODULE_WOW_ADDON_UNBOT",
@@ -11276,7 +11276,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:13:00Z"
+      "last_modified": "2026-10-08T20:46:59Z"
     },
     {
       "key": "MODULE_WOW_ADDON_WEAPONSKILLINFO",
@@ -11291,7 +11291,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:59Z"
+      "last_modified": "2026-10-08T20:51:44Z"
     },
     {
       "key": "MODULE_WOW_ADDON_RAREALERT_DUNGEON",
@@ -11306,7 +11306,82 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T21:12:58Z"
+      "last_modified": "2026-10-08T20:53:01Z"
+    },
+    {
+      "key": "MODULE_MOD_LAST_NAME",
+      "name": "mod-last_name",
+      "repo": "https://github.com/kbtoy/mod-last_name.git",
+      "description": "This modules creates a quest that is obtainable starting at level 20, sent via the mailbox, upon completion you will be able to enter a last name.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-02T17:38:54Z"
+    },
+    {
+      "key": "MODULE_MOD_BOOKOFKNOWLEDGE",
+      "name": "mod-bookofknowledge",
+      "repo": "https://github.com/kbtoy/mod-bookofknowledge.git",
+      "description": "An AzerothCore module and WoW client addon that allows players to trade items for permanent stat boosts.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-06-22T15:37:30Z"
+    },
+    {
+      "key": "MODULE_AZEROTHCHATTER",
+      "name": "AzerothChatter",
+      "repo": "https://github.com/svey-xyz/AzerothChatter.git",
+      "description": "Low computational cost realistic in world chatter.",
+      "type": "lua",
+      "category": "scripting",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-06-11T15:23:24Z"
+    },
+    {
+      "key": "MODULE_WOW_MOD_RETAIL_DRUID_FORMS",
+      "name": "wow-mod-retail-druid-forms",
+      "repo": "https://github.com/buildthehomelab/wow-mod-retail-druid-forms.git",
+      "description": "Retail druid form looks on 3.3.5a: animated model converter and client patch builder (server side in wow-mod-transmog-plus)",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-09T00:43:57Z"
+    },
+    {
+      "key": "MODULE_WOW_MOD_VISIBLE_BAGS",
+      "name": "wow-mod-visible-bags",
+      "repo": "https://github.com/buildthehomelab/wow-mod-visible-bags.git",
+      "description": "Retail backpack cloaks on 3.3.5a characters: model converter and client patch builder (server side in wow-mod-transmog-plus)",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-08T20:31:46Z"
     }
   ]
 }
