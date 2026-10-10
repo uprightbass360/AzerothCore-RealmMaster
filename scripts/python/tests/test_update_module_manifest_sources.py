@@ -1,11 +1,23 @@
 """Sync behaviour driven by config/module-sources.json."""
+import io
+import json
+import tempfile
 import unittest
+import unittest.mock
+from contextlib import redirect_stdout
 from datetime import date
+from pathlib import Path
 
 import update_module_manifest as umm
 from module_sources import Sources
 from tests.helpers import entry
-from update_module_manifest import MergeResult, RepoRecord, format_digest, merge_repositories
+from update_module_manifest import (
+    MergeResult,
+    RepoRecord,
+    format_digest,
+    merge_repositories,
+    remove_declined_entries,
+)
 
 
 def repo(owner: str, name: str, description: str = "") -> dict:
@@ -85,6 +97,107 @@ class DigestTest(unittest.TestCase):
         self.assertEqual(lines[5], "- **alpha** (1)")
         self.assertEqual(lines[7], "- **other** (1)")
         self.assertTrue(text.endswith("\n"))
+
+
+class RemoveDeclinedTest(unittest.TestCase):
+    def test_removes_matching_entries_and_leaves_others(self):
+        keep_me = entry("MODULE_KEEP", repo="https://github.com/acme/keep.git")
+        gone = entry("MODULE_GONE", repo="https://github.com/buildthehomelab/wow-mod-x.git")
+        not_github = entry("MODULE_GL", repo="https://gitlab.com/buildthehomelab/thing.git")
+        manifest = {"modules": [keep_me, gone, not_github]}
+        removed = remove_declined_entries(manifest, declined("buildthehomelab/*"))
+        self.assertEqual([e["key"] for e in removed], ["MODULE_GONE"])
+        self.assertEqual([e["key"] for e in manifest["modules"]], ["MODULE_KEEP", "MODULE_GL"])
+
+    def test_dry_run_reports_but_keeps(self):
+        gone = entry("MODULE_GONE", repo="https://github.com/acme/gone.git")
+        manifest = {"modules": [gone]}
+        out = io.StringIO()
+        with redirect_stdout(out):
+            removed = remove_declined_entries(manifest, declined("acme/gone"), dry_run=True)
+        self.assertEqual(len(removed), 1)
+        self.assertEqual(len(manifest["modules"]), 1)
+        self.assertIn("[dry-run] Would remove MODULE_GONE", out.getvalue())
+
+    def test_no_cap_on_large_removals(self):
+        manifest = {"modules": [entry(f"MODULE_{i}", repo=f"https://github.com/bulk/m{i}.git") for i in range(50)]}
+        removed = remove_declined_entries(manifest, declined("bulk/*"))
+        self.assertEqual(len(removed), 50)
+        self.assertEqual(manifest["modules"], [])
+
+
+class SourcesOnlyMainTest(unittest.TestCase):
+    """End-to-end offline run: --sources-only never touches the network."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.manifest = root / "module-manifest.json"
+        self.sources = root / "module-sources.json"
+        self.profiles = root / "profiles"
+        self.template = root / ".env.template"
+        self.digest = root / "digest.md"
+        self.profiles.mkdir()
+        self.manifest.write_text(json.dumps({"modules": [
+            entry("MODULE_KEEP", repo="https://github.com/acme/keep.git", status="active"),
+            entry("MODULE_GONE", repo="https://github.com/buildthehomelab/wow-mod-x.git", status="active"),
+        ]}, indent=2) + "\n")
+        (self.profiles / "curated.json").write_text(json.dumps(
+            {"modules": ["MODULE_KEEP", "MODULE_GONE"], "label": "c", "description": "", "order": 1}, indent=2) + "\n")
+        self.template.write_text("MODULE_KEEP=0\nMODULE_GONE=0\n")
+        self.sources.write_text(json.dumps({
+            "policy": {"stale_after_days": 1095, "ignore_profiles": []},
+            "declined": {"buildthehomelab/*": {"reason": "bulk", "date": "2026-10-10"}},
+            "keep": [],
+        }))
+        # Any network call is a test failure.
+        self.patch = unittest.mock.patch.object(umm.request, "urlopen", side_effect=AssertionError("network"))
+        self.patch.start()
+
+    def tearDown(self):
+        self.patch.stop()
+        self.tmp.cleanup()
+
+    def run_main(self, *extra):
+        argv = ["--manifest", str(self.manifest), "--sources", str(self.sources),
+                "--profiles-dir", str(self.profiles), "--update-template", str(self.template),
+                "--digest-file", str(self.digest), "--sources-only", *extra]
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = umm.main(argv)
+        return code, out.getvalue()
+
+    def test_sources_only_removes_declined_everywhere(self):
+        code, out = self.run_main()
+        self.assertEqual(code, 0)
+        keys = [e["key"] for e in json.loads(self.manifest.read_text())["modules"]]
+        self.assertEqual(keys, ["MODULE_KEEP"])
+        self.assertEqual(json.loads((self.profiles / "curated.json").read_text())["modules"], ["MODULE_KEEP"])
+        self.assertNotIn("MODULE_GONE", self.template.read_text())
+        self.assertEqual(self.digest.read_text(), "No new modules this run.\n")
+        self.assertIn("declined 1", out)
+
+    def test_sources_only_dry_run_changes_nothing(self):
+        before = self.manifest.read_text()
+        code, out = self.run_main("--dry-run")
+        self.assertEqual(code, 0)
+        self.assertEqual(self.manifest.read_text(), before)
+        self.assertEqual(json.loads((self.profiles / "curated.json").read_text())["modules"],
+                         ["MODULE_KEEP", "MODULE_GONE"])
+        self.assertIn("would remove declined=1", out)
+        self.assertIn("Would remove 1 unknown key(s) from curated.json: MODULE_GONE", out)
+
+    def test_missing_sources_file_is_a_no_op(self):
+        self.sources.unlink()
+        before = self.manifest.read_text()
+        code, _ = self.run_main()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.manifest.read_text(), before)
+
+    def test_malformed_sources_file_fails_loudly(self):
+        self.sources.write_text("{broken")
+        with self.assertRaises(umm.SourcesError):
+            self.run_main()
 
 
 if __name__ == "__main__":
