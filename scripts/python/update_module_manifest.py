@@ -25,10 +25,12 @@ import os
 import re
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 from urllib import error, parse, request
+
+from module_sources import DEFAULT_SOURCES_PATH, Sources, load_sources
 
 API_ROOT = "https://api.github.com"
 DEFAULT_TOPICS = [
@@ -141,6 +143,15 @@ class RepoRecord:
     data: dict
     topic_expr: str
     module_type: str
+
+
+@dataclass
+class MergeResult:
+    added: int = 0
+    updated: int = 0
+    skipped_declined: int = 0
+    # New entries created this run, in discovery order; feeds the PR digest.
+    added_entries: List[dict] = field(default_factory=list)
 
 
 class GitHubClient:
@@ -479,7 +490,13 @@ def merge_repositories(
     manifest: Dict[str, List[dict]],
     repos: Iterable[RepoRecord],
     refresh_existing: bool,
-) -> tuple[int, int]:
+    sources: Optional[Sources] = None,
+) -> MergeResult:
+    """Merge discovered repositories into the manifest.
+
+    Repositories matching the ``declined`` section of config/module-sources.json
+    are skipped entirely: they neither create nor refresh an entry.
+    """
     modules = manifest.setdefault("modules", [])
     by_key = {module.get("key"): module for module in modules if module.get("key")}
     by_repo = {
@@ -487,12 +504,14 @@ def merge_repositories(
         for module in modules
         if module.get("repo")
     }
-    added = 0
-    updated = 0
+    result = MergeResult()
 
     for record in repos:
         repo = record.data
         repo_url = normalize_repo_url(repo.get("clone_url") or repo.get("html_url") or "")
+        if sources is not None and sources.is_declined(github_full_name(repo_url)):
+            result.skipped_declined += 1
+            continue
         existing = by_repo.get(repo_url)
         key = repo_name_to_key(repo.get("name", ""))
         if not existing:
@@ -512,12 +531,36 @@ def merge_repositories(
             by_key[key] = existing
             if repo_url:
                 by_repo[repo_url] = existing
-            added += 1
+            result.added += 1
+            result.added_entries.append(existing)
         else:
-            updated += 1
+            result.updated += 1
         update_entry_from_repo(existing, repo, record.module_type, record.topic_expr, refresh_existing)
 
-    return added, updated
+    return result
+
+
+def format_digest(added_entries: List[dict]) -> str:
+    """Markdown summary of this run's new entries grouped by GitHub owner.
+
+    Pasted into the sync PR body so a bulk arrival from one author is obvious
+    at a glance. Non-GitHub repos are grouped under "other".
+    """
+    if not added_entries:
+        return "No new modules this run.\n"
+    by_owner: Dict[str, List[dict]] = {}
+    for entry in added_entries:
+        full_name = github_full_name(str(entry.get("repo", "")))
+        owner = full_name.split("/", 1)[0] if full_name else "other"
+        by_owner.setdefault(owner, []).append(entry)
+    lines = [f"{len(added_entries)} new module(s) from {len(by_owner)} owner(s):", ""]
+    for owner in sorted(by_owner, key=lambda name: (-len(by_owner[name]), name)):
+        entries = by_owner[owner]
+        lines.append(f"- **{owner}** ({len(entries)})")
+        for entry in sorted(entries, key=lambda item: str(item.get("key"))):
+            description = str(entry.get("description") or "").strip()
+            lines.append(f"  - `{entry['key']}` {description}".rstrip())
+    return "\n".join(lines) + "\n"
 
 
 def collect_repositories(
@@ -663,7 +706,8 @@ def main(argv: Sequence[str]) -> int:
 
     manifest = load_manifest(args.manifest)
     repos = collect_repositories(client, topics, args.max_pages)
-    added, updated = merge_repositories(manifest, repos, args.refresh_existing)
+    merge = merge_repositories(manifest, repos, args.refresh_existing)
+    added, updated = merge.added, merge.updated
 
     removed: List[dict] = []
     if args.prune_missing:
