@@ -211,3 +211,30 @@ compile is needed.
 - [MODULES.md](MODULES.md): module catalog and profiles
 - [MODULE_DBC_FILES.md](MODULE_DBC_FILES.md): modules that ship server DBC files
 - [scripts/hooks/README.md](../scripts/hooks/README.md): post-install hooks
+
+## Excluding a module from the catalogue
+
+The nightly sync admits every repository tagged with the AzerothCore topics.
+To keep one out, add it to `declined` in `config/module-sources.json` with a
+short reason and merge:
+
+```json
+"declined": {
+  "someowner/*": { "reason": "unreviewed bulk uploads", "date": "2026-10-10" },
+  "someowner/mod-broken": { "reason": "fails to link", "date": "2026-10-10" }
+}
+```
+
+`owner/*` covers everything that owner publishes, now and later. The next
+sync removes any matching entries from the manifest, profiles and
+`.env.template`, and never readmits them. Users with the key still set in
+`.env` are unaffected: unknown keys are treated as disabled.
+
+`keep` lists repos exempt from the monthly staleness review; modules in a
+curated profile are exempt automatically. `policy.stale_after_days` sets the
+window. To preview the effect of an edit locally:
+
+```bash
+python3 scripts/python/update_module_manifest.py --sources-only --dry-run --log
+python3 scripts/python/review_stale_modules.py --dry-run
+```
