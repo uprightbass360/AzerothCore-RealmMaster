@@ -29,3 +29,6 @@ scripts/python/tests/__pycache__/
 deploy.log
 local-backups/
 config/index.json
+
+# AI-generated design specs and implementation plans stay local
+docs/superpowers/
