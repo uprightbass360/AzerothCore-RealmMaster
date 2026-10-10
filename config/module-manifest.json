@@ -16,7 +16,7 @@
       "special_message": "\ud83e\udd16 Foundation module: Enables AI-powered companions for solo and group content",
       "status": "active",
       "requires": [],
-      "last_modified": "2026-10-07T14:20:44Z"
+      "last_modified": "2026-10-09T13:54:03Z"
     },
     {
       "key": "MODULE_AOE_LOOT",
@@ -320,7 +320,7 @@
       "category": "scripting",
       "order": 9998,
       "special_message": "\u26a1 Advanced scripting: Required by many Lua-based modules. Enable this first if you plan to use scripted features",
-      "last_modified": "2026-10-08T07:34:21Z",
+      "last_modified": "2026-10-10T09:08:08Z",
       "status": "active",
       "requires": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'"
@@ -581,7 +581,7 @@
       "requires": [],
       "config_cleanup": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-10-07T21:36:42Z"
+      "last_modified": "2026-10-09T17:55:01Z"
     },
     {
       "key": "MODULE_PLAYER_BOT_LEVEL_BRACKETS",
@@ -4071,7 +4071,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-15T18:33:21Z"
+      "last_modified": "2026-10-09T13:43:29Z"
     },
     {
       "key": "MODULE_KEIRA3",
@@ -4086,7 +4086,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T05:00:11Z"
+      "last_modified": "2026-10-09T23:02:09Z"
     },
     {
       "key": "MODULE_ACORE_LXD_IMAGE",
@@ -4162,7 +4162,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-08-30T16:34:21Z"
+      "last_modified": "2026-10-10T09:46:47Z"
     },
     {
       "key": "MODULE_SERVER_STATUS",
@@ -4271,7 +4271,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T11:50:14Z"
+      "last_modified": "2026-10-10T10:53:37Z"
     },
     {
       "key": "MODULE_AZEROTHCORE_REGISTRATION_PAGE",
@@ -5456,7 +5456,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T12:08:31Z"
+      "last_modified": "2026-10-09T11:59:59Z"
     },
     {
       "key": "MODULE_DELVES",
@@ -5906,7 +5906,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T18:57:39Z"
+      "last_modified": "2026-10-10T10:44:49Z"
     },
     {
       "key": "MODULE_MOD_I_FOUND_YOUR_SWORD",
@@ -5921,7 +5921,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T17:26:13Z"
+      "last_modified": "2026-10-10T11:05:19Z"
     },
     {
       "key": "MODULE_MOD_LLM_GUIDE",
@@ -7151,7 +7151,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-24T19:13:55Z"
+      "last_modified": "2026-10-10T05:10:45Z"
     },
     {
       "key": "MODULE_MOD_TALENT_ITEM_TEMPLATE",
@@ -8036,7 +8036,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-08-25T17:58:05Z"
+      "last_modified": "2026-10-09T12:55:27Z"
     },
     {
       "key": "MODULE_MOD_PBC",
@@ -9251,7 +9251,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T08:23:59Z"
+      "last_modified": "2026-10-10T06:51:42Z"
     },
     {
       "key": "MODULE_MOD_BOSS_ARCHIVE",
@@ -9581,7 +9581,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T19:34:55Z"
+      "last_modified": "2026-10-09T22:25:43Z"
     },
     {
       "key": "MODULE_MYTHICPLUS_EXTENDED",
@@ -9626,7 +9626,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T15:17:18Z"
+      "last_modified": "2026-10-09T13:05:53Z"
     },
     {
       "key": "MODULE_MOD_ASSISTANT",
@@ -10601,22 +10601,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T20:39:56Z"
-    },
-    {
-      "key": "MODULE_WOW_MOD_RAID_BWL",
-      "name": "wow-mod-raid-bwl",
-      "repo": "https://github.com/buildthehomelab/wow-mod-raid-bwl.git",
-      "description": "AzerothCore module: Blackwing Lair encounter fixes (disarmed Suppression Devices keep casting)",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-10-08T20:52:14Z"
+      "last_modified": "2026-10-09T15:32:23Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_DUNGEON_XP",
@@ -10646,22 +10631,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T20:42:52Z"
-    },
-    {
-      "key": "MODULE_WOW_MOD_RAID_ONYXIA",
-      "name": "wow-mod-raid-onyxia",
-      "repo": "https://github.com/buildthehomelab/wow-mod-raid-onyxia.git",
-      "description": "AzerothCore module: caps Onyxia's air phase so bot raids don't wait forever",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-10-08T20:40:25Z"
+      "last_modified": "2026-10-09T15:11:02Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_PALADIN",
@@ -10706,7 +10676,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T20:50:55Z"
+      "last_modified": "2026-10-10T02:42:28Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_PERIODIC_CRIT",
@@ -10736,7 +10706,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T20:50:25Z"
+      "last_modified": "2026-10-09T20:23:10Z"
     },
     {
       "key": "MODULE_WOW_MOD_RETAIL_PROFESSIONS",
@@ -10751,7 +10721,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T20:51:52Z"
+      "last_modified": "2026-10-10T02:41:40Z"
     },
     {
       "key": "MODULE_WOW_MOD_FOREVER_ROGUE",
@@ -10811,7 +10781,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T00:17:57Z"
+      "last_modified": "2026-10-10T02:42:33Z"
     },
     {
       "key": "MODULE_WOW_MOD_WEATHER",
@@ -10901,7 +10871,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T04:31:53Z"
+      "last_modified": "2026-10-09T12:58:39Z"
     },
     {
       "key": "MODULE_WOW_MOD_NPC_FINDER",
@@ -11261,7 +11231,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T04:28:13Z"
+      "last_modified": "2026-10-09T22:08:48Z"
     },
     {
       "key": "MODULE_WOW_ADDON_UNBOT",
@@ -11366,7 +11336,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T00:43:57Z"
+      "last_modified": "2026-10-09T18:50:52Z"
     },
     {
       "key": "MODULE_WOW_MOD_VISIBLE_BAGS",
@@ -11382,6 +11352,51 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-10-08T20:31:46Z"
+    },
+    {
+      "key": "MODULE_MOD_PLAYERHOUSING",
+      "name": "mod-playerhousing",
+      "repo": "https://github.com/dudemcbro/mod-playerhousing.git",
+      "description": "Player housing for AzerothCore (WotLK 3.3.5a): a private GM Island per account, 2,350+ unlockable furnishings and buildings placed with the mouse, mannequins, layouts, visitors and roommates. Client addon included.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-10T00:34:08Z"
+    },
+    {
+      "key": "MODULE_MOD_QUESTIE_BRIDGE",
+      "name": "mod-questie-bridge",
+      "repo": "https://github.com/Aldori15/mod-questie-bridge.git",
+      "description": "AzerothCore module that exposes live server state to Questie-335 for events, quest pools, world state/progress, phasing, moving questgivers, resets, and reward rates.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-09T20:11:58Z"
+    },
+    {
+      "key": "MODULE_WOW_MOD_CACHE_VERSION",
+      "name": "wow-mod-cache-version",
+      "repo": "https://github.com/buildthehomelab/wow-mod-cache-version.git",
+      "description": "AzerothCore module: tells the Evermore launcher when to clear players' WoW Cache (checksums the client-cached world tables at startup)",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-09T14:49:38Z"
     }
   ]
 }
