@@ -41,7 +41,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python3 scripts/python/update_module_manifest.py --log --prune-missing
+          python3 scripts/python/update_module_manifest.py --log --prune-missing \
+            --digest-file "$RUNNER_TEMP/digest.md"
 
       - name: Config UI round-trip check
         # Same gate the Pages deploy runs; a sync PR must never leave profiles
@@ -60,6 +61,28 @@ jobs:
             git diff --name-only
           fi
 
+      - name: Compose pull request body
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          {
+            cat <<'EOF'
+          Automated manifest refresh via GitHub topic sync.
+
+          Repositories listed under `declined` in `config/module-sources.json`
+          are skipped on admission and removed if present. Entries whose
+          upstream repository returned a hard 404/451 are removed. Repos that
+          merely dropped the topic are verified via the GitHub API and kept.
+
+          Merged automatically once the in-job gates pass: the sync aborts
+          pruning on any GitHub API error or if removals exceed 10% of the
+          manifest, and the config UI round-trip check must succeed.
+
+          ## New this run
+
+          EOF
+            cat "$RUNNER_TEMP/digest.md"
+          } > "$RUNNER_TEMP/pr-body.md"
+
       - name: Create Pull Request with changes
         id: cpr
         if: steps.changes.outputs.changed == 'true'
@@ -68,16 +91,7 @@ jobs:
           commit-message: 'chore: sync module manifest'
           branch: chore/update-module-manifest
           title: 'chore: sync module manifest'
-          body: |
-            Automated manifest refresh via GitHub topic sync.
-
-            Entries whose upstream repository returned a hard 404/451 are
-            removed. Repos that merely dropped the topic are verified via the
-            GitHub API and kept.
-
-            Merged automatically once the in-job gates pass: the sync aborts
-            pruning on any GitHub API error or if removals exceed 10% of the
-            manifest, and the config UI round-trip check must succeed.
+          body-path: ${{ runner.temp }}/pr-body.md
           labels: modules
           delete-branch: true
 

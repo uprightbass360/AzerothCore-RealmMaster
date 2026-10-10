@@ -1,0 +1,87 @@
+name: Review Stale Modules
+
+on:
+  workflow_dispatch:
+  schedule:
+    # First of the month, off the hour like the manifest sync. Opens (or
+    # updates) a PR proposing modules with no upstream activity inside the
+    # window in config/module-sources.json. Never merges on its own.
+    - cron: '23 6 1 * *'
+
+concurrency:
+  group: review-stale-modules
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Find stale modules
+        id: stale
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/python/review_stale_modules.py --check-archived > "$RUNNER_TEMP/stale.md"
+          if [ -s "$RUNNER_TEMP/stale.md" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            cat "$RUNNER_TEMP/stale.md"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No stale modules this run"
+          fi
+
+      - name: Apply removals to manifest, profiles and template
+        if: steps.stale.outputs.found == 'true'
+        run: python3 scripts/python/update_module_manifest.py --sources-only --log
+
+      - name: Config UI round-trip check
+        if: steps.stale.outputs.found == 'true'
+        run: python3 tools/config-ui/check_roundtrip.py
+
+      - name: Compose pull request body
+        if: steps.stale.outputs.found == 'true'
+        run: |
+          {
+            cat <<'EOF'
+          Modules with no upstream activity inside the staleness window (or
+          archived upstream) have been added to `declined` in
+          `config/module-sources.json`, and their manifest, profile and
+          `.env.template` entries removed.
+
+          - **Merge as-is** to remove everything listed.
+          - **To keep one**, on this branch: move its repo from `declined` to
+            `keep` in `config/module-sources.json`, restore the catalogue files
+            with `git checkout main -- config/module-manifest.json config/module-profiles .env.template`,
+            run `python3 scripts/python/update_module_manifest.py --sources-only`,
+            commit and push.
+
+          The window is `policy.stale_after_days` in the same file.
+
+          ## Proposed removals
+
+          EOF
+            cat "$RUNNER_TEMP/stale.md"
+          } > "$RUNNER_TEMP/pr-body.md"
+
+      - name: Open or update pull request
+        if: steps.stale.outputs.found == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: 'chore: decline stale modules'
+          branch: chore/review-stale-modules
+          title: 'chore: review stale modules'
+          body-path: ${{ runner.temp }}/pr-body.md
+          labels: modules
+          delete-branch: true
