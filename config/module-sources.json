@@ -1,0 +1,10 @@
+{
+  "policy": {
+    "stale_after_days": 1095,
+    "ignore_profiles": [
+      "all-modules.json"
+    ]
+  },
+  "declined": {},
+  "keep": []
+}
