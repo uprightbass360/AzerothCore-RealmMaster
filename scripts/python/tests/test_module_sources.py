@@ -104,6 +104,7 @@ class LoadSaveTest(unittest.TestCase):
             {"policy": {"stale_after_days": 0}},             # non-positive window
             {"policy": {"stale_after_days": "365"}},         # not an int
             {"declined": {"no-slash": {"reason": "r", "date": "2026-01-01"}}},  # not owner/repo
+            {"keep": ["owner/*"]},                           # keep is exact names only
         ):
             self.path.write_text(json.dumps(bad))
             with self.assertRaises(SourcesError, msg=repr(bad)):
