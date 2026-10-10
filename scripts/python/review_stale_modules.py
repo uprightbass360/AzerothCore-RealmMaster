@@ -112,11 +112,11 @@ def main(argv: Sequence[str]) -> int:
         client = GitHubClient(token)
 
     candidates = find_stale_candidates(manifest, sources, exempt, today, client)
+    note = ""
     if client is not None and client.error_count:
-        print(
-            f"Warning: {client.error_count} GitHub API error(s); archived detection is incomplete",
-            file=sys.stderr,
-        )
+        note = f"{client.error_count} GitHub API error(s); archived detection is incomplete"
+        # GitHub Actions turns this into a run annotation even when stdout is redirected.
+        print(f"::warning::{note}", file=sys.stderr)
     if not candidates:
         return 0
 
@@ -125,6 +125,9 @@ def main(argv: Sequence[str]) -> int:
     if not args.dry_run:
         save_sources(sources, args.sources)
     sys.stdout.write(format_table(candidates))
+    if note:
+        # Travels with the table into the PR body so the reviewer sees it.
+        sys.stdout.write(f"\n> **Warning:** {note}.\n")
     return 0
 
 

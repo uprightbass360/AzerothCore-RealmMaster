@@ -110,6 +110,9 @@ def load_sources(path: str) -> Sources:
     raw_keep = data.get("keep", [])
     _require(isinstance(raw_keep, list) and all(isinstance(x, str) for x in raw_keep),
              f"{path}: 'keep' must be a list of 'owner/repo' names")
+    for name in raw_keep:
+        _require("*" not in name,
+                 f"{path}: keep entry {name!r} must be an exact 'owner/repo'; wildcards only work in 'declined'")
 
     return Sources(
         stale_after_days=days,

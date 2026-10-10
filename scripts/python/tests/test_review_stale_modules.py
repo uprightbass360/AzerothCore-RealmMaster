@@ -3,7 +3,7 @@ import io
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import date
 from pathlib import Path
 from unittest import mock
@@ -162,6 +162,24 @@ class MainTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(out, "")
         self.assertFalse(self.sources.exists())
+
+    def test_api_errors_are_surfaced_in_table_and_as_warning(self):
+        class ErroringClient:
+            def __init__(self, *args, **kwargs):
+                self.error_count = 0
+
+            def check_repo(self, full_name):
+                self.error_count += 1
+                return ("error", None)
+
+        err = io.StringIO()
+        with mock.patch.object(rsm, "GitHubClient", ErroringClient), \
+                mock.patch.object(rsm.time, "sleep"), redirect_stderr(err):
+            code, out = self.run_main("--check-archived")
+        self.assertEqual(code, 0)
+        self.assertIn("| `MODULE_OLD` |", out)
+        self.assertIn("1 GitHub API error(s); archived detection is incomplete", out)
+        self.assertIn("::warning::", err.getvalue())
 
     def test_second_run_does_not_reflag(self):
         self.run_main()
