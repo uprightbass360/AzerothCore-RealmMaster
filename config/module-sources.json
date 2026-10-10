@@ -5,6 +5,327 @@
       "all-modules.json"
     ]
   },
-  "declined": {},
+  "declined": {
+    "0xciber/acore_discordnotifier": {
+      "reason": "no upstream activity since 2023-06-07",
+      "date": "2026-10-10"
+    },
+    "55honey/acore_carboncopy": {
+      "reason": "no upstream activity since 2022-02-20",
+      "date": "2026-10-10"
+    },
+    "55honey/acore_elunatest": {
+      "reason": "no upstream activity since 2022-04-03",
+      "date": "2026-10-10"
+    },
+    "55honey/acore_sendandbind": {
+      "reason": "no upstream activity since 2022-11-03",
+      "date": "2026-10-10"
+    },
+    "55honey/acore_summonall": {
+      "reason": "no upstream activity since 2022-02-20",
+      "date": "2026-10-10"
+    },
+    "55honey/acore_tempannouncements": {
+      "reason": "no upstream activity since 2022-09-06",
+      "date": "2026-10-10"
+    },
+    "55honey/acore_zonecheck": {
+      "reason": "no upstream activity since 2023-02-10",
+      "date": "2026-10-10"
+    },
+    "55honey/acore_zonedebuff": {
+      "reason": "no upstream activity since 2023-03-08",
+      "date": "2026-10-10"
+    },
+    "anchydev/dungeonrespawn": {
+      "reason": "no upstream activity since 2023-05-28",
+      "date": "2026-10-10"
+    },
+    "anchydev/statboosterreroller": {
+      "reason": "no upstream activity since 2023-02-21",
+      "date": "2026-10-10"
+    },
+    "azerothcore/ac-json-api": {
+      "reason": "no upstream activity since 2021-06-09",
+      "date": "2026-10-10"
+    },
+    "azerothcore/acore-node-server": {
+      "reason": "no upstream activity since 2020-06-22",
+      "date": "2026-10-10"
+    },
+    "azerothcore/acore-pwa": {
+      "reason": "no upstream activity since 2021-04-30",
+      "date": "2026-10-10"
+    },
+    "azerothcore/apaw": {
+      "reason": "no upstream activity since 2021-06-08",
+      "date": "2026-10-10"
+    },
+    "azerothcore/azerothcore-exitcode-script": {
+      "reason": "no upstream activity since 2022-10-09",
+      "date": "2026-10-10"
+    },
+    "azerothcore/azerothcore-module-installer": {
+      "reason": "no upstream activity since 2021-10-11",
+      "date": "2026-10-10"
+    },
+    "azerothcore/classic-mode": {
+      "reason": "no upstream activity since 2020-12-16",
+      "date": "2026-10-10"
+    },
+    "azerothcore/democlient-app": {
+      "reason": "no upstream activity since 2020-02-17",
+      "date": "2026-10-10"
+    },
+    "azerothcore/lua-aio-modrate-exp": {
+      "reason": "no upstream activity since 2020-02-21",
+      "date": "2026-10-10"
+    },
+    "azerothcore/lua-command-plus": {
+      "reason": "no upstream activity since 2020-02-21",
+      "date": "2026-10-10"
+    },
+    "azerothcore/mod-alpha-rewards": {
+      "reason": "no upstream activity since 2019-02-15",
+      "date": "2026-10-10"
+    },
+    "azerothcore/mod-ip2nation": {
+      "reason": "no upstream activity since 2021-01-20",
+      "date": "2026-10-10"
+    },
+    "azerothcore/mod-playerbots": {
+      "reason": "no upstream activity since 2021-12-28",
+      "date": "2026-10-10"
+    },
+    "azerothcore/mod-premium-lib": {
+      "reason": "no upstream activity since 2022-09-12",
+      "date": "2026-10-10"
+    },
+    "azerothcore/mysql-tools": {
+      "reason": "no upstream activity since 2021-04-21",
+      "date": "2026-10-10"
+    },
+    "azerothcore/spellwork": {
+      "reason": "no upstream activity since 2022-01-04",
+      "date": "2026-10-10"
+    },
+    "azerothcore/tool-tc-migration": {
+      "reason": "no upstream activity since 2023-09-03",
+      "date": "2026-10-10"
+    },
+    "azerothcore/unused-guid-search": {
+      "reason": "no upstream activity since 2022-01-04",
+      "date": "2026-10-10"
+    },
+    "azerothcore/web-character-migration-tool": {
+      "reason": "no upstream activity since 2019-03-15",
+      "date": "2026-10-10"
+    },
+    "azerothcore/world-boss-rank": {
+      "reason": "no upstream activity since 2021-12-13",
+      "date": "2026-10-10"
+    },
+    "azerothcore/wow-telegram": {
+      "reason": "no upstream activity since 2020-02-21",
+      "date": "2026-10-10"
+    },
+    "azerothcore/wowlauncher-delphi": {
+      "reason": "no upstream activity since 2016-02-16",
+      "date": "2026-10-10"
+    },
+    "azerothcore/wowserverwebterminal": {
+      "reason": "no upstream activity since 2019-10-17",
+      "date": "2026-10-10"
+    },
+    "betayi/mod_spec_reward": {
+      "reason": "no upstream activity since 2022-02-03",
+      "date": "2026-10-10"
+    },
+    "bewarellamas/mod-profspecs": {
+      "reason": "no upstream activity since 2022-10-25",
+      "date": "2026-10-10"
+    },
+    "buildthehomelab/*": {
+      "reason": "58 bulk AI-generated wow-mod-* repos published in 17 days, unreviewed and unused elsewhere",
+      "date": "2026-10-10"
+    },
+    "day36512/acore_lua_unlimited_ammo": {
+      "reason": "no upstream activity since 2023-08-25",
+      "date": "2026-10-10"
+    },
+    "day36512/dynamic-trader": {
+      "reason": "no upstream activity since 2023-10-02",
+      "date": "2026-10-10"
+    },
+    "day36512/extended-holidays-lua": {
+      "reason": "no upstream activity since 2023-10-09",
+      "date": "2026-10-10"
+    },
+    "dimi-dun-morogh/-eluna-wow-scripts": {
+      "reason": "no upstream activity since 2023-06-27",
+      "date": "2026-10-10"
+    },
+    "drassil/noderouter": {
+      "reason": "no upstream activity since 2022-05-05",
+      "date": "2026-10-10"
+    },
+    "drozco/mod-item-level-up": {
+      "reason": "no upstream activity since 2022-10-12",
+      "date": "2026-10-10"
+    },
+    "eldoba/mod-dynamic-resurrections-": {
+      "reason": "no upstream activity since 2019-07-16",
+      "date": "2026-10-10"
+    },
+    "gozzim/mod-firstlogin-aio": {
+      "reason": "no upstream activity since 2022-04-07",
+      "date": "2026-10-10"
+    },
+    "gozzim/mod-globalchat": {
+      "reason": "no upstream activity since 2023-08-26",
+      "date": "2026-10-10"
+    },
+    "hallgaeuer/mod-dynamic-loot-rates": {
+      "reason": "no upstream activity since 2023-10-08",
+      "date": "2026-10-10"
+    },
+    "helldragonpz/auto_check_restart": {
+      "reason": "no upstream activity since 2023-02-17",
+      "date": "2026-10-10"
+    },
+    "hellionop/lua-hardcoremode": {
+      "reason": "no upstream activity since 2023-01-29",
+      "date": "2026-10-10"
+    },
+    "lightdestory/azerothcoreadmin": {
+      "reason": "no upstream activity since 2023-04-18",
+      "date": "2026-10-10"
+    },
+    "logandros/aztral-airlines": {
+      "reason": "no upstream activity since 2023-01-28",
+      "date": "2026-10-10"
+    },
+    "malfurionwow/acore-bg-end-announcer": {
+      "reason": "no upstream activity since 2021-06-17",
+      "date": "2026-10-10"
+    },
+    "michaeldelago/mod-quest-count-level": {
+      "reason": "no upstream activity since 2023-07-23",
+      "date": "2026-10-10"
+    },
+    "microbica/mod-share-mounts": {
+      "reason": "no upstream activity since 2023-10-01",
+      "date": "2026-10-10"
+    },
+    "miithrandiir/mod_sponsorship": {
+      "reason": "no upstream activity since 2023-01-17",
+      "date": "2026-10-10"
+    },
+    "noisiver/mod-activatezones": {
+      "reason": "no upstream activity since 2021-12-28",
+      "date": "2026-10-10"
+    },
+    "noisiver/mod-spawnpoints": {
+      "reason": "no upstream activity since 2022-06-11",
+      "date": "2026-10-10"
+    },
+    "noisiver/wrath-of-the-vanilla": {
+      "reason": "no upstream activity since 2023-06-08",
+      "date": "2026-10-10"
+    },
+    "nolt/acore-box": {
+      "reason": "no upstream activity since 2022-07-08",
+      "date": "2026-10-10"
+    },
+    "nolt/acore-linux-restarter": {
+      "reason": "no upstream activity since 2020-08-31",
+      "date": "2026-10-10"
+    },
+    "nolt/acore-mini-reg-page": {
+      "reason": "no upstream activity since 2021-05-28",
+      "date": "2026-10-10"
+    },
+    "nolt/registration-page": {
+      "reason": "no upstream activity since 2021-06-02",
+      "date": "2026-10-10"
+    },
+    "rafaelcalleja/azerothcore-wowhead-mod-lua": {
+      "reason": "no upstream activity since 2023-07-17",
+      "date": "2026-10-10"
+    },
+    "shadowveil-wotlk/lua-itemupgrader-template": {
+      "reason": "no upstream activity since 2023-04-20",
+      "date": "2026-10-10"
+    },
+    "shadowveil-wotlk/lua-notonly-randommorpher": {
+      "reason": "no upstream activity since 2023-06-06",
+      "date": "2026-10-10"
+    },
+    "shadowveil-wotlk/lua-super-buffernpc": {
+      "reason": "no upstream activity since 2023-04-06",
+      "date": "2026-10-10"
+    },
+    "talamortis/mod-boss-announcer": {
+      "reason": "no upstream activity since 2018-10-08",
+      "date": "2026-10-10"
+    },
+    "talamortis/mod-individual-xp": {
+      "reason": "no upstream activity since 2022-02-08",
+      "date": "2026-10-10"
+    },
+    "talamortis/mod-itemlevel": {
+      "reason": "no upstream activity since 2020-08-30",
+      "date": "2026-10-10"
+    },
+    "talamortis/mod-learnspells": {
+      "reason": "no upstream activity since 2019-02-18",
+      "date": "2026-10-10"
+    },
+    "talamortis/mod-phased-duels": {
+      "reason": "no upstream activity since 2018-11-10",
+      "date": "2026-10-10"
+    },
+    "talamortis/mod-premium": {
+      "reason": "no upstream activity since 2023-09-06",
+      "date": "2026-10-10"
+    },
+    "talamortis/mod-whologged": {
+      "reason": "no upstream activity since 2018-07-03",
+      "date": "2026-10-10"
+    },
+    "talamortis/mod_character_tools": {
+      "reason": "no upstream activity since 2018-07-02",
+      "date": "2026-10-10"
+    },
+    "talamortis/playerteleport": {
+      "reason": "no upstream activity since 2023-07-20",
+      "date": "2026-10-10"
+    },
+    "talamortis/reward-system": {
+      "reason": "no upstream activity since 2018-07-02",
+      "date": "2026-10-10"
+    },
+    "vhiperdev/mod-no-farming": {
+      "reason": "no upstream activity since 2018-05-15",
+      "date": "2026-10-10"
+    },
+    "vhiperdev/mod-spellregulator": {
+      "reason": "no upstream activity since 2020-08-30",
+      "date": "2026-10-10"
+    },
+    "winfidonarleyan/kargatum-system": {
+      "reason": "no upstream activity since 2022-03-11",
+      "date": "2026-10-10"
+    },
+    "wowsur/lua_vip": {
+      "reason": "no upstream activity since 2023-08-02",
+      "date": "2026-10-10"
+    },
+    "zhengpeiru21/transmog-addons": {
+      "reason": "no upstream activity since 2022-08-31",
+      "date": "2026-10-10"
+    }
+  },
   "keep": []
 }
