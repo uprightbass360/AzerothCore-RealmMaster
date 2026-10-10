@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 from urllib import error, parse, request
 
-from module_sources import DEFAULT_SOURCES_PATH, Sources, load_sources
+from module_sources import DEFAULT_SOURCES_PATH, Sources, SourcesError, load_sources  # noqa: F401
 
 API_ROOT = "https://api.github.com"
 DEFAULT_TOPICS = [
@@ -134,6 +134,25 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
             "Abort pruning if the confirmed-dead entries exceed this fraction of the "
             "manifest (default: %(default)s)"
         ),
+    )
+    parser.add_argument(
+        "--sources",
+        default=DEFAULT_SOURCES_PATH,
+        help="Path to the module sources policy file (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--sources-only",
+        action="store_true",
+        help=(
+            "Skip GitHub entirely: only remove entries declined in --sources and "
+            "scrub profiles and the template. Used by the stale-review workflow "
+            "and for local previews."
+        ),
+    )
+    parser.add_argument(
+        "--digest-file",
+        default=None,
+        help="Write a Markdown digest of entries added this run to this path (for the PR body)",
     )
     return parser.parse_args(argv)
 
@@ -425,6 +444,34 @@ def prune_profiles(
     return changes
 
 
+def remove_declined_entries(
+    manifest: Dict[str, List[dict]],
+    sources: Sources,
+    dry_run: bool = False,
+) -> List[dict]:
+    """Drop manifest entries whose repository matches ``sources.declined``.
+
+    Declined removals record an explicit human decision in
+    config/module-sources.json, so unlike the 404 prune they are never capped
+    and need no GitHub access. Entries not hosted on github.com never match.
+
+    Returns the removed entries (or, in dry-run, the entries that would be).
+    """
+    modules = manifest.setdefault("modules", [])
+    removed: List[dict] = []
+    for entry in modules:
+        pattern = sources.is_declined(github_full_name(str(entry.get("repo", ""))))
+        if not pattern:
+            continue
+        removed.append(entry)
+        prefix = "[dry-run] Would remove" if dry_run else "🗑️  Removed"
+        print(f"{prefix} {entry.get('key')} — declined by {pattern}")
+    if removed and not dry_run:
+        removed_ids = {id(entry) for entry in removed}
+        manifest["modules"] = [entry for entry in modules if id(entry) not in removed_ids]
+    return removed
+
+
 def repo_name_to_key(name: str) -> str:
     sanitized = re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_")
     sanitized = sanitized.upper()
@@ -700,43 +747,57 @@ def update_env_template(manifest_path: str, template_path: str) -> bool:
 
 def main(argv: Sequence[str]) -> int:
     args = parse_args(argv)
-    topics = args.topics or DEFAULT_TOPICS
-    token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GITHUB_API_TOKEN")
-    client = GitHubClient(token, verbose=args.log)
-
     manifest = load_manifest(args.manifest)
-    repos = collect_repositories(client, topics, args.max_pages)
-    merge = merge_repositories(manifest, repos, args.refresh_existing)
-    added, updated = merge.added, merge.updated
+    sources = load_sources(args.sources)
 
+    repos: List[RepoRecord] = []
+    merge = MergeResult()
     removed: List[dict] = []
-    if args.prune_missing:
-        seen_repo_urls = {
-            normalize_repo_url(
-                record.data.get("clone_url") or record.data.get("html_url") or ""
-            )
-            for record in repos
-        }
-        seen_repo_urls.discard("")
-        removed = prune_missing_repositories(
-            manifest,
-            client,
-            seen_repo_urls,
-            args.prune_max_fraction,
-            dry_run=args.dry_run,
-            verbose=args.log,
-        )
+    if not args.sources_only:
+        topics = args.topics or DEFAULT_TOPICS
+        token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GITHUB_API_TOKEN")
+        client = GitHubClient(token, verbose=args.log)
+        repos = collect_repositories(client, topics, args.max_pages)
+        merge = merge_repositories(manifest, repos, args.refresh_existing, sources=sources)
 
+        if args.prune_missing:
+            seen_repo_urls = {
+                normalize_repo_url(
+                    record.data.get("clone_url") or record.data.get("html_url") or ""
+                )
+                for record in repos
+            }
+            seen_repo_urls.discard("")
+            removed = prune_missing_repositories(
+                manifest,
+                client,
+                seen_repo_urls,
+                args.prune_max_fraction,
+                dry_run=args.dry_run,
+                verbose=args.log,
+            )
+
+    # Declined repos are removed on every run, with or without GitHub access.
+    declined = remove_declined_entries(manifest, sources, dry_run=args.dry_run)
+
+    if args.digest_file:
+        Path(args.digest_file).write_text(format_digest(merge.added_entries), encoding="utf-8")
+
+    # In dry-run the declined entries are still in the manifest; exclude them so
+    # the profile preview matches what a real run would do.
+    declined_keys = {str(entry.get("key")) for entry in declined}
     valid_keys = {
         str(entry.get("key")) for entry in manifest.get("modules", []) if entry.get("key")
-    }
+    } - declined_keys
 
     if args.dry_run:
         if not args.skip_profiles:
             prune_profiles(args.profiles_dir, valid_keys, dry_run=True, verbose=args.log)
         print(
             f"Discovered {len(repos)} repositories "
-            f"(added={added}, updated={updated}, would remove={len(removed)})"
+            f"(added={merge.added}, updated={merge.updated}, "
+            f"skipped declined={merge.skipped_declined}, "
+            f"would remove={len(removed)}, would remove declined={len(declined)})"
         )
         return 0
 
@@ -745,8 +806,9 @@ def main(argv: Sequence[str]) -> int:
         handle.write("\n")
 
     print(
-        f"Updated manifest {args.manifest}: added {added}, refreshed {updated}, "
-        f"removed {len(removed)}"
+        f"Updated manifest {args.manifest}: added {merge.added}, refreshed {merge.updated}, "
+        f"removed {len(removed)}, declined {len(declined)}, "
+        f"skipped declined {merge.skipped_declined}"
     )
 
     # Keep profiles free of keys the manifest no longer has; the config UI's
