@@ -583,24 +583,6 @@
       "last_modified": "2026-09-22T21:04:10Z"
     },
     {
-      "key": "MODULE_STATBOOSTER",
-      "name": "StatBooster",
-      "repo": "https://github.com/AnchyDev/StatBooster.git",
-      "type": "cpp",
-      "status": "blocked",
-      "block_reason": "Override signature mismatch on OnLootItem",
-      "post_install_hooks": [
-        "fix-statbooster-api"
-      ],
-      "description": "Random Enchant module for Azeroth Core",
-      "category": "quality-of-life",
-      "order": 5000,
-      "requires": [],
-      "config_cleanup": [],
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2024-09-16T06:19:08Z"
-    },
-    {
       "key": "MODULE_SKELETON_MODULE",
       "name": "skeleton-module",
       "repo": "https://github.com/azerothcore/skeleton-module.git",
@@ -2144,21 +2126,6 @@
       "last_modified": "2026-03-23T07:12:15Z"
     },
     {
-      "key": "MODULE_MOD_ONY_NAXX_LOGOUT_TELEPORT",
-      "name": "mod-ony-naxx-logout-teleport",
-      "repo": "https://github.com/valsan-azerty-boi/mod-ony-naxx-logout-teleport.git",
-      "description": "AzerothCore module that avoid client crash with reintroduced Vanilla Onyxia's Lair & Naxx",
-      "type": "cpp",
-      "category": "quality-of-life",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2025-04-12T15:11:00Z"
-    },
-    {
       "key": "MODULE_MOD_QUICK_RESPAWN",
       "name": "mod-quick-respawn",
       "repo": "https://github.com/hallgaeuer/mod-quick-respawn.git",
@@ -2715,22 +2682,6 @@
       "last_modified": "2025-02-01T18:29:34Z"
     },
     {
-      "key": "MODULE_HARDMODE",
-      "name": "HardMode",
-      "repo": "https://github.com/AnchyDev/HardMode.git",
-      "description": "Adds extra difficulty modes, heavily inspired by mod-challenge-modes.",
-      "type": "cpp",
-      "category": "progression",
-      "notes": "DISABLED: only virtual member functions can be marked 'override' \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: only virtual member functions can be marked 'override'",
-      "last_modified": "2025-01-28T08:00:36Z"
-    },
-    {
       "key": "MODULE_MOD_LOW_LEVEL_ARENA",
       "name": "mod-low-level-arena",
       "repo": "https://github.com/azerothcore/mod-low-level-arena.git",
@@ -2744,37 +2695,6 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-09-09T20:18:59Z"
-    },
-    {
-      "key": "MODULE_MOD_CFPVE",
-      "name": "mod-cfpve",
-      "repo": "https://github.com/pangolp/mod-cfpve.git",
-      "description": "This module obtains the faction of the first player who enters the list of instances used in it, and changes the obtained faction to the rest of the players so that the events can be carried out normally.",
-      "type": "cpp",
-      "category": "scripting",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2025-01-16T16:31:19Z"
-    },
-    {
-      "key": "MODULE_MOD_ACCOUNTBOUND",
-      "name": "mod-accountbound",
-      "repo": "https://github.com/noisiver/mod-accountbound.git",
-      "description": "This module aims to make mounts, companions and heirlooms shared across all characters of an account",
-      "type": "cpp",
-      "category": "account-wide",
-      "notes": "DISABLED: only virtual member functions can be marked 'override' \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: only virtual member functions can be marked 'override'",
-      "last_modified": "2025-01-03T23:44:35Z"
     },
     {
       "key": "MODULE_MOD_DISCORD_WEBHOOK",
@@ -2990,37 +2910,6 @@
       "last_modified": "2024-09-17T19:51:10Z"
     },
     {
-      "key": "MODULE_BREAKINGNEWSOVERRIDE",
-      "name": "BreakingNewsOverride",
-      "repo": "https://github.com/AnchyDev/BreakingNewsOverride.git",
-      "description": "An Azeroth Core module to allow the display of the Breaking News section on the character select screen.",
-      "type": "cpp",
-      "category": "social",
-      "notes": "DISABLED: no member named 'StringFormatFmt' in namespace 'Acore' \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: no member named 'StringFormatFmt' in namespace 'Acore'",
-      "last_modified": "2024-09-16T06:16:19Z"
-    },
-    {
-      "key": "MODULE_AOE_LOOT_MERGE",
-      "name": "AOE-loot---merge",
-      "repo": "https://github.com/Seaferer/AOE-loot---merge.git",
-      "description": "Merge all loot in a single creature.",
-      "type": "cpp",
-      "category": "quality-of-life",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2024-09-13T00:05:10Z"
-    },
-    {
       "key": "MODULE_MOD_CHANGEABLESPAWNRATES",
       "name": "mod-changeablespawnrates",
       "repo": "https://github.com/justin-kaufmann/mod-changeablespawnrates.git",
@@ -3160,22 +3049,6 @@
       "last_modified": "2024-07-15T15:06:07Z"
     },
     {
-      "key": "MODULE_RECYCLEDITEMS",
-      "name": "RecycledItems",
-      "repo": "https://github.com/AnchyDev/RecycledItems.git",
-      "description": "An AzerothCore module that recycles unwanted items to the auction house.",
-      "type": "cpp",
-      "category": "economy",
-      "notes": "DISABLED: only virtual member functions can be marked 'override' \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: only virtual member functions can be marked 'override'",
-      "last_modified": "2024-07-13T03:03:32Z"
-    },
-    {
       "key": "MODULE_MOD_NPC_SUBCLASS",
       "name": "mod-npc-subclass",
       "repo": "https://github.com/xiii-hearts/mod-npc-subclass.git",
@@ -3189,53 +3062,6 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2024-07-05T04:16:15Z"
-    },
-    {
-      "key": "MODULE_ATTRIBOOST",
-      "name": "Attriboost",
-      "repo": "https://github.com/AnchyDev/Attriboost.git",
-      "description": "AzerothCore module that adds a random attribute book.",
-      "type": "cpp",
-      "category": "admin",
-      "notes": "DISABLED: 'OnLogin' marked 'override' but does not override \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: 'OnLogin' marked 'override' but does not override",
-      "last_modified": "2024-06-17T05:59:19Z"
-    },
-    {
-      "key": "MODULE_PRESTIGIOUS",
-      "name": "Prestigious",
-      "repo": "https://github.com/AnchyDev/Prestigious.git",
-      "description": "AzerothCore module that allows prestige at max level.",
-      "type": "cpp",
-      "category": "progression",
-      "notes": "DISABLED: use of undeclared identifier 'sSpellMgr' \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: use of undeclared identifier 'sSpellMgr'",
-      "last_modified": "2024-06-17T05:55:46Z"
-    },
-    {
-      "key": "MODULE_RECACHE",
-      "name": "Recache",
-      "repo": "https://github.com/AnchyDev/Recache.git",
-      "description": "Forces the client to obtain a new cache for each new session.",
-      "type": "cpp",
-      "category": "tooling",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2024-06-15T12:30:06Z"
     },
     {
       "key": "MODULE_MOD_REWARD_SHOP",
@@ -3254,22 +3080,6 @@
       "last_modified": "2024-06-12T20:30:17Z"
     },
     {
-      "key": "MODULE_EXTENDEDXP",
-      "name": "ExtendedXP",
-      "repo": "https://github.com/AnchyDev/ExtendedXP.git",
-      "description": "An Azeroth Core module that adds alternative XP gains.",
-      "type": "cpp",
-      "category": "progression",
-      "notes": "DISABLED: only virtual member functions can be marked 'override' \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: only virtual member functions can be marked 'override'",
-      "last_modified": "2024-05-12T03:25:27Z"
-    },
-    {
       "key": "MODULE_MOD_LEVEL_15_BOOST",
       "name": "mod-level-15-boost",
       "repo": "https://github.com/fischerlol/mod-level-15-boost.git",
@@ -3284,22 +3094,6 @@
       "config_cleanup": [],
       "last_modified": "2024-04-23T03:07:23Z",
       "block_reason": "Compilation error: no member named 'getLevel' in 'Player'"
-    },
-    {
-      "key": "MODULE_BGQUEUECHECKER",
-      "name": "BGQueueChecker",
-      "repo": "https://github.com/AnchyDev/BGQueueChecker.git",
-      "description": "Ensures all party members have matching faction before queueing into battleground.",
-      "type": "cpp",
-      "category": "pvp",
-      "notes": "DISABLED: only virtual member functions can be marked 'override' \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: only virtual member functions can be marked 'override'",
-      "last_modified": "2024-04-16T22:46:02Z"
     },
     {
       "key": "MODULE_ADDON_FACTION_FREE_UNIT_POPUP",
@@ -3379,38 +3173,6 @@
       "config_cleanup": [],
       "block_reason": "Compilation error: no member named 'SendNotification' in 'WorldSession'",
       "last_modified": "2024-03-12T19:25:17Z"
-    },
-    {
-      "key": "MODULE_ITEMBROADCASTGUILDCHAT",
-      "name": "ItemBroadcastGuildChat",
-      "repo": "https://github.com/AnchyDev/ItemBroadcastGuildChat.git",
-      "description": "Broadcasts items with the ITEM_FLAG_REPORT_TO_GUILD_CHAT flag to guild chat.",
-      "type": "cpp",
-      "category": "scripting",
-      "notes": "DISABLED: only virtual member functions can be marked 'override' \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: only virtual member functions can be marked 'override'",
-      "last_modified": "2024-03-11T21:51:15Z"
-    },
-    {
-      "key": "MODULE_FFAFIX",
-      "name": "FFAFix",
-      "repo": "https://github.com/AnchyDev/FFAFix.git",
-      "description": "Fixes FFA for safe zones.",
-      "type": "cpp",
-      "category": "content",
-      "notes": "DISABLED: only virtual member functions can be marked 'override' \nDiscovered via GitHub topic 'azerothcore-module'",
-      "status": "blocked",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "block_reason": "Compilation error: only virtual member functions can be marked 'override'",
-      "last_modified": "2024-02-13T04:46:55Z"
     },
     {
       "key": "MODULE_ACI",
@@ -5606,21 +5368,6 @@
       "last_modified": "2026-06-06T08:07:04Z"
     },
     {
-      "key": "MODULE_RANDOMENCHANTS",
-      "name": "RandomEnchants",
-      "repo": "https://github.com/Brytenwally/RandomEnchants.git",
-      "description": "SQL query and necessary database files to add random stat enchantments to all rare and epic items",
-      "type": "sql",
-      "category": "database",
-      "notes": "Discovered via GitHub topic 'azerothcore-sql'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-04-26T13:05:30Z"
-    },
-    {
       "key": "MODULE_MOD_CORPSE_RESPAWN",
       "name": "mod-corpse-respawn",
       "repo": "https://github.com/dr1s/mod-corpse-respawn.git",
@@ -6866,36 +6613,6 @@
       "last_modified": "2026-07-29T17:52:18Z"
     },
     {
-      "key": "MODULE_MOD_SOLO_COLLECTIONS",
-      "name": "mod-solo-collections",
-      "repo": "https://github.com/haha2345/mod-solo-collections.git",
-      "description": "Authoritative AzerothCore C++ backend for the SoloCollections WoW 3.3.5a AddOn",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-08-18T14:35:22Z"
-    },
-    {
-      "key": "MODULE_ACM",
-      "name": "acm",
-      "repo": "https://github.com/dr1s/acm.git",
-      "description": "Azerothcore Container Manager - uses rootless Podman or Docker.",
-      "type": "tool",
-      "category": "tooling",
-      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-09-01T03:40:59Z"
-    },
-    {
       "key": "MODULE_CRATESYSTEM_AIO",
       "name": "CrateSystem-AIO",
       "repo": "https://github.com/zyggy123/CrateSystem-AIO.git",
@@ -7479,21 +7196,6 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-05-18T12:25:54Z"
-    },
-    {
-      "key": "MODULE_DUNGEONRESPAWN",
-      "name": "DungeonRespawn",
-      "repo": "https://github.com/monakaibrahim-cmyk/DungeonRespawn.git",
-      "description": "A module for AzerothCore that teleports players to the start of the dungeon upon death.",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-05-17T04:44:37Z"
     },
     {
       "key": "MODULE_MOD_ACCOUNT_MOUNTS_RGSON",

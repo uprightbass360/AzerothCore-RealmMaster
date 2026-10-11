@@ -1,12 +1,12 @@
 {
   "policy": {
-    "fork_owners": [
-      "azerothcore"
-    ],
+    "stale_after_days": 1095,
     "ignore_profiles": [
       "all-modules.json"
     ],
-    "stale_after_days": 1095
+    "fork_owners": [
+      "azerothcore"
+    ]
   },
   "declined": {
     "0xciber/acore_discordnotifier": {
@@ -41,9 +41,53 @@
       "reason": "no upstream activity since 2023-03-08",
       "date": "2026-10-10"
     },
+    "anchydev/attriboost": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "anchydev/bgqueuechecker": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "anchydev/breakingnewsoverride": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
     "anchydev/dungeonrespawn": {
       "reason": "no upstream activity since 2023-05-28",
       "date": "2026-10-10"
+    },
+    "anchydev/extendedxp": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "anchydev/ffafix": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "anchydev/hardmode": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "anchydev/itembroadcastguildchat": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "anchydev/prestigious": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "anchydev/recache": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "anchydev/recycleditems": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "anchydev/statbooster": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
     },
     "anchydev/statboosterreroller": {
       "reason": "no upstream activity since 2023-02-21",
@@ -149,6 +193,10 @@
       "reason": "no upstream activity since 2022-10-25",
       "date": "2026-10-10"
     },
+    "brytenwally/randomenchants": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
     "buildthehomelab/*": {
       "reason": "58 bulk AI-generated wow-mod-* repos published in 17 days, unreviewed and unused elsewhere",
       "date": "2026-10-10"
@@ -169,6 +217,10 @@
       "reason": "no upstream activity since 2023-06-27",
       "date": "2026-10-10"
     },
+    "dr1s/acm": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
     "drassil/noderouter": {
       "reason": "no upstream activity since 2022-05-05",
       "date": "2026-10-10"
@@ -188,6 +240,10 @@
     "gozzim/mod-globalchat": {
       "reason": "no upstream activity since 2023-08-26",
       "date": "2026-10-10"
+    },
+    "haha2345/mod-solo-collections": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
     },
     "hallgaeuer/mod-dynamic-loot-rates": {
       "reason": "no upstream activity since 2023-10-08",
@@ -225,6 +281,14 @@
       "reason": "no upstream activity since 2023-01-17",
       "date": "2026-10-10"
     },
+    "monakaibrahim-cmyk/dungeonrespawn": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
+    "noisiver/mod-accountbound": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
     "noisiver/mod-activatezones": {
       "reason": "no upstream activity since 2021-12-28",
       "date": "2026-10-10"
@@ -253,9 +317,17 @@
       "reason": "no upstream activity since 2021-06-02",
       "date": "2026-10-10"
     },
+    "pangolp/mod-cfpve": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
+    },
     "rafaelcalleja/azerothcore-wowhead-mod-lua": {
       "reason": "no upstream activity since 2023-07-17",
       "date": "2026-10-10"
+    },
+    "seaferer/aoe-loot---merge": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
     },
     "shadowveil-wotlk/lua-itemupgrader-template": {
       "reason": "no upstream activity since 2023-04-20",
@@ -308,6 +380,10 @@
     "talamortis/reward-system": {
       "reason": "no upstream activity since 2018-07-02",
       "date": "2026-10-10"
+    },
+    "valsan-azerty-boi/mod-ony-naxx-logout-teleport": {
+      "reason": "archived upstream",
+      "date": "2026-10-11"
     },
     "vhiperdev/mod-no-farming": {
       "reason": "no upstream activity since 2018-05-15",
