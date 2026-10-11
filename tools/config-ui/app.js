@@ -135,7 +135,7 @@ ConfigUI.profile = {
     const have = profile.key_schema ?? 0;
     const want = ConfigUI.data.keySchema ?? 0;
     this.pendingStale = have < want
-      ? `This profile predates module key rename wave ${want} (it records ${have}); its keys may be stale. Run ./modules.sh migrate <file> and import the result.`
+      ? `This file predates module key rename wave ${want} (it records ${have}); its keys may be stale. Run ./modules.sh migrate <file> and import the result.`
       : "";
     this.meta = {
       name: sourceName ? sourceName.replace(/\.json$/, "") : this.meta.name,
@@ -654,8 +654,10 @@ document.addEventListener("configui:import", e => {
         && /^\s*MODULE_[A-Z0-9_]+\s*=/m.test(e.detail.text));
   if (!looksLikeEnv) return;
   const keys = ConfigUI.env.parseModules(e.detail.text);
+  // MODULES_KEY_SCHEMA records the rename wave the file's keys are current to (0 when absent).
+  const schema = e.detail.text.match(/^\s*(?:export\s+)?MODULES_KEY_SCHEMA\s*=\s*["']?(\d+)/m);
   ConfigUI.profile.applyImport(
-    { modules: [...keys], label: "", description: "", order: 10000 },
+    { modules: [...keys], label: "", description: "", order: 10000, key_schema: schema ? Number(schema[1]) : 0 },
     e.detail.name,
   );
   ConfigUI.profile.meta.name = ""; // .env-derived names shouldn't name a .json export
