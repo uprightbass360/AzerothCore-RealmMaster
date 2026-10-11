@@ -149,5 +149,21 @@ class AdmissionTest(unittest.TestCase):
         self.assertEqual((result.added, result.skipped_declined), (0, 1))
 
 
+class DigestCollisionTest(unittest.TestCase):
+    def test_no_new_modules_and_no_collisions_is_unchanged(self):
+        self.assertEqual(format_digest([]), "No new modules this run.\n")
+        self.assertEqual(format_digest([], []), "No new modules this run.\n")
+
+    def test_collisions_are_listed_after_the_owner_groups(self):
+        new = entry("MODULE_MOD_AOE_LOOT_TERRABYTE_TBWPS", repo="https://github.com/TerraByte-tbwps/mod-aoe-loot.git", description="loot")
+        holder = entry("MODULE_MOD_AOE_LOOT", repo="https://github.com/azerothcore/mod-aoe-loot.git")
+        text = format_digest([new], [(new, holder)])
+        self.assertIn("1 new module(s) from 1 owner(s):", text)
+        self.assertIn("**Name collisions** (1)", text)
+        self.assertIn("- `MODULE_MOD_AOE_LOOT_TERRABYTE_TBWPS` (TerraByte-tbwps/mod-aoe-loot) collides with `MODULE_MOD_AOE_LOOT` (azerothcore/mod-aoe-loot)", text)
+        self.assertTrue(text.endswith("\n"))
+        self.assertLess(text.index("new module(s)"), text.index("Name collisions"))
+
+
 if __name__ == "__main__":
     unittest.main()
