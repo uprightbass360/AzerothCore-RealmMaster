@@ -22,7 +22,7 @@ class RenameKeysCliTest(unittest.TestCase):
         (self.root / "config" / "key-renames.json").write_text(json.dumps(WAVES))
         # The catalogue is already at wave 1: MODULE_MOD_PLAYERBOTS is the original's key.
         (self.root / "config" / "module-manifest.json").write_text(
-            json.dumps({"modules": [{"key": "MODULE_MOD_PLAYERBOTS", "requires": []}, {"key": "MODULE_MOD_STAT_BOOSTER", "requires": ["MODULE_MOD_PLAYERBOTS"]}]})
+            json.dumps({"key_schema": 1, "modules": [{"key": "MODULE_MOD_PLAYERBOTS", "requires": []}, {"key": "MODULE_MOD_STAT_BOOSTER", "requires": ["MODULE_MOD_PLAYERBOTS"]}]})
         )
         (self.root / "config" / "module-profiles" / "a.json").write_text(json.dumps({"modules": ["MODULE_MOD_STAT_BOOSTER"]}))
         (self.root / ".env.template").write_text("MODULE_MOD_PLAYERBOTS=0\nMODULE_MOD_STAT_BOOSTER=0\nMODULES_KEY_SCHEMA=1\n")
@@ -41,7 +41,10 @@ class RenameKeysCliTest(unittest.TestCase):
         manifest = json.loads((self.root / "config" / "module-manifest.json").read_text())
         self.assertEqual([m["key"] for m in manifest["modules"]], ["MODULE_MOD_PLAYERBOTS", "MODULE_MOD_STAT_BOOSTER_BENNYBROSEPH"])
         self.assertEqual(manifest["modules"][1]["requires"], ["MODULE_MOD_PLAYERBOTS"])
-        self.assertEqual(json.loads((self.root / "config" / "module-profiles" / "a.json").read_text())["modules"], ["MODULE_MOD_STAT_BOOSTER_BENNYBROSEPH"])
+        self.assertEqual(manifest["key_schema"], 2)
+        profile = json.loads((self.root / "config" / "module-profiles" / "a.json").read_text())
+        self.assertEqual(profile["modules"], ["MODULE_MOD_STAT_BOOSTER_BENNYBROSEPH"])
+        self.assertEqual(profile["key_schema"], 2)
         self.assertEqual((self.root / ".env.template").read_text(), "MODULE_MOD_PLAYERBOTS=0\nMODULE_MOD_STAT_BOOSTER_BENNYBROSEPH=0\nMODULES_KEY_SCHEMA=2\n")
         self.assertEqual((self.root / ".env.prebuilt").read_text(), "MODULE_PROFILE=realmmaster\nMODULE_MOD_PLAYERBOTS=1\nMODULES_KEY_SCHEMA=2\n")
         self.assertEqual(list(self.root.glob("**/*.bak-*")), [])
@@ -56,6 +59,20 @@ class RenameKeysCliTest(unittest.TestCase):
             self.assertEqual(p.read_text(), text)
         self.assertIn("[dry-run]", out)
         self.assertIn("total renames applied: 3", out)
+
+    def test_applied_wave_is_refused(self):
+        code, out = self._run("--wave", "1")
+        self.assertEqual(code, 1)
+        self.assertIn("already applied", out)
+        self.assertEqual(json.loads((self.root / "config" / "module-manifest.json").read_text())["key_schema"], 1)
+
+    def test_skipping_a_wave_is_refused(self):
+        waves = json.loads((self.root / "config" / "key-renames.json").read_text())
+        waves["waves"].append({"id": 3, "renames": {"MODULE_Z": "MODULE_Z_OWNER"}})
+        (self.root / "config" / "key-renames.json").write_text(json.dumps(waves))
+        code, out = self._run("--wave", "3")
+        self.assertEqual(code, 1)
+        self.assertIn("skip wave 2", out)
 
     def test_unknown_wave_fails(self):
         code, out = self._run("--wave", "3")

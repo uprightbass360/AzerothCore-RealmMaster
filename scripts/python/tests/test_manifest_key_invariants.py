@@ -3,7 +3,7 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from key_renames import DEFAULT_RENAMES_PATH, cumulative_map, load_rename_waves
+from key_renames import DEFAULT_RENAMES_PATH, cumulative_map, load_rename_waves, read_schema
 from update_module_manifest import github_full_name, repo_name_to_key, sanitize_owner
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -45,6 +45,15 @@ class ManifestKeyInvariantsTest(unittest.TestCase):
         pure_old = set(self.renames) - set(self.renames.values())
         self.assertEqual(sorted(pure_old & keys), [], "old keys still in the manifest")
         self.assertEqual(sorted(set(self.renames.values()) - keys), [], "renamed-to keys missing from the manifest")
+
+    def test_catalogue_documents_are_at_the_latest_schema(self):
+        latest = load_rename_waves(ROOT / DEFAULT_RENAMES_PATH)[-1].id
+        manifest = json.loads((ROOT / "config" / "module-manifest.json").read_text())
+        self.assertEqual(manifest.get("key_schema"), latest)
+        for profile in sorted((ROOT / "config" / "module-profiles").glob("*.json")):
+            self.assertEqual(json.loads(profile.read_text()).get("key_schema"), latest, profile.name)
+        for name in (".env.template", ".env.prebuilt"):
+            self.assertEqual(read_schema((ROOT / name).read_text()), latest, name)
 
 
 if __name__ == "__main__":

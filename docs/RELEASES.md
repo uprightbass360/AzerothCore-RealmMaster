@@ -225,12 +225,14 @@ git pull
 ./build.sh                # or ./deploy.sh, as before
 ```
 
-`migrate` records the rename wave it applied as `MODULES_KEY_SCHEMA=<n>` in
-`.env` and skips waves already applied, so it is safe to run again. If you ran
-an earlier `migrate` that did not write this line, add `MODULES_KEY_SCHEMA=1`
-to `.env` by hand before running it again; otherwise the first wave is applied
-twice and `MODULE_MOD_PLAYERBOTS` (and the eleven other keys that changed
-meaning) would be renamed onto the forks.
+`migrate` records the rename wave it applied in each file (`MODULES_KEY_SCHEMA=<n>`
+in `.env`, `key_schema` in `config/module-manifest.local.json` and in profile
+files) and skips waves already applied, so it is safe to run again. If you ran
+an earlier `migrate` that did not write these markers, add `MODULES_KEY_SCHEMA=1`
+to `.env`, and `"key_schema": 1` to `config/module-manifest.local.json` and to
+any profile you migrated, by hand before running it again; otherwise the first
+wave is applied twice and `MODULE_MOD_PLAYERBOTS` (and the eleven other keys
+that changed meaning) would be renamed onto the forks.
 
 Profile files exported from the config UI can be passed to the same command:
 `./modules.sh migrate my-profile.json`.

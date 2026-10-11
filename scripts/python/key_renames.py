@@ -19,6 +19,7 @@ from typing import Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple
 
 DEFAULT_RENAMES_PATH = "config/key-renames.json"
 SCHEMA_KEY = "MODULES_KEY_SCHEMA"
+SCHEMA_FIELD = "key_schema"  # top-level field of JSON documents that hold module keys
 Change = Tuple[str, str]
 Renames = Dict[str, str]
 
@@ -65,7 +66,7 @@ def load_rename_waves(path) -> List[Wave]:
     renamed_away: set = set()
     for index, raw in enumerate(raw_waves, start=1):
         wave_id = raw.get("id") if isinstance(raw, dict) else None
-        if wave_id != index:
+        if isinstance(wave_id, bool) or not isinstance(wave_id, int) or wave_id != index:
             raise RenameError(f'{p}: wave #{index} must carry "id": {index} (ids are consecutive from 1)')
         renames = _validate_renames(p, wave_id, raw.get("renames"))
         repeated = renamed_away & set(renames)
@@ -91,15 +92,30 @@ def cumulative_map(waves: Sequence[Wave]) -> Renames:
 
 
 def read_schema(text: str) -> int:
-    """The ``MODULES_KEY_SCHEMA`` value of an env file; 0 when absent or not an integer."""
+    """The ``MODULES_KEY_SCHEMA`` value of an env file: 0 when absent, an error when present but not a number."""
     for line in text.splitlines():
         match = _SCHEMA_LINE.match(line)
         if match:
-            try:
-                return int(match.group("value"))
-            except ValueError:
-                return 0
+            value = match.group("value").strip().strip("\"'")
+            if not value.isdigit():
+                raise RenameError(f"{SCHEMA_KEY}={match.group('value')!r} is not a wave number")
+            return int(value)
     return 0
+
+
+def read_json_schema(data) -> int:
+    """The ``key_schema`` of a parsed JSON document: 0 when absent, an error when not a non-negative integer."""
+    if not isinstance(data, dict) or SCHEMA_FIELD not in data:
+        return 0
+    value = data[SCHEMA_FIELD]
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise RenameError(f"{SCHEMA_FIELD} must be a wave number, got {value!r}")
+    return value
+
+
+def catalogue_schema(manifest_path) -> int:
+    """The catalogue's current schema: the top-level ``key_schema`` of config/module-manifest.json (0 when absent)."""
+    return read_json_schema(json.loads(Path(manifest_path).read_text(encoding="utf-8")))
 
 
 def set_schema_text(text: str, schema: int) -> str:
@@ -195,11 +211,12 @@ def _json_transform(apply: Callable[[dict], List[Change]]):
     def transform(text: str) -> Tuple[str, List[Change]]:
         data = json.loads(text)
         changes = apply(data)
-        return (json.dumps(data, indent=2) + "\n") if changes else text, changes
+        dirty = data != json.loads(text)
+        return (json.dumps(data, indent=2) + "\n") if dirty else text, changes
     return transform
 
 
-def rewrite_manifest_file(path, passes: Sequence[Renames], *, backup: bool = True,
+def rewrite_manifest_file(path, passes: Sequence[Renames], *, schema: Optional[int] = None, backup: bool = True,
                           now: Optional[datetime] = None) -> List[Change]:
     """A ``{"modules": [entry, ...]}`` document (manifest or local overlay)."""
     def apply(data: dict) -> List[Change]:
@@ -208,11 +225,13 @@ def rewrite_manifest_file(path, passes: Sequence[Renames], *, backup: bool = Tru
         changes: List[Change] = []
         for renames in passes:
             changes.extend(rewrite_entries(entries, renames))
+        if schema is not None and isinstance(data, dict):
+            data[SCHEMA_FIELD] = schema
         return changes
     return _rewrite_file(path, _json_transform(apply), backup, now)
 
 
-def rewrite_profile_file(path, passes: Sequence[Renames], *, backup: bool = True,
+def rewrite_profile_file(path, passes: Sequence[Renames], *, schema: Optional[int] = None, backup: bool = True,
                          now: Optional[datetime] = None) -> List[Change]:
     """A ``{"modules": [key, ...]}`` document; other fields untouched."""
     def apply(data: dict) -> List[Change]:
@@ -226,5 +245,7 @@ def rewrite_profile_file(path, passes: Sequence[Renames], *, backup: bool = True
             changes.extend(made)
         if changes:
             data["modules"] = keys
+        if schema is not None:
+            data[SCHEMA_FIELD] = schema
         return changes
     return _rewrite_file(path, _json_transform(apply), backup, now)

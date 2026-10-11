@@ -272,5 +272,6 @@
   ],
   "label": "\ud83e\udde9 All Modules",
   "description": "Enable every optional module in the repository - NOT RECOMMENDED",
-  "order": 7
+  "order": 7,
+  "key_schema": 1
 }

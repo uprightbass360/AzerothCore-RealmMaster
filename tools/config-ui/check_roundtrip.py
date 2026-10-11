@@ -21,6 +21,7 @@ def parse_profile(text):
         "label": data.get("label", ""),
         "description": data.get("description", ""),
         "order": data.get("order", 10000),
+        "key_schema": data.get("key_schema", 0),
     }
 
 
@@ -34,6 +35,7 @@ def serialize_profile(profile, order_map):
         "label": profile["label"],
         "description": profile["description"],
         "order": profile["order"],
+        "key_schema": profile["key_schema"],
     }
     return json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
 

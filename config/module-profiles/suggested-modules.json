@@ -12,5 +12,6 @@
   ],
   "label": "\u2b50 Suggested Modules (Main)",
   "description": "Baseline solo-friendly quality of life mix (no playerbots)",
-  "order": 2
+  "order": 2,
+  "key_schema": 1
 }

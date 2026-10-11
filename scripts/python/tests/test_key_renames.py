@@ -5,12 +5,15 @@ from datetime import datetime
 from pathlib import Path
 
 from key_renames import (
+    SCHEMA_FIELD,
     SCHEMA_KEY,
     RenameError,
     Wave,
     backup_path,
+    catalogue_schema,
     cumulative_map,
     load_rename_waves,
+    read_json_schema,
     read_schema,
     rewrite_entries,
     rewrite_env_file,
@@ -86,8 +89,29 @@ class SchemaMarkerTest(unittest.TestCase):
     def test_read_schema_reads_the_value(self):
         self.assertEqual(read_schema("A=1\n  export MODULES_KEY_SCHEMA = 3 # note\n"), 3)
 
-    def test_read_schema_non_integer_is_zero(self):
-        self.assertEqual(read_schema("MODULES_KEY_SCHEMA=two\n"), 0)
+    def test_read_schema_tolerates_quotes(self):
+        self.assertEqual(read_schema('MODULES_KEY_SCHEMA="1"\n'), 1)
+        self.assertEqual(read_schema("MODULES_KEY_SCHEMA='2'\n"), 2)
+
+    def test_read_schema_present_but_unreadable_is_an_error(self):
+        for bad in ("MODULES_KEY_SCHEMA=two\n", "MODULES_KEY_SCHEMA=\n", "MODULES_KEY_SCHEMA=-1\n"):
+            with self.assertRaises(RenameError):
+                read_schema(bad)
+
+    def test_read_json_schema(self):
+        self.assertEqual(read_json_schema({"modules": []}), 0)
+        self.assertEqual(read_json_schema({"modules": [], "key_schema": 2}), 2)
+        self.assertEqual(read_json_schema(["not", "a", "dict"]), 0)
+        for bad in ({"key_schema": "2"}, {"key_schema": True}, {"key_schema": -1}, {"key_schema": 1.5}):
+            with self.assertRaises(RenameError):
+                read_json_schema(bad)
+
+    def test_catalogue_schema_reads_the_manifest(self):
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "m.json").write_text(json.dumps({"modules": []}))
+        self.assertEqual(catalogue_schema(tmp / "m.json"), 0)
+        (tmp / "m.json").write_text(json.dumps({"modules": [], "key_schema": 2}))
+        self.assertEqual(catalogue_schema(tmp / "m.json"), 2)
 
     def test_set_schema_replaces_in_place_keeping_lead_and_comment(self):
         out = set_schema_text("A=1\n  export MODULES_KEY_SCHEMA=1 # keep\nB=2\n", 2)
@@ -175,6 +199,29 @@ class FileHelpersTest(unittest.TestCase):
         self.assertEqual(path.read_text(), original)
         self.assertEqual(list(self.tmp.glob("*.bak-*")), [])
 
+    def test_manifest_file_stamps_schema_even_without_renames(self):
+        path = self.tmp / "module-manifest.local.json"
+        path.write_text(json.dumps({"modules": [{"key": "MODULE_Q"}]}))
+        self.assertEqual(rewrite_manifest_file(path, [RENAMES], schema=2, now=NOW), [])
+        data = json.loads(path.read_text())
+        self.assertEqual(data, {"modules": [{"key": "MODULE_Q"}], "key_schema": 2})
+        self.assertTrue((self.tmp / "module-manifest.local.json.bak-20261011-093000").exists())
+
+    def test_manifest_file_with_current_schema_and_no_renames_is_untouched(self):
+        path = self.tmp / "module-manifest.local.json"
+        original = json.dumps({"modules": [{"key": "MODULE_Q"}], "key_schema": 2})
+        path.write_text(original)
+        self.assertEqual(rewrite_manifest_file(path, [RENAMES], schema=2, now=NOW), [])
+        self.assertEqual(path.read_text(), original)
+        self.assertEqual(list(self.tmp.glob("*.bak-*")), [])
+
+    def test_profile_file_stamps_schema_and_keeps_other_fields(self):
+        path = self.tmp / "mine.json"
+        path.write_text(json.dumps({"name": "mine", "modules": ["MODULE_ELUNA"], "order": 5}))
+        changes = rewrite_profile_file(path, [RENAMES], schema=1, now=NOW)
+        self.assertEqual(changes, [("MODULE_ELUNA", "MODULE_MOD_ALE")])
+        self.assertEqual(json.loads(path.read_text()), {"name": "mine", "modules": ["MODULE_MOD_ALE"], "order": 5, "key_schema": 1})
+
     def test_profile_file_rewrites_module_list_and_keeps_other_fields(self):
         path = self.tmp / "mine.json"
         path.write_text(json.dumps({"name": "mine", "modules": ["MODULE_ELUNA", "MODULE_Q"]}))
@@ -217,6 +264,12 @@ class LoadRenameWavesTest(unittest.TestCase):
     def test_rejects_non_module_keys_self_maps_and_empty_waves(self):
         for bad in ({"FOO": "MODULE_X"}, {"MODULE_X": "MODULE_X"}, {}):
             self.path.write_text(waves_doc(bad))
+            with self.assertRaises(RenameError):
+                load_rename_waves(self.path)
+
+    def test_ids_must_be_true_integers(self):
+        for bad_id in (True, 1.0, "1"):
+            self.path.write_text(json.dumps({"waves": [{"id": bad_id, "renames": RENAMES}]}))
             with self.assertRaises(RenameError):
                 load_rename_waves(self.path)
 
