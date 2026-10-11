@@ -33,7 +33,7 @@
       "order": 5000,
       "requires": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-10-10T14:14:33Z"
+      "last_modified": "2026-06-04T16:05:36Z"
     },
     {
       "key": "MODULE_MOD_LEARN_SPELLS",
@@ -133,7 +133,7 @@
       "order": 5000,
       "requires": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-10-10T14:58:02Z"
+      "last_modified": "2026-09-30T01:53:45Z"
     },
     {
       "key": "MODULE_MOD_NPC_BUFFER",
@@ -664,7 +664,7 @@
       "status": "active",
       "order": 5000,
       "config_cleanup": [],
-      "last_modified": "2026-10-08T20:52:57Z"
+      "last_modified": "2026-10-08T02:23:23Z"
     },
     {
       "key": "MODULE_ELUNA_TS",
@@ -1155,7 +1155,7 @@
         "mod-double-xp-weekend.conf*"
       ],
       "category": "progression",
-      "last_modified": "2026-10-10T14:16:10Z",
+      "last_modified": "2026-10-11T19:05:59Z",
       "status": "active",
       "order": 5000,
       "requires": [],
@@ -1341,7 +1341,7 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "category": "account-wide",
-      "last_modified": "2026-09-21T06:33:17Z",
+      "last_modified": "2025-11-25T19:41:44Z",
       "status": "active",
       "order": 5000,
       "requires": [],
@@ -4418,7 +4418,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-11T07:30:15Z"
+      "last_modified": "2026-10-11T19:07:47Z"
     },
     {
       "key": "MODULE_DELVES",
@@ -4763,7 +4763,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-10T19:20:46Z"
+      "last_modified": "2026-10-11T17:33:23Z"
     },
     {
       "key": "MODULE_MOD_CUSTOMS",
@@ -4868,7 +4868,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-10T21:36:57Z"
+      "last_modified": "2026-10-11T17:46:22Z"
     },
     {
       "key": "MODULE_MOD_I_FOUND_YOUR_SWORD",
@@ -5318,7 +5318,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T07:22:58Z"
+      "last_modified": "2026-10-11T17:57:56Z"
     },
     {
       "key": "MODULE_WOW_LIBRE_CMS",
@@ -6923,7 +6923,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T07:33:21Z"
+      "last_modified": "2026-10-11T18:10:19Z"
     },
     {
       "key": "MODULE_MOD_INDIVIDUAL_LEVELING_PROGRESSION",
@@ -7508,7 +7508,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2025-11-25T19:41:44Z"
+      "last_modified": "2026-04-25T23:02:31Z"
     },
     {
       "key": "MODULE_MOD_NPC_TITLES_TOKENS",
@@ -7688,7 +7688,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2025-03-01T07:44:49Z"
+      "last_modified": "2026-10-11T17:55:08Z"
     },
     {
       "key": "MODULE_MOD_MORPH_ALL_PLAYERS",
@@ -8258,7 +8258,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-03T23:20:50Z"
+      "last_modified": "2026-10-11T14:44:36Z"
     },
     {
       "key": "MODULE_MOD_DEAD_MEANS_DEAD_HOTFIX",
@@ -8333,7 +8333,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-11T05:24:33Z"
+      "last_modified": "2026-10-11T18:00:37Z"
     },
     {
       "key": "MODULE_MYTHICPLUS_EXTENDED",
@@ -8918,7 +8918,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T11:32:28Z"
+      "last_modified": "2026-10-11T15:02:10Z"
     },
     {
       "key": "MODULE_MOD_PVP_ZONES_HOTFIX",
@@ -9488,7 +9488,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-10T20:08:54Z"
+      "last_modified": "2026-10-11T11:42:50Z"
     },
     {
       "key": "MODULE_MOD_PLAYERBOTS_MALURAMICHAEL",
@@ -9564,6 +9564,66 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2025-08-27T15:33:59Z"
+    },
+    {
+      "key": "MODULE_MOD_RAID_GROUP_XP",
+      "name": "mod-raid-group-xp",
+      "repo": "https://github.com/Furbodo/mod-raid-group-xp.git",
+      "description": "AzerothCore module: raid-group members earn a 5-player party's kill XP share, with a configurable multiplier",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-11T17:05:28Z"
+    },
+    {
+      "key": "MODULE_MOD_IP_LIMITER",
+      "name": "mod-ip-limiter",
+      "repo": "https://github.com/electrobutterfly/mod-ip-limiter.git",
+      "description": "A module for AzerothCore that limits how many players may connect from a single IP address. When the limit is exceeded, every player from that IP is kicked. Specific IP addresses (e.g. internet caf\u00e9s, LAN parties, or your own office) can be whitelisted and exempted from the limit.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-11T16:49:22Z"
+    },
+    {
+      "key": "MODULE_MOD_AFK_KICKER",
+      "name": "mod-afk-kicker",
+      "repo": "https://github.com/electrobutterfly/mod-afk-kicker.git",
+      "description": "A module for AzerothCore that automatically kicks players who remain AFK (Away From Keyboard) for longer than a configurable duration, useful for high-population servers where inactive sessions consume player slots, memory, and CPU.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-11T16:46:16Z"
+    },
+    {
+      "key": "MODULE_AZEROTHCORE_DISCORD",
+      "name": "azerothcore-discord",
+      "repo": "https://github.com/Griznah/azerothcore-discord.git",
+      "description": "Discord (and more) bot for AzerothCore",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-11T18:33:53Z"
     }
   ]
 }
