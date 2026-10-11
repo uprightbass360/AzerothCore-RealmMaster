@@ -60,7 +60,7 @@ The setup wizard will guide you through:
 - You want vanilla AzerothCore without playerbots
 
 **Required when:**
-- Playerbots enabled (`MODULE_PLAYERBOTS=1`)
+- Playerbots enabled (`MODULE_MOD_PLAYERBOTS=1`)
 - Any C++ module enabled (modules with `"type": "cpp"` in `config/module-manifest.json`)
 
 **Build process:**
@@ -237,7 +237,7 @@ cd ~/AzerothCore-RealmMaster  # or your custom project directory
 
   ```json
   {
-    "modules": ["MODULE_ELUNA", "MODULE_SOLO_LFG", "MODULE_SOLOCRAFT"],
+    "modules": ["MODULE_MOD_ALE", "MODULE_MOD_SOLO_LFG", "MODULE_MOD_SOLOCRAFT"],
     "label": "⭐ Suggested Modules",
     "description": "Baseline solo-friendly quality of life mix",
     "order": 1

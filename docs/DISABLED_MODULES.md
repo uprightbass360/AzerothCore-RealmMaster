@@ -56,9 +56,9 @@ undefined reference to `Addmod_ahbotScripts()'
 **Details:**
 - ModulesLoader expects `Addmod_ahbotScripts()` but function not defined
 - Possible incomplete module or build issue
-- Alternative: Use MODULE_LUA_AH_BOT instead (Lua version)
+- Alternative: Use MODULE_AZEROTHCORE_LUA_AH_BOT instead (Lua version)
 
-**Alternative:** `MODULE_LUA_AH_BOT=1` (Lua implementation available)
+**Alternative:** `MODULE_AZEROTHCORE_LUA_AH_BOT=1` (Lua implementation available)
 
 ---
 
@@ -83,7 +83,7 @@ undefined reference to `Addazerothcore_lua_multivendorScripts()'
 
 These modules are blocked in the manifest with known issues:
 
-### MODULE_POCKET_PORTAL
+### MODULE_MOD_POCKET_PORTAL
 **Reason:** Requires C++20 std::format support patch before enabling
 
 ### MODULE_STATBOOSTER
@@ -175,11 +175,11 @@ python3 scripts/python/modules.py \
 Current disabled modules in `.env`:
 
 ```bash
-MODULE_AZEROTHSHARD=0          # Method name mismatch
-MODULE_CHALLENGE_MODES=0       # Override signature mismatch
-MODULE_AHBOT=0                 # Linker error (use lua version)
-MODULE_MULTIVENDOR=0           # Linker error
-MODULE_POCKET_PORTAL=0         # C++20 requirement
+MODULE_MOD_AZEROTHSHARD=0          # Method name mismatch
+MODULE_MOD_CHALLENGE_MODES=0       # Override signature mismatch
+MODULE_MOD_AHBOT=0                 # Linker error (use lua version)
+MODULE_AZEROTHCORE_LUA_MULTIVENDOR=0           # Linker error
+MODULE_MOD_POCKET_PORTAL=0         # C++20 requirement
 MODULE_STATBOOSTER=0           # Override mismatch
 MODULE_DUNGEON_RESPAWN=0       # Override mismatch
 ```

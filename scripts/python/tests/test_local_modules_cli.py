@@ -18,12 +18,12 @@ class CliCase(unittest.TestCase):
         (self.root / "config").mkdir()
         self.upstream_repo = "https://github.com/azerothcore/mod-up.git"
         write_manifest(self.root / "config" / "module-manifest.json", [
-            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_MOD_ALE", name="mod-ale", type="cpp"),
             entry("MODULE_AIO", name="mod-aio", type="lua"),
-            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_MOD_PLAYERBOTS", name="mod-playerbots", type="cpp"),
             entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
         ])
-        (self.root / ".env").write_text("MODULE_ELUNA=1\n")
+        (self.root / ".env").write_text("MODULE_MOD_ALE=1\n")
 
     def run_cli(self, *args):
         out, err = io.StringIO(), io.StringIO()
@@ -47,7 +47,7 @@ class AddTest(CliCase):
         [e] = self.local_entries()
         self.assertEqual((e["key"], e["name"], e["type"]), ("MODULE_LUA_THING", "lua-thing", "lua"))
         self.assertEqual(e["post_install_hooks"], ["copy-standard-lua"])
-        self.assertEqual(e["requires"], ["MODULE_ELUNA"])
+        self.assertEqual(e["requires"], ["MODULE_MOD_ALE"])
         self.assertIn("MODULE_LUA_THING=1", self.env())
         self.assertIn("run inside your worldserver", out)
         self.assertIn("./deploy.sh", out)
@@ -91,7 +91,7 @@ class AddTest(CliCase):
         self.assertEqual(rc, 1)
         self.assertIn("MODULE_UP=1", err)
         self.assertEqual(self.local_entries(), [])
-        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+        self.assertEqual(self.env(), "MODULE_MOD_ALE=1\n")
 
     def test_add_twice_same_url_is_rejected(self):
         repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
@@ -110,14 +110,19 @@ class AddTest(CliCase):
         self.assertIn("--key", err)
 
     def test_add_same_folder_name_needs_explicit_key(self):
-        # Folder name "mod-playerbots" already matches the upstream MODULE_PLAYERBOTS
-        # entry's "name", even though the derived key would differ.
+        # Folder name "mod-playerbots" already matches an upstream entry's "name",
+        # even though the derived key (MODULE_MOD_PLAYERBOTS) differs from that
+        # entry's key, so the key-collision check does not fire first.
+        write_manifest(self.root / "config" / "module-manifest.json", [
+            entry("MODULE_MOD_ALE", name="mod-ale", type="cpp"),
+            entry("MODULE_PLAYERBOTS_UPSTREAM", name="mod-playerbots", type="cpp"),
+        ])
         repo = make_repo(self.repos / "mod-playerbots", {"README.md": "x"})
         rc, _, err = self.run_cli("add", str(repo), "--yes")
         self.assertEqual(rc, 1)
-        self.assertIn("--key MODULE_PLAYERBOTS", err)
+        self.assertIn("--key MODULE_PLAYERBOTS_UPSTREAM", err)
         self.assertEqual(self.local_entries(), [])
-        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+        self.assertEqual(self.env(), "MODULE_MOD_ALE=1\n")
 
     def test_add_same_folder_new_key_still_refused(self):
         # Even with an explicit --key, a *different* key targeting a folder that's
@@ -125,7 +130,7 @@ class AddTest(CliCase):
         repo = make_repo(self.repos / "mod-playerbots", {"README.md": "x"})
         rc, _, err = self.run_cli("add", str(repo), "--key", "MODULE_MY_BOTS", "--yes")
         self.assertEqual(rc, 1)
-        self.assertIn("--key MODULE_PLAYERBOTS", err)
+        self.assertIn("--key MODULE_MOD_PLAYERBOTS", err)
         self.assertEqual(self.local_entries(), [])
 
     def _write_transmog_manifest(self):
@@ -133,17 +138,25 @@ class AddTest(CliCase):
         # (a fork listed alongside the original) -- the real manifest has 17 such
         # pairs. Overriding either existing key must not trip the folder guard.
         write_manifest(self.root / "config" / "module-manifest.json", [
-            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_MOD_ALE", name="mod-ale", type="cpp"),
             entry("MODULE_AIO", name="mod-aio", type="lua"),
-            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_MOD_PLAYERBOTS", name="mod-playerbots", type="cpp"),
             entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
-            entry("MODULE_TRANSMOG", name="mod-transmog",
-                  repo="https://github.com/example/mod-transmog.git", type="cpp"),
             entry("MODULE_MOD_TRANSMOG", name="mod-transmog",
+                  repo="https://github.com/example/mod-transmog.git", type="cpp"),
+            entry("MODULE_MOD_TRANSMOG_MALURAMICHAEL", name="mod-transmog",
                   repo="https://github.com/example/mod-transmog-fork.git", type="cpp"),
         ])
 
     def test_fork_override_of_second_entry_sharing_a_folder(self):
+        self._write_transmog_manifest()
+        fork = make_repo(self.repos / "mod-transmog", {"src/l.cpp": "void Addmod_transmogScripts(){}"})
+        rc, _, _ = self.run_cli("add", str(fork), "--key", "MODULE_MOD_TRANSMOG_MALURAMICHAEL", "--yes")
+        self.assertEqual(rc, 0)
+        [e] = self.local_entries()
+        self.assertEqual(e["key"], "MODULE_MOD_TRANSMOG_MALURAMICHAEL")
+
+    def test_fork_override_of_first_entry_sharing_a_folder(self):
         self._write_transmog_manifest()
         fork = make_repo(self.repos / "mod-transmog", {"src/l.cpp": "void Addmod_transmogScripts(){}"})
         rc, _, _ = self.run_cli("add", str(fork), "--key", "MODULE_MOD_TRANSMOG", "--yes")
@@ -151,20 +164,12 @@ class AddTest(CliCase):
         [e] = self.local_entries()
         self.assertEqual(e["key"], "MODULE_MOD_TRANSMOG")
 
-    def test_fork_override_of_first_entry_sharing_a_folder(self):
-        self._write_transmog_manifest()
-        fork = make_repo(self.repos / "mod-transmog", {"src/l.cpp": "void Addmod_transmogScripts(){}"})
-        rc, _, _ = self.run_cli("add", str(fork), "--key", "MODULE_TRANSMOG", "--yes")
-        self.assertEqual(rc, 0)
-        [e] = self.local_entries()
-        self.assertEqual(e["key"], "MODULE_TRANSMOG")
-
     def test_fork_new_key_sharing_a_listed_folder_is_refused(self):
         self._write_transmog_manifest()
         fork = make_repo(self.repos / "mod-transmog", {"src/l.cpp": "void Addmod_transmogScripts(){}"})
         rc, _, err = self.run_cli("add", str(fork), "--key", "MODULE_NEW_TRANSMOG", "--yes")
         self.assertEqual(rc, 1)
-        self.assertIn("--key MODULE_TRANSMOG", err)
+        self.assertIn("--key MODULE_MOD_TRANSMOG", err)
         self.assertEqual(self.local_entries(), [])
 
     def test_add_collection_refused_without_type(self):
@@ -174,7 +179,7 @@ class AddTest(CliCase):
         self.assertEqual(rc, 1)
         self.assertIn("--type lua", err)
         self.assertEqual(self.local_entries(), [])
-        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+        self.assertEqual(self.env(), "MODULE_MOD_ALE=1\n")
 
     def test_add_collection_with_type_lua(self):
         files = {f"s{i}.lua": "" for i in range(25)}
@@ -193,7 +198,7 @@ class AddTest(CliCase):
         rc, _, err = self.run_cli("add", str(self.repos / "missing"), "--yes")
         self.assertEqual(rc, 1)
         self.assertEqual(self.local_entries(), [])
-        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+        self.assertEqual(self.env(), "MODULE_MOD_ALE=1\n")
 
     def test_add_refuses_when_local_file_is_invalid(self):
         path = self.root / "config" / LOCAL_MANIFEST_NAME
@@ -229,11 +234,11 @@ class AddTest(CliCase):
         # MODULE_UP is upstream cpp with a requires; the fork's content looks like
         # AIO Lua, but that's advisory only -- the listed entry's type/requires win.
         write_manifest(self.root / "config" / "module-manifest.json", [
-            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_MOD_ALE", name="mod-ale", type="cpp"),
             entry("MODULE_AIO", name="mod-aio", type="lua"),
-            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_MOD_PLAYERBOTS", name="mod-playerbots", type="cpp"),
             entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream",
-                  requires=["MODULE_PLAYERBOTS"]),
+                  requires=["MODULE_MOD_PLAYERBOTS"]),
         ])
         fork = make_repo(self.repos / "mod-up", {"Server/s.lua": 'local AIO = require("AIO")'})
         rc, out, err = self.run_cli("add", str(fork), "--key", "MODULE_UP", "--yes")
@@ -244,7 +249,7 @@ class AddTest(CliCase):
         self.assertNotIn("requires", e)
         self.assertNotIn("post_install_hooks", e)
         self.assertNotIn("MODULE_AIO", self.env())
-        self.assertIn("MODULE_PLAYERBOTS=1", self.env())
+        self.assertIn("MODULE_MOD_PLAYERBOTS=1", self.env())
         self.assertIn("./build.sh --force", out)
         self.assertIn("WARNING", err)
 
@@ -278,29 +283,29 @@ class AddTest(CliCase):
 
     def test_unrelated_manifest_errors_do_not_block(self):
         write_manifest(self.root / "config" / "module-manifest.json", [
-            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_MOD_ALE", name="mod-ale", type="cpp"),
             entry("MODULE_AIO", name="mod-aio", type="lua"),
-            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_MOD_PLAYERBOTS", name="mod-playerbots", type="cpp"),
             entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
             entry("MODULE_BROKEN", name="mod-broken", type="cpp", requires=["MODULE_GHOST"]),
         ])
-        (self.root / ".env").write_text("MODULE_ELUNA=1\nMODULE_BROKEN=1\n")
+        (self.root / ".env").write_text("MODULE_MOD_ALE=1\nMODULE_BROKEN=1\n")
         repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
         rc, _, err = self.run_cli("add", str(repo), "--yes")
         self.assertEqual(rc, 0)
         self.assertIn("WARNING", err)
 
     def test_unrelated_error_from_key_sharing_a_prefix_does_not_block(self):
-        # MODULE_ELUNA_TS shares the "MODULE_ELUNA" prefix with the module our add
+        # MODULE_ELUNA_TS shares the "MODULE_MOD_ALE" prefix with the module our add
         # requires; a substring match would misfire on its unrelated error.
         write_manifest(self.root / "config" / "module-manifest.json", [
-            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_MOD_ALE", name="mod-ale", type="cpp"),
             entry("MODULE_ELUNA_TS", name="mod-eluna-ts", type="cpp", requires=["MODULE_GHOST"]),
             entry("MODULE_AIO", name="mod-aio", type="lua"),
-            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_MOD_PLAYERBOTS", name="mod-playerbots", type="cpp"),
             entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
         ])
-        (self.root / ".env").write_text("MODULE_ELUNA=1\nMODULE_ELUNA_TS=1\n")
+        (self.root / ".env").write_text("MODULE_MOD_ALE=1\nMODULE_ELUNA_TS=1\n")
         repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
         rc, _, err = self.run_cli("add", str(repo), "--yes")
         self.assertEqual(rc, 0)
@@ -309,12 +314,12 @@ class AddTest(CliCase):
 
     def test_no_enable_excludes_requires_from_error_relevance(self):
         write_manifest(self.root / "config" / "module-manifest.json", [
-            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_MOD_ALE", name="mod-ale", type="cpp"),
             entry("MODULE_AIO", name="mod-aio", type="lua", requires=["MODULE_MISSING"]),
-            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_MOD_PLAYERBOTS", name="mod-playerbots", type="cpp"),
             entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
         ])
-        (self.root / ".env").write_text("MODULE_ELUNA=1\nMODULE_AIO=1\n")
+        (self.root / ".env").write_text("MODULE_MOD_ALE=1\nMODULE_AIO=1\n")
         repo = make_repo(self.repos / "aio-thing", {"Server/s.lua": 'local AIO = require("AIO")'})
         rc, _, err = self.run_cli("add", str(repo), "--yes", "--no-enable")
         self.assertEqual(rc, 0)
@@ -323,9 +328,9 @@ class AddTest(CliCase):
 
     def test_blocking_error_from_enabled_requirement_keeps_entry_and_reports_removal(self):
         write_manifest(self.root / "config" / "module-manifest.json", [
-            entry("MODULE_ELUNA", name="mod-ale", type="cpp"),
+            entry("MODULE_MOD_ALE", name="mod-ale", type="cpp"),
             entry("MODULE_AIO", name="mod-aio", type="lua", requires=["MODULE_MISSING"]),
-            entry("MODULE_PLAYERBOTS", name="mod-playerbots", type="cpp"),
+            entry("MODULE_MOD_PLAYERBOTS", name="mod-playerbots", type="cpp"),
             entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
         ])
         repo = make_repo(self.repos / "aio-thing", {"Server/s.lua": 'local AIO = require("AIO")'})
@@ -342,7 +347,7 @@ class AddTest(CliCase):
             self.assertEqual(rc, 1, bad)
             self.assertIn("capitals, digits and underscores", err)
         self.assertEqual(self.local_entries(), [])
-        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+        self.assertEqual(self.env(), "MODULE_MOD_ALE=1\n")
 
     def test_add_url_with_invalid_folder_name_refused(self):
         repo = make_repo(self.repos / "bad name", {"thing.lua": ""})
@@ -350,7 +355,7 @@ class AddTest(CliCase):
         self.assertEqual(rc, 1)
         self.assertIn("bad name", err)
         self.assertEqual(self.local_entries(), [])
-        self.assertEqual(self.env(), "MODULE_ELUNA=1\n")
+        self.assertEqual(self.env(), "MODULE_MOD_ALE=1\n")
 
     def test_ref_starting_with_dash_refused(self):
         repo = make_repo(self.repos / "lua-thing", {"thing.lua": ""})
@@ -405,7 +410,7 @@ class AddTest(CliCase):
 
 
 class ListRemoveTest(CliCase):
-    def seed(self, entries, env="MODULE_ELUNA=1\n"):
+    def seed(self, entries, env="MODULE_MOD_ALE=1\n"):
         write_manifest(self.root / "config" / LOCAL_MANIFEST_NAME, entries)
         (self.root / ".env").write_text(env)
 

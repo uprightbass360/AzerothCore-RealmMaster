@@ -85,7 +85,7 @@ setup_select_modules() {
     local preset_modules="${MODULE_PRESET_CONFIGS[$preset_name]:-}"
 
     # Check if playerbots module is in the preset
-    if [[ "$preset_modules" == *"MODULE_PLAYERBOTS"* ]]; then
+    if [[ "$preset_modules" == *"MODULE_MOD_PLAYERBOTS"* ]]; then
       echo "azerothcore-playerbots"
     else
       echo "azerothcore-wotlk"
@@ -180,14 +180,14 @@ setup_select_modules() {
   auto_enable_module_dependencies
   ensure_module_platforms
 
-  if [ "${MODULE_OLLAMA_CHAT:-0}" = "1" ] && [ "${MODULE_PLAYERBOTS:-0}" != "1" ]; then
-    say INFO "Automatically enabling MODULE_PLAYERBOTS for MODULE_OLLAMA_CHAT."
-    MODULE_PLAYERBOTS=1
-    MODULE_ENABLE_SET["MODULE_PLAYERBOTS"]=1
+  if [ "${MODULE_MOD_OLLAMA_CHAT:-0}" = "1" ] && [ "${MODULE_MOD_PLAYERBOTS:-0}" != "1" ]; then
+    say INFO "Automatically enabling MODULE_MOD_PLAYERBOTS for MODULE_MOD_OLLAMA_CHAT."
+    MODULE_MOD_PLAYERBOTS=1
+    MODULE_ENABLE_SET["MODULE_MOD_PLAYERBOTS"]=1
   fi
 
   declare -A DISABLED_MODULE_REASONS=(
-    [MODULE_AHBOT]="Requires upstream Addmod_ahbotScripts symbol (fails link)"
+    [MODULE_MOD_AHBOT]="Requires upstream Addmod_ahbotScripts symbol (fails link)"
     [MODULE_LEVEL_GRANT]="QuestCountLevel module relies on removed ConfigMgr APIs and fails to build"
   )
 
@@ -381,7 +381,7 @@ setup_select_modules() {
     PLAYERBOT_MAX_BOTS="$CLI_PLAYERBOT_MAX"
   fi
 
-  if [ "$MODULE_PLAYERBOTS" = "1" ]; then
+  if [ "$MODULE_MOD_PLAYERBOTS" = "1" ]; then
     if [ -z "$CLI_PLAYERBOT_ENABLED" ]; then
       PLAYERBOT_ENABLED=1
     fi
@@ -429,7 +429,7 @@ setup_select_modules() {
 
   # Determine source variant based ONLY on playerbots module
   STACK_SOURCE_VARIANT="core"
-  if [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
+  if [ "$MODULE_MOD_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
     STACK_SOURCE_VARIANT="playerbots"
   fi
 

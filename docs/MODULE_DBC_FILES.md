@@ -19,7 +19,7 @@ Add the `server_dbc_path` field to the module's entry in `config/module-manifest
 
 ```json
 {
-  "key": "MODULE_WORGOBLIN",
+  "key": "MODULE_MOD_WORGOBLIN",
   "name": "mod-worgoblin",
   "repo": "https://github.com/heyitsbench/mod-worgoblin.git",
   "type": "cpp",
@@ -82,7 +82,7 @@ The mod-bg-slaveryvalley module contains DBC files in `client-side/DBFilesClient
 **Manifest entry:**
 ```json
 {
-  "key": "MODULE_BG_SLAVERYVALLEY",
+  "key": "MODULE_MOD_BG_SLAVERYVALLEY",
   "name": "mod-bg-slaveryvalley",
   "notes": "DBC files in client-side/DBFilesClient are CLIENT-ONLY. Server data must be downloaded separately from releases."
 }

@@ -37,7 +37,7 @@ class DetectTest(unittest.TestCase):
 
     def test_cpp_playerbots_dependency(self):
         d = detect(self.mod({"src/x.cpp": '#include "Playerbots.h"\nvoid Addmod_fooScripts(){}'}), "mod-foo")
-        self.assertIn("MODULE_PLAYERBOTS", d.requires)
+        self.assertIn("MODULE_MOD_PLAYERBOTS", d.requires)
 
     def test_cpp_stray_sql_warns(self):
         d = detect(self.mod({"src/x.cpp": "void Addmod_fooScripts(){}", "sql/world.sql": "SELECT 1;"}), "mod-foo")
@@ -59,7 +59,7 @@ class DetectTest(unittest.TestCase):
     # Lua
     def test_lua_standard(self):
         d = detect(self.mod({"script.lua": "print(1)"}), "lua-thing")
-        self.assertEqual((d.module_type, d.post_install_hooks, d.requires), ("lua", ["copy-standard-lua"], ["MODULE_ELUNA"]))
+        self.assertEqual((d.module_type, d.post_install_hooks, d.requires), ("lua", ["copy-standard-lua"], ["MODULE_MOD_ALE"]))
 
     def test_lua_aio(self):
         d = detect(self.mod({"Server/s.lua": 'local AIO = AIO or require("AIO")'}), "aio-thing")

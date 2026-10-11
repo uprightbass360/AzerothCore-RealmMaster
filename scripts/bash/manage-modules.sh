@@ -629,8 +629,8 @@ manage_configuration_files(){
     fi
   done
 
-  local playerbots_enabled="${MODULE_PLAYERBOTS:-0}"
-  if [ "${MODULE_ENABLED[MODULE_PLAYERBOTS]:-0}" = "1" ]; then
+  local playerbots_enabled="${MODULE_MOD_PLAYERBOTS:-0}"
+  if [ "${MODULE_ENABLED[MODULE_MOD_PLAYERBOTS]:-0}" = "1" ]; then
     playerbots_enabled=1
   fi
 

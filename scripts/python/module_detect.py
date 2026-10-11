@@ -81,7 +81,7 @@ def _detect_cpp(root: Path, folder_name: str) -> Detection:
             "the build may fail to link"
         )
     if "Playerbots.h" in text or "PlayerbotAI" in text:
-        detection.requires.append("MODULE_PLAYERBOTS")
+        detection.requires.append("MODULE_MOD_PLAYERBOTS")
     detection.warnings.extend(_stray_sql_warnings(root))
     return detection
 
@@ -99,7 +99,7 @@ def _detect_lua(root: Path, lua_files: List[Path]) -> Detection:
         detection.requires = ["MODULE_AIO"]
         return detection
 
-    detection.requires = ["MODULE_ELUNA"]
+    detection.requires = ["MODULE_MOD_ALE"]
     in_standard = {r for r in rels if (r.parent.as_posix() or ".") in _STANDARD_LUA_DIRS}
     standard_names = {r.stem for r in in_standard}
     all_names = {r.stem for r in rels}
