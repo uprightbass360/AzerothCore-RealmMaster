@@ -122,7 +122,8 @@ class LoadSaveTest(unittest.TestCase):
         self.assertEqual(list(data), ["policy", "declined", "keep"])
         self.assertEqual(list(data["declined"]), ["alpha/*", "zeta/repo"])
         self.assertEqual(data["keep"], ["a/b", "m/n"])
-        self.assertEqual(data["policy"], {"stale_after_days": 500, "ignore_profiles": ["x.json"]})
+        self.assertEqual(data["policy"], {"stale_after_days": 500, "ignore_profiles": ["x.json"],
+                                                "fork_owners": ["azerothcore"]})
         self.assertEqual(load_sources(str(self.path)), sources)
 
 
@@ -150,3 +151,32 @@ class ProfileKeysTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ForkOwnersTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.path = self.tmp / "module-sources.json"
+
+    def test_defaults_to_azerothcore_when_absent(self):
+        self.path.write_text(json.dumps({"policy": {}, "declined": {}, "keep": []}))
+        self.assertEqual(load_sources(str(self.path)).fork_owners, {"azerothcore"})
+
+    def test_missing_file_defaults_to_azerothcore(self):
+        self.assertEqual(load_sources(str(self.tmp / "nope.json")).fork_owners, {"azerothcore"})
+
+    def test_loads_and_lower_cases(self):
+        self.path.write_text(json.dumps({"policy": {"fork_owners": ["AzerothCore", "Rochet2"]}}))
+        self.assertEqual(load_sources(str(self.path)).fork_owners, {"azerothcore", "rochet2"})
+
+    def test_rejects_non_list(self):
+        self.path.write_text(json.dumps({"policy": {"fork_owners": "azerothcore"}}))
+        with self.assertRaises(SourcesError):
+            load_sources(str(self.path))
+
+    def test_save_round_trips_sorted(self):
+        sources = Sources(fork_owners={"rochet2", "azerothcore"})
+        save_sources(sources, str(self.path))
+        data = json.loads(self.path.read_text())
+        self.assertEqual(data["policy"]["fork_owners"], ["azerothcore", "rochet2"])
+        self.assertEqual(load_sources(str(self.path)).fork_owners, {"azerothcore", "rochet2"})

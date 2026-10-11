@@ -4,7 +4,8 @@
 Owns ``config/module-sources.json``::
 
     {
-      "policy":   {"stale_after_days": 1095, "ignore_profiles": ["all-modules.json"]},
+      "policy":   {"stale_after_days": 1095, "ignore_profiles": ["all-modules.json"],
+                   "fork_owners": ["azerothcore"]},
       "declined": {"owner/*": {"reason": "...", "date": "YYYY-MM-DD"},
                    "owner/repo": {"reason": "...", "date": "YYYY-MM-DD"}},
       "keep":     ["owner/repo"]
@@ -26,6 +27,7 @@ from typing import Dict, List, Optional, Sequence, Set
 DEFAULT_SOURCES_PATH = "config/module-sources.json"
 DEFAULT_STALE_AFTER_DAYS = 1095
 DEFAULT_IGNORE_PROFILES = ["all-modules.json"]
+DEFAULT_FORK_OWNERS = ("azerothcore",)
 
 
 class SourcesError(ValueError):
@@ -44,6 +46,8 @@ def normalize_full_name(full_name: str) -> str:
 class Sources:
     stale_after_days: int = DEFAULT_STALE_AFTER_DAYS
     ignore_profiles: List[str] = field(default_factory=lambda: list(DEFAULT_IGNORE_PROFILES))
+    # lower-cased owners whose forks keep the bare key (no owner suffix)
+    fork_owners: Set[str] = field(default_factory=lambda: set(DEFAULT_FORK_OWNERS))
     # normalised pattern ("owner/repo" or "owner/*") -> {"reason": str, "date": "YYYY-MM-DD"}
     declined: Dict[str, dict] = field(default_factory=dict)
     # normalised "owner/repo"
@@ -95,6 +99,9 @@ def load_sources(path: str) -> Sources:
     ignore = policy.get("ignore_profiles", list(DEFAULT_IGNORE_PROFILES))
     _require(isinstance(ignore, list) and all(isinstance(x, str) for x in ignore),
              f"{path}: policy.ignore_profiles must be a list of file names")
+    owners = policy.get("fork_owners", list(DEFAULT_FORK_OWNERS))
+    _require(isinstance(owners, list) and all(isinstance(x, str) and x for x in owners),
+             f"{path}: policy.fork_owners must be a list of owner names")
 
     raw_declined = data.get("declined", {})
     _require(isinstance(raw_declined, dict), f"{path}: 'declined' must be an object")
@@ -117,6 +124,7 @@ def load_sources(path: str) -> Sources:
     return Sources(
         stale_after_days=days,
         ignore_profiles=list(ignore),
+        fork_owners={o.lower() for o in owners},
         declined=declined,
         keep={normalize_full_name(x) for x in raw_keep},
     )
@@ -128,6 +136,7 @@ def save_sources(sources: Sources, path: str) -> None:
         "policy": {
             "stale_after_days": sources.stale_after_days,
             "ignore_profiles": list(sources.ignore_profiles),
+            "fork_owners": sorted(sources.fork_owners),
         },
         "declined": {key: sources.declined[key] for key in sorted(sources.declined)},
         "keep": sorted(sources.keep),
