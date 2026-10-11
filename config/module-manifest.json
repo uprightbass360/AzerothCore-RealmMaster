@@ -1866,7 +1866,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-01-27T02:24:14Z"
+      "last_modified": "2026-10-11T05:09:56Z"
     },
     {
       "key": "MODULE_MOD_MOUNTS_ON_ACCOUNT",
@@ -3141,7 +3141,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-05-30T00:43:52Z",
+      "last_modified": "2026-08-13T10:06:58Z",
       "block_reason": "Compilation error: no member named 'SendNotification' in 'WorldSession'"
     },
     {
@@ -3506,7 +3506,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:43:42Z"
+      "last_modified": "2026-10-11T11:14:19Z"
     },
     {
       "key": "MODULE_CODEBASE",
@@ -4418,7 +4418,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-11T03:32:09Z"
+      "last_modified": "2026-10-11T07:30:15Z"
     },
     {
       "key": "MODULE_DELVES",
@@ -5648,7 +5648,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-11T01:45:30Z"
+      "last_modified": "2026-10-11T05:20:35Z"
     },
     {
       "key": "MODULE_MOD_NODEJS",
@@ -8333,7 +8333,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-11T01:29:24Z"
+      "last_modified": "2026-10-11T05:24:33Z"
     },
     {
       "key": "MODULE_MYTHICPLUS_EXTENDED",
@@ -8558,7 +8558,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:46:56Z"
+      "last_modified": "2026-10-11T11:15:12Z"
     },
     {
       "key": "MODULE_MOD_GUILD_SUMMON",
@@ -8573,7 +8573,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:42:55Z"
+      "last_modified": "2026-10-11T11:14:06Z"
     },
     {
       "key": "MODULE_MOD_MULTI_IMP",
@@ -8588,7 +8588,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:44:14Z"
+      "last_modified": "2026-10-11T11:14:28Z"
     },
     {
       "key": "MODULE_MOD_SHARED_GOLD",
@@ -8603,7 +8603,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:46:40Z"
+      "last_modified": "2026-10-11T11:15:04Z"
     },
     {
       "key": "MODULE_MOD_GROUP_BUFFS",
@@ -8618,7 +8618,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:42:39Z"
+      "last_modified": "2026-10-11T11:14:01Z"
     },
     {
       "key": "MODULE_MOD_TELEMETRY_REDIS",
@@ -8633,7 +8633,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:47:14Z"
+      "last_modified": "2026-10-11T11:15:16Z"
     },
     {
       "key": "MODULE_MOD_BASELINE_BUFFS",
@@ -8648,7 +8648,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:41:04Z"
+      "last_modified": "2026-10-11T11:13:35Z"
     },
     {
       "key": "MODULE_MOD_PALADIN_FOREVER",
@@ -8663,7 +8663,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:44:30Z"
+      "last_modified": "2026-10-11T11:14:33Z"
     },
     {
       "key": "MODULE_MOD_CAMPING",
@@ -8678,7 +8678,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:41:51Z"
+      "last_modified": "2026-10-11T11:13:48Z"
     },
     {
       "key": "MODULE_MOD_PARTY_BRIDGE",
@@ -8693,7 +8693,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:44:46Z"
+      "last_modified": "2026-10-11T11:14:37Z"
     },
     {
       "key": "MODULE_MOD_BIOME_EFFECTS",
@@ -8708,7 +8708,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T12:54:09Z"
+      "last_modified": "2026-10-11T11:13:39Z"
     },
     {
       "key": "MODULE_MOD_SELF_FOUND",
@@ -8723,7 +8723,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:46:23Z"
+      "last_modified": "2026-10-11T11:14:59Z"
     },
     {
       "key": "MODULE_MOD_ACCOUNT_COLLECTIONS",
@@ -8738,7 +8738,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:40:47Z"
+      "last_modified": "2026-10-11T11:13:30Z"
     },
     {
       "key": "MODULE_MOD_LEGACY",
@@ -8753,7 +8753,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:43:58Z"
+      "last_modified": "2026-10-11T11:14:24Z"
     },
     {
       "key": "MODULE_MOD_PVP_RANKS",
@@ -8768,7 +8768,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:45:19Z"
+      "last_modified": "2026-10-11T11:14:46Z"
     },
     {
       "key": "MODULE_MOD_GUILD_TAX",
@@ -8783,7 +8783,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:43:11Z"
+      "last_modified": "2026-10-11T11:14:10Z"
     },
     {
       "key": "MODULE_MOD_BOT_ECONOMY",
@@ -8798,7 +8798,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:41:35Z"
+      "last_modified": "2026-10-11T11:13:43Z"
     },
     {
       "key": "MODULE_MOD_FOREVER_BANK",
@@ -8813,7 +8813,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:42:23Z"
+      "last_modified": "2026-10-11T11:13:57Z"
     },
     {
       "key": "MODULE_MOD_CUSTOM_ITEMIZATION",
@@ -8828,7 +8828,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:42:07Z"
+      "last_modified": "2026-10-11T11:13:52Z"
     },
     {
       "key": "MODULE_MOD_PORTED_ITEMS",
@@ -8843,7 +8843,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:45:02Z"
+      "last_modified": "2026-10-11T11:14:42Z"
     },
     {
       "key": "MODULE_MOD_SCROLL_SYSTEM",
@@ -8858,7 +8858,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:46:06Z"
+      "last_modified": "2026-10-11T11:14:55Z"
     },
     {
       "key": "MODULE_MOD_REBIRTH",
@@ -8873,7 +8873,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:45:50Z"
+      "last_modified": "2026-10-11T11:14:50Z"
     },
     {
       "key": "MODULE_MOD_RACE_CLASS_COMBOS",
@@ -8888,7 +8888,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-28T15:45:34Z"
+      "last_modified": "2026-10-11T11:12:09Z"
     },
     {
       "key": "MODULE_MOD_NPC_ENCHANTER_ENHANCED",
