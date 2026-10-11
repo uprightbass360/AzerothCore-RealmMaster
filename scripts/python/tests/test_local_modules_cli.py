@@ -296,21 +296,21 @@ class AddTest(CliCase):
         self.assertIn("WARNING", err)
 
     def test_unrelated_error_from_key_sharing_a_prefix_does_not_block(self):
-        # MODULE_ELUNA_TS shares the "MODULE_MOD_ALE" prefix with the module our add
+        # MODULE_MOD_ALE_TS shares the "MODULE_MOD_ALE" prefix with the module our add
         # requires; a substring match would misfire on its unrelated error.
         write_manifest(self.root / "config" / "module-manifest.json", [
             entry("MODULE_MOD_ALE", name="mod-ale", type="cpp"),
-            entry("MODULE_ELUNA_TS", name="mod-eluna-ts", type="cpp", requires=["MODULE_GHOST"]),
+            entry("MODULE_MOD_ALE_TS", name="mod-eluna-ts", type="cpp", requires=["MODULE_GHOST"]),
             entry("MODULE_AIO", name="mod-aio", type="lua"),
             entry("MODULE_MOD_PLAYERBOTS", name="mod-playerbots", type="cpp"),
             entry("MODULE_UP", name="mod-up", repo=self.upstream_repo, type="cpp", description="upstream"),
         ])
-        (self.root / ".env").write_text("MODULE_MOD_ALE=1\nMODULE_ELUNA_TS=1\n")
+        (self.root / ".env").write_text("MODULE_MOD_ALE=1\nMODULE_MOD_ALE_TS=1\n")
         repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
         rc, _, err = self.run_cli("add", str(repo), "--yes")
         self.assertEqual(rc, 0)
         self.assertIn("WARNING", err)
-        self.assertIn("MODULE_ELUNA_TS", err)
+        self.assertIn("MODULE_MOD_ALE_TS", err)
 
     def test_no_enable_excludes_requires_from_error_relevance(self):
         write_manifest(self.root / "config" / "module-manifest.json", [

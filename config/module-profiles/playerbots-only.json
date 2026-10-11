@@ -1,6 +1,6 @@
 {
   "modules": [
-    "MODULE_MOD_PLAYERBOTS_MALURAMICHAEL",
+    "MODULE_MOD_PLAYERBOTS",
     "MODULE_MOD_ALE"
   ],
   "label": "\ud83e\udde9 Playerbots Only",
