@@ -363,6 +363,7 @@ def prune_missing_repositories(
         elif verdict == "alive":
             # The topic search missed it, so this is the only date refresh it gets.
             update_last_modified(entry, repo or {})
+            update_fork(entry, repo or {})
             if verbose:
                 print(f"   ✓ {entry.get('key')} ({full_name}) — still exists, keeping")
         # Avoid secondary rate-limits on long candidate lists.
@@ -546,8 +547,20 @@ def update_last_modified(entry: dict, repo: dict) -> None:
         entry["last_modified"] = pushed_at
 
 
+def update_fork(entry: dict, repo: dict) -> None:
+    """Record whether the repo is a fork.
+
+    Activity data like ``last_modified``: refreshed on every sync from the search
+    payload, and from the per-repo check for entries the search missed. A payload
+    without the field (API error paths) leaves the entry untouched.
+    """
+    if "fork" in repo:
+        entry["fork"] = bool(repo["fork"])
+
+
 def update_entry_from_repo(entry: dict, repo: dict, repo_type: str, topic_expr: str, refresh: bool) -> None:
     update_last_modified(entry, repo)
+    update_fork(entry, repo)
     # Only overwrite descriptive fields when refresh is enabled or when they are missing.
     if refresh or not entry.get("name"):
         entry["name"] = repo.get("name") or entry.get("name")
