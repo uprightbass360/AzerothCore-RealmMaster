@@ -330,3 +330,35 @@ mod-playerbots/mod-playerbots. The fork is `MODULE_MOD_PLAYERBOTS_MALURAMICHAEL`
 | `MODULE_MOD_SOLOCRAFT` | `MODULE_MOD_SOLOCRAFT_VALSAN_AZERTY_BOI` | valsan-azerty-boi/mod-solocraft (duplicate, suffixed) |
 | `MODULE_MOD_TRANSMOG` | `MODULE_MOD_TRANSMOG_MALURAMICHAEL` | maluramichael/mod-transmog (duplicate, suffixed) |
 | `MODULE_MOD_WORGOBLIN` | `MODULE_MOD_WORGOBLIN_ARAXIAONLINE` | araxiaonline/mod-worgoblin (duplicate, suffixed) |
+
+### Fork keys and name collisions
+
+Every GitHub-hosted module now records `fork: true|false`, refreshed nightly. A
+fork from an owner other than `azerothcore` carries its owner in the key, and so
+does any repository whose bare key another entry already holds. 17 forks that
+still had bare keys were renamed; `./modules.sh migrate` handles them like the
+rest:
+
+| Old key | New key |
+|---|---|
+| `MODULE_BGQUEUECHECKER_PLAYERBOTS_HOTFIX` | `MODULE_BGQUEUECHECKER_PLAYERBOTS_HOTFIX_OUTTIETV` |
+| `MODULE_DUNGEONRESPAWN` | `MODULE_DUNGEONRESPAWN_MONAKAIBRAHIM_CMYK` |
+| `MODULE_MOD_ARAC_UPDATED` | `MODULE_MOD_ARAC_UPDATED_CHROMWOLF` |
+| `MODULE_MOD_AUCTIONATOR` | `MODULE_MOD_AUCTIONATOR_ARAXIAONLINE` |
+| `MODULE_MOD_CHALLENGE_MODES_HOTFIX` | `MODULE_MOD_CHALLENGE_MODES_HOTFIX_OUTTIETV` |
+| `MODULE_MOD_CUSTOMLOGIN` | `MODULE_MOD_CUSTOMLOGIN_BRIAN_ALDRIDGE` |
+| `MODULE_MOD_DEAD_MEANS_DEAD_HOTFIX` | `MODULE_MOD_DEAD_MEANS_DEAD_HOTFIX_OUTTIETV` |
+| `MODULE_MOD_DYNAMIC_LOOT_RATES_HOTFIX` | `MODULE_MOD_DYNAMIC_LOOT_RATES_HOTFIX_OUTTIETV` |
+| `MODULE_MOD_FLY_IN_OLD_WORLD` | `MODULE_MOD_FLY_IN_OLD_WORLD_TRACKMASTERSTEVE` |
+| `MODULE_MOD_NPC_ENCHANTER_PROGRESSION` | `MODULE_MOD_NPC_ENCHANTER_PROGRESSION_RECKA50` |
+| `MODULE_MOD_PVP_ZONES_HOTFIX` | `MODULE_MOD_PVP_ZONES_HOTFIX_OUTTIETV` |
+| `MODULE_MOD_RANDOM_SUFFIX` | `MODULE_MOD_RANDOM_SUFFIX_LOHVHT` |
+| `MODULE_MOD_REAGENT_BANK_ACCOUNT_DEPRECATED` | `MODULE_MOD_REAGENT_BANK_ACCOUNT_DEPRECATED_BRIAN_ALDRIDGE` |
+| `MODULE_MOD_STAT_BOOSTER` | `MODULE_MOD_STAT_BOOSTER_BENNYBROSEPH` |
+| `MODULE_MOD_TRANSMOG_PLUS_UI` | `MODULE_MOD_TRANSMOG_PLUS_UI_MALINMR` |
+| `MODULE_NETHERBOT` | `MODULE_NETHERBOT_DAY36512` |
+| `MODULE_TELEPORTERWITHCD` | `MODULE_TELEPORTERWITHCD_IMAGIONATIONEDITOR` |
+
+31 repositories that previously shared a name with a listed module, and were
+silently merged onto it, are now listed under their own owner-suffixed keys.
+The sync PR body lists each new collision under "Name collisions".

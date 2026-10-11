@@ -16,7 +16,7 @@ Only one build runs at a time; a second one waits for the first to finish.
 
 ### Related workflows
 
-- `update-module-manifest.yml`: daily manifest sync from GitHub topics; skips and removes repos declined in `config/module-sources.json`, merges its own PR after in-job checks (the PR body lists new modules by owner), then republishes the config UI and starts the nightly build.
+- `update-module-manifest.yml`: daily manifest sync from GitHub topics; skips and removes repos declined in `config/module-sources.json`; admits same-named repositories under owner-suffixed keys and lists them in the PR body under *Name collisions*; refreshes each entry's `fork` flag, merges its own PR after in-job checks (the PR body lists new modules by owner), then republishes the config UI and starts the nightly build.
 - `review-stale-modules.yml`: monthly; proposes modules with no upstream activity for `policy.stale_after_days` (default 1095) in `config/module-sources.json`, or archived upstream, by moving them to `declined` and opening a PR with the removals applied. Never merges on its own.
 - `config-ui-pages.yml`: publishes the config UI to GitHub Pages when the UI or `config/` changes on `main`, and after each manifest sync.
 - `ci.yml`: runs the Python and shell test suites and the config UI round-trip check on every pull request and push to `main`.
