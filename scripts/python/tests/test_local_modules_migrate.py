@@ -192,5 +192,61 @@ class MigrateCommandTest(unittest.TestCase):
         self.assertIn(str(directory), err.getvalue())
 
 
+    def test_unmarked_env_already_past_wave_one_is_refused(self):
+        (self.root / ".env").write_text("MODULE_MOD_ALE=0\nMODULE_MOD_PLAYERBOTS=1\n")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run()
+        self.assertEqual(code, 1)
+        self.assertIn("MODULES_KEY_SCHEMA=1", err.getvalue())
+        self.assertEqual((self.root / ".env").read_text(), "MODULE_MOD_ALE=0\nMODULE_MOD_PLAYERBOTS=1\n")
+        self.assertEqual(list(self.root.glob(".env.bak-*")), [])
+
+    def test_unmarked_profile_already_past_wave_one_is_refused(self):
+        profile = self.root / "p.json"
+        profile.write_text(json.dumps({"modules": ["MODULE_MOD_ALE"]}))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run(str(profile))
+        self.assertEqual(code, 1)
+        self.assertIn('"key_schema": 1', err.getvalue())
+        self.assertEqual(json.loads(profile.read_text()), {"modules": ["MODULE_MOD_ALE"]})
+
+    def test_unmarked_local_manifest_already_past_wave_one_is_refused(self):
+        local = self.root / "config" / "module-manifest.local.json"
+        local.write_text(json.dumps({"modules": [{"key": "MODULE_MOD_ALE", "ref": "x"}]}))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run()
+        self.assertEqual(code, 1)
+        self.assertIn('"key_schema": 1', err.getvalue())
+        self.assertIn("module-manifest.local.json", err.getvalue())
+
+    def test_env_at_schema_one_holding_a_wave_two_key_is_refused_with_two(self):
+        (self.root / ".env").write_text("MODULES_KEY_SCHEMA=1\nMODULE_MOD_STAT_BOOSTER_BENNYBROSEPH=1\n")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run()
+        self.assertEqual(code, 1)
+        self.assertIn("MODULES_KEY_SCHEMA=2", err.getvalue())
+
+    def test_a_refusal_writes_no_file_at_all(self):
+        (self.root / ".env").write_text("MODULE_PLAYERBOTS=1\n")
+        profile = self.root / "p.json"
+        profile.write_text(json.dumps({"modules": ["MODULE_MOD_ALE"]}))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run(str(profile))
+        self.assertEqual(code, 1)
+        self.assertEqual((self.root / ".env").read_text(), "MODULE_PLAYERBOTS=1\n")
+        self.assertEqual(list(self.root.glob(".env.bak-*")), [])
+
+    def test_marked_env_with_introduced_keys_migrates_normally(self):
+        (self.root / ".env").write_text("MODULES_KEY_SCHEMA=1\nMODULE_MOD_ALE=0\nMODULE_MOD_STAT_BOOSTER=1\n")
+        code, _ = self._run()
+        self.assertEqual(code, 0)
+        self.assertEqual((self.root / ".env").read_text(), "MODULES_KEY_SCHEMA=2\nMODULE_MOD_ALE=0\nMODULE_MOD_STAT_BOOSTER_BENNYBROSEPH=1\n")
+
+
 if __name__ == "__main__":
     unittest.main()

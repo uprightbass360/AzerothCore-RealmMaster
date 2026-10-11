@@ -99,6 +99,7 @@ document.getElementById("file-input").addEventListener("change", e => routeFiles
 ConfigUI.profile = {
   selection: new Set(),
   pendingUnknown: [],
+  pendingStale: "",
   // Export metadata: populated from an imported/loaded profile, defaults otherwise.
   meta: { name: "", label: "", description: "", order: 10000 },
 
@@ -109,6 +110,7 @@ ConfigUI.profile = {
       label: d.label || "",
       description: d.description || "",
       order: d.order ?? 10000,
+      key_schema: d.key_schema ?? 0,
     };
   },
 
@@ -130,6 +132,11 @@ ConfigUI.profile = {
     const valid = new Set(ConfigUI.data.manifest.map(m => m.key));
     this.selection = new Set(profile.modules.filter(k => valid.has(k)));
     this.pendingUnknown = profile.modules.filter(k => !valid.has(k));
+    const have = profile.key_schema ?? 0;
+    const want = ConfigUI.data.keySchema ?? 0;
+    this.pendingStale = have < want
+      ? `This profile predates module key rename wave ${want} (it records ${have}); its keys may be stale. Run ./modules.sh migrate <file> and import the result.`
+      : "";
     this.meta = {
       name: sourceName ? sourceName.replace(/\.json$/, "") : this.meta.name,
       label: profile.label,
@@ -168,6 +175,11 @@ ConfigUI.profile = {
     document.getElementById("selected-count").textContent = `${this.selection.size} selected`;
     const box = document.getElementById("profile-warnings");
     box.textContent = "";
+    if (this.pendingStale) {
+      const div = document.createElement("div");
+      div.append(`⚠ ${this.pendingStale}`);
+      box.append(div);
+    }
     for (const key of this.pendingUnknown) {
       const div = document.createElement("div");
       div.append(`Unknown module key (not in manifest, excluded from export): ${key} `);
