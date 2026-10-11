@@ -272,6 +272,20 @@ class ModuleCollectionState:
         return any(module.needs_build and module.enabled_effective for module in self.modules)
 
 
+def _load_key_renames(path: Path) -> Dict[str, str]:
+    """Old -> new key map used only to word the hard-stop hint.
+
+    Returns {} when the file is absent or unreadable; the stop fires regardless.
+    """
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {k: v for k, v in data.items() if isinstance(k, str) and isinstance(v, str)}
+
+
 def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
     env_map = load_env_file(env_path)
     upstream_entries = load_manifest(manifest_path)
@@ -370,16 +384,26 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
         if module.warnings:
             warnings.extend(module.warnings)
 
-    # Warn if .env enables or disables modules the manifest doesn't know. Only
-    # 0/1 flags are module switches; other MODULE_* values (e.g. MODULE_PROFILE
-    # in .env.prebuilt) are settings.
-    extra_env_modules = [
-        key for key, value in env_map.items()
-        if key.startswith("MODULE_") and key not in module_map
-        and str(value).strip() in ("0", "1")
-    ]
-    for unknown_key in extra_env_modules:
-        warnings.append(f".env defines {unknown_key} but it is missing from the manifest")
+    # .env keys shaped like module switches (value 0/1) that match no manifest
+    # entry. Enabling one is an error: the module the user asked for would not
+    # be built. Other MODULE_* values (e.g. MODULE_PROFILE) are settings.
+    renames = _load_key_renames(manifest_path.parent / "key-renames.json")
+    for env_key, value in env_map.items():
+        if not env_key.startswith("MODULE_") or env_key in module_map:
+            continue
+        flag = str(value).strip()
+        if flag == "1":
+            if env_key in renames:
+                errors.append(
+                    f".env enables {env_key}, which is now {renames[env_key]}; "
+                    f"run ./modules.sh migrate to update .env"
+                )
+            else:
+                errors.append(
+                    f".env enables {env_key} but it is missing from the manifest (removed or mistyped)"
+                )
+        elif flag == "0":
+            warnings.append(f".env defines {env_key} but it is missing from the manifest")
 
     # Skip warnings for missing modules - they default to disabled (0) as intended
 
