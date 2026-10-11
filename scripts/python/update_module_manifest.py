@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 from urllib import error, parse, request
 
-from module_sources import DEFAULT_SOURCES_PATH, Sources, SourcesError, load_sources  # noqa: F401
+from module_sources import DEFAULT_FORK_OWNERS, DEFAULT_SOURCES_PATH, Sources, SourcesError, load_sources  # noqa: F401
 
 API_ROOT = "https://api.github.com"
 DEFAULT_TOPICS = [
@@ -169,8 +169,13 @@ class MergeResult:
     added: int = 0
     updated: int = 0
     skipped_declined: int = 0
+    # Newcomers whose suffixed key was itself taken by a different repo; never merged.
+    skipped_collision: int = 0
     # New entries created this run, in discovery order; feeds the PR digest.
     added_entries: List[dict] = field(default_factory=list)
+    # (new entry, entry holding its bare key) for every admission that needed a suffix
+    # because the bare key was taken; feeds the digest's collision section.
+    collisions: List[Tuple[dict, dict]] = field(default_factory=list)
 
 
 class GitHubClient:
@@ -588,47 +593,77 @@ def merge_repositories(
     """Merge discovered repositories into the manifest.
 
     Repositories matching the ``declined`` section of config/module-sources.json
-    are skipped entirely: they neither create nor refresh an entry.
+    are skipped first: they neither create nor refresh an entry. Existing entries
+    are matched by repo URL, then by case-insensitive GitHub ``owner/name``.
+    Unmatched repos are admitted under ``derive_key``; there is no lookup by key.
     """
     modules = manifest.setdefault("modules", [])
+    fork_owners = sources.fork_owners if sources is not None else set(DEFAULT_FORK_OWNERS)
     by_key = {module.get("key"): module for module in modules if module.get("key")}
     by_repo = {
         normalize_repo_url(str(module.get("repo", ""))): module
         for module in modules
         if module.get("repo")
     }
+    # Second identity index: the same GitHub repo under a different URL spelling
+    # (scheme, case) is still the same entry. normalize_repo_url only strips .git.
+    by_full: Dict[str, dict] = {}
+    taken_by: Dict[str, str] = {}
+    for module in modules:
+        full = github_full_name(str(module.get("repo", "")))
+        if full:
+            by_full.setdefault(full.lower(), module)
+            if module.get("key"):
+                taken_by[module["key"]] = full.lower()
     result = MergeResult()
 
     for record in repos:
         repo = record.data
         repo_url = normalize_repo_url(repo.get("clone_url") or repo.get("html_url") or "")
-        if sources is not None and sources.is_declined(github_full_name(repo_url)):
+        full_name = github_full_name(repo_url)
+        if sources is not None and sources.is_declined(full_name):
             result.skipped_declined += 1
             continue
         existing = by_repo.get(repo_url)
-        key = repo_name_to_key(repo.get("name", ""))
-        if not existing:
-            existing = by_key.get(key)
-        if not existing:
-            existing = {
-                "key": key,
-                "name": repo.get("name", key),
-                "repo": repo.get("clone_url") or repo.get("html_url", ""),
-                "description": repo.get("description") or "",
-                "type": record.module_type,
-                "category": CATEGORY_BY_TYPE.get(record.module_type, "uncategorized"),
-                "notes": "",
-            }
-            ensure_defaults(existing)
-            modules.append(existing)
-            by_key[key] = existing
-            if repo_url:
-                by_repo[repo_url] = existing
-            result.added += 1
-            result.added_entries.append(existing)
-        else:
+        if existing is None and full_name:
+            existing = by_full.get(full_name.lower())
+        if existing is not None:
             result.updated += 1
-        update_entry_from_repo(existing, repo, record.module_type, record.topic_expr, refresh_existing)
+            update_entry_from_repo(existing, repo, record.module_type, record.topic_expr, refresh_existing)
+            continue
+
+        # Not in the manifest under any URL spelling: admit under the key rule. There
+        # is deliberately no lookup by key here; a same-named repo gets its own entry.
+        owner, name = (full_name.split("/", 1) if full_name else ("", str(repo.get("name", ""))))
+        key = derive_key(name, owner, fork=bool(repo.get("fork")), fork_owners=fork_owners, taken_by=taken_by)
+        if key in by_key:
+            # Only reachable when the suffixed key is itself held by a different repo.
+            result.skipped_collision += 1
+            print(f"⚠️  {full_name or repo_url}: key {key} already belongs to {taken_by.get(key)}; not admitted")
+            continue
+        new_entry = {
+            "key": key,
+            "name": repo.get("name", key),
+            "repo": repo.get("clone_url") or repo.get("html_url", ""),
+            "description": repo.get("description") or "",
+            "type": record.module_type,
+            "category": CATEGORY_BY_TYPE.get(record.module_type, "uncategorized"),
+            "notes": "",
+        }
+        ensure_defaults(new_entry)
+        modules.append(new_entry)
+        by_key[key] = new_entry
+        if repo_url:
+            by_repo[repo_url] = new_entry
+        if full_name:
+            by_full[full_name.lower()] = new_entry
+            taken_by[key] = full_name.lower()
+        result.added += 1
+        result.added_entries.append(new_entry)
+        base = repo_name_to_key(name)
+        if key != base and base in by_key:
+            result.collisions.append((new_entry, by_key[base]))
+        update_entry_from_repo(new_entry, repo, record.module_type, record.topic_expr, refresh_existing)
 
     return result
 
