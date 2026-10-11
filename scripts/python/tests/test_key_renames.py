@@ -88,6 +88,16 @@ class FileHelpersTest(unittest.TestCase):
         self.assertEqual(second, [])
         self.assertFalse((self.tmp / ".env.bak-20261011-093100").exists())
 
+    def test_crlf_env_file_keeps_crlf_in_file_and_backup(self):
+        env = self.tmp / ".env"
+        src = b"MODULE_PLAYERBOTS=1\r\nOTHER=2\r\n"
+        env.write_bytes(src)
+        rewrite_env_file(env, {"MODULE_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS"}, now=datetime(2026, 1, 2, 3, 4, 5))
+        self.assertEqual(env.read_bytes(), b"MODULE_MOD_PLAYERBOTS=1\r\nOTHER=2\r\n")
+        backups = [b for b in self.tmp.iterdir() if b.name != ".env"]
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].read_bytes(), src)
+
     def test_env_file_without_backup(self):
         env = self.tmp / ".env.template"
         env.write_text("MODULE_ELUNA=1\n")

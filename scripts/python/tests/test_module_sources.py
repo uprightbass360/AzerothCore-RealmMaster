@@ -149,10 +149,6 @@ class ProfileKeysTest(unittest.TestCase):
         self.assertEqual(profile_keys(str(self.dir / "nope"), []), set())
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class ForkOwnersTest(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -180,3 +176,7 @@ class ForkOwnersTest(unittest.TestCase):
         data = json.loads(self.path.read_text())
         self.assertEqual(data["policy"]["fork_owners"], ["azerothcore", "rochet2"])
         self.assertEqual(load_sources(str(self.path)).fork_owners, {"azerothcore", "rochet2"})
+
+
+if __name__ == "__main__":
+    unittest.main()

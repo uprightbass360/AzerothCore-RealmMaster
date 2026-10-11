@@ -31,6 +31,16 @@ class HardStopTest(unittest.TestCase):
         self.assertEqual(state.errors, [])
         self.assertTrue(any("MODULE_PLAYERBOTS" in w for w in state.warnings))
 
+    def test_truthy_words_are_errors_too(self):
+        state = self._state("MODULE_PLAYERBOTS=true\n")
+        self.assertEqual(len(state.errors), 1)
+        self.assertIn("MODULE_PLAYERBOTS", state.errors[0])
+
+    def test_falsy_words_are_warnings_only(self):
+        state = self._state("MODULE_PLAYERBOTS=false\n")
+        self.assertEqual(state.errors, [])
+        self.assertTrue(any("MODULE_PLAYERBOTS" in w for w in state.warnings))
+
     def test_non_flag_module_setting_is_ignored(self):
         state = self._state("MODULE_PROFILE=realmmaster\n")
         self.assertEqual(state.errors, [])
