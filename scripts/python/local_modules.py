@@ -374,7 +374,7 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
 
         hooks = detection.post_install_hooks if module_type == detection.module_type else []
         if module_type == "lua" and not hooks:
-            hooks, requires = ["copy-standard-lua"], ["MODULE_ELUNA"]
+            hooks, requires = ["copy-standard-lua"], ["MODULE_MOD_ALE"]
         else:
             requires = detection.requires if module_type == detection.module_type else []
 

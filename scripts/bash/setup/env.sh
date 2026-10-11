@@ -56,7 +56,7 @@ setup_write_env() {
     printf -v "$hc_key" '%s' "${!hc_key:-${!default_var}}"
   done
   unset hc_key default_var
-  MODULE_ELUNA=${MODULE_ELUNA:-$DEFAULT_MODULE_ELUNA}
+  MODULE_MOD_ALE=${MODULE_MOD_ALE:-$DEFAULT_MODULE_ELUNA}
   BACKUP_PATH=${BACKUP_PATH:-$DEFAULT_BACKUP_PATH}
 
   local project_image_prefix

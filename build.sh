@@ -124,7 +124,7 @@ generate_module_state(){
     warn "issues. These modules will be SKIPPED during the build process."
     warn ""
     warn "To permanently fix this, disable these modules in your .env file"
-    warn "by setting them to 0 (e.g., MODULE_POCKET_PORTAL=0)"
+    warn "by setting them to 0 (e.g., MODULE_MOD_POCKET_PORTAL=0)"
     warn ""
     warn "If you believe this is an error, please file an issue on GitHub:"
     warn "https://github.com/uprightbass360/AzerothCore-RealmMaster/issues"
@@ -196,14 +196,14 @@ core_source_update_reason(){
   fi
 }
 
-# Info message shown when playerbots is in use but MODULE_PLAYERBOTS is
+# Info message shown when playerbots is in use but MODULE_MOD_PLAYERBOTS is
 # pinned, so the automatic core update above is skipped.
 core_source_pin_notice(){
   local ref="$1"
   echo "mod-playerbots is pinned to ${ref}; not updating the core source automatically (run ./build.sh --force-update to update it anyway)"
 }
 
-# MODULE_PLAYERBOTS's effective ref (repo/ref overrides live in
+# MODULE_MOD_PLAYERBOTS's effective ref (repo/ref overrides live in
 # config/module-manifest.local.json; jq may be absent, so parse with python).
 # Prints the empty string and returns 0 when unpinned; returns 1 (nothing
 # printed) when the manifest could not be read or parsed, so callers can tell
@@ -230,7 +230,7 @@ if not isinstance(data, dict):
 
 ref = ""
 for module in data.get("modules", []):
-    if isinstance(module, dict) and module.get("key") == "MODULE_PLAYERBOTS":
+    if isinstance(module, dict) and module.get("key") == "MODULE_MOD_PLAYERBOTS":
         ref = module.get("ref") or ""
         break
 print(ref)

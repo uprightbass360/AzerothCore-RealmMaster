@@ -122,11 +122,11 @@ A Docker Hub access token (recommended) or your Docker Hub password.
 
 The workflow uses the **RealmMaster** module profile by default, which includes 32 carefully selected modules:
 
-- MODULE_PLAYERBOTS - AI-controlled player characters
-- MODULE_TRANSMOG - Transmogrification system
-- MODULE_SOLO_LFG - Solo dungeon finder
-- MODULE_NPC_BUFFER - Buff NPC
-- MODULE_ELUNA - Lua scripting engine
+- MODULE_MOD_PLAYERBOTS - AI-controlled player characters
+- MODULE_MOD_TRANSMOG - Transmogrification system
+- MODULE_MOD_SOLO_LFG - Solo dungeon finder
+- MODULE_MOD_NPC_BUFFER - Buff NPC
+- MODULE_MOD_ALE - Lua scripting engine
 - MODULE_AIO - All-in-one interface
 - ...and 26 more modules
 
@@ -307,9 +307,9 @@ To build a custom profile:
    ```json
    {
      "modules": [
-       "MODULE_PLAYERBOTS",
-       "MODULE_TRANSMOG",
-       "MODULE_SOLO_LFG"
+       "MODULE_MOD_PLAYERBOTS",
+       "MODULE_MOD_TRANSMOG",
+       "MODULE_MOD_SOLO_LFG"
      ],
      "label": "My Custom Profile",
      "description": "Custom module selection",

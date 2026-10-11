@@ -4,7 +4,7 @@
 # regularly needs newer core symbols than an older compiled core provides. This
 # tests build.sh's decision of whether ensure_source_repo should re-run
 # setup-source.sh for an *existing* checkout, plus the two small helpers around
-# it (reading MODULE_PLAYERBOTS's effective pinned ref, and the pin notice
+# it (reading MODULE_MOD_PLAYERBOTS's effective pinned ref, and the pin notice
 # text) - all pure functions with no side effects.
 #
 # Extracts the functions straight out of build.sh with sed so this never
@@ -76,12 +76,12 @@ check "pin notice mentions the ref and --force-update" "$r" "yes"
 echo "=== playerbots_pinned_ref ==="
 
 # make_manifest_dir: a temp config dir with an upstream manifest, optionally
-# overlaid by a local manifest pinning MODULE_PLAYERBOTS.
+# overlaid by a local manifest pinning MODULE_MOD_PLAYERBOTS.
 CONFIG_DIR="$WORK/config"
 mkdir -p "$CONFIG_DIR"
 cat > "$CONFIG_DIR/module-manifest.json" <<'EOF'
 {"modules": [
-  {"key": "MODULE_PLAYERBOTS", "name": "mod-playerbots", "repo": "https://example.com/mod-playerbots.git", "type": "cpp"}
+  {"key": "MODULE_MOD_PLAYERBOTS", "name": "mod-playerbots", "repo": "https://example.com/mod-playerbots.git", "type": "cpp"}
 ]}
 EOF
 
@@ -90,12 +90,12 @@ check "upstream manifest without ref -> empty" "$ref" ""
 
 cat > "$CONFIG_DIR/module-manifest.local.json" <<'EOF'
 {"modules": [
-  {"key": "MODULE_PLAYERBOTS", "ref": "Playerbot-pinned-sha"}
+  {"key": "MODULE_MOD_PLAYERBOTS", "ref": "Playerbot-pinned-sha"}
 ]}
 EOF
 
 ref="$(bash -c 'source "$1"; playerbots_pinned_ref "$2" "$3"' _ "$FUNC_FILE" "$CONFIG_DIR/module-manifest.json" "$REPO_ROOT/scripts/python/modules.py")"
-check "local manifest pinning MODULE_PLAYERBOTS -> that ref" "$ref" "Playerbot-pinned-sha"
+check "local manifest pinning MODULE_MOD_PLAYERBOTS -> that ref" "$ref" "Playerbot-pinned-sha"
 
 echo "=== update_core_source_if_needed ==="
 
@@ -131,18 +131,18 @@ EOF
 chmod +x "$UROOT/scripts/bash/setup-source.sh"
 cat > "$UROOT/config/module-manifest.json" <<'EOF'
 {"modules": [
-  {"key": "MODULE_PLAYERBOTS", "name": "mod-playerbots", "repo": "https://example.com/mod-playerbots.git", "type": "cpp"}
+  {"key": "MODULE_MOD_PLAYERBOTS", "name": "mod-playerbots", "repo": "https://example.com/mod-playerbots.git", "type": "cpp"}
 ]}
 EOF
 
-# A second ROOT_DIR whose MODULE_PLAYERBOTS is pinned via a local override.
+# A second ROOT_DIR whose MODULE_MOD_PLAYERBOTS is pinned via a local override.
 UROOT_PINNED="$WORK/uroot-pinned"
 mkdir -p "$UROOT_PINNED/scripts/bash" "$UROOT_PINNED/config"
 cp "$UROOT/scripts/bash/setup-source.sh" "$UROOT_PINNED/scripts/bash/setup-source.sh"
 cp "$UROOT/config/module-manifest.json" "$UROOT_PINNED/config/module-manifest.json"
 cat > "$UROOT_PINNED/config/module-manifest.local.json" <<'EOF'
 {"modules": [
-  {"key": "MODULE_PLAYERBOTS", "ref": "Playerbot-pinned-sha"}
+  {"key": "MODULE_MOD_PLAYERBOTS", "ref": "Playerbot-pinned-sha"}
 ]}
 EOF
 

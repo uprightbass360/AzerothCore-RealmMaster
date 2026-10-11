@@ -111,7 +111,7 @@ if [ -f .env ]; then
   info "Enabled modules: $enabled_count"
 
   # Check for playerbots
-  if grep -q "^MODULE_PLAYERBOTS=1" .env; then
+  if grep -q "^MODULE_MOD_PLAYERBOTS=1" .env; then
     info "Playerbots module enabled"
   fi
 else

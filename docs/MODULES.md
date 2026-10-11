@@ -248,9 +248,9 @@ Pre-configured module combinations are available in `config/module-profiles/`:
 You can also enable modules by setting environment variables in your `.env` file:
 
 ```bash
-MODULE_SOLO_LFG=1
-MODULE_TRANSMOG=1
-MODULE_PLAYERBOTS=1
+MODULE_MOD_SOLO_LFG=1
+MODULE_MOD_TRANSMOG=1
+MODULE_MOD_PLAYERBOTS=1
 # ... additional modules
 ```
 

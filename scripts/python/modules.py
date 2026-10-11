@@ -265,7 +265,7 @@ class ModuleCollectionState:
 
     def requires_playerbot_source(self) -> bool:
         module_map = {m.key: m for m in self.modules}
-        playerbots_enabled = module_map.get("MODULE_PLAYERBOTS")
+        playerbots_enabled = module_map.get("MODULE_MOD_PLAYERBOTS")
         return bool(playerbots_enabled and playerbots_enabled.enabled_effective)
 
     def requires_custom_build(self) -> bool:

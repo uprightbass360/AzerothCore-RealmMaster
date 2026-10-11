@@ -32,17 +32,17 @@ mkdir -p "$ROOT/config" "$ROOT/modules/mod-mine/.git" "$ROOT/modules/mod-up" \
   "$ROOT/lua/mod-mine" "$ROOT/state"
 cat > "$ROOT/config/module-manifest.json" <<'EOF'
 {"modules": [
-  {"key": "MODULE_ELUNA", "name": "mod-ale", "repo": "https://example.com/mod-ale.git", "type": "cpp"},
+  {"key": "MODULE_MOD_ALE", "name": "mod-ale", "repo": "https://example.com/mod-ale.git", "type": "cpp"},
   {"key": "MODULE_UP", "name": "mod-up", "repo": "https://example.com/mod-up.git", "type": "cpp"}
 ]}
 EOF
 cat > "$ROOT/config/module-manifest.local.json" <<'EOF'
 {"modules": [
   {"key": "MODULE_MINE", "name": "mod-mine", "repo": "https://example.com/mod-mine.git", "type": "lua",
-   "post_install_hooks": ["copy-standard-lua"], "requires": ["MODULE_ELUNA"]}
+   "post_install_hooks": ["copy-standard-lua"], "requires": ["MODULE_MOD_ALE"]}
 ]}
 EOF
-printf 'MODULE_ELUNA=1\nMODULE_MINE=1\nMODULE_UP=1\n' > "$ROOT/.env"
+printf 'MODULE_MOD_ALE=1\nMODULE_MINE=1\nMODULE_UP=1\n' > "$ROOT/.env"
 echo 'print(1)' > "$ROOT/lua/mod-mine/mine.lua"
 echo 'print(2)' > "$ROOT/lua/hand-placed.lua"
 

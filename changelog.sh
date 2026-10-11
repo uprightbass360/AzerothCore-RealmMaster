@@ -109,7 +109,7 @@ get_last_build_time() {
 
   # Use actual image names from environment
   # Detect variant to check appropriate images
-  if [[ "${STACK_IMAGE_MODE:-standard}" == "playerbots" ]] || [[ "${MODULE_PLAYERBOTS:-0}" == "1" ]] || [[ "${PLAYERBOT_ENABLED:-0}" == "1" ]] || [[ "${STACK_SOURCE_VARIANT:-}" == "playerbots" ]]; then
+  if [[ "${STACK_IMAGE_MODE:-standard}" == "playerbots" ]] || [[ "${MODULE_MOD_PLAYERBOTS:-0}" == "1" ]] || [[ "${PLAYERBOT_ENABLED:-0}" == "1" ]] || [[ "${STACK_SOURCE_VARIANT:-}" == "playerbots" ]]; then
     if [[ -z "${AC_WORLDSERVER_IMAGE_PLAYERBOTS:-}" ]] || [[ -z "${AC_AUTHSERVER_IMAGE_PLAYERBOTS:-}" ]]; then
       warn "Playerbots mode detected but AC_WORLDSERVER_IMAGE_PLAYERBOTS or AC_AUTHSERVER_IMAGE_PLAYERBOTS not set"
       return 1
@@ -190,7 +190,7 @@ detect_source_config() {
   local variant="core"
 
   # Check environment variables for playerbots mode
-  if [[ "${MODULE_PLAYERBOTS:-0}" == "1" ]] || [[ "${PLAYERBOT_ENABLED:-0}" == "1" ]] || [[ "${STACK_SOURCE_VARIANT:-}" == "playerbots" ]]; then
+  if [[ "${MODULE_MOD_PLAYERBOTS:-0}" == "1" ]] || [[ "${PLAYERBOT_ENABLED:-0}" == "1" ]] || [[ "${STACK_SOURCE_VARIANT:-}" == "playerbots" ]]; then
     variant="playerbots"
   fi
 

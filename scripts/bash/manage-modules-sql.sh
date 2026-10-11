@@ -229,7 +229,7 @@ module_sql_run_module(){
 
   echo "Processing SQL scripts for $module_name..."
 
-  if [ "$module_key" = "MODULE_PLAYERBOTS" ]; then
+  if [ "$module_key" = "MODULE_MOD_PLAYERBOTS" ]; then
     echo "  Ensuring database ${playerbots_db} exists..."
     if mysql_exec -e "CREATE DATABASE IF NOT EXISTS \`${playerbots_db}\` CHARACTER SET ${character_set} COLLATE ${collation};" >/dev/null 2>&1; then
       echo "    ✅ Playerbots database ready"
@@ -265,7 +265,7 @@ module_sql_run_module(){
     run_sorted_sql "$module_dir_path/data/sql/db-characters" "${characters_db}" "characters SQL"
 
     # Execute playerbots database scripts
-    if [ "$module_key" = "MODULE_PLAYERBOTS" ] && [ -d "$module_dir_path/data/sql/playerbots" ]; then
+    if [ "$module_key" = "MODULE_MOD_PLAYERBOTS" ] && [ -d "$module_dir_path/data/sql/playerbots" ]; then
       local pb_root="$module_dir_path/data/sql/playerbots"
       run_sorted_sql "$pb_root/base" "$playerbots_db" "playerbots SQL"
       run_sorted_sql "$pb_root/custom" "$playerbots_db" "playerbots SQL"

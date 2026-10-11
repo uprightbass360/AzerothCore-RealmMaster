@@ -195,7 +195,7 @@ jobs:
             echo ""
             echo "- **Built**: ${BUILD_DATE}"
             echo "- **AzerothCore Commit**: ${ACORE_COMMIT}"
-            echo "- **Source Variant**: playerbots (for MODULE_PLAYERBOTS support)"
+            echo "- **Source Variant**: playerbots (for MODULE_MOD_PLAYERBOTS support)"
             echo "- **Profile**: ${PROFILE}"
             echo "- **Module Count**: ${MODULE_COUNT}"
             echo ""
