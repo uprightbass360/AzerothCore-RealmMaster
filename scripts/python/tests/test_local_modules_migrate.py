@@ -72,6 +72,26 @@ class MigrateCommandTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("key-renames.json", err.getvalue())
 
+    def test_missing_profile_fails_before_rewriting(self):
+        (self.root / ".env").write_text("MODULE_PLAYERBOTS=1\n")
+        missing = str(self.root / "typo.json")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run(missing)
+        self.assertEqual(code, 1)
+        self.assertIn(missing, err.getvalue())
+        self.assertEqual((self.root / ".env").read_text(), "MODULE_PLAYERBOTS=1\n")
+        self.assertEqual(list(self.root.glob(".env.bak-*")), [])
+
+    def test_malformed_profile_reports_an_error(self):
+        profile = self.root / "broken.json"
+        profile.write_text("{")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run(str(profile))
+        self.assertEqual(code, 1)
+        self.assertIn(str(profile), err.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
