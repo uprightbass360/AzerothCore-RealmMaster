@@ -384,7 +384,7 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
         if module.warnings:
             warnings.extend(module.warnings)
 
-    # .env keys shaped like module switches (value 0/1) that match no manifest
+    # .env keys shaped like module switches (any boolean value) that match no manifest
     # entry. Enabling one is an error: the module the user asked for would not
     # be built. Other MODULE_* values (e.g. MODULE_PROFILE) are settings.
     renames = _load_key_renames(manifest_path.parent / "key-renames.json")
@@ -392,7 +392,7 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
         if not env_key.startswith("MODULE_") or env_key in module_map:
             continue
         flag = str(value).strip()
-        if flag == "1":
+        if parse_bool(flag):
             if env_key in renames:
                 errors.append(
                     f".env enables {env_key}, which is now {renames[env_key]}; "
@@ -402,7 +402,7 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
                 errors.append(
                     f".env enables {env_key} but it is missing from the manifest (removed or mistyped)"
                 )
-        elif flag == "0":
+        elif flag.lower() in {"0", "false", "no", "off"}:
             warnings.append(f".env defines {env_key} but it is missing from the manifest")
 
     # Skip warnings for missing modules - they default to disabled (0) as intended
@@ -630,14 +630,9 @@ def handle_generate(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
     if state.errors:
-        error_block = "\n".join(f"- {error}" for error in state.errors)
+        header = "❌ Module manifest errors detected:"
         print(
-            textwrap.dedent(
-                f"""\
-                ❌ Module manifest errors detected:
-                {error_block}
-                """
-            ),
+            header + "\n" + "\n".join(f"- {error}" for error in state.errors) + "\n",
             file=sys.stderr,
         )
         return 1

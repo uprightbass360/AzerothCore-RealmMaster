@@ -20,14 +20,17 @@ class ManifestKeyInvariantsTest(unittest.TestCase):
 
     def test_every_github_key_is_bare_or_owner_suffixed_for_its_own_repo(self):
         offenders = []
+        checked = 0
         for entry in self.modules:
             full = github_full_name(entry.get("repo", ""))
             if not full:
                 continue
+            checked += 1
             owner, name = full.split("/", 1)
             base = repo_name_to_key(name)
             if entry["key"] not in {base, f"{base}_{sanitize_owner(owner)}"}:
                 offenders.append(f"{entry['key']} ({full}) expected {base} or {base}_{sanitize_owner(owner)}")
+        self.assertGreater(checked, 0)
         self.assertEqual(offenders, [], "\n".join(offenders))
 
     def test_no_two_entries_share_a_repository(self):

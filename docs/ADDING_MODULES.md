@@ -25,9 +25,7 @@ config UI is republished after each sync, and the nightly images are built right
 after it, so a new module is in the next morning's images.
 
 - **Key:** the repository name, upper-cased, with non-alphanumerics turned into `_`
-  and a `MODULE_` prefix. `lottery-lua` becomes `MODULE_LOTTERY_LUA`. Older curated
-  entries may use shorter keys (`MODULE_MOD_TRANSMOG` for `mod-transmog`), so look up the
-  exact key in the config UI or the manifest.
+  and a `MODULE_` prefix. `lottery-lua` becomes `MODULE_LOTTERY_LUA`.
 - **Status:** new entries start `active`. Entries that break the build are later set
   to `blocked` with a `block_reason`, and blocked modules can't be enabled.
 - **Removal:** an entry is pruned only if GitHub returns 404/451 for its repository.

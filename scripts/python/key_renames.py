@@ -87,13 +87,14 @@ def backup_path(path: Path, now: datetime) -> Path:
 def _rewrite_file(path, renames, transform: Callable[[str], Tuple[str, List[Change]]],
                   backup: bool, now: Optional[datetime]) -> List[Change]:
     p = Path(path)
-    original = p.read_text(encoding="utf-8")
+    raw = p.read_bytes()
+    original = raw.decode("utf-8")
     updated, changes = transform(original)
     if not changes:
         return []
     if backup:
-        backup_path(p, now or datetime.now()).write_text(original, encoding="utf-8")
-    p.write_text(updated, encoding="utf-8")
+        backup_path(p, now or datetime.now()).write_bytes(raw)
+    p.write_bytes(updated.encode("utf-8"))
     return changes
 
 
