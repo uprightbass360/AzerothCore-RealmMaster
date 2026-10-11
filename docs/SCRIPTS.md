@@ -327,7 +327,9 @@ This centralized approach eliminates duplicate module definitions across scripts
 with non-alphanumerics as `_` (`mod-aoe-loot` becomes `MODULE_MOD_AOE_LOOT`).
 Forks from owners outside `policy.fork_owners` in `config/module-sources.json`,
 and any repo whose bare key is already taken, get `_OWNER` appended.
-`scripts/python/tests/test_manifest_key_invariants.py` enforces this in CI. Entries record `fork` so the config UI can badge forks; the sync refreshes it nightly.
+`scripts/python/tests/test_manifest_key_invariants.py` enforces this in CI.
+Entries record `fork` so the config UI can badge forks; the sync refreshes it
+nightly.
 
 **Enabled unknown keys stop the build.** If `.env` sets a `MODULE_*` key to `1`
 that the manifest does not list, `modules.py generate` exits non-zero and every

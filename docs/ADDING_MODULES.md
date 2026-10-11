@@ -216,7 +216,8 @@ Keys are never chosen by hand. The sync derives `MODULE_<REPO_NAME>` from the
 repository name, and appends `_<OWNER>` for third-party forks and for any
 repository whose bare key another entry already holds. `azerothcore` forks are
 exempt from the fork suffix (`policy.fork_owners` in
-`config/module-sources.json`). Every GitHub-hosted entry also carries `fork: true|false`, refreshed by the sync.
+`config/module-sources.json`). Every GitHub-hosted entry also carries
+`fork: true|false`, refreshed by the sync.
 A pull request that adds an entry whose key does not follow this rule, or that
 lacks the `fork` field, fails the `test_manifest_key_invariants` test.
 
