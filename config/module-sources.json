@@ -1,9 +1,12 @@
 {
   "policy": {
-    "stale_after_days": 1095,
+    "fork_owners": [
+      "azerothcore"
+    ],
     "ignore_profiles": [
       "all-modules.json"
-    ]
+    ],
+    "stale_after_days": 1095
   },
   "declined": {
     "0xciber/acore_discordnotifier": {

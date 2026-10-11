@@ -27,7 +27,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 from urllib import error, parse, request
 
 from module_sources import DEFAULT_SOURCES_PATH, Sources, SourcesError, load_sources  # noqa: F401
@@ -480,6 +480,39 @@ def repo_name_to_key(name: str) -> str:
     if not sanitized.startswith("MODULE_"):
         sanitized = f"MODULE_{sanitized}"
     return sanitized
+
+
+def sanitize_owner(owner: str) -> str:
+    """Owner name as a key suffix: same character rule as repo_name_to_key, no prefix."""
+    return re.sub(r"[^A-Za-z0-9]+", "_", owner).strip("_").upper()
+
+
+def derive_key(
+    name: str,
+    owner: str,
+    *,
+    fork: bool,
+    fork_owners: Set[str],
+    taken_by: Dict[str, str],
+) -> str:
+    """The one rule that produces a manifest key.
+
+    ``name`` is the repository basename from the clone URL. ``taken_by`` maps
+    every key already in the manifest to the lower-cased ``owner/repo`` that
+    holds it. A fork from an owner outside ``fork_owners`` always gets the
+    owner suffix; anyone whose bare key is held by a different repo gets it
+    too. Otherwise the bare key.
+    """
+    base = repo_name_to_key(name)
+    suffixed = f"{base}_{sanitize_owner(owner)}"
+    full_name = f"{owner}/{name}".lower()
+    exempt = {o.lower() for o in fork_owners}
+    if fork and owner.lower() not in exempt:
+        return suffixed
+    holder = taken_by.get(base)
+    if holder is not None and holder.lower() != full_name:
+        return suffixed
+    return base
 
 
 def load_manifest(path: str) -> Dict[str, List[dict]]:
