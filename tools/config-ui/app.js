@@ -285,6 +285,13 @@ ConfigUI.profile = {
         badge.textContent = mod.status;
         nameCell.append(" ", badge);
       }
+      if (mod.fork === true) {
+        const forkBadge = document.createElement("span");
+        forkBadge.className = "badge fork";
+        forkBadge.textContent = "fork";
+        forkBadge.title = "Fork of another repository (GitHub metadata)";
+        nameCell.append(" ", forkBadge);
+      }
       const keyCell = document.createElement("td");
       keyCell.className = "key";
       keyCell.textContent = mod.key;
