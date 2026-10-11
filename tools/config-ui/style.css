@@ -53,6 +53,7 @@ a { color:var(--accent); }
 .module-table td.cat { color:var(--accent); font-size:12px; overflow-wrap:anywhere; }
 .badge { font-size:11px; border:1px solid var(--line); border-radius:10px; padding:0 8px; color:var(--dim); }
 .badge.warn { color:var(--warn); border-color:var(--warn); }
+.badge.fork { color:var(--accent); border-color:var(--accent); }
 #profile-warnings:not(:empty) { border:1px solid var(--warn); border-radius:6px; padding:8px 12px; margin-bottom:10px; }
 .preset-group h3 { margin:14px 0 6px; color:var(--accent); font-size:14px; }
 .preset-row { display:flex; gap:8px; margin:4px 0; }
