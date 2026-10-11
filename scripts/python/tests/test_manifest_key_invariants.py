@@ -3,7 +3,7 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from key_renames import DEFAULT_RENAMES_PATH, load_rename_map
+from key_renames import DEFAULT_RENAMES_PATH, cumulative_map, load_rename_waves
 from update_module_manifest import github_full_name, repo_name_to_key, sanitize_owner
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -16,7 +16,7 @@ class ManifestKeyInvariantsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.modules = json.loads((ROOT / "config" / "module-manifest.json").read_text())["modules"]
-        cls.renames = load_rename_map(ROOT / DEFAULT_RENAMES_PATH)
+        cls.renames = cumulative_map(load_rename_waves(ROOT / DEFAULT_RENAMES_PATH))
 
     def test_every_github_key_is_bare_or_owner_suffixed_for_its_own_repo(self):
         offenders = []

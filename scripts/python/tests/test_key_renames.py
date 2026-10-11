@@ -5,15 +5,20 @@ from datetime import datetime
 from pathlib import Path
 
 from key_renames import (
+    SCHEMA_KEY,
     RenameError,
+    Wave,
     backup_path,
-    load_rename_map,
+    cumulative_map,
+    load_rename_waves,
+    read_schema,
     rewrite_entries,
     rewrite_env_file,
     rewrite_env_text,
     rewrite_key_list,
     rewrite_manifest_file,
     rewrite_profile_file,
+    set_schema_text,
 )
 
 RENAMES = {
@@ -21,16 +26,20 @@ RENAMES = {
     "MODULE_MOD_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS_MALURAMICHAEL",
     "MODULE_ELUNA": "MODULE_MOD_ALE",
 }
+WAVE2 = {"MODULE_MOD_ALE": "MODULE_MOD_ALE_V2"}
 NOW = datetime(2026, 10, 11, 9, 30, 0)
+
+
+def waves_doc(*maps):
+    return json.dumps({"waves": [{"id": i, "renames": m} for i, m in enumerate(maps, start=1)]})
 
 
 class RewriteEnvTextTest(unittest.TestCase):
     def test_renames_only_the_key_and_keeps_everything_else(self):
-        text = "# header\nexport MODULE_PLAYERBOTS=1  # on\nMODULE_ELUNA=\"1\"\nOTHER=MODULE_ELUNA\n\n"
+        text = "# header\n  export MODULE_PLAYERBOTS=1 # on\nMODULE_OTHER=0\n\nMODULE_ELUNA = 0\n"
         out, changes = rewrite_env_text(text, RENAMES)
         self.assertEqual(
-            out,
-            "# header\nexport MODULE_MOD_PLAYERBOTS=1  # on\nMODULE_MOD_ALE=\"1\"\nOTHER=MODULE_ELUNA\n\n",
+            out, "# header\n  export MODULE_MOD_PLAYERBOTS=1 # on\nMODULE_OTHER=0\n\nMODULE_MOD_ALE = 0\n"
         )
         self.assertEqual(changes, [("MODULE_PLAYERBOTS", "MODULE_MOD_PLAYERBOTS"), ("MODULE_ELUNA", "MODULE_MOD_ALE")])
 
@@ -39,13 +48,13 @@ class RewriteEnvTextTest(unittest.TestCase):
         self.assertEqual(out, "MODULE_MOD_ALE=1\r\nX=1\r\n")
 
     def test_single_pass_never_chains(self):
-        text = "MODULE_PLAYERBOTS=1\nMODULE_MOD_PLAYERBOTS=0\n"
-        out, _ = rewrite_env_text(text, RENAMES)
-        self.assertEqual(out, "MODULE_MOD_PLAYERBOTS=1\nMODULE_MOD_PLAYERBOTS_MALURAMICHAEL=0\n")
+        out, changes = rewrite_env_text("MODULE_PLAYERBOTS=1\nMODULE_MOD_PLAYERBOTS=1\n", RENAMES)
+        self.assertEqual(out, "MODULE_MOD_PLAYERBOTS=1\nMODULE_MOD_PLAYERBOTS_MALURAMICHAEL=1\n")
+        self.assertEqual(len(changes), 2)
 
     def test_does_not_touch_longer_keys_sharing_a_prefix(self):
-        out, changes = rewrite_env_text("MODULE_PLAYERBOTS_CHARACTERS=1\n", RENAMES)
-        self.assertEqual(out, "MODULE_PLAYERBOTS_CHARACTERS=1\n")
+        out, changes = rewrite_env_text("MODULE_ELUNA_TS=1\n", RENAMES)
+        self.assertEqual(out, "MODULE_ELUNA_TS=1\n")
         self.assertEqual(changes, [])
 
     def test_unchanged_text_reports_no_changes(self):
@@ -56,18 +65,41 @@ class RewriteEnvTextTest(unittest.TestCase):
 class RewriteJsonTest(unittest.TestCase):
     def test_entries_rename_key_and_requires_in_place(self):
         entries = [
-            {"key": "MODULE_PLAYERBOTS", "requires": []},
-            {"key": "MODULE_X", "requires": ["MODULE_PLAYERBOTS", "MODULE_Y"]},
+            {"key": "MODULE_PLAYERBOTS", "requires": ["MODULE_ELUNA", "MODULE_Q"]},
+            {"key": "MODULE_Q"},
         ]
         changes = rewrite_entries(entries, RENAMES)
-        self.assertEqual(entries[0]["key"], "MODULE_MOD_PLAYERBOTS")
-        self.assertEqual(entries[1]["requires"], ["MODULE_MOD_PLAYERBOTS", "MODULE_Y"])
-        self.assertEqual(changes, [("MODULE_PLAYERBOTS", "MODULE_MOD_PLAYERBOTS")] * 2)
+        self.assertEqual(entries[0], {"key": "MODULE_MOD_PLAYERBOTS", "requires": ["MODULE_MOD_ALE", "MODULE_Q"]})
+        self.assertEqual(entries[1], {"key": "MODULE_Q"})
+        self.assertEqual(changes, [("MODULE_PLAYERBOTS", "MODULE_MOD_PLAYERBOTS"), ("MODULE_ELUNA", "MODULE_MOD_ALE")])
 
     def test_key_list(self):
-        keys, changes = rewrite_key_list(["MODULE_ELUNA", "MODULE_Z"], RENAMES)
-        self.assertEqual(keys, ["MODULE_MOD_ALE", "MODULE_Z"])
+        keys, changes = rewrite_key_list(["MODULE_ELUNA", "MODULE_Q"], RENAMES)
+        self.assertEqual(keys, ["MODULE_MOD_ALE", "MODULE_Q"])
         self.assertEqual(changes, [("MODULE_ELUNA", "MODULE_MOD_ALE")])
+
+
+class SchemaMarkerTest(unittest.TestCase):
+    def test_read_schema_absent_is_zero(self):
+        self.assertEqual(read_schema("MODULE_X=1\n"), 0)
+
+    def test_read_schema_reads_the_value(self):
+        self.assertEqual(read_schema("A=1\n  export MODULES_KEY_SCHEMA = 3 # note\n"), 3)
+
+    def test_read_schema_non_integer_is_zero(self):
+        self.assertEqual(read_schema("MODULES_KEY_SCHEMA=two\n"), 0)
+
+    def test_set_schema_replaces_in_place_keeping_lead_and_comment(self):
+        out = set_schema_text("A=1\n  export MODULES_KEY_SCHEMA=1 # keep\nB=2\n", 2)
+        self.assertEqual(out, "A=1\n  export MODULES_KEY_SCHEMA=2 # keep\nB=2\n")
+
+    def test_set_schema_appends_in_the_files_line_ending(self):
+        self.assertEqual(set_schema_text("A=1\r\n", 2), "A=1\r\nMODULES_KEY_SCHEMA=2\r\n")
+        self.assertEqual(set_schema_text("A=1\n", 2), "A=1\nMODULES_KEY_SCHEMA=2\n")
+
+    def test_set_schema_terminates_an_unterminated_last_line_first(self):
+        self.assertEqual(set_schema_text("A=1", 2), "A=1\nMODULES_KEY_SCHEMA=2\n")
+        self.assertEqual(set_schema_text("", 2), "MODULES_KEY_SCHEMA=2\n")
 
 
 class FileHelpersTest(unittest.TestCase):
@@ -78,75 +110,133 @@ class FileHelpersTest(unittest.TestCase):
         self.assertEqual(backup_path(Path("/x/.env"), NOW).name, ".env.bak-20261011-093000")
 
     def test_env_file_rewritten_with_backup_only_when_changed(self):
-        env = self.tmp / ".env"
-        env.write_text("MODULE_ELUNA=1\n")
-        changes = rewrite_env_file(env, RENAMES, now=NOW)
+        path = self.tmp / ".env"
+        path.write_text("MODULE_ELUNA=1\n")
+        changes = rewrite_env_file(path, [RENAMES], now=NOW)
         self.assertEqual(changes, [("MODULE_ELUNA", "MODULE_MOD_ALE")])
-        self.assertEqual(env.read_text(), "MODULE_MOD_ALE=1\n")
+        self.assertEqual(path.read_text(), "MODULE_MOD_ALE=1\n")
         self.assertEqual((self.tmp / ".env.bak-20261011-093000").read_text(), "MODULE_ELUNA=1\n")
-        second = rewrite_env_file(env, RENAMES, now=datetime(2026, 10, 11, 9, 31, 0))
-        self.assertEqual(second, [])
+        later = datetime(2026, 10, 11, 9, 31, 0)
+        self.assertEqual(rewrite_env_file(path, [RENAMES], now=later), [])
         self.assertFalse((self.tmp / ".env.bak-20261011-093100").exists())
 
+    def test_env_file_applies_passes_in_order_with_one_backup(self):
+        path = self.tmp / ".env"
+        path.write_text("MODULE_ELUNA=1\n")
+        changes = rewrite_env_file(path, [RENAMES, WAVE2], now=NOW)
+        self.assertEqual(changes, [("MODULE_ELUNA", "MODULE_MOD_ALE"), ("MODULE_MOD_ALE", "MODULE_MOD_ALE_V2")])
+        self.assertEqual(path.read_text(), "MODULE_MOD_ALE_V2=1\n")
+        self.assertEqual(sorted(p.name for p in self.tmp.glob(".env.bak-*")), [".env.bak-20261011-093000"])
+        self.assertEqual((self.tmp / ".env.bak-20261011-093000").read_text(), "MODULE_ELUNA=1\n")
+
+    def test_env_file_records_schema_even_without_renames(self):
+        path = self.tmp / ".env"
+        path.write_text("A=1\n")
+        self.assertEqual(rewrite_env_file(path, [RENAMES], schema=2, now=NOW), [])
+        self.assertEqual(path.read_text(), "A=1\nMODULES_KEY_SCHEMA=2\n")
+        self.assertEqual((self.tmp / ".env.bak-20261011-093000").read_text(), "A=1\n")
+
+    def test_env_file_with_current_schema_and_no_renames_is_untouched(self):
+        path = self.tmp / ".env"
+        path.write_text("A=1\nMODULES_KEY_SCHEMA=2\n")
+        self.assertEqual(rewrite_env_file(path, [RENAMES], schema=2, now=NOW), [])
+        self.assertEqual(list(self.tmp.glob(".env.bak-*")), [])
+
     def test_crlf_env_file_keeps_crlf_in_file_and_backup(self):
-        env = self.tmp / ".env"
-        src = b"MODULE_PLAYERBOTS=1\r\nOTHER=2\r\n"
-        env.write_bytes(src)
-        rewrite_env_file(env, {"MODULE_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS"}, now=datetime(2026, 1, 2, 3, 4, 5))
-        self.assertEqual(env.read_bytes(), b"MODULE_MOD_PLAYERBOTS=1\r\nOTHER=2\r\n")
-        backups = [b for b in self.tmp.iterdir() if b.name != ".env"]
-        self.assertEqual(len(backups), 1)
-        self.assertEqual(backups[0].read_bytes(), src)
+        path = self.tmp / ".env"
+        path.write_bytes(b"MODULE_ELUNA=1\r\nX=1\r\n")
+        rewrite_env_file(path, [RENAMES], schema=1, now=NOW)
+        self.assertEqual(path.read_bytes(), b"MODULE_MOD_ALE=1\r\nX=1\r\nMODULES_KEY_SCHEMA=1\r\n")
+        self.assertEqual((self.tmp / ".env.bak-20261011-093000").read_bytes(), b"MODULE_ELUNA=1\r\nX=1\r\n")
 
     def test_env_file_without_backup(self):
-        env = self.tmp / ".env.template"
-        env.write_text("MODULE_ELUNA=1\n")
-        rewrite_env_file(env, RENAMES, backup=False, now=NOW)
-        self.assertEqual(list(self.tmp.iterdir()), [env])
+        path = self.tmp / ".env.template"
+        path.write_text("MODULE_ELUNA=0\n")
+        rewrite_env_file(path, [RENAMES], backup=False, now=NOW)
+        self.assertEqual(path.read_text(), "MODULE_MOD_ALE=0\n")
+        self.assertEqual(list(self.tmp.glob("*.bak-*")), [])
 
     def test_manifest_file_rewrites_entries_and_keeps_layout(self):
         path = self.tmp / "module-manifest.local.json"
-        path.write_text(json.dumps({"modules": [{"key": "MODULE_PLAYERBOTS", "ref": "abc"}]}, indent=2) + "\n")
-        changes = rewrite_manifest_file(path, RENAMES, now=NOW)
-        self.assertEqual(changes, [("MODULE_PLAYERBOTS", "MODULE_MOD_PLAYERBOTS")])
-        self.assertEqual(
-            path.read_text(),
-            json.dumps({"modules": [{"key": "MODULE_MOD_PLAYERBOTS", "ref": "abc"}]}, indent=2) + "\n",
-        )
+        path.write_text(json.dumps({"modules": [{"key": "MODULE_ELUNA", "ref": "x"}], "extra": 1}, indent=2) + "\n")
+        changes = rewrite_manifest_file(path, [RENAMES], now=NOW)
+        self.assertEqual(changes, [("MODULE_ELUNA", "MODULE_MOD_ALE")])
+        data = json.loads(path.read_text())
+        self.assertEqual(data["modules"][0]["key"], "MODULE_MOD_ALE")
+        self.assertEqual(data["extra"], 1)
+        self.assertTrue(path.read_text().endswith("}\n"))
+        self.assertTrue((self.tmp / "module-manifest.local.json.bak-20261011-093000").exists())
+
+    def test_manifest_file_without_changes_is_not_rewritten(self):
+        path = self.tmp / "module-manifest.local.json"
+        original = '{"modules": [{"key": "MODULE_Q"}]}'
+        path.write_text(original)
+        self.assertEqual(rewrite_manifest_file(path, [RENAMES], now=NOW), [])
+        self.assertEqual(path.read_text(), original)
+        self.assertEqual(list(self.tmp.glob("*.bak-*")), [])
 
     def test_profile_file_rewrites_module_list_and_keeps_other_fields(self):
         path = self.tmp / "mine.json"
-        path.write_text(json.dumps({"name": "mine", "modules": ["MODULE_ELUNA", "MODULE_Q"]}, indent=2) + "\n")
-        changes = rewrite_profile_file(path, RENAMES, now=NOW)
-        self.assertEqual(changes, [("MODULE_ELUNA", "MODULE_MOD_ALE")])
-        self.assertEqual(json.loads(path.read_text()), {"name": "mine", "modules": ["MODULE_MOD_ALE", "MODULE_Q"]})
+        path.write_text(json.dumps({"name": "mine", "modules": ["MODULE_ELUNA", "MODULE_Q"]}))
+        changes = rewrite_profile_file(path, [RENAMES, WAVE2], now=NOW)
+        self.assertEqual(changes, [("MODULE_ELUNA", "MODULE_MOD_ALE"), ("MODULE_MOD_ALE", "MODULE_MOD_ALE_V2")])
+        self.assertEqual(json.loads(path.read_text()), {"name": "mine", "modules": ["MODULE_MOD_ALE_V2", "MODULE_Q"]})
 
 
-class LoadRenameMapTest(unittest.TestCase):
+class LoadRenameWavesTest(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
         self.path = self.tmp / "key-renames.json"
 
-    def test_loads_flat_map(self):
-        self.path.write_text(json.dumps(RENAMES))
-        self.assertEqual(load_rename_map(self.path), RENAMES)
+    def test_loads_waves_in_order(self):
+        self.path.write_text(waves_doc(RENAMES, WAVE2))
+        self.assertEqual(load_rename_waves(self.path), [Wave(1, RENAMES), Wave(2, WAVE2)])
 
     def test_missing_file_raises(self):
         with self.assertRaises(RenameError):
-            load_rename_map(self.path)
+            load_rename_waves(self.path)
 
     def test_malformed_json_raises(self):
         self.path.write_text("{")
         with self.assertRaises(RenameError):
-            load_rename_map(self.path)
+            load_rename_waves(self.path)
 
-    def test_rejects_non_module_keys_and_self_maps(self):
-        self.path.write_text(json.dumps({"FOO": "MODULE_X"}))
+    def test_flat_map_is_rejected(self):
+        self.path.write_text(json.dumps(RENAMES))
         with self.assertRaises(RenameError):
-            load_rename_map(self.path)
-        self.path.write_text(json.dumps({"MODULE_X": "MODULE_X"}))
+            load_rename_waves(self.path)
+
+    def test_ids_must_be_consecutive_from_one(self):
+        self.path.write_text(json.dumps({"waves": [{"id": 2, "renames": RENAMES}]}))
         with self.assertRaises(RenameError):
-            load_rename_map(self.path)
+            load_rename_waves(self.path)
+        self.path.write_text(json.dumps({"waves": [{"id": 1, "renames": RENAMES}, {"id": 3, "renames": WAVE2}]}))
+        with self.assertRaises(RenameError):
+            load_rename_waves(self.path)
+
+    def test_rejects_non_module_keys_self_maps_and_empty_waves(self):
+        for bad in ({"FOO": "MODULE_X"}, {"MODULE_X": "MODULE_X"}, {}):
+            self.path.write_text(waves_doc(bad))
+            with self.assertRaises(RenameError):
+                load_rename_waves(self.path)
+
+    def test_an_old_key_may_not_reappear_as_an_old_key_in_a_later_wave(self):
+        self.path.write_text(waves_doc(RENAMES, {"MODULE_ELUNA": "MODULE_ELSEWHERE"}))
+        with self.assertRaises(RenameError):
+            load_rename_waves(self.path)
+
+
+class CumulativeMapTest(unittest.TestCase):
+    def test_resolves_across_waves_but_never_inside_one(self):
+        cum = cumulative_map([Wave(1, RENAMES), Wave(2, WAVE2)])
+        self.assertEqual(cum["MODULE_ELUNA"], "MODULE_MOD_ALE_V2")
+        self.assertEqual(cum["MODULE_MOD_ALE"], "MODULE_MOD_ALE_V2")
+        self.assertEqual(cum["MODULE_PLAYERBOTS"], "MODULE_MOD_PLAYERBOTS")
+        self.assertEqual(cum["MODULE_MOD_PLAYERBOTS"], "MODULE_MOD_PLAYERBOTS_MALURAMICHAEL")
+        self.assertEqual(len(cum), 4)
+
+    def test_schema_key_constant(self):
+        self.assertEqual(SCHEMA_KEY, "MODULES_KEY_SCHEMA")
 
 
 if __name__ == "__main__":

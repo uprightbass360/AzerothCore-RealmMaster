@@ -30,8 +30,10 @@ from manifest_overlay import (
 )
 from key_renames import (
     DEFAULT_RENAMES_PATH,
+    SCHEMA_KEY,
     RenameError,
-    load_rename_map,
+    load_rename_waves,
+    read_schema,
     rewrite_env_file,
     rewrite_manifest_file,
     rewrite_profile_file,
@@ -453,9 +455,9 @@ def cmd_remove(args: argparse.Namespace, paths: Paths) -> int:
 
 
 def cmd_migrate(args: argparse.Namespace, paths: Paths) -> int:
-    """Rewrite renamed MODULE_* keys in .env, the local manifest and any profiles given."""
+    """Apply the rename waves newer than the .env's MODULES_KEY_SCHEMA, then record the latest."""
     try:
-        renames = load_rename_map(paths.root / DEFAULT_RENAMES_PATH)
+        waves = load_rename_waves(paths.root / DEFAULT_RENAMES_PATH)
     except RenameError as exc:
         print(f"❌ {exc}", file=sys.stderr)
         return 1
@@ -465,26 +467,36 @@ def cmd_migrate(args: argparse.Namespace, paths: Paths) -> int:
             print(f"❌ profile not found: {profile}", file=sys.stderr)
         return 1
     env_path = Path(args.env) if args.env else paths.env
+    latest = waves[-1].id
     changes: List[tuple] = []
     current = env_path
     try:
+        schema = read_schema(env_path.read_text(encoding="utf-8")) if env_path.exists() else 0
+        pending = [wave.renames for wave in waves if wave.id > schema]
+        if not pending:
+            print(f"nothing to migrate ({SCHEMA_KEY}={schema} is current)")
+            return 0
         if env_path.exists():
-            changes += [(env_path, c) for c in rewrite_env_file(env_path, renames)]
+            changes += [(env_path, c) for c in rewrite_env_file(env_path, pending, schema=latest)]
         if paths.local.exists():
             current = paths.local
-            changes += [(paths.local, c) for c in rewrite_manifest_file(paths.local, renames)]
+            changes += [(paths.local, c) for c in rewrite_manifest_file(paths.local, pending)]
         for profile in args.profiles:
             current = Path(profile)
-            changes += [(current, c) for c in rewrite_profile_file(current, renames)]
+            changes += [(current, c) for c in rewrite_profile_file(current, pending)]
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         print(f"❌ {current}: {exc}", file=sys.stderr)
         return 1
-    if not changes:
-        print("nothing to migrate")
-        return 0
     for path, (old, new) in changes:
         print(f"{old} -> {new} ({path})")
-    print(f"✅ {len(changes)} key(s) migrated; a .bak-<timestamp> copy sits next to each changed file")
+    if not env_path.exists():
+        print("nothing to migrate" if not changes else f"✅ {len(changes)} key(s) migrated; a .bak-<timestamp> copy sits next to each changed file")
+        return 0
+    if changes:
+        print(f"✅ {len(changes)} key(s) migrated and {SCHEMA_KEY}={latest} recorded in {env_path}; "
+              f"a .bak-<timestamp> copy sits next to each changed file")
+    else:
+        print(f"no keys to rename; {SCHEMA_KEY}={latest} recorded in {env_path} (a .bak-<timestamp> copy was kept)")
     return 0
 
 
