@@ -1,14 +1,14 @@
 {
   "modules": [
-    "MODULE_ELUNA",
+    "MODULE_MOD_ALE",
     "MODULE_AIO",
-    "MODULE_SOLO_LFG",
-    "MODULE_SOLOCRAFT",
-    "MODULE_AUTOBALANCE",
-    "MODULE_TRANSMOG",
-    "MODULE_NPC_BUFFER",
-    "MODULE_LEARN_SPELLS",
-    "MODULE_FIREWORKS"
+    "MODULE_MOD_SOLO_LFG",
+    "MODULE_MOD_SOLOCRAFT",
+    "MODULE_MOD_AUTOBALANCE",
+    "MODULE_MOD_TRANSMOG",
+    "MODULE_MOD_NPC_BUFFER",
+    "MODULE_MOD_LEARN_SPELLS",
+    "MODULE_MOD_FIREWORKS_ON_LEVEL"
   ],
   "label": "\u2b50 Suggested Modules (Main)",
   "description": "Baseline solo-friendly quality of life mix (no playerbots)",
