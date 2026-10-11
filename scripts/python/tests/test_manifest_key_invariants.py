@@ -4,10 +4,45 @@ from collections import Counter
 from pathlib import Path
 
 from key_renames import DEFAULT_RENAMES_PATH, cumulative_map, load_rename_waves, read_schema
-from module_sources import load_sources
-from update_module_manifest import derive_key, github_full_name
+from module_sources import Sources, load_sources
+from update_module_manifest import derive_key, github_full_name, repo_name_to_key, sanitize_owner
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def declined_by_pattern(key: str, sources: Sources) -> bool:
+    """True when a ``declined`` pattern accounts for ``key``: an exact ``owner/repo`` yields the
+    repo's bare and owner-suffixed keys; an ``owner/*`` wildcard covers owner-suffixed keys."""
+    for pattern in sources.declined:
+        owner, _, repo = pattern.partition("/")
+        suffix = f"_{sanitize_owner(owner)}"
+        if repo == "*":
+            if key.endswith(suffix):
+                return True
+            continue
+        base = repo_name_to_key(repo)
+        if key in {base, base + suffix}:
+            return True
+    return False
+
+
+class DeclinedByPatternTest(unittest.TestCase):
+    """A rename-map target may be absent from the manifest when its repo is declined."""
+
+    def test_exact_pattern_accounts_for_bare_and_suffixed_key(self):
+        sources = Sources(declined={"monakaibrahim-cmyk/dungeonrespawn": {"reason": "x", "date": "2026-10-11"}})
+        self.assertTrue(declined_by_pattern("MODULE_DUNGEONRESPAWN", sources))
+        self.assertTrue(declined_by_pattern("MODULE_DUNGEONRESPAWN_MONAKAIBRAHIM_CMYK", sources))
+        self.assertFalse(declined_by_pattern("MODULE_DUNGEONRESPAWN_OTHER", sources))
+        self.assertFalse(declined_by_pattern("MODULE_MOD_AHBOT", sources))
+
+    def test_owner_wildcard_accounts_for_owner_suffixed_keys_only(self):
+        sources = Sources(declined={"buildthehomelab/*": {"reason": "x", "date": "2026-10-11"}})
+        self.assertTrue(declined_by_pattern("MODULE_WOW_MOD_X_BUILDTHEHOMELAB", sources))
+        self.assertFalse(declined_by_pattern("MODULE_WOW_MOD_X", sources))
+
+    def test_nothing_declined_accounts_for_nothing(self):
+        self.assertFalse(declined_by_pattern("MODULE_ANYTHING", Sources()))
 
 
 class ManifestKeyInvariantsTest(unittest.TestCase):
@@ -57,7 +92,11 @@ class ManifestKeyInvariantsTest(unittest.TestCase):
         keys = {e["key"] for e in self.modules}
         pure_old = set(self.renames) - set(self.renames.values())
         self.assertEqual(sorted(pure_old & keys), [], "old keys still in the manifest")
-        self.assertEqual(sorted(set(self.renames.values()) - keys), [], "renamed-to keys missing from the manifest")
+        # A renamed-to key may be absent when the module was declined afterwards
+        # (config/module-sources.json); migrate then leads to the "removed" hard stop.
+        sources = load_sources(str(ROOT / "config" / "module-sources.json"))
+        missing = [k for k in set(self.renames.values()) - keys if not declined_by_pattern(k, sources)]
+        self.assertEqual(sorted(missing), [], "renamed-to keys missing from the manifest and not declined")
 
     def test_catalogue_documents_are_at_the_latest_schema(self):
         latest = load_rename_waves(ROOT / DEFAULT_RENAMES_PATH)[-1].id
