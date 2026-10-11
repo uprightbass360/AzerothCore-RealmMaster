@@ -52,6 +52,18 @@ class AddTest(CliCase):
         self.assertIn("run inside your worldserver", out)
         self.assertIn("./deploy.sh", out)
 
+    def test_add_stamps_the_catalogue_key_schema(self):
+        write_manifest(self.root / "config" / "module-manifest.json", [entry("MODULE_MOD_ALE", name="mod-ale", type="cpp")])
+        path = self.root / "config" / "module-manifest.json"
+        data = json.loads(path.read_text())
+        data["key_schema"] = 2
+        path.write_text(json.dumps(data))
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
+        rc, _, _ = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 0)
+        local = json.loads((self.root / "config" / LOCAL_MANIFEST_NAME).read_text())
+        self.assertEqual(local["key_schema"], 2)
+
     def test_add_enables_requires(self):
         repo = make_repo(self.repos / "aio-thing", {"Server/s.lua": 'local AIO = require("AIO")'})
         rc, out, _ = self.run_cli("add", str(repo), "--yes")

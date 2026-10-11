@@ -43,7 +43,7 @@ class MigrateCommandTest(unittest.TestCase):
         local = json.loads((self.root / "config" / "module-manifest.local.json").read_text())
         self.assertEqual(local["modules"][0]["key"], "MODULE_MOD_PLAYERBOTS")
         self.assertIn("MODULE_PLAYERBOTS -> MODULE_MOD_PLAYERBOTS", out)
-        self.assertIn("MODULES_KEY_SCHEMA=2", out)
+        self.assertIn("schema 2 recorded", out)
         self.assertEqual(len(list(self.root.glob(".env.bak-*"))), 1)
 
     def test_second_run_changes_nothing(self):
@@ -73,7 +73,7 @@ class MigrateCommandTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual((self.root / ".env").read_text(), "MODULE_MOD_UNRELATED=1\nMODULES_KEY_SCHEMA=2\n")
         self.assertIn("no keys to rename", out)
-        self.assertIn("MODULES_KEY_SCHEMA=2", out)
+        self.assertIn("schema 2 recorded", out)
         self.assertEqual(len(list(self.root.glob(".env.bak-*"))), 1)
 
     def test_current_schema_is_a_quiet_success(self):
@@ -119,6 +119,50 @@ class MigrateCommandTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("nope.json", err.getvalue())
         self.assertEqual((self.root / ".env").read_text(), "MODULE_ELUNA=1\n")
+        self.assertEqual(list(self.root.glob(".env.bak-*")), [])
+
+    def test_local_manifest_is_migrated_against_its_own_schema_when_env_is_absent(self):
+        local = self.root / "config" / "module-manifest.local.json"
+        local.write_text(json.dumps({"modules": [{"key": "MODULE_PLAYERBOTS", "ref": "abc"}]}))
+        code, out = self._run()
+        self.assertEqual(code, 0)
+        data = json.loads(local.read_text())
+        self.assertEqual(data["modules"][0]["key"], "MODULE_MOD_PLAYERBOTS")
+        self.assertEqual(data["key_schema"], 2)
+        code, out = self._run()
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(local.read_text())["modules"][0]["key"], "MODULE_MOD_PLAYERBOTS")
+        self.assertIn("nothing to migrate", out)
+        self.assertEqual(len(list(self.root.glob("config/module-manifest.local.json.bak-*"))), 1)
+
+    def test_profile_is_migrated_even_when_env_is_current(self):
+        (self.root / ".env").write_text("MODULE_MOD_PLAYERBOTS=1\nMODULES_KEY_SCHEMA=2\n")
+        profile = self.root / "old.json"
+        profile.write_text(json.dumps({"modules": ["MODULE_PLAYERBOTS"]}))
+        code, out = self._run(str(profile))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(profile.read_text()), {"modules": ["MODULE_MOD_PLAYERBOTS"], "key_schema": 2})
+        self.assertEqual((self.root / ".env").read_text(), "MODULE_MOD_PLAYERBOTS=1\nMODULES_KEY_SCHEMA=2\n")
+        self.assertEqual(list(self.root.glob(".env.bak-*")), [])
+
+    def test_migrated_profile_is_not_re_renamed_by_an_older_env(self):
+        (self.root / ".env").write_text("MODULE_PLAYERBOTS=1\n")
+        profile = self.root / "done.json"
+        profile.write_text(json.dumps({"modules": ["MODULE_MOD_PLAYERBOTS"], "key_schema": 1}))
+        code, _ = self._run(str(profile))
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(profile.read_text()), {"modules": ["MODULE_MOD_PLAYERBOTS"], "key_schema": 2})
+        self.assertEqual((self.root / ".env").read_text(), "MODULE_MOD_PLAYERBOTS=1\nMODULES_KEY_SCHEMA=2\n")
+
+    def test_unreadable_marker_is_an_error_and_writes_nothing(self):
+        (self.root / ".env").write_text("MODULES_KEY_SCHEMA=two\nMODULE_MOD_PLAYERBOTS=1\n")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run()
+        self.assertEqual(code, 1)
+        self.assertIn("MODULES_KEY_SCHEMA", err.getvalue())
+        self.assertEqual((self.root / ".env").read_text(), "MODULES_KEY_SCHEMA=two\nMODULE_MOD_PLAYERBOTS=1\n")
+        self.assertEqual(list(self.root.glob(".env.bak-*")), [])
 
     def test_malformed_profile_reports_an_error(self):
         profile = self.root / "broken.json"

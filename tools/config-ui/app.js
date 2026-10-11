@@ -3,7 +3,7 @@
 "use strict";
 
 const ConfigUI = {
-  data: { manifest: [], orderMap: new Map(), index: { profiles: [], presets: [] }, base: null },
+  data: { manifest: [], keySchema: 0, orderMap: new Map(), index: { profiles: [], presets: [] }, base: null },
 
   // The page runs from two roots: Pages serves it at the site root next to
   // config/, local serve.sh serves the whole repo (page under tools/config-ui/).
@@ -40,6 +40,7 @@ const ConfigUI = {
         if (!res.ok) continue;
         const j = await res.json();
         this.data.manifest = Array.isArray(j) ? j : (j.modules || []);
+        this.data.keySchema = Array.isArray(j) ? 0 : (j.key_schema ?? 0);
         this.data.base = base;
         break;
       } catch (e) { /* file:// or missing — try next base */ }
@@ -78,6 +79,7 @@ function routeFiles(fileList) {
       if (file.name === "module-manifest.json") {
         const j = JSON.parse(text);
         ConfigUI.data.manifest = Array.isArray(j) ? j : (j.modules || []);
+        ConfigUI.data.keySchema = Array.isArray(j) ? 0 : (j.key_schema ?? 0);
         ConfigUI.data.orderMap = new Map(ConfigUI.data.manifest.map(m => [m.key, m.order ?? 99999]));
         ConfigUI.setStatus(`${ConfigUI.data.manifest.length} modules loaded from dropped manifest.`);
         ConfigUI.emit("configui:ready", {});
@@ -119,6 +121,7 @@ ConfigUI.profile = {
       label: this.meta.label,
       description: this.meta.description,
       order: this.meta.order,
+      key_schema: ConfigUI.data.keySchema ?? 0,
     };
     return JSON.stringify(doc, null, 2) + "\n";
   },

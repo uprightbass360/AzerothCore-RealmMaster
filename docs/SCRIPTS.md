@@ -337,8 +337,9 @@ build or deploy script aborts. The message names the new key when
 **`./modules.sh migrate [--env PATH] [PROFILE ...]`** rewrites renamed keys in
 `.env`, `config/module-manifest.local.json` and any profile files given, keeping
 a `.bak-<timestamp>` copy of each changed file. `config/key-renames.json` is a
-list of rename waves; `.env` records the last wave applied to it as
-`MODULES_KEY_SCHEMA=<n>`, and `migrate` applies only newer waves, so running it
+list of rename waves. Each file records the last wave applied to it (`MODULES_KEY_SCHEMA=<n>` in `.env`, a top-level `key_schema`
+in the local manifest and in profile files, which the config UI writes on
+export), and `migrate` applies only newer waves to each file, so running it
 again does nothing.
 
 **`scripts/python/rename_keys.py --wave N [--dry-run]`** is the maintainer-side

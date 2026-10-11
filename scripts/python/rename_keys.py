@@ -17,9 +17,11 @@ from typing import Callable, Iterator, List, Optional, Tuple
 
 from key_renames import (
     DEFAULT_RENAMES_PATH,
+    SCHEMA_FIELD,
     SCHEMA_KEY,
     RenameError,
     Wave,
+    catalogue_schema,
     load_rename_waves,
     rewrite_entries,
     rewrite_env_file,
@@ -33,9 +35,9 @@ Target = Tuple[Path, Callable[[Path], int], str]
 
 def _targets(root: Path, wave: Wave) -> Iterator[Target]:
     passes = [wave.renames]
-    yield root / "config" / "module-manifest.json", lambda p: len(rewrite_manifest_file(p, passes, backup=False)), ""
+    yield root / "config" / "module-manifest.json", lambda p: len(rewrite_manifest_file(p, passes, schema=wave.id, backup=False)), f", {SCHEMA_FIELD}={wave.id}"
     for profile in sorted((root / "config" / "module-profiles").glob("*.json")):
-        yield profile, lambda p: len(rewrite_profile_file(p, passes, backup=False)), ""
+        yield profile, lambda p: len(rewrite_profile_file(p, passes, schema=wave.id, backup=False)), f", {SCHEMA_FIELD}={wave.id}"
     for name in (".env.template", ".env.prebuilt"):
         path = root / name
         if path.exists():
@@ -70,6 +72,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     wave = next((w for w in waves if w.id == args.wave), None)
     if wave is None:
         print(f"❌ wave {args.wave} is not in {renames_path} (waves: {', '.join(str(w.id) for w in waves)})", file=sys.stderr)
+        return 1
+    try:
+        current = catalogue_schema(root / "config" / "module-manifest.json")
+    except (OSError, ValueError) as exc:
+        print(f"❌ {root / 'config' / 'module-manifest.json'}: {exc}", file=sys.stderr)
+        return 1
+    if current >= wave.id:
+        print(f"❌ wave {wave.id} is already applied (catalogue is at schema {current})", file=sys.stderr)
+        return 1
+    if wave.id != current + 1:
+        print(f"❌ wave {wave.id} would skip wave {current + 1} (catalogue is at schema {current})", file=sys.stderr)
         return 1
     total = 0
     for path, rewrite, note in _targets(root, wave):

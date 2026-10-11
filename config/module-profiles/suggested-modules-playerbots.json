@@ -13,5 +13,6 @@
   ],
   "label": "\ud83e\udd16 Suggested modules (Playerbots)",
   "description": "Suggested stack plus playerbots enabled",
-  "order": 1
+  "order": 1,
+  "key_schema": 1
 }
