@@ -28,6 +28,14 @@ from manifest_overlay import (
     local_manifest_path,
     merge_manifest,
 )
+from key_renames import (
+    DEFAULT_RENAMES_PATH,
+    RenameError,
+    load_rename_map,
+    rewrite_env_file,
+    rewrite_manifest_file,
+    rewrite_profile_file,
+)
 from module_detect import detect
 from modules import build_state, load_env_file, parse_bool
 from update_module_manifest import repo_name_to_key
@@ -444,6 +452,31 @@ def cmd_remove(args: argparse.Namespace, paths: Paths) -> int:
     return 0
 
 
+def cmd_migrate(args: argparse.Namespace, paths: Paths) -> int:
+    """Rewrite renamed MODULE_* keys in .env, the local manifest and any profiles given."""
+    try:
+        renames = load_rename_map(paths.root / DEFAULT_RENAMES_PATH)
+    except RenameError as exc:
+        print(f"❌ {exc}", file=sys.stderr)
+        return 1
+    env_path = Path(args.env) if args.env else paths.env
+    changes: List[tuple] = []
+    if env_path.exists():
+        changes += [(env_path, c) for c in rewrite_env_file(env_path, renames)]
+    if paths.local.exists():
+        changes += [(paths.local, c) for c in rewrite_manifest_file(paths.local, renames)]
+    for profile in args.profiles:
+        profile_path = Path(profile)
+        changes += [(profile_path, c) for c in rewrite_profile_file(profile_path, renames)]
+    if not changes:
+        print("nothing to migrate")
+        return 0
+    for path, (old, new) in changes:
+        print(f"{old} -> {new} ({path})")
+    print(f"✅ {len(changes)} key(s) migrated; a .bak-<timestamp> copy sits next to each changed file")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="modules.sh", description="Manage user-defined modules")
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]), help=argparse.SUPPRESS)
@@ -464,6 +497,11 @@ def build_parser() -> argparse.ArgumentParser:
     rm = sub.add_parser("remove", help="Remove a user-defined module or override")
     rm.add_argument("key", help="MODULE_* key")
     rm.set_defaults(func=cmd_remove)
+
+    mig = sub.add_parser("migrate", help="Rewrite renamed MODULE_* keys in .env, the local manifest and profiles")
+    mig.add_argument("--env", help="Path to the .env file (default: <root>/.env)")
+    mig.add_argument("profiles", nargs="*", help="Profile JSON files to rewrite as well")
+    mig.set_defaults(func=cmd_migrate)
     return parser
 
 
