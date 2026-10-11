@@ -15,7 +15,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple
+from typing import Callable, Dict, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple
 
 DEFAULT_RENAMES_PATH = "config/key-renames.json"
 SCHEMA_KEY = "MODULES_KEY_SCHEMA"
@@ -89,6 +89,48 @@ def cumulative_map(waves: Sequence[Wave]) -> Renames:
                 key = step.renames.get(key, key)
             out[old] = key
     return out
+
+
+def introduced_keys(wave: Wave) -> Set[str]:
+    """Keys that first exist once ``wave`` is applied: its new keys that are not also its old keys."""
+    return set(wave.renames.values()) - set(wave.renames)
+
+
+def ahead_of_schema(keys: Iterable[str], waves: Sequence[Wave], schema: int) -> Optional[int]:
+    """The highest wave above ``schema`` whose introduced keys appear in ``keys``, or None.
+
+    A document that records ``schema`` but holds such keys was migrated past it
+    without a marker; applying the pending waves again would rename it wrongly.
+    """
+    present = set(keys)
+    ahead = [wave.id for wave in waves if wave.id > schema and present & introduced_keys(wave)]
+    return max(ahead) if ahead else None
+
+
+def env_keys(text: str) -> List[str]:
+    """The MODULE_* keys defined on ``KEY=value`` lines of an env file."""
+    keys: List[str] = []
+    for line in text.splitlines():
+        match = _ENV_LINE.match(line)
+        if match:
+            keys.append(match.group("key"))
+    return keys
+
+
+def document_keys(data) -> List[str]:
+    """The module keys a manifest-style or profile-style JSON document holds."""
+    modules = data.get("modules") if isinstance(data, dict) else None
+    if not isinstance(modules, list):
+        return []
+    keys: List[str] = []
+    for item in modules:
+        if isinstance(item, dict):
+            if isinstance(item.get("key"), str):
+                keys.append(item["key"])
+            keys.extend(dep for dep in (item.get("requires") or []) if isinstance(dep, str))
+        elif isinstance(item, str):
+            keys.append(item)
+    return keys
 
 
 def read_schema(text: str) -> int:

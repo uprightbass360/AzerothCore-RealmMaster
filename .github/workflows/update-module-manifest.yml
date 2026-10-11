@@ -44,6 +44,11 @@ jobs:
           python3 scripts/python/update_module_manifest.py --log --prune-missing \
             --digest-file "$RUNNER_TEMP/digest.md"
 
+      - name: Catalogue invariants
+        # The sync PR auto-merges, so the key rule, fork field, schema markers and
+        # declined-list consistency are enforced here, not only by ci.yml on main.
+        run: python3 -m unittest discover -s scripts/python/tests -t scripts/python -p 'test_manifest_*.py'
+
       - name: Config UI round-trip check
         # Same gate the Pages deploy runs; a sync PR must never leave profiles
         # referencing keys the manifest no longer has.

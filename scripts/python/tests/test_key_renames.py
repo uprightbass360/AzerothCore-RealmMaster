@@ -9,9 +9,13 @@ from key_renames import (
     SCHEMA_KEY,
     RenameError,
     Wave,
+    ahead_of_schema,
     backup_path,
     catalogue_schema,
     cumulative_map,
+    document_keys,
+    env_keys,
+    introduced_keys,
     load_rename_waves,
     read_json_schema,
     read_schema,
@@ -290,6 +294,34 @@ class CumulativeMapTest(unittest.TestCase):
 
     def test_schema_key_constant(self):
         self.assertEqual(SCHEMA_KEY, "MODULES_KEY_SCHEMA")
+
+
+class AheadOfSchemaTest(unittest.TestCase):
+    WAVES = [Wave(1, RENAMES), Wave(2, WAVE2)]
+
+    def test_introduced_keys_exclude_dual_role_keys(self):
+        self.assertEqual(introduced_keys(Wave(1, RENAMES)), {"MODULE_MOD_PLAYERBOTS_MALURAMICHAEL", "MODULE_MOD_ALE"})
+
+    def test_schema_zero_holding_a_wave_one_key_is_ahead(self):
+        self.assertEqual(ahead_of_schema(["MODULE_MOD_ALE", "MODULE_Q"], self.WAVES, 0), 1)
+
+    def test_dual_role_key_alone_is_not_evidence(self):
+        self.assertIsNone(ahead_of_schema(["MODULE_MOD_PLAYERBOTS"], self.WAVES, 0))
+
+    def test_highest_wave_wins(self):
+        self.assertEqual(ahead_of_schema(["MODULE_MOD_ALE", "MODULE_MOD_ALE_V2"], self.WAVES, 0), 2)
+
+    def test_keys_of_applied_waves_are_fine(self):
+        self.assertIsNone(ahead_of_schema(["MODULE_MOD_ALE"], self.WAVES, 1))
+
+    def test_env_keys(self):
+        self.assertEqual(env_keys("# c\nexport MODULE_A=1\nX=2\n  MODULE_B = 0\n"), ["MODULE_A", "MODULE_B"])
+
+    def test_document_keys_manifest_and_profile(self):
+        self.assertEqual(document_keys({"modules": [{"key": "MODULE_A", "requires": ["MODULE_B"]}, {"ref": "x"}]}), ["MODULE_A", "MODULE_B"])
+        self.assertEqual(document_keys({"modules": ["MODULE_A", 3]}), ["MODULE_A"])
+        self.assertEqual(document_keys({"modules": "no"}), [])
+        self.assertEqual(document_keys([]), [])
 
 
 if __name__ == "__main__":

@@ -64,6 +64,42 @@ class AddTest(CliCase):
         local = json.loads((self.root / "config" / LOCAL_MANIFEST_NAME).read_text())
         self.assertEqual(local["key_schema"], 2)
 
+    def _set_catalogue_schema(self, value):
+        path = self.root / "config" / "module-manifest.json"
+        data = json.loads(path.read_text())
+        data["key_schema"] = value
+        path.write_text(json.dumps(data))
+
+    def test_add_keeps_an_existing_local_manifest_schema(self):
+        self._set_catalogue_schema(2)
+        (self.root / "config" / LOCAL_MANIFEST_NAME).write_text(json.dumps({"key_schema": 0, "modules": []}))
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
+        rc, _, _ = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 0)
+        local = json.loads((self.root / "config" / LOCAL_MANIFEST_NAME).read_text())
+        self.assertEqual(local["key_schema"], 0)
+        self.assertEqual(len(local["modules"]), 1)
+
+    def test_remove_keeps_an_existing_local_manifest_schema(self):
+        self._set_catalogue_schema(2)
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
+        self.run_cli("add", str(repo), "--yes")
+        path = self.root / "config" / LOCAL_MANIFEST_NAME
+        data = json.loads(path.read_text())
+        data["key_schema"] = 0
+        path.write_text(json.dumps(data))
+        rc, _, _ = self.run_cli("remove", "MODULE_LUA_THING")
+        self.assertEqual(rc, 0)
+        self.assertEqual(json.loads(path.read_text())["key_schema"], 0)
+
+    def test_add_with_a_bad_local_schema_is_refused_without_a_traceback(self):
+        self._set_catalogue_schema(2)
+        (self.root / "config" / LOCAL_MANIFEST_NAME).write_text(json.dumps({"key_schema": "x", "modules": []}))
+        repo = make_repo(self.repos / "lua-thing", {"thing.lua": "print(1)"})
+        rc, _, err = self.run_cli("add", str(repo), "--yes")
+        self.assertEqual(rc, 1)
+        self.assertIn("❌", err)
+
     def test_add_enables_requires(self):
         repo = make_repo(self.repos / "aio-thing", {"Server/s.lua": 'local AIO = require("AIO")'})
         rc, out, _ = self.run_cli("add", str(repo), "--yes")
