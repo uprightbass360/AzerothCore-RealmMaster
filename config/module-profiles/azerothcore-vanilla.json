@@ -5,5 +5,5 @@
   "label": "\ud83d\udd30 AzerothCore Main - Mod Free",
   "description": "Pure AzerothCore with no optional modules enabled",
   "order": 3,
-  "key_schema": 1
+  "key_schema": 2
 }

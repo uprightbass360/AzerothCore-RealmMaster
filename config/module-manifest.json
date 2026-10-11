@@ -7331,7 +7331,7 @@
       "last_modified": "2026-09-01T13:55:42Z"
     },
     {
-      "key": "MODULE_MOD_FLY_IN_OLD_WORLD",
+      "key": "MODULE_MOD_FLY_IN_OLD_WORLD_TRACKMASTERSTEVE",
       "name": "mod-fly-in-old-world",
       "repo": "https://github.com/trackmastersteve/mod-fly-in-old-world.git",
       "description": "An azerothcore module which allows players to fly in the old world (Eastern Kingdoms and Kalimdor)",
@@ -7346,7 +7346,7 @@
       "last_modified": "2026-08-18T17:24:49Z"
     },
     {
-      "key": "MODULE_MOD_TRANSMOG_PLUS_UI",
+      "key": "MODULE_MOD_TRANSMOG_PLUS_UI_MALINMR",
       "name": "mod-transmog-plus-ui",
       "repo": "https://github.com/malinmr/mod-transmog-plus-ui.git",
       "description": "Slot-based transmogrification module for AzerothCore. Appearances are stored per equipment slot, so transmogs persist when gear is replaced.",
@@ -7406,7 +7406,7 @@
       "last_modified": "2026-07-13T14:06:50Z"
     },
     {
-      "key": "MODULE_MOD_AUCTIONATOR",
+      "key": "MODULE_MOD_AUCTIONATOR_ARAXIAONLINE",
       "name": "mod-auctionator",
       "repo": "https://github.com/araxiaonline/mod-auctionator.git",
       "description": "Auction bot style mod for Azerothcore.",
@@ -7436,7 +7436,7 @@
       "last_modified": "2026-07-07T14:27:51Z"
     },
     {
-      "key": "MODULE_TELEPORTERWITHCD",
+      "key": "MODULE_TELEPORTERWITHCD_IMAGIONATIONEDITOR",
       "name": "TeleporterWithCd",
       "repo": "https://github.com/imagionationeditor/TeleporterWithCd.git",
       "description": "Rewrite Module for Azerothcore to teleport players to a mall with a command MojiSpectre",
@@ -7451,7 +7451,7 @@
       "last_modified": "2026-07-02T20:44:01Z"
     },
     {
-      "key": "MODULE_MOD_STAT_BOOSTER",
+      "key": "MODULE_MOD_STAT_BOOSTER_BENNYBROSEPH",
       "name": "mod-stat-booster",
       "repo": "https://github.com/bennybroseph/mod-stat-booster.git",
       "description": "Random Enchant module for Azeroth Core",
@@ -7466,7 +7466,7 @@
       "last_modified": "2026-06-17T03:26:01Z"
     },
     {
-      "key": "MODULE_MOD_NPC_ENCHANTER_PROGRESSION",
+      "key": "MODULE_MOD_NPC_ENCHANTER_PROGRESSION_RECKA50",
       "name": "mod-npc-enchanter-progression",
       "repo": "https://github.com/Recka50/mod-npc-enchanter-progression.git",
       "description": "Progression-aware enchanter NPC for AzerothCore \u2014 Classic, TBC, and Wrath enchant tiers gated by configurable level and expansion requirements.",
@@ -7481,7 +7481,7 @@
       "last_modified": "2026-05-18T12:25:54Z"
     },
     {
-      "key": "MODULE_DUNGEONRESPAWN",
+      "key": "MODULE_DUNGEONRESPAWN_MONAKAIBRAHIM_CMYK",
       "name": "DungeonRespawn",
       "repo": "https://github.com/monakaibrahim-cmyk/DungeonRespawn.git",
       "description": "A module for AzerothCore that teleports players to the start of the dungeon upon death.",
@@ -7556,7 +7556,7 @@
       "last_modified": "2026-01-26T07:21:37Z"
     },
     {
-      "key": "MODULE_MOD_ARAC_UPDATED",
+      "key": "MODULE_MOD_ARAC_UPDATED_CHROMWOLF",
       "name": "mod-arac-updated",
       "repo": "https://github.com/ChromWolf/mod-arac-updated.git",
       "description": "Module & patches - \"All Races All Classes (ARAC)\"",
@@ -7586,7 +7586,7 @@
       "last_modified": "2026-09-19T18:55:25Z"
     },
     {
-      "key": "MODULE_MOD_CUSTOMLOGIN",
+      "key": "MODULE_MOD_CUSTOMLOGIN_BRIAN_ALDRIDGE",
       "name": "mod-customlogin",
       "repo": "https://github.com/Brian-Aldridge/mod-customlogin.git",
       "description": "",
@@ -7616,7 +7616,7 @@
       "last_modified": "2025-08-24T16:37:07Z"
     },
     {
-      "key": "MODULE_MOD_REAGENT_BANK_ACCOUNT_DEPRECATED",
+      "key": "MODULE_MOD_REAGENT_BANK_ACCOUNT_DEPRECATED_BRIAN_ALDRIDGE",
       "name": "mod-reagent-bank-account-deprecated",
       "repo": "https://github.com/Brian-Aldridge/mod-reagent-bank-account-deprecated.git",
       "description": "Reagent Bank Module for AzerothCore",
@@ -7661,7 +7661,7 @@
       "last_modified": "2025-05-16T23:35:24Z"
     },
     {
-      "key": "MODULE_MOD_RANDOM_SUFFIX",
+      "key": "MODULE_MOD_RANDOM_SUFFIX_LOHVHT",
       "name": "mod-random-suffix",
       "repo": "https://github.com/lohvht/mod-random-suffix.git",
       "description": "Random Suffixes for any Looted, Created or Quest Reward items",
@@ -7901,7 +7901,7 @@
       "last_modified": "2024-01-27T13:15:22Z"
     },
     {
-      "key": "MODULE_NETHERBOT",
+      "key": "MODULE_NETHERBOT_DAY36512",
       "name": "NetherBot",
       "repo": "https://github.com/Day36512/NetherBot.git",
       "description": "Netherbot wow addon is tool for NPCBots for TrinityCore and AzerothCore 3.3.5, to help you play with npcbots.",
@@ -8261,7 +8261,7 @@
       "last_modified": "2026-10-11T14:44:36Z"
     },
     {
-      "key": "MODULE_MOD_DEAD_MEANS_DEAD_HOTFIX",
+      "key": "MODULE_MOD_DEAD_MEANS_DEAD_HOTFIX_OUTTIETV",
       "name": "mod-dead-means-dead-hotfix",
       "repo": "https://github.com/outtieTV/mod-dead-means-dead-hotfix.git",
       "description": "AzerothCore module to alter or remove the respawn timer on creatures.",
@@ -8276,7 +8276,7 @@
       "last_modified": "2026-09-20T22:52:49Z"
     },
     {
-      "key": "MODULE_MOD_CHALLENGE_MODES_HOTFIX",
+      "key": "MODULE_MOD_CHALLENGE_MODES_HOTFIX_OUTTIETV",
       "name": "mod-challenge-modes-hotfix",
       "repo": "https://github.com/outtieTV/mod-challenge-modes-hotfix.git",
       "description": "Challenge Modes Module for AzerothCore hotfixed by outtieTV",
@@ -8921,7 +8921,7 @@
       "last_modified": "2026-10-11T15:02:10Z"
     },
     {
-      "key": "MODULE_MOD_PVP_ZONES_HOTFIX",
+      "key": "MODULE_MOD_PVP_ZONES_HOTFIX_OUTTIETV",
       "name": "mod-pvp-zones-hotfix",
       "repo": "https://github.com/outtieTV/mod-pvp-zones-hotfix.git",
       "description": "A module redefining world pvp.",
@@ -8936,7 +8936,7 @@
       "last_modified": "2026-09-21T22:26:03Z"
     },
     {
-      "key": "MODULE_MOD_DYNAMIC_LOOT_RATES_HOTFIX",
+      "key": "MODULE_MOD_DYNAMIC_LOOT_RATES_HOTFIX_OUTTIETV",
       "name": "mod-dynamic-loot-rates-hotfix",
       "repo": "https://github.com/outtieTV/mod-dynamic-loot-rates-hotfix.git",
       "description": "Azerothcore module to allow for different group / reference loot rates in dungeons and raids",
@@ -8951,7 +8951,7 @@
       "last_modified": "2026-09-21T22:24:32Z"
     },
     {
-      "key": "MODULE_BGQUEUECHECKER_PLAYERBOTS_HOTFIX",
+      "key": "MODULE_BGQUEUECHECKER_PLAYERBOTS_HOTFIX_OUTTIETV",
       "name": "BGQueueChecker-playerbots-hotfix",
       "repo": "https://github.com/outtieTV/BGQueueChecker-playerbots-hotfix.git",
       "description": "Ensures all party members have matching faction before queueing into battleground.",
@@ -9626,5 +9626,5 @@
       "last_modified": "2026-10-11T18:33:53Z"
     }
   ],
-  "key_schema": 1
+  "key_schema": 2
 }
