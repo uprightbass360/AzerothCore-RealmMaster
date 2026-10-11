@@ -92,6 +92,24 @@ class MigrateCommandTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn(str(profile), err.getvalue())
 
+    def test_non_utf8_profile_reports_an_error(self):
+        profile = self.root / "binary.json"
+        profile.write_bytes(b"\xff\xfe{")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run(str(profile))
+        self.assertEqual(code, 1)
+        self.assertIn(str(profile), err.getvalue())
+
+    def test_directory_as_profile_reports_an_error(self):
+        directory = self.root / "profiles"
+        directory.mkdir()
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self._run(str(directory))
+        self.assertEqual(code, 1)
+        self.assertIn(str(directory), err.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
