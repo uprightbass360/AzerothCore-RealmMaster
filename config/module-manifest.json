@@ -33,7 +33,7 @@
       "order": 5000,
       "requires": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-09-25T15:18:35Z"
+      "last_modified": "2026-10-10T14:14:33Z"
     },
     {
       "key": "MODULE_LEARN_SPELLS",
@@ -133,7 +133,7 @@
       "order": 5000,
       "requires": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-07-26T23:52:37Z"
+      "last_modified": "2026-10-10T14:58:02Z"
     },
     {
       "key": "MODULE_NPC_BUFFER",
@@ -340,7 +340,7 @@
       "order": 5000,
       "requires": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2025-06-08T07:42:36Z"
+      "last_modified": "2026-10-10T23:42:01Z"
     },
     {
       "key": "MODULE_POCKET_PORTAL",
@@ -1155,7 +1155,7 @@
         "mod-double-xp-weekend.conf*"
       ],
       "category": "progression",
-      "last_modified": "2026-07-23T23:58:38Z",
+      "last_modified": "2026-10-10T14:16:10Z",
       "status": "active",
       "order": 5000,
       "requires": [],
@@ -1215,7 +1215,7 @@
       "config_cleanup": [],
       "notes": "Admin commands: .templatenpc create [TemplateName] and .templatenpc reload \nDiscovered via GitHub topic 'azerothcore-module'",
       "category": "npc-service",
-      "last_modified": "2026-09-30T08:52:16Z",
+      "last_modified": "2026-10-10T14:14:21Z",
       "status": "active",
       "order": 5000,
       "requires": []
@@ -4418,7 +4418,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T11:59:59Z"
+      "last_modified": "2026-10-11T03:32:09Z"
     },
     {
       "key": "MODULE_DELVES",
@@ -4763,7 +4763,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-15T21:35:39Z"
+      "last_modified": "2026-10-10T19:20:46Z"
     },
     {
       "key": "MODULE_MOD_CUSTOMS",
@@ -4868,7 +4868,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-10T10:44:49Z"
+      "last_modified": "2026-10-10T21:36:57Z"
     },
     {
       "key": "MODULE_MOD_I_FOUND_YOUR_SWORD",
@@ -4883,7 +4883,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-10T11:05:19Z"
+      "last_modified": "2026-10-10T19:17:13Z"
     },
     {
       "key": "MODULE_MOD_LLM_GUIDE",
@@ -5648,7 +5648,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T15:54:24Z"
+      "last_modified": "2026-10-11T01:45:30Z"
     },
     {
       "key": "MODULE_MOD_NODEJS",
@@ -5873,7 +5873,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-08-25T17:57:53Z"
+      "last_modified": "2026-10-10T21:02:17Z"
     },
     {
       "key": "MODULE_MOD_TOKEN_TURNIN",
@@ -8333,7 +8333,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T22:25:43Z"
+      "last_modified": "2026-10-11T01:29:24Z"
     },
     {
       "key": "MODULE_MYTHICPLUS_EXTENDED",
@@ -9113,7 +9113,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T12:32:35Z"
+      "last_modified": "2026-10-10T23:05:21Z"
     },
     {
       "key": "MODULE_MOD_E_INTERACT",
@@ -9443,7 +9443,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-10T00:34:08Z"
+      "last_modified": "2026-10-10T21:52:02Z"
     },
     {
       "key": "MODULE_MOD_QUESTIE_BRIDGE",
@@ -9459,6 +9459,111 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-10-09T20:11:58Z"
+    },
+    {
+      "key": "MODULE_MOD_DK",
+      "name": "mod-dk",
+      "repo": "https://github.com/dudemcbro/mod-dk.git",
+      "description": "Level Death Knights from 1 like any other class: trainer progression, low level scaling, default trainers and runeforges, and an Ebon Hold intro you can replay.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-10T20:51:45Z"
+    },
+    {
+      "key": "MODULE_MOD_PLAYERBOTS_AUCTIONEER",
+      "name": "mod-playerbots-auctioneer",
+      "repo": "https://github.com/electrobutterfly/mod-playerbots-auctioneer.git",
+      "description": "Playerbots-Auctioneer is a heavily modified mod-playerbots fork for Azerothcore-Playerbots which provides an auction-house subsystem.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-10T20:08:54Z"
+    },
+    {
+      "key": "MODULE_MOD_PLAYERBOTS",
+      "name": "mod-playerbots",
+      "repo": "https://github.com/maluramichael/mod-playerbots.git",
+      "description": "AzerothCore Playerbots Module",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-09-25T09:34:39Z"
+    },
+    {
+      "key": "MODULE_MOD_INDIVIDUAL_XP",
+      "name": "mod-individual-xp",
+      "repo": "https://github.com/azerothcore/mod-individual-xp.git",
+      "description": "",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-04-19T15:27:48Z"
+    },
+    {
+      "key": "MODULE_MOD_CHARACTER_TOOLS",
+      "name": "mod-character-tools",
+      "repo": "https://github.com/azerothcore/mod-character-tools.git",
+      "description": "character tools",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2025-02-28T13:40:04Z"
+    },
+    {
+      "key": "MODULE_ACORE_MINI_REG_PAGE",
+      "name": "acore-mini-reg-page",
+      "repo": "https://github.com/azerothcore/acore-mini-reg-page.git",
+      "description": "A simple registration-only website for AzerothCore",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2024-04-12T20:51:54Z"
+    },
+    {
+      "key": "MODULE_HARDCORE_MODE",
+      "name": "hardcore_mode",
+      "repo": "https://github.com/PrivateDonut/hardcore_mode.git",
+      "description": "Permanent death game mode for AzerothCore with Eluna. Features hardcore and ironman modes, XP   bonuses, milestone rewards, leaderboards, seasons, and trade/mail restrictions. Fully configurable   with database tracking.",
+      "type": "lua",
+      "category": "scripting",
+      "notes": "Discovered via GitHub topic 'azerothcore-lua'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2025-08-27T15:33:59Z"
     }
   ]
 }
