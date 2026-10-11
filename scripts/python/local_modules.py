@@ -459,15 +459,26 @@ def cmd_migrate(args: argparse.Namespace, paths: Paths) -> int:
     except RenameError as exc:
         print(f"❌ {exc}", file=sys.stderr)
         return 1
+    missing = [p for p in args.profiles if not Path(p).exists()]
+    if missing:
+        for profile in missing:
+            print(f"❌ profile not found: {profile}", file=sys.stderr)
+        return 1
     env_path = Path(args.env) if args.env else paths.env
     changes: List[tuple] = []
-    if env_path.exists():
-        changes += [(env_path, c) for c in rewrite_env_file(env_path, renames)]
-    if paths.local.exists():
-        changes += [(paths.local, c) for c in rewrite_manifest_file(paths.local, renames)]
-    for profile in args.profiles:
-        profile_path = Path(profile)
-        changes += [(profile_path, c) for c in rewrite_profile_file(profile_path, renames)]
+    current = env_path
+    try:
+        if env_path.exists():
+            changes += [(env_path, c) for c in rewrite_env_file(env_path, renames)]
+        if paths.local.exists():
+            current = paths.local
+            changes += [(paths.local, c) for c in rewrite_manifest_file(paths.local, renames)]
+        for profile in args.profiles:
+            current = Path(profile)
+            changes += [(current, c) for c in rewrite_profile_file(current, renames)]
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        print(f"❌ {current}: {exc}", file=sys.stderr)
+        return 1
     if not changes:
         print("nothing to migrate")
         return 0
