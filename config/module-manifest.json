@@ -1,7 +1,7 @@
 {
   "modules": [
     {
-      "key": "MODULE_MOD_PLAYERBOTS_MALURAMICHAEL",
+      "key": "MODULE_MOD_PLAYERBOTS",
       "name": "mod-playerbots",
       "repo": "https://github.com/mod-playerbots/mod-playerbots.git",
       "description": "AzerothCore Playerbots Module",
@@ -19,7 +19,7 @@
       "last_modified": "2026-10-09T13:54:03Z"
     },
     {
-      "key": "MODULE_MOD_AOE_LOOT_TERRABYTE_TBWPS",
+      "key": "MODULE_MOD_AOE_LOOT",
       "name": "mod-aoe-loot",
       "repo": "https://github.com/azerothcore/mod-aoe-loot.git",
       "description": "Loot all bodies at once!",
@@ -36,7 +36,7 @@
       "last_modified": "2026-10-10T14:14:33Z"
     },
     {
-      "key": "MODULE_MOD_LEARN_SPELLS_VENOMEKPL",
+      "key": "MODULE_MOD_LEARN_SPELLS",
       "name": "mod-learn-spells",
       "repo": "https://github.com/azerothcore/mod-learn-spells.git",
       "description": "Teaches class spells automatically at the correct level to streamline leveling",
@@ -102,7 +102,7 @@
       "last_modified": "2026-09-19T18:55:25Z"
     },
     {
-      "key": "MODULE_MOD_AUTOBALANCE_ARAXIAONLINE",
+      "key": "MODULE_MOD_AUTOBALANCE",
       "name": "mod-autobalance",
       "repo": "https://github.com/azerothcore/mod-autobalance.git",
       "type": "cpp",
@@ -119,7 +119,7 @@
       "last_modified": "2026-10-07T20:08:43Z"
     },
     {
-      "key": "MODULE_MOD_TRANSMOG_MALURAMICHAEL",
+      "key": "MODULE_MOD_TRANSMOG",
       "name": "mod-transmog",
       "repo": "https://github.com/azerothcore/mod-transmog.git",
       "type": "cpp",
@@ -378,7 +378,7 @@
       "notes": "Discovered via GitHub topic 'azerothcore-module'"
     },
     {
-      "key": "MODULE_MOD_SOLOCRAFT_VALSAN_AZERTY_BOI",
+      "key": "MODULE_MOD_SOLOCRAFT",
       "name": "mod-solocraft",
       "repo": "https://github.com/azerothcore/mod-solocraft.git",
       "type": "cpp",
@@ -414,7 +414,7 @@
       "last_modified": "2025-02-22T21:29:06Z"
     },
     {
-      "key": "MODULE_MOD_NPC_BEASTMASTER_BRIAN_ALDRIDGE",
+      "key": "MODULE_MOD_NPC_BEASTMASTER",
       "name": "mod-npc-beastmaster",
       "repo": "https://github.com/azerothcore/mod-npc-beastmaster.git",
       "type": "cpp",
@@ -485,7 +485,7 @@
       "last_modified": "2025-07-25T02:21:42Z"
     },
     {
-      "key": "MODULE_MOD_ASSISTANT_MALURAMICHAEL",
+      "key": "MODULE_MOD_ASSISTANT",
       "name": "mod-assistant",
       "repo": "https://github.com/noisiver/mod-assistant.git",
       "type": "cpp",
@@ -551,7 +551,7 @@
       "last_modified": "2025-11-25T17:27:07Z"
     },
     {
-      "key": "MODULE_MOD_OLLAMA_CHAT_MALURAMICHAEL",
+      "key": "MODULE_MOD_OLLAMA_CHAT",
       "name": "mod-ollama-chat",
       "repo": "https://github.com/DustinHendrickson/mod-ollama-chat.git",
       "type": "cpp",
@@ -571,7 +571,7 @@
       "repo": "https://github.com/DustinHendrickson/mod-player-bot-level-brackets.git",
       "type": "cpp",
       "requires": [
-        "MODULE_MOD_PLAYERBOTS_MALURAMICHAEL"
+        "MODULE_MOD_PLAYERBOTS"
       ],
       "post_install_hooks": [],
       "description": "The Bot Level Brackets module for AzerothCore ensures an even spread of player bots across configurable level ranges (brackets). It periodically monitors bot levels and automatically adjusts them by transferring bots from overpopulated brackets to those with a deficit. ",
@@ -649,7 +649,7 @@
       "last_modified": "2026-09-21T06:32:16Z"
     },
     {
-      "key": "MODULE_MOD_WORGOBLIN_ARAXIAONLINE",
+      "key": "MODULE_MOD_WORGOBLIN",
       "name": "mod-worgoblin",
       "repo": "https://github.com/heyitsbench/mod-worgoblin.git",
       "type": "cpp",
@@ -1038,7 +1038,7 @@
       "last_modified": "2026-04-06T17:04:40Z"
     },
     {
-      "key": "MODULE_MOD_GUILDHOUSE_BRIAN_ALDRIDGE",
+      "key": "MODULE_MOD_GUILDHOUSE",
       "name": "mod-guildhouse",
       "repo": "https://github.com/azerothcore/mod-guildhouse.git",
       "description": "Phased guild house system allowing guild members to visit their private guild house",
@@ -1333,7 +1333,7 @@
       "notes": "Discovered via GitHub topic 'azerothcore-module'"
     },
     {
-      "key": "MODULE_MOD_ACCOUNT_MOUNTS_RGSON",
+      "key": "MODULE_MOD_ACCOUNT_MOUNTS",
       "name": "mod-account-mounts",
       "repo": "https://github.com/azerothcore/mod-account-mounts.git",
       "description": "Goes through the list of characters on an account to obtain playerGuids and store mount spells that all characters know",
