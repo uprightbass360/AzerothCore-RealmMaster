@@ -668,26 +668,41 @@ def merge_repositories(
     return result
 
 
-def format_digest(added_entries: List[dict]) -> str:
-    """Markdown summary of this run's new entries grouped by GitHub owner.
-
-    Pasted into the sync PR body so a bulk arrival from one author is obvious
-    at a glance. Non-GitHub repos are grouped under "other".
+def format_digest(added_entries: List[dict], collisions: Sequence[Tuple[dict, dict]] = ()) -> str:
+    """Markdown summary of this run's new entries grouped by GitHub owner, plus any
+    name collisions (newcomers that needed an owner suffix because their bare key
+    was taken). Pasted into the sync PR body. Non-GitHub repos group under "other".
     """
+    lines: List[str] = []
     if not added_entries:
-        return "No new modules this run.\n"
-    by_owner: Dict[str, List[dict]] = {}
-    for entry in added_entries:
-        full_name = github_full_name(str(entry.get("repo", "")))
-        owner = full_name.split("/", 1)[0] if full_name else "other"
-        by_owner.setdefault(owner, []).append(entry)
-    lines = [f"{len(added_entries)} new module(s) from {len(by_owner)} owner(s):", ""]
-    for owner in sorted(by_owner, key=lambda name: (-len(by_owner[name]), name)):
-        entries = by_owner[owner]
-        lines.append(f"- **{owner}** ({len(entries)})")
-        for entry in sorted(entries, key=lambda item: str(item.get("key"))):
-            description = str(entry.get("description") or "").strip()
-            lines.append(f"  - `{entry['key']}` {description}".rstrip())
+        lines.append("No new modules this run.")
+    else:
+        by_owner: Dict[str, List[dict]] = {}
+        for entry in added_entries:
+            full_name = github_full_name(str(entry.get("repo", "")))
+            owner = full_name.split("/", 1)[0] if full_name else "other"
+            by_owner.setdefault(owner, []).append(entry)
+        lines.append(f"{len(added_entries)} new module(s) from {len(by_owner)} owner(s):")
+        lines.append("")
+        for owner in sorted(by_owner, key=lambda name: (-len(by_owner[name]), name)):
+            entries = by_owner[owner]
+            lines.append(f"- **{owner}** ({len(entries)})")
+            for entry in sorted(entries, key=lambda item: str(item.get("key"))):
+                description = str(entry.get("description") or "").strip()
+                lines.append(f"  - `{entry['key']}` {description}".rstrip())
+    if collisions:
+        lines.append("")
+        lines.append(
+            f"**Name collisions** ({len(collisions)}): the bare key was already taken, so the "
+            f"newcomer got an owner suffix. Decline either side in `config/module-sources.json` "
+            f"if one of them should not be listed."
+        )
+        lines.append("")
+        for new, holder in collisions:
+            lines.append(
+                f"- `{new['key']}` ({github_full_name(str(new.get('repo', ''))) or new.get('repo')}) "
+                f"collides with `{holder['key']}` ({github_full_name(str(holder.get('repo', ''))) or holder.get('repo')})"
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -862,7 +877,7 @@ def main(argv: Sequence[str]) -> int:
     declined = remove_declined_entries(manifest, sources, dry_run=args.dry_run)
 
     if args.digest_file:
-        Path(args.digest_file).write_text(format_digest(merge.added_entries), encoding="utf-8")
+        Path(args.digest_file).write_text(format_digest(merge.added_entries, merge.collisions), encoding="utf-8")
 
     # In dry-run the declined entries are still in the manifest; exclude them so
     # the profile preview matches what a real run would do.
@@ -878,6 +893,8 @@ def main(argv: Sequence[str]) -> int:
             f"Discovered {len(repos)} repositories "
             f"(added={merge.added}, updated={merge.updated}, "
             f"skipped declined={merge.skipped_declined}, "
+            f"collisions={len(merge.collisions)}, "
+            f"skipped collisions={merge.skipped_collision}, "
             f"would remove={len(removed)}, would remove declined={len(declined)})"
         )
         return 0
@@ -889,7 +906,9 @@ def main(argv: Sequence[str]) -> int:
     print(
         f"Updated manifest {args.manifest}: added {merge.added}, refreshed {merge.updated}, "
         f"removed {len(removed)}, declined {len(declined)}, "
-        f"skipped declined {merge.skipped_declined}"
+        f"skipped declined {merge.skipped_declined}, "
+        f"collisions {len(merge.collisions)}, "
+        f"skipped collisions {merge.skipped_collision}"
     )
 
     # Keep profiles free of keys the manifest no longer has; the config UI's
