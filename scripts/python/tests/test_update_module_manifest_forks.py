@@ -92,5 +92,62 @@ class VerifyLoopForkTest(unittest.TestCase):
         self.assertIs(absent["fork"], False)
 
 
+class AdmissionTest(unittest.TestCase):
+    def test_third_party_fork_gets_owner_suffix(self):
+        manifest = {"modules": []}
+        result = merge_repositories(manifest, [record(repo("maluramichael", "mod-playerbots", fork=True))], refresh_existing=False)
+        self.assertEqual(result.added, 1)
+        self.assertEqual(manifest["modules"][0]["key"], "MODULE_MOD_PLAYERBOTS_MALURAMICHAEL")
+        self.assertEqual(result.collisions, [])
+
+    def test_exempt_owner_fork_keeps_bare_key_case_insensitively(self):
+        manifest = {"modules": []}
+        merge_repositories(manifest, [record(repo("AzerothCore", "mod-guildhouse", fork=True))], refresh_existing=False, sources=Sources())
+        self.assertEqual(manifest["modules"][0]["key"], "MODULE_MOD_GUILDHOUSE")
+
+    def test_same_name_newcomer_is_admitted_with_suffix_not_merged(self):
+        holder = entry("MODULE_MOD_AOE_LOOT", repo="https://github.com/azerothcore/mod-aoe-loot.git",
+                       last_modified="2024-01-01T00:00:00Z", fork=False)
+        manifest = {"modules": [holder]}
+        result = merge_repositories(manifest, [record(repo("TerraByte-tbwps", "mod-aoe-loot", pushed_at="2026-09-09T00:00:00Z"))], refresh_existing=False)
+        self.assertEqual((result.added, result.updated), (1, 0))
+        new = manifest["modules"][1]
+        self.assertEqual(new["key"], "MODULE_MOD_AOE_LOOT_TERRABYTE_TBWPS")
+        self.assertEqual(new["last_modified"], "2026-09-09T00:00:00Z")
+        self.assertEqual(holder["last_modified"], "2024-01-01T00:00:00Z")
+        self.assertEqual(result.collisions, [(new, holder)])
+
+    def test_sanitised_name_collision_is_admitted_with_suffix(self):
+        holder = entry("MODULE_MOD_REWARD_SHOP", repo="https://github.com/azerothcore/mod-reward-shop.git", fork=False)
+        manifest = {"modules": [holder]}
+        result = merge_repositories(manifest, [record(repo("talamortis", "mod_reward_shop"))], refresh_existing=False)
+        self.assertEqual(manifest["modules"][1]["key"], "MODULE_MOD_REWARD_SHOP_TALAMORTIS")
+        self.assertEqual(len(result.collisions), 1)
+
+    def test_url_variants_still_match_existing_entry(self):
+        existing = entry("MODULE_MOD_X", repo="http://GitHub.com/Someone/Mod-X", fork=False)
+        manifest = {"modules": [existing]}
+        result = merge_repositories(manifest, [record(repo("someone", "mod-x"))], refresh_existing=False)
+        self.assertEqual((result.added, result.updated), (0, 1))
+        self.assertEqual(len(manifest["modules"]), 1)
+        self.assertEqual(existing["key"], "MODULE_MOD_X")
+
+    def test_suffixed_key_already_taken_by_another_repo_is_skipped(self):
+        holder = entry("MODULE_MOD_X", repo="https://github.com/a/mod-x.git", fork=False)
+        squatter = entry("MODULE_MOD_X_B", repo="https://github.com/c/mod-x-b.git", fork=False)
+        manifest = {"modules": [holder, squatter]}
+        result = merge_repositories(manifest, [record(repo("b", "mod-x"))], refresh_existing=False)
+        self.assertEqual(len(manifest["modules"]), 2)
+        self.assertEqual(result.skipped_collision, 1)
+        self.assertEqual(result.added, 0)
+
+    def test_declined_is_skipped_before_derivation(self):
+        sources = Sources()
+        sources.decline("buildthehomelab/*", "bulk", date(2026, 10, 10))
+        manifest = {"modules": []}
+        result = merge_repositories(manifest, [record(repo("buildthehomelab", "wow-mod-x"))], refresh_existing=False, sources=sources)
+        self.assertEqual((result.added, result.skipped_declined), (0, 1))
+
+
 if __name__ == "__main__":
     unittest.main()
