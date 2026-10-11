@@ -323,6 +323,25 @@ Central module registry and management system:
 
 This centralized approach eliminates duplicate module definitions across scripts.
 
+**Key rule.** A module's key is `MODULE_` plus its repository name upper-cased
+with non-alphanumerics as `_` (`mod-aoe-loot` becomes `MODULE_MOD_AOE_LOOT`).
+Forks from owners outside `policy.fork_owners` in `config/module-sources.json`,
+and any repo whose bare key is already taken, get `_OWNER` appended.
+`scripts/python/tests/test_manifest_key_invariants.py` enforces this in CI.
+
+**Enabled unknown keys stop the build.** If `.env` sets a `MODULE_*` key to `1`
+that the manifest does not list, `modules.py generate` exits non-zero and every
+build or deploy script aborts. The message names the new key when
+`config/key-renames.json` knows the rename.
+
+**`./modules.sh migrate [--env PATH] [PROFILE ...]`** rewrites renamed keys in
+`.env`, `config/module-manifest.local.json` and any profile files given, keeping
+a `.bak-<timestamp>` copy of each changed file. Running it twice is harmless.
+
+**`scripts/python/rename_keys.py [--dry-run]`** is the maintainer-side tool
+that applies `config/key-renames.json` to the manifest, profiles and env
+templates in the repo. Users never need it.
+
 #### `scripts/python/update_module_manifest.py` - GitHub Topic Sync
 Automates manifest population directly from the official AzerothCore GitHub topics.
 

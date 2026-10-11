@@ -210,3 +210,114 @@ No! You can:
 3. **Build from source**: Clone repo, build locally (most flexible)
 
 Releases are just convenient snapshots for users who want stability.
+
+## Upgrade notes: module key rename (October 2026)
+
+Module keys are now derived from the repository name. 73 hand-named keys and
+12 same-named duplicates were renamed. A `.env` that still enables an old key
+stops the build with a message naming the new key.
+
+**Upgrade in three commands**
+
+```bash
+git pull
+./modules.sh migrate      # rewrites .env and config/module-manifest.local.json; a .bak-<timestamp> copy is kept
+./build.sh                # or ./deploy.sh, as before
+```
+
+Profile files exported from the config UI can be passed to the same command:
+`./modules.sh migrate my-profile.json`.
+
+**One meaning changed.** `MODULE_MOD_PLAYERBOTS` used to denote maluramichael's
+fork of the playerbots module. It now denotes the upstream
+mod-playerbots/mod-playerbots. The fork is `MODULE_MOD_PLAYERBOTS_MALURAMICHAEL`.
+
+**Full rename table**
+
+| Old key | New key | Repository |
+|---|---|---|
+| `MODULE_1V1_ARENA` | `MODULE_MOD_1V1_ARENA` | azerothcore/mod-1v1-arena |
+| `MODULE_ACCOUNTWIDE_SYSTEMS` | `MODULE_AZEROTHCORE_ELUNA_ACCOUNTWIDE` | Aldori15/azerothcore-eluna-accountwide |
+| `MODULE_ACCOUNT_ACHIEVEMENTS` | `MODULE_MOD_ACCOUNT_ACHIEVEMENTS` | azerothcore/mod-account-achievements |
+| `MODULE_ACCOUNT_MOUNTS` | `MODULE_MOD_ACCOUNT_MOUNTS` | azerothcore/mod-account-mounts |
+| `MODULE_ACORE_SUBSCRIPTIONS` | `MODULE_MOD_ACORE_SUBSCRIPTIONS` | azerothcore/mod-acore-subscriptions |
+| `MODULE_ACTIVE_CHAT` | `MODULE_ACTIVECHAT` | Day36512/ActiveChat |
+| `MODULE_AHBOT` | `MODULE_MOD_AHBOT` | azerothcore/mod-ahbot |
+| `MODULE_ANTIFARMING` | `MODULE_MOD_ANTIFARMING` | azerothcore/mod-antifarming |
+| `MODULE_AOE_LOOT` | `MODULE_MOD_AOE_LOOT` | azerothcore/mod-aoe-loot |
+| `MODULE_ARAC` | `MODULE_MOD_ARAC` | heyitsbench/mod-arac |
+| `MODULE_ARENA_REPLAY` | `MODULE_MOD_ARENA_REPLAY` | azerothcore/mod-arena-replay |
+| `MODULE_ASSISTANT` | `MODULE_MOD_ASSISTANT` | noisiver/mod-assistant |
+| `MODULE_AUTOBALANCE` | `MODULE_MOD_AUTOBALANCE` | azerothcore/mod-autobalance |
+| `MODULE_AUTO_REVIVE` | `MODULE_MOD_AUTO_REVIVE` | azerothcore/mod-auto-revive |
+| `MODULE_AZEROTHSHARD` | `MODULE_MOD_AZEROTHSHARD` | azerothcore/mod-azerothshard |
+| `MODULE_BG_SLAVERYVALLEY` | `MODULE_MOD_BG_SLAVERYVALLEY` | Helias/mod-bg-slaveryvalley |
+| `MODULE_BOSS_ANNOUNCER` | `MODULE_MOD_BOSS_ANNOUNCER` | azerothcore/mod-boss-announcer |
+| `MODULE_BREAKING_NEWS` | `MODULE_MOD_BREAKING_NEWS_OVERRIDE` | azerothcore/mod-breaking-news-override |
+| `MODULE_CHALLENGE_MODES` | `MODULE_MOD_CHALLENGE_MODES` | ZhengPeiRu21/mod-challenge-modes |
+| `MODULE_DUEL_RESET` | `MODULE_MOD_DUEL_RESET` | azerothcore/mod-duel-reset |
+| `MODULE_DYNAMIC_XP` | `MODULE_MOD_DYNAMIC_XP` | azerothcore/mod-dynamic-xp |
+| `MODULE_ELUNA` | `MODULE_MOD_ALE` | azerothcore/mod-ale |
+| `MODULE_EVENT_SCRIPTS` | `MODULE_ACORE_EVENTSCRIPTS` | 55Honey/Acore_eventScripts |
+| `MODULE_EXCHANGE_NPC` | `MODULE_ACORE_EXCHANGENPC` | 55Honey/Acore_ExchangeNpc |
+| `MODULE_FIREWORKS` | `MODULE_MOD_FIREWORKS_ON_LEVEL` | azerothcore/mod-fireworks-on-level |
+| `MODULE_GAIN_HONOR_GUARD` | `MODULE_MOD_GAIN_HONOR_GUARD` | azerothcore/mod-gain-honor-guard |
+| `MODULE_GLOBAL_CHAT` | `MODULE_MOD_GLOBAL_CHAT` | azerothcore/mod-global-chat |
+| `MODULE_GLOBAL_MAIL_BANKING_AUCTIONS` | `MODULE_AZEROTHCORE_GLOBAL_MAIL_BANKING_AUCTIONS` | Aldori15/azerothcore-global-mail_banking_auctions |
+| `MODULE_GUILDHOUSE` | `MODULE_MOD_GUILDHOUSE` | azerothcore/mod-guildhouse |
+| `MODULE_HORADRIC_CUBE` | `MODULE_HORADRIC_CUBE_FOR_WORLD_OF_WARCRAFT` | TITIaio/Horadric-Cube-for-World-of-Warcraft |
+| `MODULE_INDIVIDUAL_PROGRESSION` | `MODULE_MOD_INDIVIDUAL_PROGRESSION` | ZhengPeiRu21/mod-individual-progression |
+| `MODULE_INSTANCE_RESET` | `MODULE_MOD_INSTANCE_RESET` | azerothcore/mod-instance-reset |
+| `MODULE_ITEM_LEVEL_UP` | `MODULE_MOD_ITEM_LEVEL_UP` | azerothcore/mod-item-level-up |
+| `MODULE_KEEP_OUT` | `MODULE_MOD_KEEP_OUT` | azerothcore/mod-keep-out |
+| `MODULE_LEARN_SPELLS` | `MODULE_MOD_LEARN_SPELLS` | azerothcore/mod-learn-spells |
+| `MODULE_LEVEL_UP_REWARD` | `MODULE_ACORE_LEVELUPREWARD` | 55Honey/Acore_LevelUpReward |
+| `MODULE_LUA_AH_BOT` | `MODULE_AZEROTHCORE_LUA_AH_BOT` | mostlynick3/azerothcore-lua-ah-bot |
+| `MODULE_MORPHSUMMON` | `MODULE_MOD_MORPHSUMMON` | azerothcore/mod-morphsummon |
+| `MODULE_MULTIVENDOR` | `MODULE_AZEROTHCORE_LUA_MULTIVENDOR` | Shadowveil-WotLK/AzerothCore-lua-MultiVendor |
+| `MODULE_NPC_BEASTMASTER` | `MODULE_MOD_NPC_BEASTMASTER` | azerothcore/mod-npc-beastmaster |
+| `MODULE_NPC_BUFFER` | `MODULE_MOD_NPC_BUFFER` | azerothcore/mod-npc-buffer |
+| `MODULE_NPC_ENCHANTER` | `MODULE_MOD_NPC_ENCHANTER` | azerothcore/mod-npc-enchanter |
+| `MODULE_NPC_FREE_PROFESSIONS` | `MODULE_MOD_NPC_FREE_PROFESSIONS` | azerothcore/mod-npc-free-professions |
+| `MODULE_NPC_TALENT_TEMPLATE` | `MODULE_MOD_NPC_TALENT_TEMPLATE` | azerothcore/mod-npc-talent-template |
+| `MODULE_OLLAMA_CHAT` | `MODULE_MOD_OLLAMA_CHAT` | DustinHendrickson/mod-ollama-chat |
+| `MODULE_PHASED_DUELS` | `MODULE_MOD_PHASED_DUELS` | azerothcore/mod-phased-duels |
+| `MODULE_PLAYERBOTS` | `MODULE_MOD_PLAYERBOTS` | mod-playerbots/mod-playerbots |
+| `MODULE_PLAYER_BOT_LEVEL_BRACKETS` | `MODULE_MOD_PLAYER_BOT_LEVEL_BRACKETS` | DustinHendrickson/mod-player-bot-level-brackets |
+| `MODULE_POCKET_PORTAL` | `MODULE_MOD_POCKET_PORTAL` | azerothcore/mod-pocket-portal |
+| `MODULE_PREMIUM` | `MODULE_MOD_PREMIUM` | azerothcore/mod-premium |
+| `MODULE_PRESTIGE_DRAFT_MODE` | `MODULE_PRESTIGE_AND_DRAFT_MODE` | Youpeoples/Prestige-and-Draft-Mode |
+| `MODULE_PROGRESSION_SYSTEM` | `MODULE_MOD_PROGRESSION_SYSTEM` | azerothcore/mod-progression-system |
+| `MODULE_PROMOTION_AZEROTHCORE` | `MODULE_MOD_PROMOTION_AZEROTHCORE` | azerothcore/mod-promotion-azerothcore |
+| `MODULE_PVP_TITLES` | `MODULE_MOD_PVP_TITLES` | azerothcore/mod-pvp-titles |
+| `MODULE_RANDOM_ENCHANTS` | `MODULE_MOD_RANDOM_ENCHANTS` | azerothcore/mod-random-enchants |
+| `MODULE_REAGENT_BANK` | `MODULE_MOD_REAGENT_BANK` | ZhengPeiRu21/mod-reagent-bank |
+| `MODULE_RECRUIT_A_FRIEND` | `MODULE_ACORE_RECRUITAFRIEND` | 55Honey/Acore_RecruitAFriend |
+| `MODULE_RESURRECTION_SCROLL` | `MODULE_MOD_RESURRECTION_SCROLL` | azerothcore/mod-resurrection-scroll |
+| `MODULE_REWARD_PLAYED_TIME` | `MODULE_MOD_REWARD_PLAYED_TIME` | azerothcore/mod-reward-played-time |
+| `MODULE_SERVER_AUTO_SHUTDOWN` | `MODULE_MOD_SERVER_AUTO_SHUTDOWN` | azerothcore/mod-server-auto-shutdown |
+| `MODULE_SOLOCRAFT` | `MODULE_MOD_SOLOCRAFT` | azerothcore/mod-solocraft |
+| `MODULE_SOLO_LFG` | `MODULE_MOD_SOLO_LFG` | azerothcore/mod-solo-lfg |
+| `MODULE_SPELL_REGULATOR` | `MODULE_MOD_SPELL_REGULATOR` | azerothcore/mod-spell-regulator |
+| `MODULE_SYSTEM_VIP` | `MODULE_MOD_SYSTEM_VIP` | azerothcore/mod-system-vip |
+| `MODULE_TIC_TAC_TOE` | `MODULE_MOD_TIC_TAC_TOE` | azerothcore/mod-tic-tac-toe |
+| `MODULE_TIME_IS_TIME` | `MODULE_MOD_TIMEISTIME` | dunjeon/mod-TimeIsTime |
+| `MODULE_TRANSMOG` | `MODULE_MOD_TRANSMOG` | azerothcore/mod-transmog |
+| `MODULE_TRANSMOG_AIO` | `MODULE_AZEROTHCORE_TRANSMOG_3_3_5A` | DanieltheDeveloper/azerothcore-transmog-3.3.5a |
+| `MODULE_WAR_EFFORT` | `MODULE_MOD_WAR_EFFORT` | azerothcore/mod-war-effort |
+| `MODULE_WEEKEND_XP` | `MODULE_MOD_WEEKEND_XP` | azerothcore/mod-weekend-xp |
+| `MODULE_WHO_LOGGED` | `MODULE_MOD_WHO_LOGGED` | azerothcore/mod-who-logged |
+| `MODULE_WORGOBLIN` | `MODULE_MOD_WORGOBLIN` | heyitsbench/mod-worgoblin |
+| `MODULE_ZONE_DIFFICULTY` | `MODULE_MOD_ZONE_DIFFICULTY` | azerothcore/mod-zone-difficulty |
+| `MODULE_MOD_ACCOUNT_MOUNTS` | `MODULE_MOD_ACCOUNT_MOUNTS_RGSON` | rgson/mod-account-mounts (duplicate, suffixed) |
+| `MODULE_MOD_AOE_LOOT` | `MODULE_MOD_AOE_LOOT_TERRABYTE_TBWPS` | TerraByte-tbwps/mod-aoe-loot (duplicate, suffixed) |
+| `MODULE_MOD_ASSISTANT` | `MODULE_MOD_ASSISTANT_MALURAMICHAEL` | maluramichael/mod-assistant (duplicate, suffixed) |
+| `MODULE_MOD_AUTOBALANCE` | `MODULE_MOD_AUTOBALANCE_ARAXIAONLINE` | araxiaonline/mod-autobalance (duplicate, suffixed) |
+| `MODULE_MOD_GUILDHOUSE` | `MODULE_MOD_GUILDHOUSE_BRIAN_ALDRIDGE` | Brian-Aldridge/mod-guildhouse (duplicate, suffixed) |
+| `MODULE_MOD_LEARN_SPELLS` | `MODULE_MOD_LEARN_SPELLS_VENOMEKPL` | VenomekPL/mod-learn-spells (duplicate, suffixed) |
+| `MODULE_MOD_NPC_BEASTMASTER` | `MODULE_MOD_NPC_BEASTMASTER_BRIAN_ALDRIDGE` | Brian-Aldridge/mod-npc-beastmaster (duplicate, suffixed) |
+| `MODULE_MOD_OLLAMA_CHAT` | `MODULE_MOD_OLLAMA_CHAT_MALURAMICHAEL` | maluramichael/mod-ollama-chat (duplicate, suffixed) |
+| `MODULE_MOD_PLAYERBOTS` | `MODULE_MOD_PLAYERBOTS_MALURAMICHAEL` | maluramichael/mod-playerbots (duplicate, suffixed) |
+| `MODULE_MOD_SOLOCRAFT` | `MODULE_MOD_SOLOCRAFT_VALSAN_AZERTY_BOI` | valsan-azerty-boi/mod-solocraft (duplicate, suffixed) |
+| `MODULE_MOD_TRANSMOG` | `MODULE_MOD_TRANSMOG_MALURAMICHAEL` | maluramichael/mod-transmog (duplicate, suffixed) |
+| `MODULE_MOD_WORGOBLIN` | `MODULE_MOD_WORGOBLIN_ARAXIAONLINE` | araxiaonline/mod-worgoblin (duplicate, suffixed) |

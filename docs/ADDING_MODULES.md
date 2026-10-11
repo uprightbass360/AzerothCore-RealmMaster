@@ -212,6 +212,15 @@ compile is needed.
 - [MODULE_DBC_FILES.md](MODULE_DBC_FILES.md): modules that ship server DBC files
 - [scripts/hooks/README.md](../scripts/hooks/README.md): post-install hooks
 
+## How a module gets its key
+
+Keys are never chosen by hand. The sync derives `MODULE_<REPO_NAME>` from the
+repository name, and appends `_<OWNER>` for third-party forks and for any
+repository whose bare key another entry already holds. `azerothcore` forks are
+exempt from the fork suffix (`policy.fork_owners` in
+`config/module-sources.json`). A pull request that adds an entry with a
+different key fails the `test_manifest_key_invariants` test.
+
 ## Excluding a module from the catalogue
 
 The nightly sync admits every repository tagged with the AzerothCore topics.
