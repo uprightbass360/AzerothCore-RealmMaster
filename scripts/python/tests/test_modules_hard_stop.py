@@ -48,12 +48,27 @@ class HardStopTest(unittest.TestCase):
 
     def test_hint_names_the_new_key_when_the_rename_map_knows_it(self):
         (self.tmp / "config" / "key-renames.json").write_text(
-            json.dumps({"MODULE_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS"})
+            json.dumps({"waves": [{"id": 1, "renames": {"MODULE_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS"}}]})
         )
         state = self._state("MODULE_PLAYERBOTS=1\n")
         self.assertEqual(len(state.errors), 1)
         self.assertIn("MODULE_MOD_PLAYERBOTS", state.errors[0])
         self.assertIn("./modules.sh migrate", state.errors[0])
+
+    def test_hint_resolves_the_final_key_across_waves(self):
+        (self.tmp / "config" / "key-renames.json").write_text(json.dumps({"waves": [
+            {"id": 1, "renames": {"MODULE_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS", "MODULE_MOD_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS_FORK"}},
+            {"id": 2, "renames": {"MODULE_MOD_PLAYERBOTS_FORK": "MODULE_MOD_PLAYERBOTS_FORK_V2"}},
+        ]}))
+        state = self._state("MODULE_PLAYERBOTS=1\n")
+        self.assertTrue(any("is now MODULE_MOD_PLAYERBOTS;" in e for e in state.errors), state.errors)
+        state = self._state("MODULE_MOD_PLAYERBOTS_FORK=1\n")
+        self.assertTrue(any("is now MODULE_MOD_PLAYERBOTS_FORK_V2;" in e for e in state.errors), state.errors)
+
+    def test_schema_marker_is_not_a_module_key(self):
+        state = self._state("MODULES_KEY_SCHEMA=2\nMODULE_MOD_PLAYERBOTS=1\n")
+        self.assertEqual(state.errors, [])
+        self.assertEqual([w for w in state.warnings if "MODULES_KEY_SCHEMA" in w], [])
 
     def test_stop_fires_when_the_rename_map_is_unreadable(self):
         (self.tmp / "config" / "key-renames.json").write_text("{")

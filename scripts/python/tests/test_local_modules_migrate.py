@@ -7,14 +7,23 @@ from pathlib import Path
 
 import local_modules
 
-RENAMES = {"MODULE_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS", "MODULE_ELUNA": "MODULE_MOD_ALE"}
+WAVES = {
+    "waves": [
+        {"id": 1, "renames": {
+            "MODULE_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS",
+            "MODULE_MOD_PLAYERBOTS": "MODULE_MOD_PLAYERBOTS_MALURAMICHAEL",
+            "MODULE_ELUNA": "MODULE_MOD_ALE",
+        }},
+        {"id": 2, "renames": {"MODULE_MOD_STAT_BOOSTER": "MODULE_MOD_STAT_BOOSTER_BENNYBROSEPH"}},
+    ]
+}
 
 
 class MigrateCommandTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         (self.root / "config").mkdir()
-        (self.root / "config" / "key-renames.json").write_text(json.dumps(RENAMES))
+        (self.root / "config" / "key-renames.json").write_text(json.dumps(WAVES))
         (self.root / "config" / "module-manifest.json").write_text(json.dumps({"modules": []}))
 
     def _run(self, *args):
@@ -23,26 +32,63 @@ class MigrateCommandTest(unittest.TestCase):
             code = local_modules.main(["--root", str(self.root), "migrate", *args])
         return code, out.getvalue()
 
-    def test_rewrites_env_and_local_manifest_and_reports(self):
+    def test_rewrites_env_and_local_manifest_and_records_the_schema(self):
         (self.root / ".env").write_text("MODULE_PLAYERBOTS=1\nX=2\n")
         (self.root / "config" / "module-manifest.local.json").write_text(
             json.dumps({"modules": [{"key": "MODULE_PLAYERBOTS", "ref": "abc"}]})
         )
         code, out = self._run()
         self.assertEqual(code, 0)
-        self.assertEqual((self.root / ".env").read_text(), "MODULE_MOD_PLAYERBOTS=1\nX=2\n")
+        self.assertEqual((self.root / ".env").read_text(), "MODULE_MOD_PLAYERBOTS=1\nX=2\nMODULES_KEY_SCHEMA=2\n")
         local = json.loads((self.root / "config" / "module-manifest.local.json").read_text())
         self.assertEqual(local["modules"][0]["key"], "MODULE_MOD_PLAYERBOTS")
         self.assertIn("MODULE_PLAYERBOTS -> MODULE_MOD_PLAYERBOTS", out)
-        backups = sorted(p.name for p in self.root.glob(".env.bak-*"))
-        self.assertEqual(len(backups), 1)
+        self.assertIn("MODULES_KEY_SCHEMA=2", out)
+        self.assertEqual(len(list(self.root.glob(".env.bak-*"))), 1)
+
+    def test_second_run_changes_nothing(self):
+        (self.root / ".env").write_text("MODULE_PLAYERBOTS=1\n")
+        self._run()
+        after_first = (self.root / ".env").read_text()
+        code, out = self._run()
+        self.assertEqual(code, 0)
+        self.assertEqual((self.root / ".env").read_text(), after_first)
+        self.assertEqual(after_first, "MODULE_MOD_PLAYERBOTS=1\nMODULES_KEY_SCHEMA=2\n")
+        self.assertIn("nothing to migrate", out)
+        self.assertEqual(len(list(self.root.glob(".env.bak-*"))), 1)
+
+    def test_env_at_an_older_schema_gets_only_the_newer_waves(self):
+        (self.root / ".env").write_text("MODULES_KEY_SCHEMA=1\nMODULE_MOD_PLAYERBOTS=1\nMODULE_MOD_STAT_BOOSTER=1\n")
+        code, out = self._run()
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            (self.root / ".env").read_text(),
+            "MODULES_KEY_SCHEMA=2\nMODULE_MOD_PLAYERBOTS=1\nMODULE_MOD_STAT_BOOSTER_BENNYBROSEPH=1\n",
+        )
+        self.assertNotIn("MALURAMICHAEL", out)
+
+    def test_env_without_old_keys_still_gets_the_schema_recorded(self):
+        (self.root / ".env").write_text("MODULE_MOD_UNRELATED=1\n")
+        code, out = self._run()
+        self.assertEqual(code, 0)
+        self.assertEqual((self.root / ".env").read_text(), "MODULE_MOD_UNRELATED=1\nMODULES_KEY_SCHEMA=2\n")
+        self.assertIn("no keys to rename", out)
+        self.assertIn("MODULES_KEY_SCHEMA=2", out)
+        self.assertEqual(len(list(self.root.glob(".env.bak-*"))), 1)
+
+    def test_current_schema_is_a_quiet_success(self):
+        (self.root / ".env").write_text("MODULE_MOD_PLAYERBOTS=1\nMODULES_KEY_SCHEMA=2\n")
+        code, out = self._run()
+        self.assertEqual(code, 0)
+        self.assertIn("nothing to migrate", out)
+        self.assertEqual(list(self.root.glob(".env.bak-*")), [])
 
     def test_profiles_passed_as_arguments_are_rewritten(self):
         profile = self.root / "mine.json"
-        profile.write_text(json.dumps({"modules": ["MODULE_ELUNA"]}))
+        profile.write_text(json.dumps({"modules": ["MODULE_ELUNA", "MODULE_MOD_STAT_BOOSTER"]}))
         code, out = self._run(str(profile))
         self.assertEqual(code, 0)
-        self.assertEqual(json.loads(profile.read_text())["modules"], ["MODULE_MOD_ALE"])
+        self.assertEqual(json.loads(profile.read_text())["modules"], ["MODULE_MOD_ALE", "MODULE_MOD_STAT_BOOSTER_BENNYBROSEPH"])
         self.assertIn(str(profile), out)
 
     def test_env_override_flag(self):
@@ -50,14 +96,7 @@ class MigrateCommandTest(unittest.TestCase):
         other.write_text("MODULE_ELUNA=1\n")
         code, _ = self._run("--env", str(other))
         self.assertEqual(code, 0)
-        self.assertEqual(other.read_text(), "MODULE_MOD_ALE=1\n")
-
-    def test_nothing_to_migrate_is_a_quiet_success(self):
-        (self.root / ".env").write_text("MODULE_MOD_PLAYERBOTS=1\n")
-        code, out = self._run()
-        self.assertEqual(code, 0)
-        self.assertIn("nothing to migrate", out)
-        self.assertEqual(list(self.root.glob(".env.bak-*")), [])
+        self.assertEqual(other.read_text(), "MODULE_MOD_ALE=1\nMODULES_KEY_SCHEMA=2\n")
 
     def test_missing_files_are_skipped(self):
         code, out = self._run()
@@ -73,15 +112,13 @@ class MigrateCommandTest(unittest.TestCase):
         self.assertIn("key-renames.json", err.getvalue())
 
     def test_missing_profile_fails_before_rewriting(self):
-        (self.root / ".env").write_text("MODULE_PLAYERBOTS=1\n")
-        missing = str(self.root / "typo.json")
+        (self.root / ".env").write_text("MODULE_ELUNA=1\n")
         err = io.StringIO()
         with contextlib.redirect_stderr(err):
-            code, _ = self._run(missing)
+            code, _ = self._run(str(self.root / "nope.json"))
         self.assertEqual(code, 1)
-        self.assertIn(missing, err.getvalue())
-        self.assertEqual((self.root / ".env").read_text(), "MODULE_PLAYERBOTS=1\n")
-        self.assertEqual(list(self.root.glob(".env.bak-*")), [])
+        self.assertIn("nope.json", err.getvalue())
+        self.assertEqual((self.root / ".env").read_text(), "MODULE_ELUNA=1\n")
 
     def test_malformed_profile_reports_an_error(self):
         profile = self.root / "broken.json"

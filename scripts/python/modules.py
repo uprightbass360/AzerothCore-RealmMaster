@@ -273,17 +273,33 @@ class ModuleCollectionState:
 
 
 def _load_key_renames(path: Path) -> Dict[str, str]:
-    """Old -> new key map used only to word the hard-stop hint.
+    """Old -> final key map used only to word the hard-stop hint.
 
-    Returns {} when the file is absent or unreadable; the stop fires regardless.
+    Mirrors key_renames.cumulative_map without importing it, so modules.py stays
+    self-contained. Returns {} when the file is absent or malformed; the stop
+    fires regardless.
     """
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    if not isinstance(data, dict):
+    raw_waves = data.get("waves") if isinstance(data, dict) else None
+    if not isinstance(raw_waves, list):
         return {}
-    return {k: v for k, v in data.items() if isinstance(k, str) and isinstance(v, str)}
+    waves: List[Dict[str, str]] = []
+    for raw in raw_waves:
+        renames = raw.get("renames") if isinstance(raw, dict) else None
+        if not isinstance(renames, dict):
+            return {}
+        waves.append({k: v for k, v in renames.items() if isinstance(k, str) and isinstance(v, str)})
+    resolved: Dict[str, str] = {}
+    for wave in waves:
+        for old in wave:
+            key = old
+            for step in waves:
+                key = step.get(key, key)
+            resolved[old] = key
+    return resolved
 
 
 def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:

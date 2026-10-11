@@ -336,11 +336,15 @@ build or deploy script aborts. The message names the new key when
 
 **`./modules.sh migrate [--env PATH] [PROFILE ...]`** rewrites renamed keys in
 `.env`, `config/module-manifest.local.json` and any profile files given, keeping
-a `.bak-<timestamp>` copy of each changed file. Running it twice is harmless.
+a `.bak-<timestamp>` copy of each changed file. `config/key-renames.json` is a
+list of rename waves; `.env` records the last wave applied to it as
+`MODULES_KEY_SCHEMA=<n>`, and `migrate` applies only newer waves, so running it
+again does nothing.
 
-**`scripts/python/rename_keys.py [--dry-run]`** is the maintainer-side tool
-that applies `config/key-renames.json` to the manifest, profiles and env
-templates in the repo. Users never need it.
+**`scripts/python/rename_keys.py --wave N [--dry-run]`** is the maintainer-side
+tool that applies one wave of `config/key-renames.json` to the manifest, profiles
+and env templates in the repo and stamps the templates with
+`MODULES_KEY_SCHEMA=N`. Users never need it.
 
 #### `scripts/python/update_module_manifest.py` - GitHub Topic Sync
 Automates manifest population directly from the official AzerothCore GitHub topics.
