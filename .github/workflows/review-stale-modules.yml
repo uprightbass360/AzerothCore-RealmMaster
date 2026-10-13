@@ -51,8 +51,9 @@ jobs:
         run: python3 tools/config-ui/check_roundtrip.py
 
       - name: Python unit tests
-        # A PR opened with GITHUB_TOKEN does not trigger ci.yml, so the suite
-        # (including the manifest/sources consistency check) must run here.
+        # ci.yml skips this branch (a run for a bot-opened PR would only be
+        # held for approval), so the suite, including the manifest/sources
+        # consistency check, must run here.
         if: steps.stale.outputs.found == 'true'
         run: python3 -m unittest discover -s scripts/python/tests -t scripts/python
 
