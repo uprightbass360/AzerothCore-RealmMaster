@@ -16,7 +16,7 @@
       "special_message": "\ud83e\udd16 Foundation module: Enables AI-powered companions for solo and group content",
       "status": "active",
       "requires": [],
-      "last_modified": "2026-10-12T20:43:05Z",
+      "last_modified": "2026-10-17T02:06:21Z",
       "fork": false
     },
     {
@@ -3504,7 +3504,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-15T16:07:27Z",
+      "last_modified": "2026-10-16T21:30:25Z",
       "fork": false
     },
     {
@@ -4059,7 +4059,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-01T23:55:51Z",
+      "last_modified": "2026-10-16T15:03:04Z",
       "fork": false
     },
     {
@@ -4444,7 +4444,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-13T06:28:28Z",
+      "last_modified": "2026-10-16T09:58:41Z",
       "fork": false
     },
     {
@@ -4924,7 +4924,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-11T17:46:22Z",
+      "last_modified": "2026-10-16T14:30:27Z",
       "fork": false
     },
     {
@@ -5740,7 +5740,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-12T20:01:26Z",
+      "last_modified": "2026-10-16T22:25:36Z",
       "fork": false
     },
     {
@@ -5948,7 +5948,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-14T22:26:17Z",
+      "last_modified": "2026-10-16T18:39:08Z",
       "fork": false
     },
     {
@@ -8140,7 +8140,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-12T15:33:22Z",
+      "last_modified": "2026-10-17T01:47:55Z",
       "fork": false
     },
     {
@@ -8252,7 +8252,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-12T15:32:08Z",
+      "last_modified": "2026-10-17T02:20:59Z",
       "fork": false
     },
     {
@@ -8556,7 +8556,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-15T04:00:26Z",
+      "last_modified": "2026-10-16T23:13:05Z",
       "fork": false
     },
     {
@@ -9164,7 +9164,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-24T16:21:50Z",
+      "last_modified": "2026-10-16T14:47:21Z",
       "fork": false
     },
     {
@@ -9388,7 +9388,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-10T23:05:21Z",
+      "last_modified": "2026-10-16T23:17:26Z",
       "fork": false
     },
     {
@@ -9788,7 +9788,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T09:53:48Z",
+      "last_modified": "2026-10-16T18:51:07Z",
       "fork": false
     },
     {
@@ -10460,7 +10460,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T05:45:06Z",
+      "last_modified": "2026-10-17T06:42:31Z",
       "fork": false
     },
     {
@@ -10476,7 +10476,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-15T22:52:00Z",
+      "last_modified": "2026-10-16T23:40:41Z",
       "fork": false
     },
     {
