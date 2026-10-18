@@ -683,7 +683,7 @@
       "status": "active",
       "order": 5000,
       "config_cleanup": [],
-      "last_modified": "2026-10-08T20:52:57Z",
+      "last_modified": "2026-10-18T09:12:16Z",
       "fork": false
     },
     {
@@ -1107,7 +1107,7 @@
       ],
       "notes": "SQL files cannot be unloaded once executed; requires auto DB updater enabled in worldserver config",
       "category": "progression",
-      "last_modified": "2026-10-01T07:26:37Z",
+      "last_modified": "2026-10-18T00:39:34Z",
       "fork": false
     },
     {
@@ -1154,7 +1154,7 @@
       "config_cleanup": [],
       "notes": "Mythicmode NPC 1128001 spawned in raids/heroic dungeons; NPC 1128002 for Mythicmode rewards",
       "category": "progression",
-      "last_modified": "2026-09-20T22:28:44Z",
+      "last_modified": "2026-10-17T15:28:33Z",
       "fork": false
     },
     {
@@ -1202,7 +1202,7 @@
         "mod-double-xp-weekend.conf*"
       ],
       "category": "progression",
-      "last_modified": "2026-10-11T19:05:59Z",
+      "last_modified": "2026-10-18T09:08:30Z",
       "status": "active",
       "order": 5000,
       "requires": [],
@@ -1733,7 +1733,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-06-24T01:55:50Z",
+      "last_modified": "2026-10-17T10:58:58Z",
       "fork": false
     },
     {
@@ -3585,7 +3585,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-10T09:46:47Z",
+      "last_modified": "2026-10-17T21:56:19Z",
       "fork": false
     },
     {
@@ -3701,7 +3701,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-10T10:53:37Z",
+      "last_modified": "2026-10-17T13:47:01Z",
       "fork": false
     },
     {
@@ -3928,7 +3928,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-03-18T06:50:35Z",
+      "last_modified": "2026-10-17T21:18:49Z",
       "fork": false
     },
     {
@@ -4444,7 +4444,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T09:58:41Z",
+      "last_modified": "2026-10-17T09:31:33Z",
       "fork": false
     },
     {
@@ -4764,7 +4764,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T16:44:52Z",
+      "last_modified": "2026-10-18T00:06:16Z",
       "fork": false
     },
     {
@@ -4924,7 +4924,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T14:30:27Z",
+      "last_modified": "2026-10-17T13:56:03Z",
       "fork": false
     },
     {
@@ -4940,7 +4940,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-14T17:22:49Z",
+      "last_modified": "2026-10-17T19:28:01Z",
       "fork": false
     },
     {
@@ -5420,7 +5420,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-15T13:26:42Z",
+      "last_modified": "2026-10-17T19:55:54Z",
       "fork": false
     },
     {
@@ -5756,7 +5756,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T11:29:24Z",
+      "last_modified": "2026-10-17T12:58:23Z",
       "fork": false
     },
     {
@@ -6189,22 +6189,6 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-07-09T19:25:41Z",
-      "fork": false
-    },
-    {
-      "key": "MODULE_MOD_OPEN_WORLD_DIFFICULTY",
-      "name": "mod-open-world-difficulty",
-      "repo": "https://github.com/Stefan2102/mod-open-world-difficulty.git",
-      "description": "Open world creature difficulty scaling module for AzerothCore",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-08-05T18:01:52Z",
       "fork": false
     },
     {
@@ -8556,7 +8540,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T23:13:05Z",
+      "last_modified": "2026-10-17T16:18:21Z",
       "fork": false
     },
     {
@@ -9164,7 +9148,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T14:47:21Z",
+      "last_modified": "2026-10-17T21:47:04Z",
       "fork": false
     },
     {
@@ -9388,7 +9372,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T23:17:26Z",
+      "last_modified": "2026-10-17T14:23:44Z",
       "fork": false
     },
     {
@@ -9468,7 +9452,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T07:07:18Z",
+      "last_modified": "2026-10-17T18:27:08Z",
       "fork": false
     },
     {
@@ -9788,7 +9772,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T18:51:07Z",
+      "last_modified": "2026-10-17T23:21:25Z",
       "fork": false
     },
     {
@@ -10332,7 +10316,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-05T16:44:52Z",
+      "last_modified": "2026-10-18T00:06:16Z",
       "fork": false
     },
     {
@@ -10476,7 +10460,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T23:40:41Z",
+      "last_modified": "2026-10-17T22:21:10Z",
       "fork": false
     },
     {
@@ -10508,7 +10492,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-14T23:49:05Z",
+      "last_modified": "2026-10-17T20:54:36Z",
       "fork": false
     },
     {
@@ -10541,6 +10525,22 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-10-15T19:08:17Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_GUILD_MESSAGE_HISTORY",
+      "name": "mod-guild-message-history",
+      "repo": "https://github.com/zyggy123/mod-guild-message-history.git",
+      "description": "Guild chat history for AzerothCore 3.3.5a \u2014 the guild conversation is still there when you log back in.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-17T20:53:15Z",
       "fork": false
     }
   ],
