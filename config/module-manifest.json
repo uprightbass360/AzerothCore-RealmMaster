@@ -1620,7 +1620,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-20T09:31:46Z",
+      "last_modified": "2026-10-18T13:46:12Z",
       "fork": false
     },
     {
@@ -3504,7 +3504,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T21:30:25Z",
+      "last_modified": "2026-10-19T05:07:25Z",
       "fork": false
     },
     {
@@ -3636,7 +3636,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-11T20:17:53Z",
+      "last_modified": "2026-10-18T20:23:14Z",
       "fork": false
     },
     {
@@ -3928,7 +3928,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T21:18:49Z",
+      "last_modified": "2026-10-18T21:15:51Z",
       "fork": false
     },
     {
@@ -4444,7 +4444,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T09:31:33Z",
+      "last_modified": "2026-10-18T09:44:53Z",
       "fork": false
     },
     {
@@ -4812,7 +4812,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-11T17:33:23Z",
+      "last_modified": "2026-10-18T20:54:33Z",
       "fork": false
     },
     {
@@ -4924,7 +4924,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T13:56:03Z",
+      "last_modified": "2026-10-18T18:01:17Z",
       "fork": false
     },
     {
@@ -4940,7 +4940,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T19:28:01Z",
+      "last_modified": "2026-10-18T22:29:12Z",
       "fork": false
     },
     {
@@ -7404,7 +7404,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-08T13:57:46Z",
+      "last_modified": "2026-10-18T13:51:02Z",
       "fork": false
     },
     {
@@ -8540,7 +8540,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T16:18:21Z",
+      "last_modified": "2026-10-19T02:29:12Z",
       "fork": false
     },
     {
@@ -8668,7 +8668,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-21T08:52:23Z",
+      "last_modified": "2026-10-18T20:39:40Z",
       "fork": false
     },
     {
@@ -8684,7 +8684,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-15T00:06:32Z",
+      "last_modified": "2026-10-19T02:28:51Z",
       "fork": false
     },
     {
@@ -9772,7 +9772,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T23:21:25Z",
+      "last_modified": "2026-10-18T10:40:31Z",
       "fork": false
     },
     {
@@ -9868,7 +9868,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-11T17:33:23Z",
+      "last_modified": "2026-10-18T20:54:33Z",
       "fork": false
     },
     {
@@ -9900,7 +9900,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-12T18:20:59Z",
+      "last_modified": "2026-10-18T11:59:44Z",
       "fork": false
     },
     {
@@ -10428,7 +10428,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-12T00:29:08Z",
+      "last_modified": "2026-10-19T01:50:30Z",
       "fork": false
     },
     {
@@ -10492,7 +10492,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T20:54:36Z",
+      "last_modified": "2026-10-19T08:23:02Z",
       "fork": false
     },
     {
@@ -10524,7 +10524,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-15T19:08:17Z",
+      "last_modified": "2026-10-18T13:39:09Z",
       "fork": false
     },
     {
@@ -10541,6 +10541,22 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-10-17T20:53:15Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_3_3_5_MODEL_ANIMATIONS_INFO",
+      "name": "3.3.5-Model-Animations-Info",
+      "repo": "https://github.com/TheSCREWEDSoftware/3.3.5-Model-Animations-Info.git",
+      "description": "3.3.5 Model Animations Info",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-18T15:33:55Z",
       "fork": false
     }
   ],
