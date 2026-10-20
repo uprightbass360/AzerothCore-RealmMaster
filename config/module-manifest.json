@@ -16,7 +16,7 @@
       "special_message": "\ud83e\udd16 Foundation module: Enables AI-powered companions for solo and group content",
       "status": "active",
       "requires": [],
-      "last_modified": "2026-10-17T02:06:21Z",
+      "last_modified": "2026-10-20T04:25:53Z",
       "fork": false
     },
     {
@@ -3602,7 +3602,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-07T00:14:01Z",
+      "last_modified": "2026-10-19T21:28:07Z",
       "fork": false
     },
     {
@@ -4444,7 +4444,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-18T09:44:53Z",
+      "last_modified": "2026-10-19T10:59:59Z",
       "fork": false
     },
     {
@@ -4924,7 +4924,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-18T18:01:17Z",
+      "last_modified": "2026-10-19T18:24:52Z",
       "fork": false
     },
     {
@@ -5420,7 +5420,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T19:55:54Z",
+      "last_modified": "2026-10-19T12:12:11Z",
       "fork": false
     },
     {
@@ -5740,7 +5740,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-16T22:25:36Z",
+      "last_modified": "2026-10-20T01:44:59Z",
       "fork": false
     },
     {
@@ -6332,7 +6332,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-29T08:02:48Z",
+      "last_modified": "2026-10-20T00:28:59Z",
       "fork": false
     },
     {
@@ -7005,22 +7005,6 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-09-27T12:14:28Z",
-      "fork": false
-    },
-    {
-      "key": "MODULE_MOD_OPEN_WORLD_PARTY_SCALING",
-      "name": "mod-open-world-party-scaling",
-      "repo": "https://github.com/Stefan2102/mod-open-world-party-scaling.git",
-      "description": "An AzerothCore module that increases open-world combat difficulty for parties.",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-07-29T17:52:18Z",
       "fork": false
     },
     {
@@ -10428,7 +10412,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-19T01:50:30Z",
+      "last_modified": "2026-10-19T23:37:41Z",
       "fork": false
     },
     {
@@ -10444,7 +10428,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T06:42:31Z",
+      "last_modified": "2026-10-20T09:38:38Z",
       "fork": false
     },
     {
@@ -10460,7 +10444,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T22:21:10Z",
+      "last_modified": "2026-10-19T22:27:16Z",
       "fork": false
     },
     {
@@ -10492,7 +10476,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-19T08:23:02Z",
+      "last_modified": "2026-10-19T17:33:35Z",
       "fork": false
     },
     {
@@ -10557,6 +10541,38 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-10-18T15:33:55Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_NECRO_HOME",
+      "name": "mod-necro-home",
+      "repo": "https://github.com/ThiagoSBarreto/mod-necro-home.git",
+      "description": "A bunch of quality-of-life improvements and shenanigans to save time while playing solo or enjoying a more casual gameplay experience.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-20T03:59:19Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_NATIVE_HUNTS",
+      "name": "mod-native-hunts",
+      "repo": "https://github.com/Hisha/mod-native-hunts.git",
+      "description": "A hunter/prey system for AzerothCore that utilizes mod-content-manager to integrate it into the server.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-19T11:00:59Z",
       "fork": false
     }
   ],
