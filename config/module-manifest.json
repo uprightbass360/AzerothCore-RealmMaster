@@ -16,7 +16,7 @@
       "special_message": "\ud83e\udd16 Foundation module: Enables AI-powered companions for solo and group content",
       "status": "active",
       "requires": [],
-      "last_modified": "2026-10-20T04:25:53Z",
+      "last_modified": "2026-10-20T18:28:51Z",
       "fork": false
     },
     {
@@ -88,7 +88,7 @@
       "order": 5000,
       "requires": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-10-16T01:34:52Z",
+      "last_modified": "2026-10-20T12:27:10Z",
       "fork": false
     },
     {
@@ -3504,7 +3504,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-19T05:07:25Z",
+      "last_modified": "2026-10-20T11:36:53Z",
       "fork": false
     },
     {
@@ -3602,7 +3602,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-19T21:28:07Z",
+      "last_modified": "2026-10-21T00:14:01Z",
       "fork": false
     },
     {
@@ -3636,7 +3636,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-18T20:23:14Z",
+      "last_modified": "2026-10-20T14:42:29Z",
       "fork": false
     },
     {
@@ -4444,7 +4444,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-19T10:59:59Z",
+      "last_modified": "2026-10-20T10:13:20Z",
       "fork": false
     },
     {
@@ -5740,7 +5740,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-20T01:44:59Z",
+      "last_modified": "2026-10-21T05:05:06Z",
       "fork": false
     },
     {
@@ -8524,7 +8524,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-19T02:29:12Z",
+      "last_modified": "2026-10-21T03:17:52Z",
       "fork": false
     },
     {
@@ -9756,7 +9756,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-18T10:40:31Z",
+      "last_modified": "2026-10-20T13:26:48Z",
       "fork": false
     },
     {
@@ -9964,7 +9964,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-08T02:23:23Z",
+      "last_modified": "2026-10-21T06:46:51Z",
       "fork": true
     },
     {
@@ -10573,6 +10573,118 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-10-19T11:00:59Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_AZEROTHCORE_335_FIELD_NOTES",
+      "name": "azerothcore-335-field-notes",
+      "repo": "https://github.com/astrangedaytoday15-dev/azerothcore-335-field-notes.git",
+      "description": "AzerothCore 3.3.5a field notes: native 4th talent tab / tree for every class, custom spells and spell_proc, gotchas, Claude Code workflow, plus a mod-playerbots guild bank patch. Tested/source-tagged. CC BY 4.0.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-21T08:07:43Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_QUESTPARTY",
+      "name": "mod-questparty",
+      "repo": "https://github.com/Tntdruid/mod-questparty.git",
+      "description": "AzerothCore module: lets eligible party members loot their own quest items from the same game object",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-20T20:08:30Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_DRAENEI_WARLOCK",
+      "name": "mod-draenei-warlock",
+      "repo": "https://github.com/Leaf-Spring/mod-draenei-warlock.git",
+      "description": "M\u00f3dulo para agregar la clase Brujo a la Raza Draenei en Azerothcore WOTLK 3.3.5a",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-20T12:01:15Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_NIGHTELF_WARLOCK",
+      "name": "mod-nightelf-warlock",
+      "repo": "https://github.com/Leaf-Spring/mod-nightelf-warlock.git",
+      "description": "M\u00f3dulo para agregar la clase Brujo a la Raza Night Elf en Azerothcore WOTLK 3.3.5a",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-20T11:23:53Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_NPC_DANCER",
+      "name": "mod-npc-dancer",
+      "repo": "https://github.com/Wow-Libre/mod-npc-dancer.git",
+      "description": "",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-09-05T19:54:21Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_NPC_MINES",
+      "name": "mod-npc-mines",
+      "repo": "https://github.com/Wow-Libre/mod-npc-mines.git",
+      "description": "",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-09-05T13:42:48Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_NPC_SLOTS",
+      "name": "mod-npc-slots",
+      "repo": "https://github.com/Wow-Libre/mod-npc-slots.git",
+      "description": "",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-09-05T13:25:20Z",
       "fork": false
     }
   ],
