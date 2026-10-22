@@ -3536,7 +3536,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-13T12:55:46Z",
+      "last_modified": "2026-10-22T01:57:39Z",
       "fork": false
     },
     {
@@ -3585,7 +3585,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T21:56:19Z",
+      "last_modified": "2026-10-21T22:54:03Z",
       "fork": false
     },
     {
@@ -4444,7 +4444,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-20T10:13:20Z",
+      "last_modified": "2026-10-21T10:22:13Z",
       "fork": false
     },
     {
@@ -5740,7 +5740,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-21T05:05:06Z",
+      "last_modified": "2026-10-21T21:51:46Z",
       "fork": false
     },
     {
@@ -8108,7 +8108,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T01:47:55Z",
+      "last_modified": "2026-10-21T18:29:19Z",
       "fork": false
     },
     {
@@ -8220,7 +8220,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-17T02:20:59Z",
+      "last_modified": "2026-10-21T21:14:31Z",
       "fork": false
     },
     {
@@ -8396,7 +8396,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-09-14T17:10:49Z",
+      "last_modified": "2026-10-22T07:23:54Z",
       "fork": false
     },
     {
@@ -8572,7 +8572,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-09T13:05:53Z",
+      "last_modified": "2026-10-22T10:18:24Z",
       "fork": false
     },
     {
@@ -9484,7 +9484,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T20:37:56Z",
+      "last_modified": "2026-10-21T13:36:49Z",
       "fork": false
     },
     {
@@ -9756,7 +9756,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-20T13:26:48Z",
+      "last_modified": "2026-10-21T18:27:43Z",
       "fork": false
     },
     {
@@ -9884,7 +9884,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-18T11:59:44Z",
+      "last_modified": "2026-10-21T19:41:34Z",
       "fork": false
     },
     {
@@ -9900,7 +9900,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-12T18:20:11Z",
+      "last_modified": "2026-10-21T19:42:20Z",
       "fork": false
     },
     {
@@ -9932,7 +9932,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-13T09:58:59Z",
+      "last_modified": "2026-10-21T20:54:34Z",
       "fork": false
     },
     {
@@ -10316,7 +10316,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-13T12:55:46Z",
+      "last_modified": "2026-10-22T01:57:39Z",
       "fork": false
     },
     {
@@ -10556,7 +10556,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-20T03:59:19Z",
+      "last_modified": "2026-10-21T22:25:33Z",
       "fork": false
     },
     {
@@ -10588,7 +10588,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-21T08:07:43Z",
+      "last_modified": "2026-10-22T06:49:18Z",
       "fork": false
     },
     {
@@ -10636,7 +10636,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-20T11:23:53Z",
+      "last_modified": "2026-10-21T15:09:08Z",
       "fork": false
     },
     {
@@ -10685,6 +10685,22 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-09-05T13:25:20Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_WEEKLY_SERVER_RESET",
+      "name": "mod-weekly-server-reset",
+      "repo": "https://github.com/vrzgames/mod-weekly-server-reset.git",
+      "description": "Created by iCore. Configurable daily/weekly resets and weekly arena flush for AzerothCore, with offline catch-up. Ideal for single-player servers that do not run 24/7.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-21T15:33:55Z",
       "fork": false
     }
   ],
