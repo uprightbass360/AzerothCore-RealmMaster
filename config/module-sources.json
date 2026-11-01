@@ -249,6 +249,10 @@
       "reason": "no upstream activity since 2023-10-08",
       "date": "2026-10-10"
     },
+    "hallgaeuer/mod-quickbalance": {
+      "reason": "no upstream activity since 2023-10-26",
+      "date": "2026-11-01"
+    },
     "helldragonpz/auto_check_restart": {
       "reason": "no upstream activity since 2023-02-17",
       "date": "2026-10-10"
@@ -256,6 +260,18 @@
     "hellionop/lua-hardcoremode": {
       "reason": "no upstream activity since 2023-01-29",
       "date": "2026-10-10"
+    },
+    "ildourol/mod-playerbots-city-life": {
+      "reason": "archived upstream",
+      "date": "2026-11-01"
+    },
+    "ildourol/mod-playerbots-pvp-life": {
+      "reason": "archived upstream",
+      "date": "2026-11-01"
+    },
+    "kjack9/mod-dead-means-dead": {
+      "reason": "no upstream activity since 2023-10-22",
+      "date": "2026-11-01"
     },
     "lightdestory/azerothcoreadmin": {
       "reason": "no upstream activity since 2023-04-18",
