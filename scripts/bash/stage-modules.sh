@@ -342,44 +342,44 @@ load_enabled_modules
 
 # Define module mappings (from rebuild-with-modules.sh)
 declare -A MODULE_REPO_MAP=(
-  [MODULE_AOE_LOOT]=mod-aoe-loot
-  [MODULE_LEARN_SPELLS]=mod-learn-spells
-  [MODULE_FIREWORKS]=mod-fireworks-on-level
-  [MODULE_INDIVIDUAL_PROGRESSION]=mod-individual-progression
-  [MODULE_AHBOT]=mod-ahbot
-  [MODULE_AUTOBALANCE]=mod-autobalance
-  [MODULE_TRANSMOG]=mod-transmog
-  [MODULE_NPC_BUFFER]=mod-npc-buffer
-  [MODULE_DYNAMIC_XP]=mod-dynamic-xp
-  [MODULE_SOLO_LFG]=mod-solo-lfg
-  [MODULE_1V1_ARENA]=mod-1v1-arena
-  [MODULE_PHASED_DUELS]=mod-phased-duels
-  [MODULE_BREAKING_NEWS]=mod-breaking-news-override
-  [MODULE_BOSS_ANNOUNCER]=mod-boss-announcer
-  [MODULE_ACCOUNT_ACHIEVEMENTS]=mod-account-achievements
-  [MODULE_AUTO_REVIVE]=mod-auto-revive
-  [MODULE_GAIN_HONOR_GUARD]=mod-gain-honor-guard
-  [MODULE_TIME_IS_TIME]=mod-TimeIsTime
-  [MODULE_POCKET_PORTAL]=mod-pocket-portal
-  [MODULE_RANDOM_ENCHANTS]=mod-random-enchants
-  [MODULE_SOLOCRAFT]=mod-solocraft
-  [MODULE_PVP_TITLES]=mod-pvp-titles
-  [MODULE_NPC_BEASTMASTER]=mod-npc-beastmaster
-  [MODULE_NPC_ENCHANTER]=mod-npc-enchanter
-  [MODULE_INSTANCE_RESET]=mod-instance-reset
+  [MODULE_MOD_AOE_LOOT]=mod-aoe-loot
+  [MODULE_MOD_LEARN_SPELLS]=mod-learn-spells
+  [MODULE_MOD_FIREWORKS_ON_LEVEL]=mod-fireworks-on-level
+  [MODULE_MOD_INDIVIDUAL_PROGRESSION]=mod-individual-progression
+  [MODULE_MOD_AHBOT]=mod-ahbot
+  [MODULE_MOD_AUTOBALANCE]=mod-autobalance
+  [MODULE_MOD_TRANSMOG]=mod-transmog
+  [MODULE_MOD_NPC_BUFFER]=mod-npc-buffer
+  [MODULE_MOD_DYNAMIC_XP]=mod-dynamic-xp
+  [MODULE_MOD_SOLO_LFG]=mod-solo-lfg
+  [MODULE_MOD_1V1_ARENA]=mod-1v1-arena
+  [MODULE_MOD_PHASED_DUELS]=mod-phased-duels
+  [MODULE_MOD_BREAKING_NEWS_OVERRIDE]=mod-breaking-news-override
+  [MODULE_MOD_BOSS_ANNOUNCER]=mod-boss-announcer
+  [MODULE_MOD_ACCOUNT_ACHIEVEMENTS]=mod-account-achievements
+  [MODULE_MOD_AUTO_REVIVE]=mod-auto-revive
+  [MODULE_MOD_GAIN_HONOR_GUARD]=mod-gain-honor-guard
+  [MODULE_MOD_TIMEISTIME]=mod-TimeIsTime
+  [MODULE_MOD_POCKET_PORTAL]=mod-pocket-portal
+  [MODULE_MOD_RANDOM_ENCHANTS]=mod-random-enchants
+  [MODULE_MOD_SOLOCRAFT]=mod-solocraft
+  [MODULE_MOD_PVP_TITLES]=mod-pvp-titles
+  [MODULE_MOD_NPC_BEASTMASTER]=mod-npc-beastmaster
+  [MODULE_MOD_NPC_ENCHANTER]=mod-npc-enchanter
+  [MODULE_MOD_INSTANCE_RESET]=mod-instance-reset
   [MODULE_LEVEL_GRANT]=mod-quest-count-level
-  [MODULE_ARAC]=mod-arac
-  [MODULE_ASSISTANT]=mod-assistant
-  [MODULE_REAGENT_BANK]=mod-reagent-bank
-  [MODULE_CHALLENGE_MODES]=mod-challenge-modes
-  [MODULE_OLLAMA_CHAT]=mod-ollama-chat
-  [MODULE_PLAYER_BOT_LEVEL_BRACKETS]=mod-player-bot-level-brackets
+  [MODULE_MOD_ARAC]=mod-arac
+  [MODULE_MOD_ASSISTANT]=mod-assistant
+  [MODULE_MOD_REAGENT_BANK]=mod-reagent-bank
+  [MODULE_MOD_CHALLENGE_MODES]=mod-challenge-modes
+  [MODULE_MOD_OLLAMA_CHAT]=mod-ollama-chat
+  [MODULE_MOD_PLAYER_BOT_LEVEL_BRACKETS]=mod-player-bot-level-brackets
   [MODULE_STATBOOSTER]=StatBooster
   [MODULE_DUNGEON_RESPAWN]=DungeonRespawn
   [MODULE_SKELETON_MODULE]=skeleton-module
-  [MODULE_BG_SLAVERYVALLEY]=mod-bg-slaveryvalley
-  [MODULE_AZEROTHSHARD]=mod-azerothshard
-  [MODULE_WORGOBLIN]=mod-worgoblin
+  [MODULE_MOD_BG_SLAVERYVALLEY]=mod-bg-slaveryvalley
+  [MODULE_MOD_AZEROTHSHARD]=mod-azerothshard
+  [MODULE_MOD_WORGOBLIN]=mod-worgoblin
 )
 
 show_staging_header
@@ -394,10 +394,10 @@ done
 
 # Check for playerbots mode
 PLAYERBOT_ENABLED="$(read_env PLAYERBOT_ENABLED "0")"
-MODULE_PLAYERBOTS="$(read_env MODULE_PLAYERBOTS "0")"
+MODULE_MOD_PLAYERBOTS="$(read_env MODULE_MOD_PLAYERBOTS "0")"
 STACK_IMAGE_MODE="$(read_env STACK_IMAGE_MODE "")"
 playerbots_on=0
-if [ "$MODULE_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
+if [ "$MODULE_MOD_PLAYERBOTS" = "1" ] || [ "$PLAYERBOT_ENABLED" = "1" ]; then
   playerbots_on=1
 fi
 

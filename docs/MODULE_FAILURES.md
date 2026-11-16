@@ -93,7 +93,7 @@ These repositories are Lua scripts or external web tools without a worldserver l
 - **MODULE_BLACK_MARKET_AUCTION_HOUSE** - `MODULE_mod-black-market_creature.sql` references removed `StatsCount` column (ERROR 1054 at line 14, causes worldserver crash-loop)
 - **MODULE_MOD_GUILD_VILLAGE** - `MODULE_mod-guild-village_001_creature_template.sql` tries to insert duplicate creature ID 987400 (ERROR 1062: Duplicate entry for key 'creature_template.PRIMARY')
 - **MODULE_MOD_INSTANCE_TOOLS** - `MODULE_mod-instance-tools_Creature.sql` tries to insert duplicate creature ID 987456-0 (ERROR 1062: Duplicate entry for key 'creature_template_model.PRIMARY')
-- **MODULE_ACORE_SUBSCRIPTIONS** - C++ code queries missing table `acore_auth.acore_cms_subscriptions` (ERROR 1146: Table doesn't exist, causes server ABORT)
+- **MODULE_MOD_ACORE_SUBSCRIPTIONS** - C++ code queries missing table `acore_auth.acore_cms_subscriptions` (ERROR 1146: Table doesn't exist, causes server ABORT)
   - **Resolution Required:** Module directory at `local-storage/modules/mod-acore-subscriptions` must be removed and worldserver rebuilt. Disabling in .env alone is insufficient because the code is already compiled into the binary.
   - **Process:** Either (1) remove module directory + rebuild, OR (2) create the missing database table/schema
 - **MODULE_NODEROUTER** - No `AddnoderouterScripts()` implementation

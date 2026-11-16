@@ -228,7 +228,7 @@ ensure_module_platforms() {
   local key
   for key in "${MODULE_KEYS[@]}"; do
     case "$key" in
-      MODULE_ELUNA|MODULE_AIO) continue ;;
+      MODULE_MOD_ALE|MODULE_AIO) continue ;;
     esac
     local value
     eval "value=\${$key:-0}"
@@ -242,7 +242,7 @@ ensure_module_platforms() {
   fi
 
   local platform
-  for platform in MODULE_ELUNA MODULE_AIO; do
+  for platform in MODULE_MOD_ALE MODULE_AIO; do
     [ -n "${KNOWN_MODULE_LOOKUP[$platform]:-}" ] || continue
     local platform_value
     eval "platform_value=\${$platform:-0}"

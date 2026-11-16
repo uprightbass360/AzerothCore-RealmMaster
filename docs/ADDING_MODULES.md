@@ -25,9 +25,7 @@ config UI is republished after each sync, and the nightly images are built right
 after it, so a new module is in the next morning's images.
 
 - **Key:** the repository name, upper-cased, with non-alphanumerics turned into `_`
-  and a `MODULE_` prefix. `lottery-lua` becomes `MODULE_LOTTERY_LUA`. Older curated
-  entries may use shorter keys (`MODULE_TRANSMOG` for `mod-transmog`), so look up the
-  exact key in the config UI or the manifest.
+  and a `MODULE_` prefix. `lottery-lua` becomes `MODULE_LOTTERY_LUA`.
 - **Status:** new entries start `active`. Entries that break the build are later set
   to `blocked` with a `block_reason`, and blocked modules can't be enabled.
 - **Removal:** an entry is pruned only if GitHub returns 404/451 for its repository.
@@ -59,8 +57,8 @@ touches it.
 ```bash
 ./modules.sh add https://gitlab.com/me/mod-thing.git          # add a new module
 ./modules.sh add https://github.com/me/mod-thing --ref v1.2   # pinned to a tag, branch or commit
-./modules.sh add https://github.com/me/mod-transmog --key MODULE_TRANSMOG  # use your fork of a listed module
-./modules.sh add --key MODULE_TRANSMOG --ref 1a2b3c4           # pin a listed module
+./modules.sh add https://github.com/me/mod-transmog --key MODULE_MOD_TRANSMOG  # use your fork of a listed module
+./modules.sh add --key MODULE_MOD_TRANSMOG --ref 1a2b3c4           # pin a listed module
 ./modules.sh list                                              # your entries: added, override, removed or orphaned
 ./modules.sh remove MODULE_MOD_THING                           # undo an add or an override
 ```
@@ -155,14 +153,14 @@ crash-loops after deploying, run ./modules.sh remove <key> and deploy again.
 On playerbots stacks, `mod-playerbots` and the core fork
 (`azerothcore-playerbots`, branch `Playerbot`) must move together: mod-playerbots's
 HEAD regularly needs newer core symbols than an older core provides. So every build
-updates the core fork to latest before compiling, unless `MODULE_PLAYERBOTS` is
-pinned (`./modules.sh add --key MODULE_PLAYERBOTS --ref <ref>`), in which case it
+updates the core fork to latest before compiling, unless `MODULE_MOD_PLAYERBOTS` is
+pinned (`./modules.sh add --key MODULE_MOD_PLAYERBOTS --ref <ref>`), in which case it
 prints an info line and builds with the current core instead.
 
 - Unpinned stack: to move the core + mod-playerbots together and rebuild, run
   `./build.sh --force`.
 - Pinned stack: re-pin mod-playerbots to a newer ref (`./modules.sh add --key
-  MODULE_PLAYERBOTS --ref <new ref>`) or remove the pin, then run `./build.sh
+  MODULE_MOD_PLAYERBOTS --ref <new ref>`) or remove the pin, then run `./build.sh
   --force --force-update`. `--force-update` moves the core to the fork's latest
   `Playerbot` HEAD, so a new pin should be a mod-playerbots commit that matches
   that core.
@@ -211,3 +209,41 @@ compile is needed.
 - [MODULES.md](MODULES.md): module catalog and profiles
 - [MODULE_DBC_FILES.md](MODULE_DBC_FILES.md): modules that ship server DBC files
 - [scripts/hooks/README.md](../scripts/hooks/README.md): post-install hooks
+
+## How a module gets its key
+
+Keys are never chosen by hand. The sync derives `MODULE_<REPO_NAME>` from the
+repository name, and appends `_<OWNER>` for third-party forks and for any
+repository whose bare key another entry already holds. `azerothcore` forks are
+exempt from the fork suffix (`policy.fork_owners` in
+`config/module-sources.json`). Every GitHub-hosted entry also carries
+`fork: true|false`, refreshed by the sync.
+A pull request that adds an entry whose key does not follow this rule, or that
+lacks the `fork` field, fails the `test_manifest_key_invariants` test.
+
+## Excluding a module from the catalogue
+
+The nightly sync admits every repository tagged with the AzerothCore topics.
+To keep one out, add it to `declined` in `config/module-sources.json` with a
+short reason and merge:
+
+```json
+"declined": {
+  "someowner/*": { "reason": "unreviewed bulk uploads", "date": "2026-10-10" },
+  "someowner/mod-broken": { "reason": "fails to link", "date": "2026-10-10" }
+}
+```
+
+`owner/*` covers everything that owner publishes, now and later. The next
+sync removes any matching entries from the manifest, profiles and
+`.env.template`, and never readmits them. Users with the key still set in
+`.env` are unaffected: unknown keys are treated as disabled.
+
+`keep` lists repos exempt from the monthly staleness review; modules in a
+curated profile are exempt automatically. `policy.stale_after_days` sets the
+window. To preview the effect of an edit locally:
+
+```bash
+python3 scripts/python/update_module_manifest.py --sources-only --dry-run --log
+python3 scripts/python/review_stale_modules.py --dry-run
+```

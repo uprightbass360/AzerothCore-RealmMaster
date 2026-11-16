@@ -20,7 +20,7 @@ All modules with known compilation or linking issues have been:
 
 ### Build Failures - Compilation Errors (3)
 
-#### 1. mod-azerothshard (MODULE_AZEROTHSHARD)
+#### 1. mod-azerothshard (MODULE_MOD_AZEROTHSHARD)
 **Status:** 🔴 BLOCKED
 **Category:** Compilation Error
 **Issue:** Method name mismatch
@@ -39,7 +39,7 @@ if (req <= pl->getLevel())
 
 ---
 
-#### 2. mod-challenge-modes (MODULE_CHALLENGE_MODES)
+#### 2. mod-challenge-modes (MODULE_MOD_CHALLENGE_MODES)
 **Status:** 🔴 BLOCKED
 **Category:** Compilation Error
 **Issue:** Override signature mismatch
@@ -69,7 +69,7 @@ void OnGiveXP(Player* player, uint32& amount, Unit* /*victim*/, uint8 /*xpSource
 
 ### Build Failures - Linker Errors (2)
 
-#### 4. mod-ahbot (MODULE_AHBOT)
+#### 4. mod-ahbot (MODULE_MOD_AHBOT)
 **Status:** 🔴 BLOCKED
 **Category:** Linker Error
 **Issue:** Missing script loader function
@@ -81,11 +81,11 @@ undefined reference to 'Addmod_ahbotScripts()'
 
 **Root Cause:** ModulesLoader expects `Addmod_ahbotScripts()` but function not defined
 
-**Alternative:** ✅ Use **MODULE_LUA_AH_BOT=1** (Lua version works)
+**Alternative:** ✅ Use **MODULE_AZEROTHCORE_LUA_AH_BOT=1** (Lua version works)
 
 ---
 
-#### 5. azerothcore-lua-multivendor (MODULE_MULTIVENDOR)
+#### 5. azerothcore-lua-multivendor (MODULE_AZEROTHCORE_LUA_MULTIVENDOR)
 **Status:** 🔴 BLOCKED
 **Category:** Linker Error
 **Issue:** Missing script loader function
@@ -103,7 +103,7 @@ undefined reference to 'Addazerothcore_lua_multivendorScripts()'
 
 ### Known API Incompatibilities (3)
 
-#### 6. mod-pocket-portal (MODULE_POCKET_PORTAL)
+#### 6. mod-pocket-portal (MODULE_MOD_POCKET_PORTAL)
 **Status:** 🔴 BLOCKED
 **Category:** C++20 Requirement
 **Issue:** Requires std::format support
@@ -142,7 +142,7 @@ Some blocked modules have working alternatives:
 
 | Blocked Module | Working Alternative | Status |
 |----------------|-------------------|--------|
-| mod-ahbot (C++) | MODULE_LUA_AH_BOT=1 | ✅ Available |
+| mod-ahbot (C++) | MODULE_AZEROTHCORE_LUA_AH_BOT=1 | ✅ Available |
 
 ---
 
@@ -152,16 +152,16 @@ All blocked modules are disabled:
 
 ```bash
 # Build Failures - Compilation
-MODULE_AZEROTHSHARD=0          # Method name mismatch
-MODULE_CHALLENGE_MODES=0       # Override signature mismatch
+MODULE_MOD_AZEROTHSHARD=0          # Method name mismatch
+MODULE_MOD_CHALLENGE_MODES=0       # Override signature mismatch
 MODULE_LEVEL_GRANT=0           # Removed API usage
 
 # Build Failures - Linker
-MODULE_AHBOT=0                 # Missing script function (use lua version)
-MODULE_MULTIVENDOR=0           # Missing script function
+MODULE_MOD_AHBOT=0                 # Missing script function (use lua version)
+MODULE_AZEROTHCORE_LUA_MULTIVENDOR=0           # Missing script function
 
 # API Incompatibilities
-MODULE_POCKET_PORTAL=0         # C++20 requirement
+MODULE_MOD_POCKET_PORTAL=0         # C++20 requirement
 MODULE_STATBOOSTER=0           # Hook signature mismatch
 MODULE_DUNGEON_RESPAWN=0       # Hook signature mismatch
 ```

@@ -6,16 +6,16 @@ This guide explains how to deploy AzerothCore RealmMaster using pre-built Docker
 
 The pre-built images are automatically built nightly with the **RealmMaster module profile**, which includes **32 carefully selected modules**:
 
-- **MODULE_PLAYERBOTS** - AI-controlled player characters
-- **MODULE_TRANSMOG** - Transmogrification system
-- **MODULE_SOLO_LFG** - Solo dungeon finder
-- **MODULE_ELUNA** - Lua scripting engine
+- **MODULE_MOD_PLAYERBOTS** - AI-controlled player characters
+- **MODULE_MOD_TRANSMOG** - Transmogrification system
+- **MODULE_MOD_SOLO_LFG** - Solo dungeon finder
+- **MODULE_MOD_ALE** - Lua scripting engine
 - **MODULE_AIO** - All-in-one interface
-- **MODULE_NPC_BUFFER** - Buff NPC
-- **MODULE_NPC_BEASTMASTER** - Pet management
-- **MODULE_SOLOCRAFT** - Solo dungeon scaling
-- **MODULE_1V1_ARENA** - 1v1 arena system
-- **MODULE_ACCOUNT_ACHIEVEMENTS** - Account-wide achievements
+- **MODULE_MOD_NPC_BUFFER** - Buff NPC
+- **MODULE_MOD_NPC_BEASTMASTER** - Pet management
+- **MODULE_MOD_SOLOCRAFT** - Solo dungeon scaling
+- **MODULE_MOD_1V1_ARENA** - 1v1 arena system
+- **MODULE_MOD_ACCOUNT_ACHIEVEMENTS** - Account-wide achievements
 - ...and 22 more modules!
 
 See `config/module-profiles/RealmMaster.json` for the complete list.

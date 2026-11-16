@@ -265,11 +265,41 @@ class ModuleCollectionState:
 
     def requires_playerbot_source(self) -> bool:
         module_map = {m.key: m for m in self.modules}
-        playerbots_enabled = module_map.get("MODULE_PLAYERBOTS")
+        playerbots_enabled = module_map.get("MODULE_MOD_PLAYERBOTS")
         return bool(playerbots_enabled and playerbots_enabled.enabled_effective)
 
     def requires_custom_build(self) -> bool:
         return any(module.needs_build and module.enabled_effective for module in self.modules)
+
+
+def _load_key_renames(path: Path) -> Dict[str, str]:
+    """Old -> final key map used only to word the hard-stop hint.
+
+    Mirrors key_renames.cumulative_map without importing it, so modules.py stays
+    self-contained. Returns {} when the file is absent or malformed; the stop
+    fires regardless.
+    """
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    raw_waves = data.get("waves") if isinstance(data, dict) else None
+    if not isinstance(raw_waves, list):
+        return {}
+    waves: List[Dict[str, str]] = []
+    for raw in raw_waves:
+        renames = raw.get("renames") if isinstance(raw, dict) else None
+        if not isinstance(renames, dict):
+            return {}
+        waves.append({k: v for k, v in renames.items() if isinstance(k, str) and isinstance(v, str)})
+    resolved: Dict[str, str] = {}
+    for wave in waves:
+        for old in wave:
+            key = old
+            for step in waves:
+                key = step.get(key, key)
+            resolved[old] = key
+    return resolved
 
 
 def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
@@ -370,16 +400,26 @@ def build_state(env_path: Path, manifest_path: Path) -> ModuleCollectionState:
         if module.warnings:
             warnings.extend(module.warnings)
 
-    # Warn if .env enables or disables modules the manifest doesn't know. Only
-    # 0/1 flags are module switches; other MODULE_* values (e.g. MODULE_PROFILE
-    # in .env.prebuilt) are settings.
-    extra_env_modules = [
-        key for key, value in env_map.items()
-        if key.startswith("MODULE_") and key not in module_map
-        and str(value).strip() in ("0", "1")
-    ]
-    for unknown_key in extra_env_modules:
-        warnings.append(f".env defines {unknown_key} but it is missing from the manifest")
+    # .env keys shaped like module switches (any boolean value) that match no manifest
+    # entry. Enabling one is an error: the module the user asked for would not
+    # be built. Other MODULE_* values (e.g. MODULE_PROFILE) are settings.
+    renames = _load_key_renames(manifest_path.parent / "key-renames.json")
+    for env_key, value in env_map.items():
+        if not env_key.startswith("MODULE_") or env_key in module_map:
+            continue
+        flag = str(value).strip()
+        if parse_bool(flag):
+            if env_key in renames:
+                errors.append(
+                    f".env enables {env_key}, which is now {renames[env_key]}; "
+                    f"run ./modules.sh migrate to update .env"
+                )
+            else:
+                errors.append(
+                    f".env enables {env_key} but it is missing from the manifest (removed or mistyped)"
+                )
+        elif flag.lower() in {"0", "false", "no", "off"}:
+            warnings.append(f".env defines {env_key} but it is missing from the manifest")
 
     # Skip warnings for missing modules - they default to disabled (0) as intended
 
@@ -606,14 +646,9 @@ def handle_generate(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
     if state.errors:
-        error_block = "\n".join(f"- {error}" for error in state.errors)
+        header = "❌ Module manifest errors detected:"
         print(
-            textwrap.dedent(
-                f"""\
-                ❌ Module manifest errors detected:
-                {error_block}
-                """
-            ),
+            header + "\n" + "\n".join(f"- {error}" for error in state.errors) + "\n",
             file=sys.stderr,
         )
         return 1

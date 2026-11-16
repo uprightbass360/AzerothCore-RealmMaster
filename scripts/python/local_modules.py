@@ -28,6 +28,22 @@ from manifest_overlay import (
     local_manifest_path,
     merge_manifest,
 )
+from key_renames import (
+    DEFAULT_RENAMES_PATH,
+    SCHEMA_FIELD,
+    SCHEMA_KEY,
+    RenameError,
+    ahead_of_schema,
+    catalogue_schema,
+    document_keys,
+    env_keys,
+    load_rename_waves,
+    read_json_schema,
+    read_schema,
+    rewrite_env_file,
+    rewrite_manifest_file,
+    rewrite_profile_file,
+)
 from module_detect import detect
 from modules import build_state, load_env_file, parse_bool
 from update_module_manifest import repo_name_to_key
@@ -71,13 +87,20 @@ def set_env_value(env_path: Path, key: str, value: str) -> None:
     env_path.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
-def write_local_entries(local_path: Path, entries: List[dict]) -> None:
+def local_schema(paths: Paths) -> int:
+    """The schema to stamp on the local manifest: its own when the file exists, else the catalogue's."""
+    if paths.local.exists():
+        return read_json_schema(json.loads(paths.local.read_text(encoding="utf-8")))
+    return catalogue_schema(paths.manifest)
+
+
+def write_local_entries(local_path: Path, entries: List[dict], schema: int) -> None:
     local_path = Path(local_path)
     local_path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(dir=local_path.parent, prefix=".module-manifest.local.", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump({"modules": entries}, fh, indent=2)
+            json.dump({"modules": entries, SCHEMA_FIELD: schema}, fh, indent=2)
             fh.write("\n")
         os.chmod(tmp_name, 0o644)
         os.replace(tmp_name, local_path)
@@ -279,7 +302,7 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
         print(json.dumps(override, indent=2))
         if not _confirm(f"Pin {args.key} to {args.ref}?", args.yes):
             raise Refused("Nothing written. (Use --yes to skip the confirmation.)")
-        write_local_entries(paths.local, [e for e in local if e["key"] != args.key] + [override])
+        write_local_entries(paths.local, [e for e in local if e["key"] != args.key] + [override], local_schema(paths))
         print(f"✅ {args.key} pinned to {args.ref} in {paths.local.name}")
         return _finish(paths, args.key, requires, module_type, True, args.no_enable)
 
@@ -366,7 +389,7 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
 
         hooks = detection.post_install_hooks if module_type == detection.module_type else []
         if module_type == "lua" and not hooks:
-            hooks, requires = ["copy-standard-lua"], ["MODULE_ELUNA"]
+            hooks, requires = ["copy-standard-lua"], ["MODULE_MOD_ALE"]
         else:
             requires = detection.requires if module_type == detection.module_type else []
 
@@ -379,7 +402,7 @@ def cmd_add(args: argparse.Namespace, paths: Paths) -> int:
     print(json.dumps(new_entry, indent=2))
     if not _confirm(f"Add {key}?", args.yes):
         raise Refused("Nothing written. (Use --yes to skip the confirmation.)")
-    write_local_entries(paths.local, [e for e in local if e["key"] != key] + [new_entry])
+    write_local_entries(paths.local, [e for e in local if e["key"] != key] + [new_entry], local_schema(paths))
     print(f"✅ {key} written to {paths.local.name}")
 
     return _finish(paths, key, requires, module_type, is_override, args.no_enable)
@@ -425,11 +448,11 @@ def cmd_remove(args: argparse.Namespace, paths: Paths) -> int:
         raise Refused(f"{key} is already removed; its disabled marker stays in {paths.local.name} "
                       f"so the next deploy cleans it up")
     if key in upstream_keys:
-        write_local_entries(paths.local, [e for e in local if e["key"] != key])
+        write_local_entries(paths.local, [e for e in local if e["key"] != key], local_schema(paths))
         print(f"✅ Removed the local override for {key}; it goes back to its upstream repo/ref "
               f"on the next deploy. {key} in .env is unchanged.")
     elif item.get("name") and item.get("repo"):
-        write_local_entries(paths.local, [tombstone_for(item) if e["key"] == key else e for e in local])
+        write_local_entries(paths.local, [tombstone_for(item) if e["key"] == key else e for e in local], local_schema(paths))
         set_env_value(paths.env, key, "0")
         print(f"✅ Removed {key} and set {key}=0 in .env. The next deploy removes its checkout "
               f"and staged Lua and stops staging its SQL.")
@@ -437,10 +460,78 @@ def cmd_remove(args: argparse.Namespace, paths: Paths) -> int:
               f"(shown by ./modules.sh list) so that deploy knows to clean it up.")
     else:
         # An orphaned override: nothing was installed from it.
-        write_local_entries(paths.local, [e for e in local if e["key"] != key])
+        write_local_entries(paths.local, [e for e in local if e["key"] != key], local_schema(paths))
         set_env_value(paths.env, key, "0")
         print(f"✅ Removed {key} and set {key}=0 in .env.")
     print("   SQL the module already applied stays in the database.")
+    return 0
+
+
+def cmd_migrate(args: argparse.Namespace, paths: Paths) -> int:
+    """Apply, to each file, the rename waves newer than that file's own schema, then record the latest."""
+    try:
+        waves = load_rename_waves(paths.root / DEFAULT_RENAMES_PATH)
+    except RenameError as exc:
+        print(f"❌ {exc}", file=sys.stderr)
+        return 1
+    missing = [p for p in args.profiles if not Path(p).exists()]
+    if missing:
+        for profile in missing:
+            print(f"❌ profile not found: {profile}", file=sys.stderr)
+        return 1
+    env_path = Path(args.env) if args.env else paths.env
+    latest = waves[-1].id
+    targets: List[tuple] = []
+    if env_path.exists():
+        targets.append((env_path, "env"))
+    if paths.local.exists():
+        targets.append((paths.local, "manifest"))
+    targets += [(Path(p), "profile") for p in args.profiles]
+    rewriters = {"env": rewrite_env_file, "manifest": rewrite_manifest_file, "profile": rewrite_profile_file}
+    changes: List[tuple] = []
+    recorded: List[Path] = []
+    current: Optional[Path] = None
+    plans: List[tuple] = []
+    refused: List[str] = []
+    try:
+        for path, kind in targets:
+            current = path
+            text = path.read_text(encoding="utf-8")
+            if kind == "env":
+                schema, keys = read_schema(text), env_keys(text)
+            else:
+                data = json.loads(text)
+                schema, keys = read_json_schema(data), document_keys(data)
+            ahead = ahead_of_schema(keys, waves, schema)
+            if ahead is not None:
+                marker = f"{SCHEMA_KEY}={ahead}" if kind == "env" else f'"{SCHEMA_FIELD}": {ahead}'
+                refused.append(f"❌ {path}: holds keys introduced by rename wave {ahead} but records schema {schema}; "
+                               f"it was migrated before the marker existed. Add {marker} to it and rerun.")
+                continue
+            if schema < latest:
+                plans.append((path, kind, [wave.renames for wave in waves if wave.id > schema]))
+        if refused:
+            for line in refused:
+                print(line, file=sys.stderr)
+            return 1
+        for path, kind, passes in plans:
+            current = path
+            changes += [(path, c) for c in rewriters[kind](path, passes, schema=latest)]
+            recorded.append(path)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, RenameError) as exc:
+        print(f"❌ {current}: {exc}", file=sys.stderr)
+        return 1
+    for path, (old, new) in changes:
+        print(f"{old} -> {new} ({path})")
+    if not recorded:
+        print(f"nothing to migrate (schema {latest} is current)" if targets else "nothing to migrate")
+        return 0
+    where = ", ".join(str(p) for p in recorded)
+    if changes:
+        print(f"✅ {len(changes)} key(s) migrated; schema {latest} recorded in {where}; "
+              f"a .bak-<timestamp> copy sits next to each changed file")
+    else:
+        print(f"no keys to rename; schema {latest} recorded in {where} (a .bak-<timestamp> copy was kept)")
     return 0
 
 
@@ -468,6 +559,11 @@ def build_parser() -> argparse.ArgumentParser:
     rm = sub.add_parser("remove", help="Remove a user-defined module or override")
     rm.add_argument("key", help="MODULE_* key")
     rm.set_defaults(func=cmd_remove)
+
+    mig = sub.add_parser("migrate", help="Rewrite renamed MODULE_* keys in .env, the local manifest and profiles")
+    mig.add_argument("--env", help="Path to the .env file (default: <root>/.env)")
+    mig.add_argument("profiles", nargs="*", help="Profile JSON files to rewrite as well")
+    mig.set_defaults(func=cmd_migrate)
     return parser
 
 
@@ -477,7 +573,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     paths = Paths(Path(args.root))
     try:
         return args.func(args, paths)
-    except Refused as exc:
+    except (Refused, RenameError) as exc:
         print(f"❌ {exc}", file=sys.stderr)
         return 1
 

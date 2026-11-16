@@ -16,9 +16,10 @@ Only one build runs at a time; a second one waits for the first to finish.
 
 ### Related workflows
 
-- `update-module-manifest.yml`: daily manifest sync from GitHub topics; merges its own PR after in-job checks, then republishes the config UI and starts the nightly build.
+- `update-module-manifest.yml`: daily manifest sync from GitHub topics. It skips and removes repos declined in `config/module-sources.json`, admits same-named repositories under owner-suffixed keys, refreshes each entry's `fork` flag, and merges its own PR after in-job checks; the PR body lists new modules by owner and name collisions under *Name collisions*. It then republishes the config UI and starts the nightly build.
+- `review-stale-modules.yml`: monthly; proposes modules with no upstream activity for `policy.stale_after_days` (default 1095) in `config/module-sources.json`, or archived upstream, by moving them to `declined` and opening a PR with the removals applied. Never merges on its own.
 - `config-ui-pages.yml`: publishes the config UI to GitHub Pages when the UI or `config/` changes on `main`, and after each manifest sync.
-- `ci.yml`: runs the Python and shell test suites and the config UI round-trip check on every pull request and push to `main`.
+- `ci.yml`: runs the Python and shell test suites and the config UI round-trip check on every pull request and push to `main`, except the pull requests the two workflows below open for themselves (those jobs run the same checks in-job; a CI run for a bot-opened PR would only be held for approval and reported as failed when the PR closes).
 
 ### What It Does
 
@@ -121,11 +122,11 @@ A Docker Hub access token (recommended) or your Docker Hub password.
 
 The workflow uses the **RealmMaster** module profile by default, which includes 32 carefully selected modules:
 
-- MODULE_PLAYERBOTS - AI-controlled player characters
-- MODULE_TRANSMOG - Transmogrification system
-- MODULE_SOLO_LFG - Solo dungeon finder
-- MODULE_NPC_BUFFER - Buff NPC
-- MODULE_ELUNA - Lua scripting engine
+- MODULE_MOD_PLAYERBOTS - AI-controlled player characters
+- MODULE_MOD_TRANSMOG - Transmogrification system
+- MODULE_MOD_SOLO_LFG - Solo dungeon finder
+- MODULE_MOD_NPC_BUFFER - Buff NPC
+- MODULE_MOD_ALE - Lua scripting engine
 - MODULE_AIO - All-in-one interface
 - ...and 26 more modules
 
@@ -306,9 +307,9 @@ To build a custom profile:
    ```json
    {
      "modules": [
-       "MODULE_PLAYERBOTS",
-       "MODULE_TRANSMOG",
-       "MODULE_SOLO_LFG"
+       "MODULE_MOD_PLAYERBOTS",
+       "MODULE_MOD_TRANSMOG",
+       "MODULE_MOD_SOLO_LFG"
      ],
      "label": "My Custom Profile",
      "description": "Custom module selection",

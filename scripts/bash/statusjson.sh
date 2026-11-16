@@ -174,7 +174,7 @@ def detect_source_variant(env):
         return "core"
     if read_env(env, "STACK_IMAGE_MODE", "").strip().lower() == "playerbots":
         return "playerbots"
-    if read_env(env, "MODULE_PLAYERBOTS", "0") == "1" or read_env(env, "PLAYERBOT_ENABLED", "0") == "1":
+    if read_env(env, "MODULE_MOD_PLAYERBOTS", "0") == "1" or read_env(env, "PLAYERBOT_ENABLED", "0") == "1":
         return "playerbots"
     return "core"
 

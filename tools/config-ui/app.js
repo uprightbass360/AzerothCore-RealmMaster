@@ -3,7 +3,7 @@
 "use strict";
 
 const ConfigUI = {
-  data: { manifest: [], orderMap: new Map(), index: { profiles: [], presets: [] }, base: null },
+  data: { manifest: [], keySchema: 0, orderMap: new Map(), index: { profiles: [], presets: [] }, base: null },
 
   // The page runs from two roots: Pages serves it at the site root next to
   // config/, local serve.sh serves the whole repo (page under tools/config-ui/).
@@ -40,6 +40,7 @@ const ConfigUI = {
         if (!res.ok) continue;
         const j = await res.json();
         this.data.manifest = Array.isArray(j) ? j : (j.modules || []);
+        this.data.keySchema = Array.isArray(j) ? 0 : (j.key_schema ?? 0);
         this.data.base = base;
         break;
       } catch (e) { /* file:// or missing — try next base */ }
@@ -78,6 +79,7 @@ function routeFiles(fileList) {
       if (file.name === "module-manifest.json") {
         const j = JSON.parse(text);
         ConfigUI.data.manifest = Array.isArray(j) ? j : (j.modules || []);
+        ConfigUI.data.keySchema = Array.isArray(j) ? 0 : (j.key_schema ?? 0);
         ConfigUI.data.orderMap = new Map(ConfigUI.data.manifest.map(m => [m.key, m.order ?? 99999]));
         ConfigUI.setStatus(`${ConfigUI.data.manifest.length} modules loaded from dropped manifest.`);
         ConfigUI.emit("configui:ready", {});
@@ -97,6 +99,7 @@ document.getElementById("file-input").addEventListener("change", e => routeFiles
 ConfigUI.profile = {
   selection: new Set(),
   pendingUnknown: [],
+  pendingStale: "",
   // Export metadata: populated from an imported/loaded profile, defaults otherwise.
   meta: { name: "", label: "", description: "", order: 10000 },
 
@@ -107,6 +110,7 @@ ConfigUI.profile = {
       label: d.label || "",
       description: d.description || "",
       order: d.order ?? 10000,
+      key_schema: d.key_schema ?? 0,
     };
   },
 
@@ -119,6 +123,7 @@ ConfigUI.profile = {
       label: this.meta.label,
       description: this.meta.description,
       order: this.meta.order,
+      key_schema: ConfigUI.data.keySchema ?? 0,
     };
     return JSON.stringify(doc, null, 2) + "\n";
   },
@@ -127,6 +132,11 @@ ConfigUI.profile = {
     const valid = new Set(ConfigUI.data.manifest.map(m => m.key));
     this.selection = new Set(profile.modules.filter(k => valid.has(k)));
     this.pendingUnknown = profile.modules.filter(k => !valid.has(k));
+    const have = profile.key_schema ?? 0;
+    const want = ConfigUI.data.keySchema ?? 0;
+    this.pendingStale = have < want
+      ? `This file predates module key rename wave ${want} (it records ${have}); its keys may be stale. Run ./modules.sh migrate <file> and import the result.`
+      : "";
     this.meta = {
       name: sourceName ? sourceName.replace(/\.json$/, "") : this.meta.name,
       label: profile.label,
@@ -165,6 +175,11 @@ ConfigUI.profile = {
     document.getElementById("selected-count").textContent = `${this.selection.size} selected`;
     const box = document.getElementById("profile-warnings");
     box.textContent = "";
+    if (this.pendingStale) {
+      const div = document.createElement("div");
+      div.append(`⚠ ${this.pendingStale}`);
+      box.append(div);
+    }
     for (const key of this.pendingUnknown) {
       const div = document.createElement("div");
       div.append(`Unknown module key (not in manifest, excluded from export): ${key} `);
@@ -281,6 +296,13 @@ ConfigUI.profile = {
         badge.className = "badge warn";
         badge.textContent = mod.status;
         nameCell.append(" ", badge);
+      }
+      if (mod.fork === true) {
+        const forkBadge = document.createElement("span");
+        forkBadge.className = "badge fork";
+        forkBadge.textContent = "fork";
+        forkBadge.title = "Fork of another repository (GitHub metadata)";
+        nameCell.append(" ", forkBadge);
       }
       const keyCell = document.createElement("td");
       keyCell.className = "key";
@@ -632,8 +654,10 @@ document.addEventListener("configui:import", e => {
         && /^\s*MODULE_[A-Z0-9_]+\s*=/m.test(e.detail.text));
   if (!looksLikeEnv) return;
   const keys = ConfigUI.env.parseModules(e.detail.text);
+  // MODULES_KEY_SCHEMA records the rename wave the file's keys are current to (0 when absent).
+  const schema = e.detail.text.match(/^\s*(?:export\s+)?MODULES_KEY_SCHEMA\s*=\s*["']?(\d+)/m);
   ConfigUI.profile.applyImport(
-    { modules: [...keys], label: "", description: "", order: 10000 },
+    { modules: [...keys], label: "", description: "", order: 10000, key_schema: schema ? Number(schema[1]) : 0 },
     e.detail.name,
   );
   ConfigUI.profile.meta.name = ""; // .env-derived names shouldn't name a .json export

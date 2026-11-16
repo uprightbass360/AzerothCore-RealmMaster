@@ -84,7 +84,8 @@ class EnvFileTest(unittest.TestCase):
 class WriteLocalEntriesTest(unittest.TestCase):
     def test_atomic_write(self):
         path = Path(tempfile.mkdtemp()) / "config" / "module-manifest.local.json"
-        write_local_entries(path, [{"key": "MODULE_X", "name": "x", "repo": "r"}])
+        write_local_entries(path, [{"key": "MODULE_X", "name": "x", "repo": "r"}], 3)
+        self.assertEqual(json.loads(path.read_text())["key_schema"], 3)
         self.assertEqual(json.loads(path.read_text())["modules"][0]["key"], "MODULE_X")
         self.assertEqual([p.name for p in path.parent.iterdir()], ["module-manifest.local.json"])
         # Verify file is readable by all (0o644)

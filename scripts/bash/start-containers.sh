@@ -28,7 +28,7 @@ state = json.loads(subprocess.check_output([
 
 enabled = [m for m in state["modules"] if m["enabled"]]
 profile = "standard"
-if any(m["key"] == "MODULE_PLAYERBOTS" and m["enabled"] for m in enabled):
+if any(m["key"] == "MODULE_MOD_PLAYERBOTS" and m["enabled"] for m in enabled):
     profile = "playerbots"
 elif any(m["needs_build"] and m["enabled"] for m in enabled):
     profile = "modules"

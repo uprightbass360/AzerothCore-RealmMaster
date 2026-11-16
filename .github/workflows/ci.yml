@@ -2,11 +2,16 @@ name: CI
 
 # Tests and config checks for pull requests (including Dependabot's) and main.
 # Needs only bash, git and Python's standard library: no docker, no network.
-# Automated manifest-sync PRs are created with GITHUB_TOKEN, which doesn't
-# trigger workflows; that job runs its own gates before merging.
+# PRs opened by the sync and stale-review workflows are excluded: a run for a
+# PR the Actions bot opens is held for manual approval and reported as a
+# failure when the PR closes, and both jobs run the suite and the catalogue
+# invariants themselves before they merge or open a PR.
 
 on:
   pull_request:
+    branches-ignore:
+      - chore/update-module-manifest
+      - chore/review-stale-modules
   push:
     branches: [main]
   workflow_dispatch:

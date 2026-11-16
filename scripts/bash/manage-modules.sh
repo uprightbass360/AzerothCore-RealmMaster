@@ -95,7 +95,7 @@ generate_module_state(){
 
 remove_disabled_modules(){
   # Several manifest entries can share a clone directory (a module and its
-  # forks, e.g. MODULE_PLAYERBOTS and MODULE_MOD_PLAYERBOTS -> mod-playerbots).
+  # forks, e.g. two manifest entries that both clone into mod-playerbots).
   # Never remove a directory an enabled entry still uses.
   local -A enabled_dirs=()
   local key
@@ -629,8 +629,8 @@ manage_configuration_files(){
     fi
   done
 
-  local playerbots_enabled="${MODULE_PLAYERBOTS:-0}"
-  if [ "${MODULE_ENABLED[MODULE_PLAYERBOTS]:-0}" = "1" ]; then
+  local playerbots_enabled="${MODULE_MOD_PLAYERBOTS:-0}"
+  if [ "${MODULE_ENABLED[MODULE_MOD_PLAYERBOTS]:-0}" = "1" ]; then
     playerbots_enabled=1
   fi
 

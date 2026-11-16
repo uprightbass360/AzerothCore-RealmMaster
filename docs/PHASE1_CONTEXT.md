@@ -717,7 +717,7 @@ def test_discover_sql_files():
 **Scenario:** Install module with SQL for the first time
 
 **Steps:**
-1. Enable new module in .env (e.g., `MODULE_AOE_LOOT=1`)
+1. Enable new module in .env (e.g., `MODULE_MOD_AOE_LOOT=1`)
 2. Run `./scripts/bash/manage-modules.sh`
 3. Verify SQL staged to `/azerothcore/modules/mod-aoe-loot/data/sql/`
 4. Start worldserver
@@ -757,7 +757,7 @@ def test_discover_sql_files():
 **Scenario:** Install playerbots module with SQL
 
 **Steps:**
-1. Enable `MODULE_PLAYERBOTS=1`
+1. Enable `MODULE_MOD_PLAYERBOTS=1`
 2. Run module installation
 3. Verify playerbots SQL staged
 4. Check dbimport.conf has `PlayerbotsDatabaseInfo`
@@ -781,7 +781,7 @@ def test_discover_sql_files():
 
 **Steps:**
 1. Create backup with current state
-2. Add new module (e.g., `MODULE_FIREWORKS=1`)
+2. Add new module (e.g., `MODULE_MOD_FIREWORKS_ON_LEVEL=1`)
 3. Let SQL apply
 4. Restore old backup (before new module)
 5. System should detect missing SQL

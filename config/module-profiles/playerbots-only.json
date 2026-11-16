@@ -1,9 +1,10 @@
 {
   "modules": [
-    "MODULE_PLAYERBOTS",
-    "MODULE_ELUNA"
+    "MODULE_MOD_PLAYERBOTS",
+    "MODULE_MOD_ALE"
   ],
   "label": "\ud83e\udde9 Playerbots Only",
   "description": "Minimal preset that only enables playerbot prerequisites",
-  "order": 4
+  "order": 4,
+  "key_schema": 2
 }

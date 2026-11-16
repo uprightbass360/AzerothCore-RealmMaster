@@ -28,9 +28,9 @@ from update_module_manifest import (  # type: ignore
 
 # heuristics used to surface potential dependency hints
 DEPENDENCY_KEYWORDS: Tuple[Tuple[str, str], ...] = (
-    ("playerbot", "MODULE_PLAYERBOTS"),
-    ("ah-bot", "MODULE_PLAYERBOTS"),
-    ("eluna", "MODULE_ELUNA"),
+    ("playerbot", "MODULE_MOD_PLAYERBOTS"),
+    ("ah-bot", "MODULE_MOD_PLAYERBOTS"),
+    ("eluna", "MODULE_MOD_ALE"),
 )
 
 # keywords that help categorize entries that should probably stay hidden by default
@@ -87,7 +87,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
 def implied_dependencies(module_type: str, text: str) -> List[str]:
     deps: List[str] = []
     if module_type == "lua":
-        deps.append("MODULE_ELUNA")
+        deps.append("MODULE_MOD_ALE")
     normalized = text.lower()
     for keyword, dep in DEPENDENCY_KEYWORDS:
         if keyword in normalized and dep not in deps:

@@ -25,10 +25,12 @@ import os
 import re
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 from urllib import error, parse, request
+
+from module_sources import DEFAULT_FORK_OWNERS, DEFAULT_SOURCES_PATH, Sources, SourcesError, load_sources  # noqa: F401
 
 API_ROOT = "https://api.github.com"
 DEFAULT_TOPICS = [
@@ -133,6 +135,25 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
             "manifest (default: %(default)s)"
         ),
     )
+    parser.add_argument(
+        "--sources",
+        default=DEFAULT_SOURCES_PATH,
+        help="Path to the module sources policy file (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--sources-only",
+        action="store_true",
+        help=(
+            "Skip GitHub entirely: only remove entries declined in --sources and "
+            "scrub profiles and the template. Used by the stale-review workflow "
+            "and for local previews."
+        ),
+    )
+    parser.add_argument(
+        "--digest-file",
+        default=None,
+        help="Write a Markdown digest of entries added this run to this path (for the PR body)",
+    )
     return parser.parse_args(argv)
 
 
@@ -141,6 +162,20 @@ class RepoRecord:
     data: dict
     topic_expr: str
     module_type: str
+
+
+@dataclass
+class MergeResult:
+    added: int = 0
+    updated: int = 0
+    skipped_declined: int = 0
+    # Newcomers whose suffixed key was itself taken by a different repo; never merged.
+    skipped_collision: int = 0
+    # New entries created this run, in discovery order; feeds the PR digest.
+    added_entries: List[dict] = field(default_factory=list)
+    # (new entry, entry holding its bare key) for every admission that needed a suffix
+    # because the bare key was taken; feeds the digest's collision section.
+    collisions: List[Tuple[dict, dict]] = field(default_factory=list)
 
 
 class GitHubClient:
@@ -333,6 +368,7 @@ def prune_missing_repositories(
         elif verdict == "alive":
             # The topic search missed it, so this is the only date refresh it gets.
             update_last_modified(entry, repo or {})
+            update_fork(entry, repo or {})
             if verbose:
                 print(f"   ✓ {entry.get('key')} ({full_name}) — still exists, keeping")
         # Avoid secondary rate-limits on long candidate lists.
@@ -414,6 +450,34 @@ def prune_profiles(
     return changes
 
 
+def remove_declined_entries(
+    manifest: Dict[str, List[dict]],
+    sources: Sources,
+    dry_run: bool = False,
+) -> List[dict]:
+    """Drop manifest entries whose repository matches ``sources.declined``.
+
+    Declined removals record an explicit human decision in
+    config/module-sources.json, so unlike the 404 prune they are never capped
+    and need no GitHub access. Entries not hosted on github.com never match.
+
+    Returns the removed entries (or, in dry-run, the entries that would be).
+    """
+    modules = manifest.setdefault("modules", [])
+    removed: List[dict] = []
+    for entry in modules:
+        pattern = sources.is_declined(github_full_name(str(entry.get("repo", ""))))
+        if not pattern:
+            continue
+        removed.append(entry)
+        prefix = "[dry-run] Would remove" if dry_run else "🗑️  Removed"
+        print(f"{prefix} {entry.get('key')} — declined by {pattern}")
+    if removed and not dry_run:
+        removed_ids = {id(entry) for entry in removed}
+        manifest["modules"] = [entry for entry in modules if id(entry) not in removed_ids]
+    return removed
+
+
 def repo_name_to_key(name: str) -> str:
     sanitized = re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_")
     sanitized = sanitized.upper()
@@ -422,6 +486,39 @@ def repo_name_to_key(name: str) -> str:
     if not sanitized.startswith("MODULE_"):
         sanitized = f"MODULE_{sanitized}"
     return sanitized
+
+
+def sanitize_owner(owner: str) -> str:
+    """Owner name as a key suffix: same character rule as repo_name_to_key, no prefix."""
+    return re.sub(r"[^A-Za-z0-9]+", "_", owner).strip("_").upper()
+
+
+def derive_key(
+    name: str,
+    owner: str,
+    *,
+    fork: bool,
+    fork_owners: Set[str],
+    taken_by: Dict[str, str],
+) -> str:
+    """The one rule that produces a manifest key.
+
+    ``name`` is the repository basename from the clone URL. ``taken_by`` maps
+    every key already in the manifest to the lower-cased ``owner/repo`` that
+    holds it. A fork from an owner outside ``fork_owners`` always gets the
+    owner suffix; anyone whose bare key is held by a different repo gets it
+    too. Otherwise the bare key.
+    """
+    base = repo_name_to_key(name)
+    suffixed = f"{base}_{sanitize_owner(owner)}"
+    full_name = f"{owner}/{name}".lower()
+    exempt = {o.lower() for o in fork_owners}
+    if fork and owner.lower() not in exempt:
+        return suffixed
+    holder = taken_by.get(base)
+    if holder is not None and holder.lower() != full_name:
+        return suffixed
+    return base
 
 
 def load_manifest(path: str) -> Dict[str, List[dict]]:
@@ -455,8 +552,20 @@ def update_last_modified(entry: dict, repo: dict) -> None:
         entry["last_modified"] = pushed_at
 
 
+def update_fork(entry: dict, repo: dict) -> None:
+    """Record whether the repo is a fork.
+
+    Activity data like ``last_modified``: refreshed on every sync from the search
+    payload, and from the per-repo check for entries the search missed. A payload
+    without the field (API error paths) leaves the entry untouched.
+    """
+    if "fork" in repo:
+        entry["fork"] = bool(repo["fork"])
+
+
 def update_entry_from_repo(entry: dict, repo: dict, repo_type: str, topic_expr: str, refresh: bool) -> None:
     update_last_modified(entry, repo)
+    update_fork(entry, repo)
     # Only overwrite descriptive fields when refresh is enabled or when they are missing.
     if refresh or not entry.get("name"):
         entry["name"] = repo.get("name") or entry.get("name")
@@ -479,45 +588,122 @@ def merge_repositories(
     manifest: Dict[str, List[dict]],
     repos: Iterable[RepoRecord],
     refresh_existing: bool,
-) -> tuple[int, int]:
+    sources: Optional[Sources] = None,
+) -> MergeResult:
+    """Merge discovered repositories into the manifest.
+
+    Repositories matching the ``declined`` section of config/module-sources.json
+    are skipped first: they neither create nor refresh an entry. Existing entries
+    are matched by repo URL, then by case-insensitive GitHub ``owner/name``.
+    Unmatched repos are admitted under ``derive_key``; there is no lookup by key.
+    """
     modules = manifest.setdefault("modules", [])
+    fork_owners = sources.fork_owners if sources is not None else set(DEFAULT_FORK_OWNERS)
     by_key = {module.get("key"): module for module in modules if module.get("key")}
     by_repo = {
         normalize_repo_url(str(module.get("repo", ""))): module
         for module in modules
         if module.get("repo")
     }
-    added = 0
-    updated = 0
+    # Second identity index: the same GitHub repo under a different URL spelling
+    # (scheme, case) is still the same entry. normalize_repo_url only strips .git.
+    by_full: Dict[str, dict] = {}
+    taken_by: Dict[str, str] = {}
+    for module in modules:
+        full = github_full_name(str(module.get("repo", "")))
+        if full:
+            by_full.setdefault(full.lower(), module)
+            if module.get("key"):
+                taken_by[module["key"]] = full.lower()
+    result = MergeResult()
 
     for record in repos:
         repo = record.data
         repo_url = normalize_repo_url(repo.get("clone_url") or repo.get("html_url") or "")
+        full_name = github_full_name(repo_url)
+        if sources is not None and sources.is_declined(full_name):
+            result.skipped_declined += 1
+            continue
         existing = by_repo.get(repo_url)
-        key = repo_name_to_key(repo.get("name", ""))
-        if not existing:
-            existing = by_key.get(key)
-        if not existing:
-            existing = {
-                "key": key,
-                "name": repo.get("name", key),
-                "repo": repo.get("clone_url") or repo.get("html_url", ""),
-                "description": repo.get("description") or "",
-                "type": record.module_type,
-                "category": CATEGORY_BY_TYPE.get(record.module_type, "uncategorized"),
-                "notes": "",
-            }
-            ensure_defaults(existing)
-            modules.append(existing)
-            by_key[key] = existing
-            if repo_url:
-                by_repo[repo_url] = existing
-            added += 1
-        else:
-            updated += 1
-        update_entry_from_repo(existing, repo, record.module_type, record.topic_expr, refresh_existing)
+        if existing is None and full_name:
+            existing = by_full.get(full_name.lower())
+        if existing is not None:
+            result.updated += 1
+            update_entry_from_repo(existing, repo, record.module_type, record.topic_expr, refresh_existing)
+            continue
 
-    return added, updated
+        # Not in the manifest under any URL spelling: admit under the key rule. There
+        # is deliberately no lookup by key here; a same-named repo gets its own entry.
+        owner, name = (full_name.split("/", 1) if full_name else ("", str(repo.get("name", ""))))
+        key = derive_key(name, owner, fork=bool(repo.get("fork")), fork_owners=fork_owners, taken_by=taken_by)
+        if key in by_key:
+            # Only reachable when the suffixed key is itself held by a different repo.
+            result.skipped_collision += 1
+            print(f"⚠️  {full_name or repo_url}: key {key} already belongs to {taken_by.get(key)}; not admitted")
+            continue
+        new_entry = {
+            "key": key,
+            "name": repo.get("name", key),
+            "repo": repo.get("clone_url") or repo.get("html_url", ""),
+            "description": repo.get("description") or "",
+            "type": record.module_type,
+            "category": CATEGORY_BY_TYPE.get(record.module_type, "uncategorized"),
+            "notes": "",
+        }
+        ensure_defaults(new_entry)
+        modules.append(new_entry)
+        by_key[key] = new_entry
+        if repo_url:
+            by_repo[repo_url] = new_entry
+        if full_name:
+            by_full[full_name.lower()] = new_entry
+            taken_by[key] = full_name.lower()
+        result.added += 1
+        result.added_entries.append(new_entry)
+        base = repo_name_to_key(name)
+        if key != base and base in by_key:
+            result.collisions.append((new_entry, by_key[base]))
+        update_entry_from_repo(new_entry, repo, record.module_type, record.topic_expr, refresh_existing)
+
+    return result
+
+
+def format_digest(added_entries: List[dict], collisions: Sequence[Tuple[dict, dict]] = ()) -> str:
+    """Markdown summary of this run's new entries grouped by GitHub owner, plus any
+    name collisions (newcomers that needed an owner suffix because their bare key
+    was taken). Pasted into the sync PR body. Non-GitHub repos group under "other".
+    """
+    lines: List[str] = []
+    if not added_entries:
+        lines.append("No new modules this run.")
+    else:
+        by_owner: Dict[str, List[dict]] = {}
+        for entry in added_entries:
+            full_name = github_full_name(str(entry.get("repo", "")))
+            owner = full_name.split("/", 1)[0] if full_name else "other"
+            by_owner.setdefault(owner, []).append(entry)
+        lines.append(f"{len(added_entries)} new module(s) from {len(by_owner)} owner(s):")
+        lines.append("")
+        for owner in sorted(by_owner, key=lambda name: (-len(by_owner[name]), name)):
+            entries = by_owner[owner]
+            lines.append(f"- **{owner}** ({len(entries)})")
+            for entry in sorted(entries, key=lambda item: str(item.get("key"))):
+                description = str(entry.get("description") or "").strip()
+                lines.append(f"  - `{entry['key']}` {description}".rstrip())
+    if collisions:
+        lines.append("")
+        lines.append(
+            f"**Name collisions** ({len(collisions)}): the bare key was already taken, so the "
+            f"newcomer got an owner suffix. Decline either side in `config/module-sources.json` "
+            f"if one of them should not be listed."
+        )
+        lines.append("")
+        for new, holder in collisions:
+            lines.append(
+                f"- `{new['key']}` ({github_full_name(str(new.get('repo', ''))) or new.get('repo')}) "
+                f"collides with `{holder['key']}` ({github_full_name(str(holder.get('repo', ''))) or holder.get('repo')})"
+            )
+    return "\n".join(lines) + "\n"
 
 
 def collect_repositories(
@@ -657,42 +843,59 @@ def update_env_template(manifest_path: str, template_path: str) -> bool:
 
 def main(argv: Sequence[str]) -> int:
     args = parse_args(argv)
-    topics = args.topics or DEFAULT_TOPICS
-    token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GITHUB_API_TOKEN")
-    client = GitHubClient(token, verbose=args.log)
-
     manifest = load_manifest(args.manifest)
-    repos = collect_repositories(client, topics, args.max_pages)
-    added, updated = merge_repositories(manifest, repos, args.refresh_existing)
+    sources = load_sources(args.sources)
 
+    repos: List[RepoRecord] = []
+    merge = MergeResult()
     removed: List[dict] = []
-    if args.prune_missing:
-        seen_repo_urls = {
-            normalize_repo_url(
-                record.data.get("clone_url") or record.data.get("html_url") or ""
-            )
-            for record in repos
-        }
-        seen_repo_urls.discard("")
-        removed = prune_missing_repositories(
-            manifest,
-            client,
-            seen_repo_urls,
-            args.prune_max_fraction,
-            dry_run=args.dry_run,
-            verbose=args.log,
-        )
+    if not args.sources_only:
+        topics = args.topics or DEFAULT_TOPICS
+        token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GITHUB_API_TOKEN")
+        client = GitHubClient(token, verbose=args.log)
+        repos = collect_repositories(client, topics, args.max_pages)
+        merge = merge_repositories(manifest, repos, args.refresh_existing, sources=sources)
 
+        if args.prune_missing:
+            seen_repo_urls = {
+                normalize_repo_url(
+                    record.data.get("clone_url") or record.data.get("html_url") or ""
+                )
+                for record in repos
+            }
+            seen_repo_urls.discard("")
+            removed = prune_missing_repositories(
+                manifest,
+                client,
+                seen_repo_urls,
+                args.prune_max_fraction,
+                dry_run=args.dry_run,
+                verbose=args.log,
+            )
+
+    # Declined repos are removed on every run, with or without GitHub access.
+    declined = remove_declined_entries(manifest, sources, dry_run=args.dry_run)
+
+    if args.digest_file:
+        Path(args.digest_file).write_text(format_digest(merge.added_entries, merge.collisions), encoding="utf-8")
+
+    # In dry-run the declined entries are still in the manifest; exclude them so
+    # the profile preview matches what a real run would do.
+    declined_keys = {str(entry.get("key")) for entry in declined}
     valid_keys = {
         str(entry.get("key")) for entry in manifest.get("modules", []) if entry.get("key")
-    }
+    } - declined_keys
 
     if args.dry_run:
         if not args.skip_profiles:
             prune_profiles(args.profiles_dir, valid_keys, dry_run=True, verbose=args.log)
         print(
             f"Discovered {len(repos)} repositories "
-            f"(added={added}, updated={updated}, would remove={len(removed)})"
+            f"(added={merge.added}, updated={merge.updated}, "
+            f"skipped declined={merge.skipped_declined}, "
+            f"collisions={len(merge.collisions)}, "
+            f"skipped collisions={merge.skipped_collision}, "
+            f"would remove={len(removed)}, would remove declined={len(declined)})"
         )
         return 0
 
@@ -701,8 +904,11 @@ def main(argv: Sequence[str]) -> int:
         handle.write("\n")
 
     print(
-        f"Updated manifest {args.manifest}: added {added}, refreshed {updated}, "
-        f"removed {len(removed)}"
+        f"Updated manifest {args.manifest}: added {merge.added}, refreshed {merge.updated}, "
+        f"removed {len(removed)}, declined {len(declined)}, "
+        f"skipped declined {merge.skipped_declined}, "
+        f"collisions {len(merge.collisions)}, "
+        f"skipped collisions {merge.skipped_collision}"
     )
 
     # Keep profiles free of keys the manifest no longer has; the config UI's
