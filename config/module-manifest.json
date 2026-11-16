@@ -3454,7 +3454,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-16T04:45:24Z",
+      "last_modified": "2026-11-16T12:46:10Z",
       "fork": false
     },
     {
@@ -4394,7 +4394,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-16T06:55:35Z",
+      "last_modified": "2026-11-16T07:03:02Z",
       "fork": false
     },
     {
@@ -4874,7 +4874,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-14T11:16:09Z",
+      "last_modified": "2026-11-16T13:23:36Z",
       "fork": false
     },
     {
@@ -11386,7 +11386,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-16T01:27:57Z",
+      "last_modified": "2026-11-16T08:44:48Z",
       "fork": false
     },
     {
@@ -11514,7 +11514,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-16T01:27:43Z",
+      "last_modified": "2026-11-16T08:43:15Z",
       "fork": false
     },
     {
@@ -11563,6 +11563,38 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-11-05T11:55:28Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_NATIVE_MOUNTS",
+      "name": "mod-native-mounts",
+      "repo": "https://github.com/Hisha/mod-native-mounts.git",
+      "description": "A Azerothcore module that shows the user mounts collected and uncollected in game and makes mounts account bound.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-16T12:28:25Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_ARCHEAGE_RESOCKET_PLAYERBOTS",
+      "name": "ArcheAge-resocket-PlayerBots",
+      "repo": "https://github.com/vilsonjunior22/ArcheAge-resocket-PlayerBots.git",
+      "description": "Player bots for ArcheAge: companions, party commands, combat roles and duels.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-16T12:04:42Z",
       "fork": false
     }
   ],
