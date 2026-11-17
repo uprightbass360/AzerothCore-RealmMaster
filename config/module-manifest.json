@@ -1141,7 +1141,7 @@
       "order": 5000,
       "requires": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-09-20T15:23:14Z",
+      "last_modified": "2026-11-16T20:23:10Z",
       "fork": false
     },
     {
@@ -3454,7 +3454,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-16T12:46:10Z",
+      "last_modified": "2026-11-17T01:59:13Z",
       "fork": false
     },
     {
@@ -4394,7 +4394,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-16T07:03:02Z",
+      "last_modified": "2026-11-16T13:52:00Z",
       "fork": false
     },
     {
@@ -4874,7 +4874,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-16T13:23:36Z",
+      "last_modified": "2026-11-16T18:58:39Z",
       "fork": false
     },
     {
@@ -4890,7 +4890,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-25T22:15:19Z",
+      "last_modified": "2026-11-16T23:14:19Z",
       "fork": false
     },
     {
@@ -8074,7 +8074,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-14T13:43:15Z",
+      "last_modified": "2026-11-17T01:12:38Z",
       "fork": false
     },
     {
@@ -10314,7 +10314,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-02T01:13:31Z",
+      "last_modified": "2026-11-16T18:00:05Z",
       "fork": false
     },
     {
@@ -10714,7 +10714,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-13T23:37:48Z",
+      "last_modified": "2026-11-17T13:24:32Z",
       "fork": true
     },
     {
@@ -10762,7 +10762,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-13T19:27:21Z",
+      "last_modified": "2026-11-17T14:40:25Z",
       "fork": false
     },
     {
@@ -10987,22 +10987,6 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-11-06T16:36:52Z",
-      "fork": false
-    },
-    {
-      "key": "MODULE_MOD_ROTATION_RESP",
-      "name": "mod-rotation-resp",
-      "repo": "https://github.com/manuellopezgallardo406-bit/mod-rotation-resp.git",
-      "description": "One-button rotation module for AzerothCore WotLK 3.3.5a (playerbot fork). One trigger spell, 10 classes, 30 specializations, priorities based on Wowhead WotLK Classic guides.",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-11-06T10:18:19Z",
       "fork": false
     },
     {
@@ -11386,7 +11370,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-16T08:44:48Z",
+      "last_modified": "2026-11-17T11:17:54Z",
       "fork": false
     },
     {
@@ -11436,22 +11420,6 @@
       "config_cleanup": [],
       "last_modified": "2026-11-10T17:51:16Z",
       "fork": true
-    },
-    {
-      "key": "MODULE_RPOCKET_WOW_ADDON_UNBOT",
-      "name": "rpocket-wow-addon-unbot",
-      "repo": "https://github.com/Turbostrengthloop/rpocket-wow-addon-unbot.git",
-      "description": "UnBot bot controller addon for WoW 3.3.5a (AzerothCore playerbots)",
-      "type": "tool",
-      "category": "tooling",
-      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-11-05T12:00:34Z",
-      "fork": false
     },
     {
       "key": "MODULE_AZEROTHCORE_TRUE_COMPANION_ADDON",
@@ -11514,23 +11482,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-16T08:43:15Z",
-      "fork": false
-    },
-    {
-      "key": "MODULE_RPOCKET_LRDPSYCHOCHAINS_WOW_HUB",
-      "name": "rpocket-LrdPsychoChains-WOW-HUB",
-      "repo": "https://github.com/ZeroUntopirate/rpocket-LrdPsychoChains-WOW-HUB.git",
-      "description": "LrdPsychoChains WOW HUB - WoW 12.1 MidnightCore Launcher + MidnightBotAI playerbots | Guides for Vanilla to Legion clients, server setup, data files and checksums",
-      "type": "lua",
-      "category": "scripting",
-      "notes": "Discovered via GitHub topic 'azerothcore-lua'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-11-05T11:59:56Z",
+      "last_modified": "2026-11-17T11:17:22Z",
       "fork": false
     },
     {
@@ -11595,6 +11547,70 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-11-16T12:04:42Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_POCKET_VENDOR",
+      "name": "mod-pocket-vendor",
+      "repo": "https://github.com/Tntdruid/mod-pocket-vendor.git",
+      "description": "AzerothCore module that sells junk on loot, with an addon for personal sell and keep lists",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-17T14:11:40Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_INNCORE_INSTALLER",
+      "name": "InnCore-Installer",
+      "repo": "https://github.com/Marschux/InnCore-Installer.git",
+      "description": "AzerothCore WotLK + Playerbots on Debian 13 LXC: installer, MySQL 8.4 tuning and authmenu/worldmenu server management.",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-17T05:37:08Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_JOURNALGEARBIS",
+      "name": "JournalGearBIS",
+      "repo": "https://github.com/EvilTactician/JournalGearBIS.git",
+      "description": "A World of Warcraft 3.3.5a addon that adds a Gear tab to the Journal Addon (from the mod-forever-journal module), for AzerothCore realms running mod-individual-progression.",
+      "type": "lua",
+      "category": "scripting",
+      "notes": "Discovered via GitHub topic 'azerothcore-lua'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-17T11:44:12Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_PLAYERBOTCONTROL",
+      "name": "PlayerbotControl",
+      "repo": "https://github.com/EvilTactician/PlayerbotControl.git",
+      "description": "Alternative PlayerBot Control Bar - Focused on commonly used actions, rather than overwhelming numbers of options..",
+      "type": "lua",
+      "category": "scripting",
+      "notes": "Discovered via GitHub topic 'azerothcore-lua'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-17T11:14:53Z",
       "fork": false
     }
   ],
