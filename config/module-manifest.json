@@ -16,7 +16,7 @@
       "special_message": "\ud83e\udd16 Foundation module: Enables AI-powered companions for solo and group content",
       "status": "active",
       "requires": [],
-      "last_modified": "2026-11-15T00:15:15Z",
+      "last_modified": "2026-11-21T01:55:03Z",
       "fork": false
     },
     {
@@ -1435,7 +1435,7 @@
       "config_cleanup": [],
       "notes": "NPC ID: 98500; known issue: players who were participants experience unusual behavior when watching their own replay \nDiscovered via GitHub topic 'azerothcore-module'",
       "category": "pvp",
-      "last_modified": "2026-08-07T18:58:50Z",
+      "last_modified": "2026-11-20T22:06:16Z",
       "status": "active",
       "order": 5000,
       "requires": [],
@@ -1620,7 +1620,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-22T21:53:46Z",
+      "last_modified": "2026-11-20T23:09:33Z",
       "fork": false
     },
     {
@@ -3454,7 +3454,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T03:16:46Z",
+      "last_modified": "2026-11-21T08:54:26Z",
       "fork": false
     },
     {
@@ -4394,7 +4394,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T14:34:34Z",
+      "last_modified": "2026-11-20T14:12:42Z",
       "fork": false
     },
     {
@@ -4762,7 +4762,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T19:58:03Z",
+      "last_modified": "2026-11-20T18:46:35Z",
       "fork": false
     },
     {
@@ -4810,7 +4810,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T15:50:39Z",
+      "last_modified": "2026-11-20T21:27:29Z",
       "fork": false
     },
     {
@@ -6142,22 +6142,6 @@
       "fork": false
     },
     {
-      "key": "MODULE_MOD_TRANSMOG_PLUS",
-      "name": "mod-transmog-plus",
-      "repo": "https://github.com/Stefan2102/mod-transmog-plus.git",
-      "description": "Slot-based transmogrification module for AzerothCore. Appearances are stored per equipment slot, so transmogs persist when gear is replaced.",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-10-10T05:10:45Z",
-      "fork": false
-    },
-    {
       "key": "MODULE_MOD_TALENT_ITEM_TEMPLATE",
       "name": "mod-talent-item-template",
       "repo": "https://github.com/imagionationeditor/mod-talent-item-template.git",
@@ -7066,7 +7050,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-04T15:50:39Z",
+      "last_modified": "2026-11-20T21:27:29Z",
       "fork": false
     },
     {
@@ -8138,7 +8122,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-11T10:04:08Z",
+      "last_modified": "2026-11-20T18:04:42Z",
       "fork": false
     },
     {
@@ -8474,7 +8458,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-08T11:15:50Z",
+      "last_modified": "2026-11-21T06:52:17Z",
       "fork": false
     },
     {
@@ -9610,7 +9594,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T15:25:25Z",
+      "last_modified": "2026-11-21T01:45:36Z",
       "fork": false
     },
     {
@@ -9642,7 +9626,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T14:32:02Z",
+      "last_modified": "2026-11-21T00:24:05Z",
       "fork": false
     },
     {
@@ -9658,7 +9642,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-14T12:52:07Z",
+      "last_modified": "2026-11-21T09:20:27Z",
       "fork": false
     },
     {
@@ -9754,7 +9738,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T19:58:03Z",
+      "last_modified": "2026-11-20T18:46:35Z",
       "fork": false
     },
     {
@@ -10187,22 +10171,6 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-11-19T21:41:12Z",
-      "fork": false
-    },
-    {
-      "key": "MODULE_AZEROTHCORE_LAUNCHER_STEFAN2102",
-      "name": "azerothcore-launcher",
-      "repo": "https://github.com/Stefan2102/azerothcore-launcher.git",
-      "description": "A modern Windows launcher for local AzerothCore servers.",
-      "type": "tool",
-      "category": "tooling",
-      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-08-25T10:40:49Z",
       "fork": false
     },
     {
@@ -10698,8 +10666,8 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-14T14:17:58Z",
-      "fork": true
+      "last_modified": "2026-11-21T09:55:13Z",
+      "fork": false
     },
     {
       "key": "MODULE_WOW_MOD_RETAIL_PROFESSIONS_EVILTACTICIAN",
@@ -10714,7 +10682,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-17T19:51:53Z",
+      "last_modified": "2026-11-21T10:05:19Z",
       "fork": true
     },
     {
@@ -10762,7 +10730,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T09:55:06Z",
+      "last_modified": "2026-11-21T06:57:14Z",
       "fork": false
     },
     {
@@ -10826,7 +10794,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-11T12:46:49Z",
+      "last_modified": "2026-11-21T05:41:29Z",
       "fork": false
     },
     {
@@ -11370,7 +11338,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T08:00:32Z",
+      "last_modified": "2026-11-21T12:10:01Z",
       "fork": false
     },
     {
@@ -11386,7 +11354,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-15T21:24:13Z",
+      "last_modified": "2026-11-20T20:22:07Z",
       "fork": false
     },
     {
@@ -11482,7 +11450,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T08:00:03Z",
+      "last_modified": "2026-11-21T12:09:23Z",
       "fork": false
     },
     {
@@ -11562,7 +11530,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-18T06:31:27Z",
+      "last_modified": "2026-11-20T15:17:20Z",
       "fork": false
     },
     {
@@ -11642,7 +11610,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T12:13:17Z",
+      "last_modified": "2026-11-21T05:19:56Z",
       "fork": false
     },
     {
@@ -11706,7 +11674,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T09:15:21Z",
+      "last_modified": "2026-11-20T23:09:37Z",
       "fork": false
     },
     {
@@ -11738,7 +11706,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:37:11Z",
+      "last_modified": "2026-11-20T23:10:02Z",
       "fork": false
     },
     {
@@ -11786,7 +11754,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:36:47Z",
+      "last_modified": "2026-11-20T23:09:59Z",
       "fork": false
     },
     {
@@ -11898,7 +11866,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:35:41Z",
+      "last_modified": "2026-11-20T23:09:54Z",
       "fork": false
     },
     {
@@ -12218,7 +12186,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:31:30Z",
+      "last_modified": "2026-11-20T23:09:50Z",
       "fork": false
     },
     {
@@ -12234,7 +12202,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:31:22Z",
+      "last_modified": "2026-11-20T23:09:47Z",
       "fork": false
     },
     {
@@ -12266,7 +12234,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:31:04Z",
+      "last_modified": "2026-11-20T23:09:42Z",
       "fork": false
     },
     {
@@ -12378,7 +12346,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:30:10Z",
+      "last_modified": "2026-11-20T23:09:40Z",
       "fork": false
     },
     {
@@ -12410,7 +12378,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:29:52Z",
+      "last_modified": "2026-11-20T18:35:17Z",
       "fork": false
     },
     {
@@ -12523,6 +12491,262 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-11-13T20:52:50Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_GUILD_LEVELS_EVILTACTICIAN",
+      "name": "mod-guild-levels",
+      "repo": "https://github.com/EvilTactician/mod-guild-levels.git",
+      "description": "Cataclysm-style guild levels for AzerothCore 3.3.5a: guild XP, 25 levels, 24 guild perks, GuildLevels addon",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T11:06:15Z",
+      "fork": true
+    },
+    {
+      "key": "MODULE_MOD_POCKET_STORAGE",
+      "name": "mod-pocket-storage",
+      "repo": "https://github.com/Tntdruid/mod-pocket-storage.git",
+      "description": "AzerothCore module allowing auto-deposit to a limitless vault, account wide, with support for auto-withdrawal for crafting.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T09:55:13Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_WORGEN",
+      "name": "mod-worgen",
+      "repo": "https://github.com/dudemcbro/mod-worgen.git",
+      "description": "AzerothCore module: Worgen skins via display IDs, with a Silverpine story flow",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:55Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_TRAINERS",
+      "name": "mod-trainers",
+      "repo": "https://github.com/dudemcbro/mod-trainers.git",
+      "description": "AzerothCore module: a GM command to spawn permanent class trainer NPCs where you stand.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:54Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_STARTERBAGS",
+      "name": "mod-starterbags",
+      "repo": "https://github.com/dudemcbro/mod-starterbags.git",
+      "description": "AzerothCore module: gives every new character a full set of bags on first login.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:52Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_SMALL_RAID_FIXES",
+      "name": "mod-small-raid-fixes",
+      "repo": "https://github.com/dudemcbro/mod-small-raid-fixes.git",
+      "description": "AzerothCore module: tones down MC and BWL mechanics AutoBalance cannot scale, for small groups",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:51Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_SIDEQUESTSONLY",
+      "name": "mod-sidequestsonly",
+      "repo": "https://github.com/dudemcbro/mod-sidequestsonly.git",
+      "description": "AzerothCore module and client addon: category badges ([Story], [Lore], [Side], ...) on quests",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:49Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_RDF_CLASSIC",
+      "name": "mod-rdf-classic",
+      "repo": "https://github.com/dudemcbro/mod-rdf-classic.git",
+      "description": "AzerothCore module: a classic-feel Random Dungeon Finder without the RDF gold/XP bonus or Luck of the Draw.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:48Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_MAGIC_ROOSTER",
+      "name": "mod-magic-rooster",
+      "repo": "https://github.com/dudemcbro/mod-magic-rooster.git",
+      "description": "AzerothCore module (data only): the Magic Rooster as every new character's starter mount.",
+      "type": "sql",
+      "category": "database",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:47Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_GOBLIN_VENDOR",
+      "name": "mod-goblin-vendor",
+      "repo": "https://github.com/dudemcbro/mod-goblin-vendor.git",
+      "description": "AzerothCore module: a flare gun that summons a temporary goblin salvage vendor",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:45Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_GNOMISH_ARMY_KNIFE",
+      "name": "mod-gnomish-army-knife",
+      "repo": "https://github.com/dudemcbro/mod-gnomish-army-knife.git",
+      "description": "AzerothCore module: every character gets and keeps a Gnomish Army Knife",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:44Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_GATHER_MORE",
+      "name": "mod-gather-more",
+      "repo": "https://github.com/dudemcbro/mod-gather-more.git",
+      "description": "AzerothCore module: more yield from gathering nodes, corpses and fishing pools.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:43Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_FASTMOUNTS",
+      "name": "mod-fastmounts",
+      "repo": "https://github.com/dudemcbro/mod-fastmounts.git",
+      "description": "AzerothCore module: ground mounts at 100% / 150% speed, with a matching client patch",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:41Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_DUNGEON_QUESTS_DUDEMCBRO",
+      "name": "mod-dungeon-quests",
+      "repo": "https://github.com/dudemcbro/mod-dungeon-quests.git",
+      "description": "AzerothCore module: offers a dungeon's quests when you enter it (.dq)",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:40Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_CROSSFACTIONCITIES",
+      "name": "mod-crossfactioncities",
+      "repo": "https://github.com/dudemcbro/mod-crossfactioncities.git",
+      "description": "AzerothCore module: neutral cities where both factions can use each other's NPCs, mailboxes and flightmasters.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:38Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_BEASTMASTERPLUS",
+      "name": "mod-beastmasterplus",
+      "repo": "https://github.com/dudemcbro/mod-beastmasterplus.git",
+      "description": "AzerothCore module: extended hunter pet storage (HunterStablePlus), driven by a client addon.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-21T01:55:22Z",
       "fork": false
     }
   ],
