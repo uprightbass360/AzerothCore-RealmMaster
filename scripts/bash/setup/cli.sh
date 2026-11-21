@@ -38,6 +38,8 @@ Description:
 
 Options:
   -h, --help                      Show this help message and exit
+  --debug                         Also write a trace of every command to the run log (logs/)
+  --no-log                        Don't write a run log (logs/) for this run
   --non-interactive               Use defaults/arguments without prompting
   --deployment-type TYPE          Deployment type: local, lan, or public
   --permission-scheme SCHEME      Permissions: local, nfs, or custom

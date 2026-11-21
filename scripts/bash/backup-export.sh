@@ -5,6 +5,9 @@ set -euo pipefail
 INVOCATION_DIR="$PWD"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck source=lib/run-log.sh
+source "$SCRIPT_DIR/lib/run-log.sh"
+run_log_start backup-export -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 cd "$SCRIPT_DIR"
 source "$SCRIPT_DIR/lib/common.sh"
 
@@ -48,6 +51,8 @@ Options:
       --db LIST             Comma-separated list of databases to export
       --skip LIST           Comma-separated list of databases to skip
   -h, --help                Show this help and exit
+  --debug                   Also write a trace of every command to the run log (logs/)
+  --no-log                  Don't write a run log (logs/) for this run
 
 Supported database identifiers: auth, characters, world.
 By default exports auth and characters if database names are provided.

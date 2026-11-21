@@ -5,6 +5,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$SCRIPT_DIR"
+# shellcheck source=scripts/bash/lib/run-log.sh
+source "$PROJECT_DIR/scripts/bash/lib/run-log.sh"
+run_log_start status --read-only -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 BINARY_PATH="$PROJECT_DIR/statusdash"
 SOURCE_DIR="$PROJECT_DIR/scripts/go"
 CACHE_DIR="$PROJECT_DIR/.gocache"
@@ -18,6 +21,7 @@ Usage: $0 [options] [-- statusdash-args]
 Options:
   --rebuild         Force rebuilding the statusdash binary
   -h, --help        Show this help text
+  --debug           Write a run log with a trace of every command (logs/)
 
 All arguments after '--' are passed directly to the statusdash binary.
 Go must be installed locally to build statusdash (https://go.dev/doc/install).
@@ -76,4 +80,4 @@ if [[ ! -x "$BINARY_PATH" ]]; then
   build_statusdash
 fi
 
-exec "$BINARY_PATH" "${statusdash_args[@]}"
+"$BINARY_PATH" "${statusdash_args[@]}"

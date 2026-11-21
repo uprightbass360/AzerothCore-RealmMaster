@@ -9,6 +9,9 @@ clear
 
 # === Paths / project identity ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/bash/lib/run-log.sh
+source "$SCRIPT_DIR/scripts/bash/lib/run-log.sh"
+run_log_start setup -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 ENV_FILE="$SCRIPT_DIR/.env"
 TEMPLATE_FILE="$SCRIPT_DIR/.env.template"
 

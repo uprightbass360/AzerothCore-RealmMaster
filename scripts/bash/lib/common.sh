@@ -432,3 +432,10 @@ retry() {
 
 # Library loaded successfully
 # Scripts can check for $_COMMON_LIB_LOADED to verify library is loaded
+
+# debug "message": defined by lib/run-log.sh (and exported to child scripts)
+# when a command runs with a log; otherwise a no-op so scripts can call it
+# under set -e whether or not they were started by a logging command.
+if ! declare -F debug >/dev/null 2>&1; then
+  debug(){ return 0; }
+fi

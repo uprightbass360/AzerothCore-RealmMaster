@@ -4,6 +4,9 @@ set -euo pipefail
 
 INVOCATION_DIR="$PWD"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/run-log.sh
+source "$SCRIPT_DIR/lib/run-log.sh"
+run_log_start backup-import -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 cd "$SCRIPT_DIR"
 
 source "$SCRIPT_DIR/lib/common.sh"
@@ -40,6 +43,8 @@ Options:
       --skip LIST           Comma-separated list of databases to skip
       --all                 Import all supported databases
   -h, --help                Show this help and exit
+  --debug                   Also write a trace of every command to the run log (logs/)
+  --no-log                  Don't write a run log (logs/) for this run
 
 Supported database identifiers: auth, characters, world.
 By default the script restores auth and characters databases.

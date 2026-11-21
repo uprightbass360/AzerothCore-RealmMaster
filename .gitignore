@@ -30,5 +30,7 @@ deploy.log
 local-backups/
 config/index.json
 
+# Script run logs (scripts/bash/lib/run-log.sh)
+logs/
 # AI-generated design specs and implementation plans stay local
 docs/superpowers/

@@ -6,6 +6,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck source=lib/run-log.sh
+source "$SCRIPT_DIR/lib/run-log.sh"
+run_log_start repair-storage-permissions -- "$@"; set -- "${RUN_LOG_ARGS[@]}"
 ENV_FILE="$PROJECT_ROOT/.env"
 TEMPLATE_FILE="$PROJECT_ROOT/.env.template"
 
@@ -19,6 +22,8 @@ Options:
   --path <dir>     Additional directory to fix (can be passed multiple times)
   --silent         Reduce output (only errors/warnings)
   -h, --help       Show this help message
+  --debug          Also write a trace of every command to the run log (logs/)
+  --no-log         Don't write a run log (logs/) for this run
 EOF
 }
 
