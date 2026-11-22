@@ -1620,7 +1620,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T23:09:33Z",
+      "last_modified": "2026-11-21T17:32:34Z",
       "fork": false
     },
     {
@@ -3454,7 +3454,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T08:54:26Z",
+      "last_modified": "2026-11-22T02:45:46Z",
       "fork": false
     },
     {
@@ -4394,7 +4394,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T14:12:42Z",
+      "last_modified": "2026-11-21T13:37:17Z",
       "fork": false
     },
     {
@@ -8458,7 +8458,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T06:52:17Z",
+      "last_modified": "2026-11-21T15:24:09Z",
       "fork": false
     },
     {
@@ -9034,7 +9034,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-10-12T07:50:21Z",
+      "last_modified": "2026-11-21T15:23:58Z",
       "fork": false
     },
     {
@@ -9978,7 +9978,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-08-13T10:06:58Z",
+      "last_modified": "2026-11-21T21:47:38Z",
       "fork": true
     },
     {
@@ -10570,7 +10570,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-15T16:20:05Z",
+      "last_modified": "2026-11-21T21:09:27Z",
       "fork": false
     },
     {
@@ -10666,7 +10666,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T09:55:13Z",
+      "last_modified": "2026-11-22T10:16:40Z",
       "fork": false
     },
     {
@@ -11338,7 +11338,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T12:10:01Z",
+      "last_modified": "2026-11-22T12:06:25Z",
       "fork": false
     },
     {
@@ -11450,7 +11450,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T12:09:23Z",
+      "last_modified": "2026-11-22T12:06:12Z",
       "fork": false
     },
     {
@@ -11578,7 +11578,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-18T18:51:50Z",
+      "last_modified": "2026-11-21T18:14:01Z",
       "fork": false
     },
     {
@@ -11642,7 +11642,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T13:08:14Z",
+      "last_modified": "2026-11-22T00:07:45Z",
       "fork": false
     },
     {
@@ -11658,7 +11658,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T10:09:02Z",
+      "last_modified": "2026-11-22T13:21:59Z",
       "fork": false
     },
     {
@@ -11674,7 +11674,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T23:09:37Z",
+      "last_modified": "2026-11-21T17:32:38Z",
       "fork": false
     },
     {
@@ -11690,7 +11690,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:37:18Z",
+      "last_modified": "2026-11-21T17:34:27Z",
       "fork": false
     },
     {
@@ -11706,7 +11706,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T23:10:02Z",
+      "last_modified": "2026-11-22T00:07:48Z",
       "fork": false
     },
     {
@@ -11754,7 +11754,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T23:09:59Z",
+      "last_modified": "2026-11-21T17:34:19Z",
       "fork": false
     },
     {
@@ -11786,7 +11786,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T13:21:26Z",
+      "last_modified": "2026-11-22T00:07:43Z",
       "fork": false
     },
     {
@@ -11818,7 +11818,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:36:04Z",
+      "last_modified": "2026-11-21T17:34:11Z",
       "fork": false
     },
     {
@@ -11866,7 +11866,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T23:09:54Z",
+      "last_modified": "2026-11-22T00:59:13Z",
       "fork": false
     },
     {
@@ -11882,7 +11882,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:35:33Z",
+      "last_modified": "2026-11-21T17:34:07Z",
       "fork": false
     },
     {
@@ -11898,7 +11898,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:35:25Z",
+      "last_modified": "2026-11-21T17:34:04Z",
       "fork": false
     },
     {
@@ -11914,7 +11914,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:35:18Z",
+      "last_modified": "2026-11-21T17:34:02Z",
       "fork": false
     },
     {
@@ -11930,7 +11930,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:35:11Z",
+      "last_modified": "2026-11-22T03:55:24Z",
       "fork": false
     },
     {
@@ -11978,7 +11978,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:34:46Z",
+      "last_modified": "2026-11-22T00:07:40Z",
       "fork": false
     },
     {
@@ -12026,7 +12026,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:34:21Z",
+      "last_modified": "2026-11-21T17:33:51Z",
       "fork": false
     },
     {
@@ -12042,7 +12042,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:34:13Z",
+      "last_modified": "2026-11-22T01:01:52Z",
       "fork": false
     },
     {
@@ -12074,7 +12074,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:32:26Z",
+      "last_modified": "2026-11-21T17:33:38Z",
       "fork": false
     },
     {
@@ -12090,7 +12090,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:32:17Z",
+      "last_modified": "2026-11-21T17:33:36Z",
       "fork": false
     },
     {
@@ -12106,7 +12106,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:32:10Z",
+      "last_modified": "2026-11-21T17:33:33Z",
       "fork": false
     },
     {
@@ -12122,7 +12122,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:32:02Z",
+      "last_modified": "2026-11-21T17:33:31Z",
       "fork": false
     },
     {
@@ -12154,7 +12154,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:31:47Z",
+      "last_modified": "2026-11-21T17:33:28Z",
       "fork": false
     },
     {
@@ -12170,7 +12170,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:31:37Z",
+      "last_modified": "2026-11-21T17:33:24Z",
       "fork": false
     },
     {
@@ -12186,7 +12186,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T23:09:50Z",
+      "last_modified": "2026-11-21T17:33:21Z",
       "fork": false
     },
     {
@@ -12202,7 +12202,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T23:09:47Z",
+      "last_modified": "2026-11-21T17:33:19Z",
       "fork": false
     },
     {
@@ -12234,7 +12234,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T23:09:42Z",
+      "last_modified": "2026-11-21T17:33:16Z",
       "fork": false
     },
     {
@@ -12250,7 +12250,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:30:56Z",
+      "last_modified": "2026-11-21T17:33:14Z",
       "fork": false
     },
     {
@@ -12266,7 +12266,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:30:48Z",
+      "last_modified": "2026-11-21T17:33:12Z",
       "fork": false
     },
     {
@@ -12282,7 +12282,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:30:41Z",
+      "last_modified": "2026-11-21T17:33:09Z",
       "fork": false
     },
     {
@@ -12298,7 +12298,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:30:34Z",
+      "last_modified": "2026-11-21T17:33:06Z",
       "fork": false
     },
     {
@@ -12314,7 +12314,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:30:27Z",
+      "last_modified": "2026-11-22T00:56:38Z",
       "fork": false
     },
     {
@@ -12330,7 +12330,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:30:19Z",
+      "last_modified": "2026-11-21T17:33:01Z",
       "fork": false
     },
     {
@@ -12346,7 +12346,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T23:09:40Z",
+      "last_modified": "2026-11-22T07:43:48Z",
       "fork": false
     },
     {
@@ -12362,7 +12362,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:30:02Z",
+      "last_modified": "2026-11-22T00:07:36Z",
       "fork": false
     },
     {
@@ -12394,7 +12394,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:29:44Z",
+      "last_modified": "2026-11-22T02:06:01Z",
       "fork": false
     },
     {
@@ -12410,7 +12410,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:29:37Z",
+      "last_modified": "2026-11-21T17:32:51Z",
       "fork": false
     },
     {
@@ -12426,7 +12426,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:29:25Z",
+      "last_modified": "2026-11-21T17:32:45Z",
       "fork": false
     },
     {
@@ -12442,7 +12442,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:29:11Z",
+      "last_modified": "2026-11-21T17:32:43Z",
       "fork": false
     },
     {
@@ -12458,7 +12458,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T23:29:04Z",
+      "last_modified": "2026-11-21T17:32:40Z",
       "fork": false
     },
     {
@@ -12522,23 +12522,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T09:55:13Z",
-      "fork": false
-    },
-    {
-      "key": "MODULE_MOD_WORGEN",
-      "name": "mod-worgen",
-      "repo": "https://github.com/dudemcbro/mod-worgen.git",
-      "description": "AzerothCore module: Worgen skins via display IDs, with a Silverpine story flow",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-11-21T01:55:55Z",
+      "last_modified": "2026-11-22T10:16:40Z",
       "fork": false
     },
     {
@@ -12603,22 +12587,6 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-11-21T01:55:49Z",
-      "fork": false
-    },
-    {
-      "key": "MODULE_MOD_RDF_CLASSIC",
-      "name": "mod-rdf-classic",
-      "repo": "https://github.com/dudemcbro/mod-rdf-classic.git",
-      "description": "AzerothCore module: a classic-feel Random Dungeon Finder without the RDF gold/XP bonus or Luck of the Draw.",
-      "type": "cpp",
-      "category": "uncategorized",
-      "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "status": "active",
-      "order": 5000,
-      "requires": [],
-      "post_install_hooks": [],
-      "config_cleanup": [],
-      "last_modified": "2026-11-21T01:55:48Z",
       "fork": false
     },
     {
@@ -12747,6 +12715,22 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-11-21T01:55:22Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_JOURNALPROGRESSION",
+      "name": "JournalProgression",
+      "repo": "https://github.com/EvilTactician/JournalProgression.git",
+      "description": "A World of Warcraft 3.3.5a addon that adds a Progression tab to the Journal Addon (from the mod-forever-journal module), for AzerothCore realms running mod-individual-progression.",
+      "type": "lua",
+      "category": "scripting",
+      "notes": "Discovered via GitHub topic 'azerothcore-lua'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-16T11:29:40Z",
       "fork": false
     }
   ],
