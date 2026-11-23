@@ -3454,7 +3454,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T02:45:46Z",
+      "last_modified": "2026-11-23T05:02:03Z",
       "fork": false
     },
     {
@@ -4394,7 +4394,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T13:37:17Z",
+      "last_modified": "2026-11-22T13:29:28Z",
       "fork": false
     },
     {
@@ -4890,7 +4890,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-17T22:37:27Z",
+      "last_modified": "2026-11-22T16:36:53Z",
       "fork": false
     },
     {
@@ -5674,7 +5674,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-14T22:21:38Z",
+      "last_modified": "2026-11-22T20:16:37Z",
       "fork": false
     },
     {
@@ -8330,7 +8330,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-18T20:27:25Z",
+      "last_modified": "2026-11-23T15:45:51Z",
       "fork": false
     },
     {
@@ -10538,7 +10538,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-19T18:32:21Z",
+      "last_modified": "2026-11-22T22:39:47Z",
       "fork": true
     },
     {
@@ -10666,7 +10666,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T10:16:40Z",
+      "last_modified": "2026-11-23T14:06:02Z",
       "fork": false
     },
     {
@@ -10698,7 +10698,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-13T20:52:25Z",
+      "last_modified": "2026-11-22T17:28:23Z",
       "fork": false
     },
     {
@@ -11338,7 +11338,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T12:06:25Z",
+      "last_modified": "2026-11-23T10:19:04Z",
       "fork": false
     },
     {
@@ -11386,7 +11386,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-10T17:51:16Z",
+      "last_modified": "2026-11-23T06:30:37Z",
       "fork": true
     },
     {
@@ -11450,7 +11450,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T12:06:12Z",
+      "last_modified": "2026-11-23T09:56:25Z",
       "fork": false
     },
     {
@@ -11530,7 +11530,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-20T15:17:20Z",
+      "last_modified": "2026-11-23T15:34:00Z",
       "fork": false
     },
     {
@@ -11578,7 +11578,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T18:14:01Z",
+      "last_modified": "2026-11-23T13:16:13Z",
       "fork": false
     },
     {
@@ -11658,7 +11658,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T13:21:59Z",
+      "last_modified": "2026-11-23T14:45:56Z",
       "fork": false
     },
     {
@@ -11818,7 +11818,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:34:11Z",
+      "last_modified": "2026-11-22T16:40:45Z",
       "fork": false
     },
     {
@@ -11978,7 +11978,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T00:07:40Z",
+      "last_modified": "2026-11-22T17:28:33Z",
       "fork": false
     },
     {
@@ -12042,7 +12042,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T01:01:52Z",
+      "last_modified": "2026-11-22T17:28:30Z",
       "fork": false
     },
     {
@@ -12202,7 +12202,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:33:19Z",
+      "last_modified": "2026-11-22T16:40:39Z",
       "fork": false
     },
     {
@@ -12346,7 +12346,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T07:43:48Z",
+      "last_modified": "2026-11-22T15:48:29Z",
       "fork": false
     },
     {
@@ -12362,7 +12362,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T00:07:36Z",
+      "last_modified": "2026-11-22T15:57:45Z",
       "fork": false
     },
     {
@@ -12522,7 +12522,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T10:16:40Z",
+      "last_modified": "2026-11-23T14:06:02Z",
       "fork": false
     },
     {
@@ -12731,6 +12731,86 @@
       "post_install_hooks": [],
       "config_cleanup": [],
       "last_modified": "2026-11-16T11:29:40Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_WORLD_CONFLICTS",
+      "name": "mod-world-conflicts",
+      "repo": "https://github.com/Ildourol/mod-world-conflicts.git",
+      "description": "Generates dynamic open-world PvP skirmishes and continuous dueling activity for playerbots.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-23T14:45:59Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_LIVING_CITIES",
+      "name": "mod-living-cities",
+      "repo": "https://github.com/Ildourol/mod-living-cities.git",
+      "description": "Populates capital cities and major hubs (Stormwind, Orgrimmar, Ironforge, etc.) with ambient bot foot traffic.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-23T14:45:51Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_ARCHEAGE_RESOCKET_PLAYERBOTS_CRYGOLDUNITY",
+      "name": "ArcheAge-resocket-PlayerBots",
+      "repo": "https://github.com/CryGoldunity/ArcheAge-resocket-PlayerBots.git",
+      "description": "Player bots for ArcheAge: companions, party commands, combat roles and duels.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-23T09:13:51Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_INSTANT_ENCHANTS",
+      "name": "mod-instant-enchants",
+      "repo": "https://github.com/Haeniken/mod-instant-enchants.git",
+      "description": "AzerothCore module for configurable instant equipment enchantments with a database spell list and GM reload.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-23T07:18:58Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_AZEROTHQUEST_PACK",
+      "name": "mod-azerothquest-pack",
+      "repo": "https://github.com/Tntdruid/mod-azerothquest-pack.git",
+      "description": "86 scaling quests for AzerothCore (WotLK 3.3.5a) in the zones where the levelling route runs thin. SQL module.",
+      "type": "sql",
+      "category": "database",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-22T16:29:25Z",
       "fork": false
     }
   ],
