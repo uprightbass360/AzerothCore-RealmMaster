@@ -140,7 +140,7 @@
       "order": 5000,
       "requires": [],
       "notes": "Discovered via GitHub topic 'azerothcore-module'",
-      "last_modified": "2026-11-03T02:28:51Z",
+      "last_modified": "2026-11-23T21:44:22Z",
       "fork": false
     },
     {
@@ -3454,7 +3454,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-23T05:02:03Z",
+      "last_modified": "2026-11-24T03:31:53Z",
       "fork": false
     },
     {
@@ -4394,7 +4394,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T13:29:28Z",
+      "last_modified": "2026-11-23T16:15:45Z",
       "fork": false
     },
     {
@@ -4554,7 +4554,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-07-05T22:25:59Z",
+      "last_modified": "2026-11-24T11:19:18Z",
       "fork": false
     },
     {
@@ -5258,7 +5258,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-03-14T21:41:55Z",
+      "last_modified": "2026-11-24T11:19:57Z",
       "fork": false
     },
     {
@@ -10570,7 +10570,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T21:09:27Z",
+      "last_modified": "2026-11-23T16:49:09Z",
       "fork": false
     },
     {
@@ -10666,7 +10666,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-23T14:06:02Z",
+      "last_modified": "2026-11-23T16:46:27Z",
       "fork": false
     },
     {
@@ -11338,7 +11338,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-23T10:19:04Z",
+      "last_modified": "2026-11-24T05:40:04Z",
       "fork": false
     },
     {
@@ -11450,7 +11450,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-23T09:56:25Z",
+      "last_modified": "2026-11-24T05:39:33Z",
       "fork": false
     },
     {
@@ -11578,7 +11578,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-23T13:16:13Z",
+      "last_modified": "2026-11-23T18:26:46Z",
       "fork": false
     },
     {
@@ -11658,7 +11658,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-23T14:45:56Z",
+      "last_modified": "2026-11-23T18:39:39Z",
       "fork": false
     },
     {
@@ -11674,7 +11674,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:32:38Z",
+      "last_modified": "2026-11-23T23:34:35Z",
       "fork": false
     },
     {
@@ -11754,7 +11754,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:34:19Z",
+      "last_modified": "2026-11-23T21:48:47Z",
       "fork": false
     },
     {
@@ -11818,7 +11818,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T16:40:45Z",
+      "last_modified": "2026-11-23T21:48:44Z",
       "fork": false
     },
     {
@@ -11866,7 +11866,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T00:59:13Z",
+      "last_modified": "2026-11-23T21:48:41Z",
       "fork": false
     },
     {
@@ -11882,7 +11882,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:34:07Z",
+      "last_modified": "2026-11-23T21:48:37Z",
       "fork": false
     },
     {
@@ -11914,7 +11914,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:34:02Z",
+      "last_modified": "2026-11-23T21:48:34Z",
       "fork": false
     },
     {
@@ -11930,7 +11930,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T03:55:24Z",
+      "last_modified": "2026-11-23T21:48:31Z",
       "fork": false
     },
     {
@@ -11978,7 +11978,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T17:28:33Z",
+      "last_modified": "2026-11-23T21:48:26Z",
       "fork": false
     },
     {
@@ -12042,7 +12042,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T17:28:30Z",
+      "last_modified": "2026-11-23T21:48:23Z",
       "fork": false
     },
     {
@@ -12154,7 +12154,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:33:28Z",
+      "last_modified": "2026-11-23T21:48:17Z",
       "fork": false
     },
     {
@@ -12170,7 +12170,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:33:24Z",
+      "last_modified": "2026-11-23T21:48:14Z",
       "fork": false
     },
     {
@@ -12186,7 +12186,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:33:21Z",
+      "last_modified": "2026-11-23T21:48:12Z",
       "fork": false
     },
     {
@@ -12250,7 +12250,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T17:33:14Z",
+      "last_modified": "2026-11-23T21:48:09Z",
       "fork": false
     },
     {
@@ -12362,7 +12362,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T15:57:45Z",
+      "last_modified": "2026-11-23T21:48:05Z",
       "fork": false
     },
     {
@@ -12506,7 +12506,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-21T11:06:15Z",
+      "last_modified": "2026-11-23T18:34:43Z",
       "fork": true
     },
     {
@@ -12522,7 +12522,7 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-23T14:06:02Z",
+      "last_modified": "2026-11-23T16:46:27Z",
       "fork": false
     },
     {
@@ -12810,7 +12810,71 @@
       "requires": [],
       "post_install_hooks": [],
       "config_cleanup": [],
-      "last_modified": "2026-11-22T16:29:25Z",
+      "last_modified": "2026-11-23T20:35:38Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_GROUND_TELEGRAPHS",
+      "name": "mod-ground-telegraphs",
+      "repo": "https://github.com/RockNetEngine/mod-ground-telegraphs.git",
+      "description": "Retail-style ground telegraphs for AzerothCore 3.3.5a: line, cone, nova and donut marks that follow terrain and buildings, plus SQL-driven telegraph bosses",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-24T09:11:51Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_QUEST_CATCH_UP",
+      "name": "mod-quest-catch-up",
+      "repo": "https://github.com/eveletspb/mod-quest-catch-up.git",
+      "description": "Catch up on quest chains from a party member and continue questing together on AzerothCore WotLK.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-11-24T08:50:20Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_MOD_TRANSMOG_PLUS",
+      "name": "mod-transmog-plus",
+      "repo": "https://github.com/Stefan2102/mod-transmog-plus.git",
+      "description": "Slot-based transmogrification module for AzerothCore. Appearances are stored per equipment slot, so transmogs persist when gear is replaced.",
+      "type": "cpp",
+      "category": "uncategorized",
+      "notes": "Discovered via GitHub topic 'azerothcore-module'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-10-10T05:10:45Z",
+      "fork": false
+    },
+    {
+      "key": "MODULE_AZEROTHCORE_LAUNCHER_STEFAN2102",
+      "name": "azerothcore-launcher",
+      "repo": "https://github.com/Stefan2102/azerothcore-launcher.git",
+      "description": "A modern Windows launcher for local AzerothCore servers.",
+      "type": "tool",
+      "category": "tooling",
+      "notes": "Discovered via GitHub topic 'azerothcore-tools'",
+      "status": "active",
+      "order": 5000,
+      "requires": [],
+      "post_install_hooks": [],
+      "config_cleanup": [],
+      "last_modified": "2026-08-25T10:40:49Z",
       "fork": false
     }
   ],
